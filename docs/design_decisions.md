@@ -47,11 +47,18 @@ The benching penalty needs a `[0,1]` closeness scalar nothing else produces.
 Recommend reusing the `Φ` relationship coefficient:
 `S = max(0, (A_{j,benched} + C_{j,role(benched)}) / 200)`.
 
-### D24 ⚠ Trust never decays or recovers between matches
-A 20-match campaign becomes a ratchet of accumulated slights with no path to
-repair, which contradicts the "transformational leader" archetype the campaign
-debrief is supposed to detect. Recommend a per-match decay toward a roster
-baseline, scaled by results.
+### D24 ✅ Trust feedback loop — **decided** (ADR 0007, `docs/trust_dynamics.md`)
+Nothing writes match outcome back into `T_i`, so the game's premise cannot
+occur. Resolved by owner intent: outcomes and conduct do write back, and there
+is **no** automatic decay toward baseline. The ratchet is deliberate — a player
+who keeps playing pure chess spirals to mutiny and loses the campaign; recovery
+comes only from costly signals, over multiple campaigns. The sole invariant is
+that no absorbing state exists for a player who *changes policy*.
+
+Follow-on decisions: **D25** (which costly signals ship), **D26** (how long
+phase 2 lasts before collapse), **D27** (cross-campaign roster memory),
+**D28** (disclosure vs. discovery), **D29** (post-collapse epilogue) — all in
+`docs/trust_dynamics.md` §7.
 
 Minor, no decision needed unless you disagree: `loyaltyStabilityScore` can reach
 200 despite being documented `0..100`, and `engagementFactor` is both persisted
@@ -265,4 +272,5 @@ public artifact; keep the other as the internal codename.
 3. **D2, D3, D4, D6, D7** (mechanics that define the data model) → unblocks Milestone 2
 4. **D9, D10, D11** (engine + LLM invariants) → unblocks Milestone 1
 5. **D1, D13** (audience + shell) → unblocks Milestone 4
-6. **D23, D24** during Milestone 3 calibration; everything else during Milestones 4–6.
+6. **D23, D25–D27** during Milestone 3 calibration (they set the shape of the
+   spiral); **D28, D29** during Milestone 4–7; everything else as it comes up.

@@ -56,16 +56,17 @@ likely source of subtle, save-corrupting bugs in the entire project.
 | 2.3 | Verdict ladder + refusal/quiet-quit/mutiny state machines |
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
+| 2.5b | Outcome→trust reducers and costly-signal detection per `docs/trust_dynamics.md` (ADR 0007) |
 | 2.6 | Replayer: `(rosterSnapshot, seed, intents) → identical event log` |
 
-Exit criteria: invariant suite from `psychology_engine.md` §9 passes; replay
+Exit criteria: invariant suite from `psychology_engine.md` §11 passes; replay
 determinism test passes 100 random matches.
 
 ## Milestone 3 — Headless balance harness + first calibration (≈1 week)
 
 | Task | Deliverable |
 |---|---|
-| 3.1 | Scripted AI leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random` |
+| 3.1 | Scripted AI leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`, plus the two ADR-0007 oracles `pure_tactician` and `redeemer` |
 | 3.2 | `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` |
 | 3.3 | Metrics: quiet-quit rate, refusal rate, mutiny rate, trust trajectory, culture drift, win rate, archetype classification |
 | 3.4 | Calibration pass on the trait weights, `Θ_refusal` slope/intercept, benching penalties, and sacrifice class/affinity shifts — plus resolution of D19 (trust-term scale) |

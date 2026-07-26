@@ -13,6 +13,7 @@ exists yet.**
 | `docs/architecture.md` | Target layering and move pipeline |
 | `docs/psychology_engine.md` | Math spec restated + reconciliation issues (§10) |
 | `docs/spec/psychology-engine.reference.ts` | **Normative** equations, thresholds, coefficients |
+| `docs/trust_dynamics.md` | The competence trap: outcome→trust loop, costly signals, intended spiral |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |

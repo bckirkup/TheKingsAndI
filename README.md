@@ -25,6 +25,7 @@ of decisions that must be made before implementation starts.
 | [docs/architecture.md](docs/architecture.md) | How the system is layered; the move pipeline |
 | [docs/psychology_engine.md](docs/psychology_engine.md) | Utility, verdicts, affinity, class prestige, benching decay |
 | [docs/spec/psychology-engine.reference.ts](docs/spec/psychology-engine.reference.ts) | Normative equations and default coefficients |
+| [docs/trust_dynamics.md](docs/trust_dynamics.md) | Why a strong player loses early, and how the spiral is escaped |
 | [docs/data_model.md](docs/data_model.md) | Entities, persistence, identity rules |
 | [docs/development_plan.md](docs/development_plan.md) | Milestones 0–8, exit criteria, estimates |
 | [docs/testing_strategy.md](docs/testing_strategy.md) | Golden + sensitivity tests, balance metrics |

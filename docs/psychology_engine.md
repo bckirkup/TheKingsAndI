@@ -229,10 +229,13 @@ Two sources of truth. Recommendation: treat it as derived-only (a function of th
 last verdict) and drop it from persisted state, or define exactly when the stored
 value is refreshed.
 
-### 10.8 Trust has no decay or inter-match recovery
-Nothing pulls `T_i` back toward baseline between matches, so campaigns are
-ratchets: 20 matches of accumulated slights with no path to repair. Consider a
-per-match decay toward a roster baseline, scaled by results.
+### 10.8 Trust has no outcome feedback — **resolved, see ADR 0007**
+Nothing writes match results or player conduct back into `T_i`, so the game's
+premise (a strong player losing because the pieces will not follow him) cannot
+occur. Resolved in `docs/trust_dynamics.md`: outcomes and conduct do write back,
+and there is deliberately **no** decay toward baseline. The ratchet is the
+design — recovery is earned through costly signals, not granted by time. The one
+invariant is that no absorbing state exists for a player who changes policy.
 
 ## 11. Invariants (assert in tests)
 
@@ -246,3 +249,5 @@ per-match decay toward a roster baseline, scaled by results.
 7. Every coefficient in `ENGINE_CONFIG` has both a golden test and a
    sensitivity probe.
 8. The King is never eligible for `DESERTION_MUTINY`.
+9. Trust changes only from player conduct and match outcome — never from elapsed
+   time or match count alone (ADR 0007).

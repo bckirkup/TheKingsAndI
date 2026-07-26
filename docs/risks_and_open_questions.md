@@ -74,6 +74,16 @@ an assessment instrument. Never produce a score that looks like a psychometric.
 
 ---
 
+## Risk: the intended spiral reads as unfairness
+
+ADR 0007 makes losing the first campaign the designed experience. The distance
+between "this game taught me something" and "this game is broken" is entirely
+legibility of cause: every trust loss must be attributable to a specific
+player action in the audit, even though the *solution* is never disclosed.
+Mitigation: grievance lines in piece dialogue from match 1, and a post-collapse
+debrief that names the archetype the player enacted. This is the highest
+refund-risk decision in the project and should be playtested before Milestone 7.
+
 ## Open questions (no owner yet)
 
 1. What happens when *every* legal move is refused? (see R2)
@@ -88,5 +98,7 @@ an assessment instrument. Never produce a score that looks like a psychometric.
 5. Should the *King* have psychology (i.e. does the player's avatar judge them)?
 6. Multiplayer: does the opponent see your roster's morale? Enormous
    information-warfare surface if yes.
-7. Does the campaign have a fail state (whole roster mutinies) or only a soft
-   decline?
+7. ~~Does the campaign have a fail state?~~ **Yes** — ADR 0007 makes campaign
+   collapse a supported terminal state, and the intended experience for a player
+   who does not adapt. Open sub-question: how long phase 2 runs before it
+   (D26), and whether there is a post-collapse epilogue (D29).

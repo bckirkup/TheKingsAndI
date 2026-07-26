@@ -97,6 +97,13 @@ means the model has collapsed:
    tactics → the game has no dilemma).
 7. Verdict is predictable from `T_i` alone (i.e. a classifier on trust reproduces
    >95% of verdicts) → the move terms are inert; this is the D19 detector.
+8. **Absorbing state:** >5% of campaigns reach a state from which even the oracle
+   `redeemer` policy cannot raise mean trust. (Note: campaign *collapse* is not a
+   failure — collapse that survives a changed policy is. See ADR 0007.)
+9. **Toothless spiral:** losing has no measurable effect on next-match trust.
+10. **Skill nullification:** corr(player strength, campaign win rate) ≈ 0.
+11. **Free redemption:** `redeemer` recovers as fast as it fell, or recovers
+    without paying board cost.
 
 ## 5. Stochastic-system rules
 
