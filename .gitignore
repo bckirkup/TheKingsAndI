@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnp.*
+.yarn/
+
+# build output
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# test / coverage
+coverage/
+.nyc_output/
+
+# harness output
+sim/out/
+*.metrics.csv
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# editor / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.1
+      - name: Required planning docs present
+        run: |
+          for f in AGENTS.md README.md docs/architecture.md docs/development_plan.md \
+                   docs/design_decisions.md docs/psychology_engine.md docs/data_model.md \
+                   docs/testing_strategy.md docs/llm_integration.md \
+                   docs/risks_and_open_questions.md docs/spec/living-chess-srs.md; do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+          done
+      - name: Skills have frontmatter
+        run: |
+          for f in .agents/skills/*/SKILL.md; do
+            head -1 "$f" | grep -q '^---$' || { echo "$f missing frontmatter"; exit 1; }
+            grep -q '^name:' "$f" || { echo "$f missing name:"; exit 1; }
+            grep -q '^description:' "$f" || { echo "$f missing description:"; exit 1; }
+          done
+
+  app:
+    name: Lint / typecheck / test / sim smoke
+    runs-on: ubuntu-latest
+    # Activates automatically once Milestone 0 lands package.json.
+    if: hashFiles('package.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm sim --matches=20 --leader=tyrannical
