@@ -70,20 +70,24 @@ from the most recent verdict (see `psychology_engine.md` §10.7).
 
 ## 2. Identity rules (decision-sensitive)
 
-These three rules define the campaign's emotional stakes and must be settled
-before Phase 1 code lands (see `docs/design_decisions.md` D6):
+Rules 1 and 3 are **decided** (ADR 0009); rule 2 remains as specified.
 
-1. **Capture ≠ death?** Options: (a) permadeath with recruitment of green
-   replacements; (b) pieces return next match carrying `B_i` trauma; (c) hybrid
-   — return, but a piece captured *N* times becomes unrecruitable.
-   Note `status` distinguishes `BENCHED` (reference: `T -= 30`) from `FIRED`
-   (SRS: `T := -100`); whether both exist is part of this decision.
+1. **Capture is not death.** A captured piece is removed for that match and
+   returns for the next one carrying durable cost: `B_i` trauma, its own trust
+   loss, and the trust loss of everyone who watched. `pain_i` in the desertion
+   calculation grows with `B_i`, so a piece spent repeatedly becomes
+   progressively more likely to walk off (`docs/desertion_model.md`). `status`
+   still distinguishes `BENCHED` (reference: `T -= 30`) from `FIRED`
+   (SRS: `T := -100`), and adds `DESERTED` for a piece that quit mid-match.
 2. **Promotion:** a promoted pawn keeps `id`, `traits`, and all bonds, but its
    `role` changes → it now benefits from Queen-class prestige while remembering
    pawn-class solidarity. This is deliberately the most interesting narrative
    engine in the game and should not be simplified away.
-3. **Roster size:** exactly 16, or a bench larger than 16 (making "who plays"
-   itself a leadership decision, and making benching distinct from firing)?
+3. **Roster grows a bench over time** (ADR 0009). The playing 16 is drawn from
+   a larger roster that accumulates across the campaign, which makes *selection*
+   a leadership act distinct from benching-as-punishment. Pieces have outcome
+   preferences — they like winning, hate losing, and really hate being taken —
+   and those preferences are the primary between-match writers of `T_i`.
 
 ## 3. Dexie schema (v1 draft)
 

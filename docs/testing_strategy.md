@@ -78,7 +78,8 @@ the most likely silent bug in a system this parameter-heavy.
 Emitted by `pnpm sim` as CSV/JSON; CI asserts loose bands, calibration tightens
 them (initial hypotheses in `docs/development_plan.md` M3):
 
-- refusal rate, quiet-quit ply share, mutiny incidence
+- refusal rate, **refused-good-move rate**, quiet-quit ply share, desertion
+  incidence and cascade length
 - trust trajectory (mean, variance, per-class)
 - class-bias drift (contempt → solidarity)
 - roster turnover and its win-rate cost
@@ -104,6 +105,17 @@ means the model has collapsed:
 10. **Skill nullification:** corr(player strength, campaign win rate) ≈ 0.
 11. **Free redemption:** `redeemer` recovers as fast as it fell, or recovers
     without paying board cost.
+12. **No rout:** `tyrannical` campaigns end in a desertion cascade in < 50% of
+    cases — the consequence layer is inert (ADR 0011).
+13. **Instant rout:** the whole roster leaves in the first match under a neutral
+    leader — `λ` is mis-scaled.
+14. **Suicide desertion:** desertions occur in materially winning positions.
+15. **Order violation:** loyalty correlates *positively* with desertion order —
+    the loyal must leave last, if at all.
+16. **Toothless refusal:** the refused-good-move rate is ≈ 0. Under ADR 0002
+    (free re-plan) and ADR 0008 (advice-only), denying the player good moves is
+    the psychology's only mid-match lever; if pieces only ever refuse bad moves,
+    distrust costs nothing.
 
 ## 5. Stochastic-system rules
 

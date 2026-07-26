@@ -100,7 +100,10 @@ trust-band ladder and should be preserved.
 Evaluated strictly in this order:
 
 ```
-1. T_i ≤ -75 and M_i == 0        → DESERTION_MUTINY      (η = 0.1, D = 1)
+1. U_desert(i) > U_stay(i)        → DESERTION_MUTINY      (η = 0.1, D = 1)
+                                    ^ see ADR 0011 / docs/desertion_model.md;
+                                      this REPLACES the reference's
+                                      `T_i ≤ -75 && M_i == 0` trip-wire
 2. U < Θ_refusal(T_i)            → MORAL_REFUSAL         (η = 0.2)
 3. U < 0 or T_i ≤ 0              → QUIET_QUITTING        (η = 0.2)
 4. T_i > 50 and (P_captured > 0.5 or ΔV_board > 2.0)
@@ -114,6 +117,14 @@ loyal piece making a quiet developing move is merely `COMPLIANT`.
 
 The King must be exempt from rule 1, or matches end by psychology rather than by
 chess. The reference does not encode that exemption; the orchestrator must.
+
+A deserting piece **quits the board** — it is removed from play for the rest of
+the match (ADR 0003). Defection to the opposing side is permanently out of
+scope. Rule 1 is not a threshold: it is the expected-cost comparison in
+`docs/desertion_model.md`, and the resulting cascade is intended (ADR 0011).
+
+Rules 2–5 are unaffected by trust dominance concerns only to the extent D19 is
+resolved; see §10.1.
 
 ## 7. Witnessed heroic sacrifice
 
@@ -208,11 +219,13 @@ No formula consumes it and no event writes it. Either it feeds utility (a
 grief penalty), or it gates mutiny alongside morale, or it is display-only.
 Decide, then add its sensitivity probe.
 
-### 10.4 Morale `M_i` has no update rule
-Mutiny requires `M_i == 0`, but nothing in the reference ever changes morale, so
-mutiny is unreachable as written. Morale needs: sources (losses, being exposed,
-peers dying, victories), a decay/recovery rule between matches, and a floor
-condition. Also, `M_i === 0` is an exact float comparison — use `M_i <= ε`.
+### 10.4 Morale `M_i` has no update rule — downgraded by ADR 0011
+Under the reference, desertion required `M_i == 0` while nothing ever wrote
+morale, making it unreachable. ADR 0011 replaces that gate with an expected-cost
+comparison in which morale is one input to `λ_i`, so morale is no longer
+load-bearing for reachability. It still needs sources (losses, exposure, peers
+lost, victories) and a recovery rule — ordinary wiring, not a blocker. The exact
+float comparison disappears with the gate.
 
 ### 10.5 `S(P_j, P_benched)` is undefined
 The benching penalty needs a "shared bond" scalar in `[0,1]` that no other part
@@ -251,3 +264,7 @@ invariant is that no absorbing state exists for a player who changes policy.
 8. The King is never eligible for `DESERTION_MUTINY`.
 9. Trust changes only from player conduct and match outcome — never from elapsed
    time or match count alone (ADR 0007).
+10. Desertion is evaluated by expected-cost comparison, never by a state
+    threshold, and is never damped by cooldowns or caps (ADR 0011).
+11. A commanded move is always the move played — insight never substitutes a
+    different move (ADR 0008).

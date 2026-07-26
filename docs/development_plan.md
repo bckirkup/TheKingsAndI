@@ -1,4 +1,4 @@
-# Living Chess — Development Plan
+# The King and I — Development Plan
 
 _Greenfield plan, drafted 2026-07-26. Repo currently contains planning docs
 only. Sequencing is chosen so that the riskiest unknowns are answered first and
@@ -12,8 +12,10 @@ Build the **deterministic core first** (chess + psychology + replay + headless
 sim), because the project's central risk is not rendering or LLM prose — it is
 whether the psychology model produces *interesting, tunable, non-degenerate*
 behavior. A vertical slice that is ugly but balanced is worth more than a
-beautiful board with a mutiny rate of 0% or 90%. LLM narration and the four
-visual themes are deliberately late; a template-only build must be shippable.
+beautiful board with a desertion rate of 0% or 90%. Narration content and the
+four visual themes are deliberately late. There is no runtime LLM at all
+(ADR 0004), so "narration" means authoring a dialogue tree, which is a content
+cost that can be parallelized with engineering rather than a dependency.
 
 Two hard rules for every milestone:
 
@@ -53,7 +55,8 @@ likely source of subtle, save-corrupting bugs in the entire project.
 |---|---|
 | 2.1 | `PieceState` reducers; event types; append-only match log |
 | 2.2 | `U(P_i, m)` and `Θ_refusal(T_i)` per `docs/spec/psychology-engine.reference.ts`, with all coefficients in one `ENGINE_CONFIG` object |
-| 2.3 | Verdict ladder + refusal/quiet-quit/mutiny state machines |
+| 2.3 | Verdict ladder + refusal/quiet-quit state machines. Refusal is free to re-plan (ADR 0002), so the commit step must handle a rejected intent with no state change beyond the psychology event |
+| 2.3b | Desertion: the `U_desert` vs `U_stay` comparison, removal from the board, and **cascade re-evaluation of all remaining pieces after each departure** (`docs/desertion_model.md`, ADR 0011). King exempt |
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
 | 2.5b | Outcome→trust reducers and costly-signal detection per `docs/trust_dynamics.md` (ADR 0007) |
@@ -68,7 +71,7 @@ determinism test passes 100 random matches.
 |---|---|
 | 3.1 | Scripted AI leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`, plus the two ADR-0007 oracles `pure_tactician` and `redeemer` |
 | 3.2 | `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` |
-| 3.3 | Metrics: quiet-quit rate, refusal rate, mutiny rate, trust trajectory, culture drift, win rate, archetype classification |
+| 3.3 | Metrics: quiet-quit rate, refusal rate, **refused-good-move rate**, desertion incidence, cascade length, trust trajectory, culture drift, win rate, archetype classification |
 | 3.4 | Calibration pass on the trait weights, `Θ_refusal` slope/intercept, benching penalties, and sacrifice class/affinity shifts — plus resolution of D19 (trust-term scale) |
 | 3.5 | Commit calibrated config + calibration report with the plots that justified it |
 
@@ -77,12 +80,16 @@ determinism test passes 100 random matches.
 | Metric | Tyrannical leader | Supportive leader |
 |---|---|---|
 | Refusal rate (per match) | 8–20% of plies | <2% |
-| Mutiny rate (per 20-match campaign) | 40–70% see ≥1 | <5% |
+| Desertion rate (per 20-match campaign) | 40–70% see ≥1 | <5% |
+| Campaigns ending in a full rout | common — a tyrant whose roster never routs is a bug (ADR 0011) | rare |
 | Win rate delta vs. plain chess | −5 to −20% | −0 to −8% |
 | Culture drift after 20 matches | class contempt worsens | contempt largely dissolved |
 
-If tyranny is *not* punished, or is punished so hard it's unplayable, the model
-is wrong — stop and re-tune before building UI on it.
+If tyranny is *not* punished, the model is wrong — stop and re-tune before
+building UI on it. Note the *upper* bound is deliberately absent for the tyrant:
+per ADR 0007 and ADR 0011, collapse and rout are intended outcomes, and the only
+failure condition on the harsh end is a spiral that survives a genuine change of
+policy by the player (the `redeemer` oracle).
 
 ## Milestone 4 — Playable vertical slice UI (≈2 weeks)
 
@@ -90,9 +97,9 @@ is wrong — stop and re-tune before building UI on it.
 |---|---|
 | 4.1 | chessground board + drag input → intent pipeline |
 | 4.2 | Piece state overlays: aura rings (trust), morale gauge, betrayal marker |
-| 4.3 | Refusal / quiet-quit / mutiny UX — including how a refused move is communicated without feeling like a bug |
+| 4.3 | Refusal / quiet-quit / desertion UX — how a refused move is communicated without feeling like a bug, and how a rout is made legible while it happens |
 | 4.4 | Relationship inspector: who protects whom, class-bias heatmap |
-| 4.5 | Template dialogue engine (deterministic, relationship-aware, ~200 lines seeded by verdict + event + persona) |
+| 4.5 | Authored dialogue tree v1 (deterministic, relationship-aware; ~200 lines seeded by verdict + event + persona) |
 | 4.6 | One theme only (`tactical-blueprint`: cheapest to draw, best for debugging) |
 
 Exit criteria: a full match playable end-to-end offline with zero API keys, and
@@ -111,11 +118,11 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 
 | Task | Deliverable |
 |---|---|
-| 6.1 | Narration port: `NarrationProvider` interface with `TemplateProvider` (default) and `LlmProvider` |
-| 6.2 | Structured prompt schemas + strict output validation; on any failure fall back to the template silently |
-| 6.3 | BYO-key settings UI, per-session token budget, cache by prompt hash |
-| 6.4 | Narrator pre-game, match audit prose, campaign debrief prose |
-| 6.5 | Prompt-injection hardening: piece names are user-supplied text and must be sanitized before entering prompts |
+| 6.1 | `AuthoredProvider` over the full dialogue tree — synchronous, deterministic, no network (ADR 0004) |
+| 6.2 | Offline distillation pipeline: situation matrix → authoring model → **reviewed** lines → committed tree JSON, with the generation script in-repo |
+| 6.3 | Coverage validator in CI: every reachable situation has a line, no empty leaves, no line repeated within a match |
+| 6.4 | Narrator pre-game, match audit prose, campaign debrief prose — including causal-chain reconstruction for desertions |
+| 6.5 | Sanitize player-supplied piece names (control chars, length) before substitution; render as text, never HTML |
 
 ## Milestone 7 — Themes, onboarding tracks, polish (≈2 weeks)
 
@@ -128,8 +135,12 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 
 ## Milestone 8 — Federation & scale-up (deferred)
 
-Signed roster export/import, async friend challenges, then — only if metrics
-justify — ladder, cloud sync, and a hosted LLM proxy.
+Tauri desktop shell and Steam packaging (ADR 0012); signed roster export/import;
+async friend challenges; then — only if metrics justify — ladder and cloud sync.
+
+**Blocking issue for the commercial build:** Stockfish is GPL-3.0 and cannot be
+linked into a proprietary artifact. Resolve before Steam work starts — see
+`LICENSING.md`.
 
 ---
 

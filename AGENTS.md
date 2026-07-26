@@ -1,19 +1,21 @@
-# AGENTS.md — AI Agent Guidelines for TheKingAndI (Living Chess)
+# AGENTS.md — AI Agent Guidelines for The King and I
 
 ## Repository Purpose
-Living Chess: chess where the pieces have persistent identities, memory, trust,
-class prejudice, and the ability to refuse orders or mutiny. Doubles as a
-leadership-dynamics simulation. **Status: planning only — no application code
-exists yet.**
+*The King and I* (internal codename: Living Chess): chess where the pieces have
+persistent identities, memory, trust, class prejudice, and the ability to refuse
+orders or walk off the board. Doubles as a leadership-dynamics simulation.
+**Status: planning only — no application code exists yet.**
 
 ## Read This First
 | Doc | Purpose |
 |---|---|
-| `docs/design_decisions.md` | Open decisions the owner must make. **Check before implementing anything.** |
+| `docs/design_decisions.md` | Decision register — what is settled, what is open. **Check before implementing anything.** |
 | `docs/architecture.md` | Target layering and move pipeline |
 | `docs/psychology_engine.md` | Math spec restated + reconciliation issues (§10) |
 | `docs/spec/psychology-engine.reference.ts` | **Normative** equations, thresholds, coefficients |
 | `docs/trust_dynamics.md` | The competence trap: outcome→trust loop, costly signals, intended spiral |
+| `docs/desertion_model.md` | Why a piece quits the board; the intended cascade |
+| `LICENSING.md` | Dual-license terms and the Stockfish GPL constraint |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |
@@ -37,11 +39,17 @@ exists yet.**
 6. **Every config knob gets a golden test AND a sensitivity test.** See the
    `ci-test-design` skill. A parsed-but-unwired knob is a review failure.
 7. **Never modify tests to make them pass** — fix the implementation.
-8. **Do not resolve an open decision in `docs/design_decisions.md` by writing
+8. **Accepted design invariants** (ADRs 0002–0012). A commanded move is always
+   the move played (insight is advice, ADR 0008). Refusal is free to re-plan; it
+   never costs a turn (ADR 0002). Pieces desert; they never defect (ADR 0003).
+   Desertion is an expected-cost decision and its cascade must never be damped
+   with cooldowns, caps, or morale floors (ADR 0011). There is no runtime LLM
+   and no API key (ADR 0004). Trust never decays toward a baseline on its own
+   (ADR 0007).
+9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
-   This includes the model-reconciliation issues D19–D24: the reference spec's
-   dead-wired traits and unreachable mutiny gate are decisions, not bugs to
-   silently patch.
+   The blocking ones are **D19** (trust-term scale), **D31** (does a piece refuse
+   using its own evaluation or the true one), and **D9** (engine topology).
 
 ## Setup (once code lands; not yet applicable)
 ```bash
@@ -75,6 +83,13 @@ src/persistence/    Dexie schema, migrations, roster export/import
 sim/                headless CLI harness, scripted AI leaders, metrics
 docs/               planning documents and ADRs
 ```
+
+## Licensing Hygiene
+The project is dual-licensed (AGPL-3.0 + commercial), so **dependency licenses
+are a gate**: prefer MIT/BSD/Apache-2.0/ISC and never add a GPL/AGPL-only
+dependency without flagging it. Stockfish is GPL-3.0 and is already a known
+constraint — see `LICENSING.md`. Contributions require the grant in
+`CONTRIBUTING.md`; commit with `git commit -s`.
 
 ## Code Conventions
 - TypeScript strict; no `any`, no non-null `!` without justification.

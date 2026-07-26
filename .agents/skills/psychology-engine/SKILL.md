@@ -1,6 +1,6 @@
 ---
 name: psychology-engine
-description: Modify or extend the Living Chess psychology model — trust, morale, grief, dyadic affinity, class bias, move utility, verdict ladder, witnessed events, and firing decay — without breaking determinism or balance. Use when changing anything under src/psychology/ or docs/psychology_engine.md.
+description: Modify or extend The King and I psychology model — trust, morale, grief, dyadic affinity, class bias, move utility, verdict ladder, witnessed events, and firing decay — without breaking determinism or balance. Use when changing anything under src/psychology/ or docs/psychology_engine.md.
 ---
 
 # Working on the Psychology Engine
@@ -15,7 +15,8 @@ harness, so it must stay pure, integer-clamped, and fast.
 equation set and is normative for names, formulas, thresholds, and defaults.
 `docs/psychology_engine.md` restates it and lists reconciliation issues in §10
 (trust-term dominance, `w_prestige` and `B_i` dead-wired, morale has no update
-rule so mutiny is unreachable). Those are **open decisions D19–D24** — do not
+rule). **D19 and D31 are open and blocking; D20–D23 are wiring to settle in
+review with a sensitivity probe each.** Do not
 quietly "fix" them in code.
 
 ## Contract
@@ -25,7 +26,8 @@ evaluateMoveResponse(actor, moveEval, allActivePieces)
   -> { verdict, utilityScore, refusalThreshold, effectiveSearchDepth, engagementFactor }
 
 verdict ∈ HEROIC_EXECUTION | COMPLIANT_EXECUTION | QUIET_QUITTING
-        | MORAL_REFUSAL | DESERTION_MUTINY
+        | MORAL_REFUSAL | DESERTION_MUTINY   // desertion = quits the board,
+                                             // never defects (ADR 0003)
 ```
 
 - **Pure.** No I/O, no `Date.now()`, no `Math.random()`. RNG, if ever needed,
