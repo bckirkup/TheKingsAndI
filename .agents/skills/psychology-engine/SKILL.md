@@ -9,10 +9,23 @@ The psychology engine decides how a piece feels and whether it obeys. It is the
 product. It is also the part that runs a million times inside the balance
 harness, so it must stay pure, integer-clamped, and fast.
 
+## Normative source
+
+`docs/spec/psychology-engine.reference.ts` is the owner's machine-readable
+equation set and is normative for names, formulas, thresholds, and defaults.
+`docs/psychology_engine.md` restates it and lists reconciliation issues in §10
+(trust-term dominance, `w_prestige` and `B_i` dead-wired, morale has no update
+rule so mutiny is unreachable). Those are **open decisions D19–D24** — do not
+quietly "fix" them in code.
+
 ## Contract
 
 ```
-evaluate(pieceState, traits, boardFeatures, insight, weights) -> { utility, verdict, deltas[] }
+evaluateMoveResponse(actor, moveEval, allActivePieces)
+  -> { verdict, utilityScore, refusalThreshold, effectiveSearchDepth, engagementFactor }
+
+verdict ∈ HEROIC_EXECUTION | COMPLIANT_EXECUTION | QUIET_QUITTING
+        | MORAL_REFUSAL | DESERTION_MUTINY
 ```
 
 - **Pure.** No I/O, no `Date.now()`, no `Math.random()`. RNG, if ever needed,
@@ -34,7 +47,7 @@ evaluate(pieceState, traits, boardFeatures, insight, weights) -> { utility, verd
 4. **Test both roles** (see `ci-test-design`):
    - golden: exact utility/verdict at the boundary values of each ladder rung;
    - sensitivity: change only the new weight → fingerprint or metric differs.
-5. **Invariant suite** (`docs/psychology_engine.md` §9) must pass unchanged.
+5. **Invariant suite** (`docs/psychology_engine.md` §11) must pass unchanged.
 6. **Harness before/after.** Run `pnpm sim` for at least `tyrannical` and
    `supportive` leaders and paste the metric table into the PR. Check the
    degeneracy detectors in `docs/testing_strategy.md` §4 — a change that zeroes
@@ -44,15 +57,20 @@ evaluate(pieceState, traits, boardFeatures, insight, weights) -> { utility, verd
 
 - **Asymmetry is a feature.** `A_{i,j} != A_{j,i}`. Do not "simplify" affinity
   into a symmetric matrix; contempt flowing one way is the point.
-- **Fall back to class bias, not to zero.** Unknown dyads inherit
-  `C_{role(i),role(j)}`, which is how prejudice manifests before relationships
-  exist.
+- **Class prestige is per piece and *blended*, not a fallback.** `Φ` uses
+  `(A_{i,j} + C_{i,role(j)}) / 200`, so personal bond and class prejudice always
+  combine. Each piece owns its own `classPrestige` map and updates it only from
+  events it witnessed.
 - **Traits are immutable; state is not.** Personality (`Θ_i`) is rolled once.
   Trust, morale, and grief move. Resist the urge to let events edit traits.
 - **Insight belongs in utility.** A novice piece must compute a genuinely worse
   `ΔEval`, not merely give worse hints — but its reasoning must always be
   inspectable, or errors read as the game cheating.
-- **Quiet quitting is `η_i → 0.2`,** not a special case in the move pipeline.
+- **Quiet quitting is `η_i → 0.2`,** not a special case in the move pipeline;
+  desertion is `η_i = 0.1`, `D_i = 1`.
+- **Watch term scales.** Utility mixes `T_i` (±100) with board terms (±10) and
+  `Φ` (≤ `w_empathy` per peer). Any new term must be scaled deliberately against
+  `Θ_refusal(T_i) = -50 + (100 - T_i)·0.5`, or it will be inert (see D19).
 - **Sacrifice attribution is engine-based.** A capture is a "sacrifice" only if
   it removed a threat to a peer or enabled a forced winning line. Heuristics
   ("a pawn died near a rook") produce nonsense gratitude and destroy the

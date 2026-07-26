@@ -52,8 +52,10 @@ central tension is absent and no amount of prose will hide it.
 ## Calibration procedure
 
 1. Fix the acceptance bands *before* tuning (`docs/testing_strategy.md` §4).
-2. Coarse pass: order-of-magnitude sweeps (0.1×, 1×, 10×) on `w_risk`, `w_peer`,
-   `w_loyalty`, `κ_fire`, `τ_refuse` — 200 matches each.
+2. Coarse pass: order-of-magnitude sweeps (0.1×, 1×, 10×) on the trait weights
+   (`w_courage`, `w_empathy`, `w_loyalty`, `w_honor`, `w_ambition`), the
+   `Θ_refusal` slope/intercept, and the `ENGINE_CONFIG` benching and
+   sacrifice-shift constants — 200 matches each.
 3. Fine pass: 1,000 matches on the surviving 2–3 candidate configs.
 4. Commit the chosen weights **plus** the metrics file and a short rationale.
    A calibration commit without its evidence is unreviewable.

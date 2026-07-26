@@ -1,6 +1,8 @@
 # Data Model & Persistence
 
-_Planning document. Types are illustrative TypeScript, not yet implemented._
+_Planning document. Types are illustrative TypeScript, not yet implemented.
+Field names and ranges follow `docs/spec/psychology-engine.reference.ts`, which
+is normative; this document adds the persistence and identity layers around it._
 
 ---
 
@@ -21,18 +23,18 @@ interface PieceIdentity {       // never changes
 interface PieceState {          // evolves; snapshot per match, persisted per campaign
   id: PieceId;
   role: Role;                   // current role (promotion mutates this)
-  experience: number;           // X_i
-  trust: number;                // T_i
-  morale: number;               // M_i
-  betrayal: number;             // B_i
-  affinity: Record<PieceId, number>;   // A_{i,j}, sparse
+  E_i: number;                  // experience, 1..100
+  T_i: number;                  // trust in leader, -100..100
+  M_i: number;                  // morale, 0..100
+  B_i: number;                  // betrayal / disillusionment, 0..100
+  dyadicAffinity: Record<PieceId, number>;      // A_{i,j}, sparse, asymmetric
+  classPrestige: Record<Role, number>;          // C_{i,role}, PER PIECE
   status: 'ACTIVE' | 'CAPTURED' | 'DESERTED' | 'BENCHED' | 'FIRED';
 }
 
 interface Roster {
   id: string;
   campaignId: string | null;
-  classBias: Record<`${Role}->${Role}`, number>;  // C_{r,r'}
   pieces: PieceId[];
   createdAt: number;
 }
@@ -46,6 +48,7 @@ interface MatchRecord {
   events: MatchEvent[];         // canonical log; audits fold over this
   result: 'WIN' | 'LOSS' | 'DRAW' | 'ABANDONED';
   engineConfig: { dMin: number; dMax: number; deterministic: boolean };
+  psychConfigVersion: string;   // which ENGINE_CONFIG the match was played under
   schemaVersion: number;
 }
 
@@ -57,6 +60,14 @@ interface CampaignRecord {
 }
 ```
 
+**Class prestige is per piece, not per roster.** The reference implementation
+stores `classPrestige` on each `PieceState` keyed by role, so every piece holds
+its own prejudices and only updates them from events it witnessed. That is 6
+integers × 16 pieces — trivial storage, and much better behavior than a shared
+matrix (a Rook who never saw the sacrifice should not inherit the gratitude).
+Engagement factor `η_i` is deliberately **not** persisted here: it is derived
+from the most recent verdict (see `psychology_engine.md` §10.7).
+
 ## 2. Identity rules (decision-sensitive)
 
 These three rules define the campaign's emotional stakes and must be settled
@@ -65,6 +76,8 @@ before Phase 1 code lands (see `docs/design_decisions.md` D6):
 1. **Capture ≠ death?** Options: (a) permadeath with recruitment of green
    replacements; (b) pieces return next match carrying `B_i` trauma; (c) hybrid
    — return, but a piece captured *N* times becomes unrecruitable.
+   Note `status` distinguishes `BENCHED` (reference: `T -= 30`) from `FIRED`
+   (SRS: `T := -100`); whether both exist is part of this decision.
 2. **Promotion:** a promoted pawn keeps `id`, `traits`, and all bonds, but its
    `role` changes → it now benefits from Queen-class prestige while remembering
    pawn-class solidarity. This is deliberately the most interesting narrative
@@ -77,7 +90,7 @@ before Phase 1 code lands (see `docs/design_decisions.md` D6):
 ```ts
 db.version(1).stores({
   pieceIdentities: 'id',
-  pieceStates:     'id, status',
+  pieceStates:     'id, status',   // dyadicAffinity + classPrestige stored inline
   rosters:         'id, campaignId',
   matches:         'id, campaignId, schemaVersion',
   campaigns:       'id',

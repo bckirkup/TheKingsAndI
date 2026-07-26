@@ -11,14 +11,15 @@ exists yet.**
 |---|---|
 | `docs/design_decisions.md` | Open decisions the owner must make. **Check before implementing anything.** |
 | `docs/architecture.md` | Target layering and move pipeline |
-| `docs/psychology_engine.md` | Math spec: utility, verdicts, affinity, firing decay |
+| `docs/psychology_engine.md` | Math spec restated + reconciliation issues (§10) |
+| `docs/spec/psychology-engine.reference.ts` | **Normative** equations, thresholds, coefficients |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
 | `docs/risks_and_open_questions.md` | Known hazards |
 | `docs/adr/` | Recorded decisions (immutable) |
-| `docs/spec/living-chess-srs.md` | Owner's original SRS (source of record) |
+| `docs/spec/living-chess-srs.md` | Owner's original SRS (requirements source of record) |
 
 ## Non-Negotiable Architecture Rules
 1. **Deterministic core, narrative skin.** No LLM output ever re-enters game
@@ -37,6 +38,9 @@ exists yet.**
 7. **Never modify tests to make them pass** — fix the implementation.
 8. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
+   This includes the model-reconciliation issues D19–D24: the reference spec's
+   dead-wired traits and unreachable mutiny gate are decisions, not bugs to
+   silently patch.
 
 ## Setup (once code lands; not yet applicable)
 ```bash

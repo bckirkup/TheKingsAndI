@@ -1,157 +1,248 @@
 # The Psychology Engine — Mathematical Specification
 
-_Planning document. Notation is reconstructed from the source SRS (whose
-formulas were embedded as images); every constant below is a **placeholder to
-be calibrated** by the headless harness (`docs/testing_strategy.md` §4)._
+**Source of record:** [`docs/spec/psychology-engine.reference.ts`](spec/psychology-engine.reference.ts),
+supplied by the owner. That file is normative for names, formulas, thresholds,
+and default coefficients. This document restates it, adds the invariants an
+implementation must hold, and flags the discrepancies and scale problems found
+while reconciling it (§10) — those are open decisions, not settled design.
 
 ---
 
 ## 1. Piece state
 
-Each piece `P_i` carries persistent state across matches:
-
 | Symbol | Field | Range | Notes |
 |---|---|---|---|
-| `id` | immutable UUID | — | survives capture, promotion, benching |
-| `X_i` | experience | `0..100` | grows with plies played and matches survived |
-| `T_i` | trust in leader | `-100..100` | drives the verdict ladder |
-| `M_i` | morale | `0..100` | fast-moving; `0` gates mutiny |
-| `B_i` | betrayal / grief | `0..100` | slow-decaying trauma accumulator |
-| `A_{i,j}` | dyadic affinity | `-100..100` | sparse map, per peer piece |
-| `C_{r,r'}` | class bias | `-100..100` | per-roster matrix over roles |
-| `Θ_i` | trait vector | see §2 | immutable per piece (rolled at creation) |
-| `η_i` | engagement factor | `0.2..1.0` | derived, not stored |
+| `id` | immutable id | — | survives capture, promotion, benching |
+| `role` | current role | `Pawn…King` | mutable via promotion |
+| `E_i` | experience | `1..100` | drives search depth |
+| `T_i` | trust in leader | `-100..100` | dominates utility — see §10.1 |
+| `M_i` | morale & courage | `0..100` | gates mutiny; **no update rule is defined** (§10.4) |
+| `B_i` | betrayal / disillusionment | `0..100` | **stored but unused** in the reference (§10.3) |
+| `A_{i,j}` | dyadic affinity | `-100..100` | per-peer map, asymmetric |
+| `C_{i,role}` | class prestige | `-100..100` | **per piece**, keyed by role — each piece carries its own prejudices |
+| `η_i` | engagement factor | `0.1..1.0` | `1.0` engaged, `0.2` quiet-quitting, `0.1` deserted |
+| `Θ_i` | trait vector | see §2 | immutable |
 
-`A_{i,j}` is **not** assumed symmetric: a Rook may hold a Pawn in contempt
-while the Pawn idolizes the Rook. Storage is a sparse adjacency list keyed by
-peer id; absent entries fall back to `C_{role(i),role(j)}`.
+`C` is *not* a roster-level matrix: a Rook's contempt for Pawns is that Rook's
+own attitude and evolves only from what that Rook witnesses.
 
 ## 2. Trait vector `Θ_i`
 
-Five scalars in `[0,1]`, rolled at piece creation and immutable thereafter
-(personality is stable; *state* changes, not character):
+Six weights in `[0,1]`, rolled at creation and immutable:
 
-| Trait | Meaning | Primary effect |
+| Trait | Meaning | Where it enters |
 |---|---|---|
-| `θ_courage` | resistance to fear of capture | discounts own capture risk |
-| `θ_ambition` | desire to capture high-value enemies | rewards material gain |
-| `θ_loyalty` | trust weight vs. self-preservation | scales `T_i` term |
-| `θ_empathy` | distress at peers being lost/fired | scales peer terms and firing decay |
-| `θ_prestige` | class-rank sensitivity | amplifies `C_{r,r'}` effects |
+| `w_honor` | value placed on heroic achievement and fair leadership | scales `ΔV_board` |
+| `w_courage` | resistance to fear of capture | discounts `P_captured` |
+| `w_ambition` | desire to engage high-value targets | scales `ΔV_capture` |
+| `w_loyalty` | trust vs. self-preservation | scales `T_i` |
+| `w_empathy` | sensitivity to peer safety and fair treatment | scales `Φ` and benching penalties |
+| `w_prestige` | sensitivity to rank and role status | **nowhere — declared but unused** (§10.2) |
 
-## 3. Insight allocation
+## 3. Search depth allocation
 
 ```
-η_i = clamp(0.2, 1.0, f_engagement(T_i, M_i, B_i))
-d_i = round( d_min + (d_max - d_min) · (X_i / 100) · η_i )
-d_min = 2, d_max = 16
+D_i = max(1, floor( D_min + η_i · (E_i / 100) · (D_max - D_min) ))
+D_min = 2,  D_max = 16,  η_i ∈ [0.1, 1.0],  E_i ∈ [1, 100]
 ```
 
-Quiet quitting is implemented purely as `η_i → 0.2`: the piece still obeys, but
-its advice degrades to shallow search plus bias noise.
+A veteran (`E=100`) at full engagement sees depth 16; the same veteran while
+quiet-quitting (`η=0.2`) sees depth 4; a rookie (`E=1`) sees depth 2.
+
+Quiet quitting is *only* `η_i → 0.2`. It is not a special case anywhere in the
+move pipeline.
 
 ## 4. Move utility
 
-For a proposed move `m` of piece `P_i`:
-
 ```
-U(P_i, m) =  w_board · ΔEval(m)                     // shared strategic value
-           + w_ambition · θ_ambition · ΔMaterial(m)
-           - w_risk · (1 - θ_courage) · ΔP_capture(i, m)
-           + w_loyalty · θ_loyalty · (T_i / 100)
-           - w_grief  · (B_i / 100)
-           + Φ(P_i, m)                              // inter-piece protection
+U(P_i, m) =  w_loyalty  · T_i
+           + w_honor    · ΔV_board(m)          // engine eval delta, -10..+10
+           + w_ambition · ΔV_capture(m)        // captured piece value, K = 0
+           - (1 - w_courage) · P_captured(m)   // 0..1
+           + Σ_{j ≠ i} Φ(P_i, P_j, m)
 ```
 
 with the **inter-piece protection term**
 
 ```
-Φ(P_i, m) = -w_peer · θ_empathy · Σ_{j ≠ i}  Â_{i,j} · ΔP_capture(j, m)
-
-Â_{i,j} = normalized affinity in [-1,1], = A_{i,j}/100 if present
-          else C_{role(i),role(j)}/100
+Φ(P_i, P_j, m) = w_empathy · ((A_{i,j} + C_{i,role(j)}) / 200) · ΔSafety_j(m)
 ```
 
-Sign semantics: exposing a *loved* peer (`Â > 0`) subtracts utility →
-protective refusal. Exposing a *despised* peer (`Â < 0`) adds utility →
-indifference or satisfaction. This is the mechanic that makes class contempt
-legible at the board level, so it must be surfaced in the UI, not just the math.
+`ΔSafety_j ∈ [-1, +1]`; positive = the move makes peer `j` safer. The
+relationship coefficient blends *personal* bond and *class* prejudice and lands
+in `[-1, +1]`, so:
 
-`ΔEval(m)` is the piece's *own* evaluation at depth `d_i` — a low-experience
-piece computes a different, worse `ΔEval` than a veteran looking at the same
-board. This is where variable insight enters the utility function rather than
-being a cosmetic advice-quality knob.
+- endangering a loved or respected peer subtracts utility → protective refusal;
+- endangering a despised peer *adds* utility → the piece is pleased.
 
-## 5. Verdict ladder
+Note `ΔV_board` is the **piece's own** evaluation at depth `D_i`, not the true
+engine evaluation. Variable insight therefore changes what a piece is willing to
+do, not merely the quality of its advice.
 
-Verdict is a function of `(T_i, M_i, U)`, evaluated top-down:
+## 5. Refusal threshold
 
-| Condition | Verdict | Mechanical effect |
+```
+Θ_refusal(T_i) = -50 + (100 - T_i) · 0.5
+```
+
+| `T_i` | `Θ_refusal` | Reading |
 |---|---|---|
-| `T_i > 50` and `U ≥ 0` | `ENTHUSIASTIC` | move executes; full insight shared; proactive advice |
-| `0 < T_i ≤ 50` | `COMPLIANT` | move executes; standard dialogue |
-| `-50 < T_i ≤ 0`, or `U` marginally `< 0` | `QUIET_QUIT` | move executes; `η_i → 0.2`; cynical line; advice degraded |
-| `-80 < T_i ≤ -50` and `U < τ_refuse` | `REFUSE` | move rejected; piece proposes an alternative |
-| `T_i ≤ -80` and `M_i = 0` | `MUTINY` | piece deserts (see §7) |
+| `+100` | `-50` | a loyal piece tolerates a move it dislikes |
+| `0` | `0` | neutral piece refuses anything net-negative |
+| `-100` | `+50` | a hostile piece refuses even good moves |
 
-`τ_refuse` is a calibrated threshold, not a hard `0`, so that a
-moderately-distrustful piece still executes a *slightly* bad move.
+Refusal is available at *every* trust level — a devoted piece will still refuse
+a catastrophic order. This is a meaningful improvement over a fixed
+trust-band ladder and should be preserved.
 
-**Open decision:** whether `REFUSE` costs the player the turn.
-See `docs/adr/0002-refusal-turn-cost.md`.
+## 6. Verdict state machine
 
-## 6. Witnessed events
-
-Emitted by the orchestrator after each ply and folded into psychology state:
-
-| Event | Dyadic | Class | Self |
-|---|---|---|---|
-| Peer `j` sacrificed itself protecting `i` | `A_{i,j} += 50` | `C_{role(i),role(j)} += 15` | `B_i += 10` |
-| Peer `j` captured while `i` was safe nearby | `A_{i,j} += 5` | `C += 2` | `B_i += 5·θ_empathy` |
-| Player protected `i` from a threat | — | — | `T_i += 15`, `M_i += 10` |
-| Player exposed `i` for no material gain | — | — | `T_i -= 20`, `B_i += 15` |
-| Player traded `i`'s safety for a winning line | — | — | `T_i ± f(θ_loyalty, outcome)` |
-| Match won | — | class solidarity `+5` | `T_i += 10`, `M_i += 20` |
-
-All updates clamp to range and pass through a **per-ply budget** so a single
-chaotic ply cannot swing a piece from loyal to mutinous; large narrative swings
-should require repeated behavior. (Calibration target: no more than ~25 trust
-points of movement per ply from all sources combined.)
-
-## 7. Firing / benching penalty
-
-Firing piece `P_k` from the persistent roster:
+Evaluated strictly in this order:
 
 ```
-T_k  := -100                            // the fired piece, if ever re-recruited
-∀ j ≠ k:  T_j -= (κ_fire · θ_empathy_j · (1 + Â_{j,k}))
+1. T_i ≤ -75 and M_i == 0        → DESERTION_MUTINY      (η = 0.1, D = 1)
+2. U < Θ_refusal(T_i)            → MORAL_REFUSAL         (η = 0.2)
+3. U < 0 or T_i ≤ 0              → QUIET_QUITTING        (η = 0.2)
+4. T_i > 50 and (P_captured > 0.5 or ΔV_board > 2.0)
+                                 → HEROIC_EXECUTION      (η = 1.0)
+5. otherwise                     → COMPLIANT_EXECUTION   (η = 1.0)
 ```
 
-with `κ_fire` calibrated so that a single firing is survivable but a purge is
-culturally catastrophic. This is the "commodity paradox" mechanic and is the
-central lesson of the exec-lab track; it must be *visible* in the debrief.
+Heroism is **contextual, not a trust band**: it requires a trusted piece *and* a
+moment worth being brave about (real personal danger, or a decisive line). A
+loyal piece making a quiet developing move is merely `COMPLIANT`.
 
-## 8. Desertion mechanics (chess-legality problem)
+The King must be exempt from rule 1, or matches end by psychology rather than by
+chess. The reference does not encode that exemption; the orchestrator must.
 
-A piece leaving the board is not expressible in standard chess. Three
-candidate implementations, decision pending in
-`docs/adr/0003-mutiny-board-representation.md`:
+## 7. Witnessed heroic sacrifice
 
-| Option | Board effect | Legality risk |
-|---|---|---|
-| A. **Removal** | piece disappears from FEN | safe (unless king); pure material loss |
-| B. **Frozen obstacle** | piece stays, permanently immovable, still blocks and still defends nothing | needs custom rules layer over chess.js; no FEN violation |
-| C. **Defection** | piece changes color | can create illegal positions (instant self-check, two-check states); highest engineering + balance risk |
+For each observer that witnessed the event:
 
-The King must be exempt from mutiny in all options, or the game ends by
-psychology rather than by chess. Recommendation: ship **B** (most dramatic,
-FEN-safe, reversible via re-recruitment), keep **C** as a post-MVP variant.
+```
+A_{obs, hero}          += 50   (clamped to ±100)
+C_{obs, role(hero)}    += 20   (clamped to ±100)
+```
 
-## 9. Invariants (assert in tests)
+A capture counts as a *sacrifice* only if it removed a threat to a peer or
+enabled a forced winning line — attribute via engine evaluation, never via
+proximity heuristics, or gratitude becomes nonsense and the narrative loses
+credibility.
 
-1. All psychological fields remain in range after every event fold.
-2. Psychology never mutates chess state directly; it only produces verdicts.
-3. Verdict is a pure function of `(T, M, U, thresholds)` — no RNG, no clock.
+## 8. Benching / roster reassignment
+
+```
+T_benched  += -30                                     (clamped to -100)
+∀ active peers j:  T_j += -10 · (1 + w_empathy_j) · S(P_j, P_benched)
+```
+
+`S ∈ [0,1]` is a **shared-bond scalar that the reference does not define** — its
+provenance is an open decision (§10.5). Terminology matters here: the reference
+models *benching to an inactive pool* (−30), which is materially gentler than the
+SRS's *firing* (`T := -100`). Whether both exist, and at what cost, is D6/D7 in
+`docs/design_decisions.md`.
+
+## 9. Audit metrics
+
+**Single-match leadership index**
+
+```
+LI = α·T_final + β·WinScore - γ·UnjustifiedTrauma - δ·QuietQuitTurns
+α = 0.4, β = 0.3, γ = 0.2, δ = 0.1
+```
+
+**Campaign culture drift vector `K_campaign`**
+
+```
+ΔT_longitudinal   = T_final_avg - T_initial_avg
+retentionRate     = max(0, (rosterSize - reassigned) / rosterSize)
+crossClassShift   = Σ ΔC across class pairs
+burnoutIndex      = min(100, quietQuitTurnsTotal · 2.5)
+loyaltyStability  = max(0, 100 - burnoutIndex + max(0, ΔT_longitudinal))
+```
+
+## 10. Reconciliation findings — open issues
+
+These came out of comparing the reference implementation against the SRS prose.
+Each is a decision, not a bug I should silently "fix".
+
+### 10.1 The loyalty term dominates utility by an order of magnitude
+`w_loyalty · T_i` spans `±100`. Every other term is small: `ΔV_board` is `±10`,
+`ΔV_capture` is `0..9`, the risk term is `0..1`, and `Φ` contributes at most
+`w_empathy` per peer. Meanwhile `Θ_refusal` moves only `±50`. Net effect:
+
+```
+T_i = +80, w_loyalty = 0.6  →  U ≈ 48 + (at most ~15 of everything else)
+                               Θ_refusal = -40   → refusal is unreachable
+T_i = -80, w_loyalty = 0.6  →  U ≈ -48 + …
+                               Θ_refusal = +40   → refusal is near-certain
+```
+
+The move being evaluated barely matters; trust alone decides the verdict, and
+`w_loyalty` becomes the only trait that does anything. Options:
+
+- **A.** Normalize trust: `w_loyalty · (T_i / 100)` and put all terms on a
+  comparable `[-10, +10]` scale (recommended).
+- **B.** Scale board terms up ~10× instead.
+- **C.** Keep as-is and treat trust as intentionally decisive — but then the
+  psychology is a mood filter, not a decision model, and the "protect my friend"
+  mechanic will essentially never fire.
+
+This is the single highest-impact calibration decision in the model.
+
+### 10.2 `w_prestige` is declared but never used
+The trait exists in `PieceTraits` and is documented as "sensitivity to rank and
+role status," but no formula reads it. Class attitude enters utility only through
+`C_{i,role(j)}` inside `Φ`, unweighted by the piece's own prestige sensitivity.
+Intended fix is probably:
+
+```
+Φ = w_empathy · ((A_{i,j} + w_prestige · C_{i,role(j)}) / 200) · ΔSafety_j
+```
+
+Confirm before implementing — this is exactly the dead-wiring the
+`ci-test-design` skill's sensitivity probes exist to catch.
+
+### 10.3 `B_i` (betrayal / disillusionment) is stored but never read
+No formula consumes it and no event writes it. Either it feeds utility (a
+grief penalty), or it gates mutiny alongside morale, or it is display-only.
+Decide, then add its sensitivity probe.
+
+### 10.4 Morale `M_i` has no update rule
+Mutiny requires `M_i == 0`, but nothing in the reference ever changes morale, so
+mutiny is unreachable as written. Morale needs: sources (losses, being exposed,
+peers dying, victories), a decay/recovery rule between matches, and a floor
+condition. Also, `M_i === 0` is an exact float comparison — use `M_i <= ε`.
+
+### 10.5 `S(P_j, P_benched)` is undefined
+The benching penalty needs a "shared bond" scalar in `[0,1]` that no other part
+of the spec produces. Natural derivation:
+`S = max(0, (A_{j,benched} + C_{j,role(benched)}) / 200)`, i.e. reuse the same
+relationship coefficient as `Φ`. Confirm rather than assume.
+
+### 10.6 `loyaltyStabilityScore` can exceed its documented range
+`max(0, 100 - burnout + max(0, ΔT))` reaches 200 when trust grew and burnout was
+zero, though the type documents `0..100`. Clamp, or widen the documented range.
+
+### 10.7 `engagementFactor` is stored on `PieceState` *and* recomputed per verdict
+Two sources of truth. Recommendation: treat it as derived-only (a function of the
+last verdict) and drop it from persisted state, or define exactly when the stored
+value is refreshed.
+
+### 10.8 Trust has no decay or inter-match recovery
+Nothing pulls `T_i` back toward baseline between matches, so campaigns are
+ratchets: 20 matches of accumulated slights with no path to repair. Consider a
+per-match decay toward a roster baseline, scaled by results.
+
+## 11. Invariants (assert in tests)
+
+1. All state fields clamp to range after every event fold.
+2. Psychology never mutates chess state; it only returns verdicts and deltas.
+3. Verdict is a pure function of `(state, traits, moveEval, thresholds)` — no
+   RNG, no clock, no I/O.
 4. Same `(roster, seed, intents)` → identical event log, byte for byte.
 5. No LLM output is ever read back into psychology state.
-6. Class bias `C` is per-roster (leadership culture), not global to the player.
+6. `A_{i,j} ≠ A_{j,i}` is permitted and must not be "normalized" away.
+7. Every coefficient in `ENGINE_CONFIG` has both a golden test and a
+   sensitivity probe.
+8. The King is never eligible for `DESERTION_MUTINY`.

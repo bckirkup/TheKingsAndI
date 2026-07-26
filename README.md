@@ -23,7 +23,8 @@ of decisions that must be made before implementation starts.
 |---|---|
 | [docs/design_decisions.md](docs/design_decisions.md) | **What the owner must decide, and when** |
 | [docs/architecture.md](docs/architecture.md) | How the system is layered; the move pipeline |
-| [docs/psychology_engine.md](docs/psychology_engine.md) | Utility, verdicts, affinity, class bias, firing decay |
+| [docs/psychology_engine.md](docs/psychology_engine.md) | Utility, verdicts, affinity, class prestige, benching decay |
+| [docs/spec/psychology-engine.reference.ts](docs/spec/psychology-engine.reference.ts) | Normative equations and default coefficients |
 | [docs/data_model.md](docs/data_model.md) | Entities, persistence, identity rules |
 | [docs/development_plan.md](docs/development_plan.md) | Milestones 0–8, exit criteria, estimates |
 | [docs/testing_strategy.md](docs/testing_strategy.md) | Golden + sensitivity tests, balance metrics |
@@ -32,16 +33,24 @@ of decisions that must be made before implementation starts.
 | [docs/adr/](docs/adr/) | Decisions already recorded |
 | [docs/spec/living-chess-srs.md](docs/spec/living-chess-srs.md) | The owner's original SRS |
 
+Note: `docs/psychology_engine.md` §10 lists six reconciliation findings against
+the reference implementation (trust dominates utility ~10×; `w_prestige` and
+`B_i` are dead-wired; morale has no update rule, so mutiny is currently
+unreachable). They are tracked as decisions D19–D24.
+
 ## Design in one paragraph
 
 Player utility and piece utility are orthogonal. Each piece `P_i` carries trust
 `T_i`, morale `M_i`, grief `B_i`, a per-peer affinity map `A_{i,j}`, an immutable
-trait vector, and inherits role-class prejudice `C_{r,r'}` toward pieces it does
-not know. For every proposed move the piece computes its own utility — using an
+six-trait vector, and its own class-prestige map `C_{i,role}` — its prejudices
+toward each rank, which only shift from what it personally witnesses. For every
+proposed move the piece computes its own utility — using an
 engine evaluation whose *depth is a function of its experience and engagement* —
 and answers with enthusiasm, compliance, quiet quitting, refusal, or mutiny.
 Everything that touches game state is deterministic and replayable; the LLM only
-writes the prose.
+writes the prose. Verdicts are `HEROIC_EXECUTION`, `COMPLIANT_EXECUTION`,
+`QUIET_QUITTING`, `MORAL_REFUSAL`, `DESERTION_MUTINY`, decided by comparing the
+piece's utility against `Θ_refusal(T_i) = -50 + (100 - T_i)·0.5`.
 
 ## Planned stack
 

@@ -3,7 +3,8 @@
 _Status: planning. No implementation exists yet. This document is the target
 architecture that `docs/development_plan.md` builds toward._
 
-Source of record for requirements: `docs/spec/living-chess-srs.md`.
+Sources of record: `docs/spec/living-chess-srs.md` (requirements) and
+`docs/spec/psychology-engine.reference.ts` (equations, thresholds, coefficients).
 
 ---
 
@@ -85,15 +86,16 @@ player selects move m for piece P_i
 1. chess/ legality check ................ illegal → reject, no state change
         │
         ▼
-2. chess/ feature extraction ............ Δ capture-prob for P_i and all peers,
+2. chess/ feature extraction ............ P_captured for P_i, ΔSafety_j for peers,
         │                                 material delta, king safety delta
         ▼
-3. engine/ insight request (async) ...... depth d_i = f(X_i, η_i); may be
+3. engine/ insight request (async) ...... depth D_i = f(E_i, η_i); may be
         │                                 served from cache; cancellable
         ▼
-4. psychology/ evaluate ................. U(P_i, m) → verdict ∈
-        │                                 {ENTHUSIASTIC, COMPLIANT,
-        │                                  QUIET_QUIT, REFUSE, MUTINY}
+4. psychology/ evaluate ................. U(P_i, m) vs Θ_refusal(T_i) → verdict ∈
+        │                                 {HEROIC_EXECUTION, COMPLIANT_EXECUTION,
+        │                                  QUIET_QUITTING, MORAL_REFUSAL,
+        │                                  DESERTION_MUTINY}
         ▼
 5. orchestration/ commit ................ apply move (or refusal outcome),
         │                                 emit MoveEvent + derived events
@@ -115,11 +117,11 @@ Match state is derived from an append-only event log:
 
 ```ts
 type MatchEvent =
-  | { t: 'MOVE'; ply: number; san: string; pieceId: PieceId; verdict: Verdict }
-  | { t: 'REFUSAL'; ply: number; pieceId: PieceId; reason: RefusalReason }
+  | { t: 'MOVE'; ply: number; san: string; pieceId: PieceId; verdict: MoveResponseVerdict }
+  | { t: 'REFUSAL'; ply: number; pieceId: PieceId; utility: number; threshold: number }
   | { t: 'CAPTURE'; ply: number; victim: PieceId; by: PieceId }
   | { t: 'SACRIFICE_WITNESSED'; ply: number; hero: PieceId; beneficiary: PieceId }
-  | { t: 'ROSTER_FIRE'; pieceId: PieceId }
+  | { t: 'ROSTER_BENCH'; pieceId: PieceId }
   | { t: 'PSYCH_DELTA'; ply: number; pieceId: PieceId; field: PsychField; delta: number }
   ...
 ```
@@ -138,8 +140,9 @@ Naive "one Stockfish worker per piece" is 16 WASM instances per side: memory
 blowup on mobile and pointless duplicated search. Instead:
 
 - A **pool of `min(navigator.hardwareConcurrency - 1, 4)` workers**.
-- One canonical search per position at `d_max`, retaining the multi-PV tree.
-- Per-piece insight is a **truncation** of that tree to `d_i` plus a
+- One canonical search per position at `D_max = 16`, retaining the multi-PV tree.
+- Per-piece insight is a **truncation** of that tree to
+  `D_i = max(1, floor(D_min + η_i · (E_i/100) · (D_max - D_min)))` plus a
   noise/bias model for low-experience or disengaged pieces (`η_i` throttling),
   so a novice piece is *wrong in a plausible way* rather than merely quieter.
 - Deterministic mode for tests/sim: fixed depth, single thread, no time-based

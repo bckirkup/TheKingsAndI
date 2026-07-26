@@ -8,6 +8,57 @@ Legend: **⛔ blocks Milestone 1–2 code** · **⚠ blocks Milestone 4+** · **
 
 ---
 
+## Model reconciliation (raised by `docs/spec/psychology-engine.reference.ts`)
+
+The owner's machine-readable equation set is now the normative spec. Reconciling
+it against the SRS prose surfaced six issues that must be decided before the
+psychology engine is implemented; full analysis in `docs/psychology_engine.md` §10.
+
+### D19 ⛔ The loyalty term dominates utility by ~10×
+`w_loyalty · T_i` spans ±100 while `ΔV_board` is ±10, `ΔV_capture` is 0..9, the
+risk term is 0..1, and `Φ` contributes at most `w_empathy` per peer. Since
+`Θ_refusal` only spans ±50, trust alone decides nearly every verdict and the
+move being evaluated barely matters — the "protect my friend" mechanic would
+practically never fire.
+
+- **A. Normalize trust** to `w_loyalty · (T_i / 100)` and put all terms on a
+  comparable `[-10, +10]` scale (recommended).
+- **B. Scale the board/peer terms up ~10×** instead.
+- **C. Accept trust as decisive** — then the model is a mood filter, not a
+  decision model; say so explicitly and drop the peer-protection marketing.
+
+### D20 ⛔ `w_prestige` is declared but never read
+No formula consumes it; class attitude enters only via `C_{i,role(j)}` inside
+`Φ`, unweighted. Likely intent:
+`Φ = w_empathy · ((A_{i,j} + w_prestige · C_{i,role(j)}) / 200) · ΔSafety_j`.
+Confirm, or the trait is cosmetic.
+
+### D21 ⛔ `B_i` (betrayal/disillusionment) is stored but never read
+Nothing writes it and nothing consumes it. Is it (a) a grief penalty in `U`,
+(b) a second mutiny gate alongside morale, or (c) display-only?
+
+### D22 ⛔ Morale `M_i` has no update rule — mutiny is currently unreachable
+Desertion requires `M_i == 0`, but no event changes morale. Need sources
+(losses, exposure, peer deaths, victories), an inter-match recovery rule, and
+`M_i <= ε` instead of exact float equality.
+
+### D23 ⚠ `S(P_j, P_benched)` shared bond is undefined
+The benching penalty needs a `[0,1]` closeness scalar nothing else produces.
+Recommend reusing the `Φ` relationship coefficient:
+`S = max(0, (A_{j,benched} + C_{j,role(benched)}) / 200)`.
+
+### D24 ⚠ Trust never decays or recovers between matches
+A 20-match campaign becomes a ratchet of accumulated slights with no path to
+repair, which contradicts the "transformational leader" archetype the campaign
+debrief is supposed to detect. Recommend a per-match decay toward a roster
+baseline, scaled by results.
+
+Minor, no decision needed unless you disagree: `loyaltyStabilityScore` can reach
+200 despite being documented `0..100`, and `engagementFactor` is both persisted
+and recomputed per verdict (recommend derived-only).
+
+---
+
 ## Product & audience
 
 ### D1 ⚠ Which audience track ships first?
@@ -34,6 +85,8 @@ derivative product built from the same event logs once the model is calibrated.
 ## Mechanics
 
 ### D2 ⛔ Does refusal cost the player a turn?
+_(The reference implementation defines when `MORAL_REFUSAL` fires, but not what
+it costs the player — that is still open.)_
 The SRS says "the player loses their turn or must select a compliant piece."
 These are wildly different games.
 
@@ -59,6 +112,8 @@ defection to the enemy (C).
 unlockable "high-stakes" variant. The King is never eligible for mutiny.
 
 ### D4 ⛔ Does variable insight change the *engine*, or only the *advice*?
+_(The reference resolves this in favor of B: `ΔV_board` in `U` is the piece's own
+depth-`D_i` evaluation. Confirming the consequence is still worthwhile.)_
 - **A. Advice-only** — all pieces move as commanded; experience only affects the
   quality of hints. Simple, keeps chess pure.
 - **B. Insight enters utility** (as specified) — a novice's flawed evaluation
@@ -83,7 +138,7 @@ Drives the entire campaign emotional arc, roster churn, and the meaning of
 sacrifice.
 
 - **A. Permadeath + green replacements** — sacrifice is heavy; replacements
-  arrive with `X_i ≈ 0`, so attrition costs strategic depth. Strongest theme fit.
+  arrive with `E_i ≈ 1`, so attrition costs strategic depth. Strongest theme fit.
 - **B. Pieces return with trauma** (`B_i` accumulates) — no roster spiral, more
   forgiving, keeps beloved characters alive across 20 matches.
 - **C. Hybrid** — return, but each capture permanently caps morale/experience,
@@ -205,7 +260,9 @@ public artifact; keep the other as the internal codename.
 ## Suggested decision order
 
 1. **D16** (licensing — cheapest now, most expensive later)
-2. **D2, D3, D4, D6, D7** (mechanics that define the data model) → unblocks Milestone 2
-3. **D9, D10, D11** (engine + LLM invariants) → unblocks Milestone 1
-4. **D1, D13** (audience + shell) → unblocks Milestone 4
-5. Everything else can be decided during Milestones 4–6.
+2. **D19–D22** (the model does not yet function as written: trust dominates,
+   two fields are dead-wired, and mutiny is unreachable) → unblocks Milestone 2
+3. **D2, D3, D4, D6, D7** (mechanics that define the data model) → unblocks Milestone 2
+4. **D9, D10, D11** (engine + LLM invariants) → unblocks Milestone 1
+5. **D1, D13** (audience + shell) → unblocks Milestone 4
+6. **D23, D24** during Milestone 3 calibration; everything else during Milestones 4–6.
