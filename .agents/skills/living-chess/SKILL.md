@@ -1,0 +1,64 @@
+---
+name: living-chess
+description: Orient in and work on the Living Chess (TheKingAndI) repository — a chess game whose pieces have persistent memory, trust, class prejudice, and the ability to refuse orders. Use for any task in this repo, including planning, architecture, implementation, and balance work.
+---
+
+# Living Chess (TheKingAndI)
+
+## What this project is
+
+Chess where the 16 pieces are agents with persistent identities across matches.
+They hold trust in the player (`T_i`), morale (`M_i`), grief (`B_i`), per-peer
+affinity (`A_{i,j}`), and role-class prejudice (`C_{r,r'}`). Player utility and
+piece utility are orthogonal, so orders can be met with enthusiasm, compliance,
+quiet quitting, refusal, or mutiny. A second product surface reuses the same
+telemetry as a leadership-development simulation.
+
+## Current status (check before assuming otherwise)
+
+Planning only. `docs/` holds the plan; there is no `src/`, no `package.json`.
+If a task asks to "fix" or "extend" a component, first verify it exists —
+Milestone 0 in `docs/development_plan.md` is the first code to land.
+
+## Orientation order
+
+1. `docs/design_decisions.md` — open questions; **do not silently resolve one in code**
+2. `docs/architecture.md` — layering + the move pipeline (the 7 steps matter)
+3. `docs/psychology_engine.md` — the math
+4. `docs/development_plan.md` — what milestone we are in and its exit criteria
+5. `docs/adr/` — what has already been settled and why
+
+## The invariants that matter most
+
+| Invariant | Why |
+|---|---|
+| LLM output never re-enters game state | offline play, determinism, testability (ADR 0001) |
+| All RNG seeded and explicit | replay, golden tests, bug reproduction |
+| Engine search is depth-limited only | wall-clock search makes every golden flaky |
+| Event log is the only source of truth | audits/debriefs are folds; no drifting counters |
+| `psychology/` is pure | it is the part that must be simulated a million times |
+| The King cannot mutiny | otherwise matches end by psychology, not by chess |
+
+## Common tasks
+
+**Adding a psychological mechanic:** update `docs/psychology_engine.md` first
+(the math is the spec), add the reducer + event type, add a golden test at the
+new mechanic's boundary values, add a sensitivity probe for its weight, then run
+the harness and report metric deltas in the PR.
+
+**Touching the chess layer:** remember chess.js has no piece identity. Any change
+to move application must preserve the square→`PieceId` map through captures,
+castling, promotion, and en passant. Run the identity fuzz test.
+
+**Touching narration:** narration is presentation-only. If your change makes
+prose affect a verdict, a delta, or a save file, it is wrong.
+
+**Balance work:** see the `balance-simulation` skill.
+
+## Anti-patterns specific to this repo
+
+- Implementing "one Stockfish worker per piece" literally (memory blowup — ADR 0005).
+- Adding a tuning weight without a sensitivity probe (dead wiring is invisible).
+- Storing computed audit aggregates as the only copy (they must be folds).
+- Deciding refusal-turn-cost or mutiny representation in code instead of an ADR.
+- Building UI polish before the harness says the model is non-degenerate.
