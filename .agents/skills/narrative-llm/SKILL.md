@@ -5,6 +5,15 @@ description: Implement or modify The King and I narration layer — the authored
 
 # Narration Layer (authored dialogue tree, no runtime LLM)
 
+## Testimony, not exposition (ADR 0018)
+
+The player never sees the arithmetic. A piece's line is generated from its
+**verdict**, not its computation, so it may rationalize — that is intended and
+in character. The hard constraint is that every line must still name a **cause**
+the player can act on ("you left me on that file"), because an unattributable
+trust loss is the top refund risk in `docs/trust_dynamics.md`. Rationalization
+is permitted; illegible cause is a bug.
+
 ## The two rules
 
 1. Narration is **presentation-only**. It is never parsed into numbers, never

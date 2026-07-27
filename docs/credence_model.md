@@ -7,7 +7,7 @@ _Owner intent:_
 > substitute judgement — doubt, a lack of faith, an unwillingness to do the
 > trust fall — as disloyalty (or a lack of loyalty).**
 
-Proposed resolution of D19 (option D). Governed by ADR 0015. Nothing here is
+Accepted resolution of D19 (option D). Governed by ADR 0015. Nothing here is
 implemented.
 
 ---
@@ -114,11 +114,10 @@ like people rather than a threshold table.
 
 ## 6. Open questions this creates
 
-- **D36:** How is `V_leader_implied(m)` computed? Candidates: a fixed optimism
-  prior ("he must see at least `+ε`"); an inference from the player's track
-  record (the piece learns how good the leader actually is — attractive, and it
-  makes reputation mechanical); or a fixed offset above `V_own`. This is the
-  central unknown of the model.
+- **D36:** How is `V_leader_implied(m)` computed? **Answered in substance by
+  ADR 0016**: it is a prior on the leader built from what obedience has
+  previously cost this piece, its class, and its friends — reputation becomes
+  mechanical rather than authored. What remains open is the functional form.
 - **D37:** The shape of `credence(T_i)`. Linear, logistic, or threshold-like?
   A logistic curve gives the "something snapped" experience of a relationship
   crossing a line, which is closer to how faith actually fails.

@@ -29,6 +29,8 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | — | Desertion mechanics | Expected-cost decision, not a threshold; **the cascade to a rout is intended** and must not be damped. | [0011](adr/0011-desertion-cascade.md) |
 | D31 | Whose evaluation? | **Its own.** A piece decides from its depth-`D_i` view, never the true one — so it can refuse a winning move in good faith. Also settles **D32**. | [0013](adr/0013-pieces-reason-from-own-knowledge.md) |
 | D30 | Every legal move refused | **The player may override any refusal**, at a large trust cost to the piece and a smaller one to every witness. The board is never stuck. | [0014](adr/0014-refusal-override.md) |
+| D19 | Scale of the trust term | **Trust is credence**, not an additive term: `V_perceived = (1−τ)·V_own + τ·V_leader_implied`. The unwillingness to substitute judgment *is* the model. | [0015](adr/0015-trust-as-credence.md) |
+| D34 | Does the player see the arithmetic? | **No — testimony only.** The piece offers a reason generated from its verdict, which may be a rationalization. Cause must be legible; numbers must not. | [0018](adr/0018-witness-judgment-and-testimony.md) |
 
 Downgraded to ordinary implementation wiring by owner ruling — to be settled in
 code review during Milestones 1–3, each with a sensitivity probe:
@@ -41,7 +43,10 @@ undefined).
 
 ## Open — blocking
 
-### D19 ⛔ The loyalty term dominates utility by ~10×
+*(D19 and D9 both now have rulings or proposals — see the Decided table and
+ADR 0017. The section below is retained for the reasoning that produced them.)*
+
+### D19 ✅ resolved as credence (ADR 0015) — original analysis
 `w_loyalty · T_i` spans ±100 while `ΔV_board` is ±10, `ΔV_capture` is 0..9, the
 risk term is 0..1, and `Φ` contributes at most `w_empathy` per peer. Since
 `Θ_refusal` spans only ±50, trust alone decides nearly every verdict.
@@ -73,8 +78,17 @@ lack of faith, an unwillingness to do the trust fall — as disloyalty."*
 credence curve (D37). Resolve during Milestone 3 calibration; blocks the
 psychology reducers.
 
-### D9 ⛔ Engine topology
-Owner: not decided yet, and now the **last blocking technical unknown**. Options
+### D9 ✅ resolved as shared search / private scoring (ADR 0017, proposed)
+**Ruling:** one pooled engine; search is shared, scoring is private. Leaves from
+a single search are re-scored under each piece's own weights, truncated to `D_i`,
+with only its attention lines extended; cached on
+`(position, D_i, evalProfile_i)`. ADR 0016 forced this: with sixteen distinct
+evaluation profiles, per-piece *search* is unaffordable but per-piece *scoring*
+is nearly free. Remaining sub-question is D41 (prune vs. deprioritize).
+
+Original analysis follows.
+
+Owner: not decided when written, and then the **last blocking technical unknown**. Options
 unchanged: worker-per-piece (16 WASM instances, unusable on mobile), pool + one
 deep search truncated per piece (recommended), or pool + separate shallow
 searches for the few pieces the player is consulting.
@@ -109,10 +123,28 @@ nobody presses twice. Calibrate against *override rate by leader archetype*:
 `tyrannical` should use it freely, `supportive` almost never.
 
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
+**Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
+recruitable, and the cost is set by the roster's verdict on his departure rather
+than by a constant: reinstating a piece the roster judged *brave* is the leader
+conceding error (a real trust gain); reinstating one judged a *coward* is
+favoritism (a loss, worst among the pieces who stayed). Because the bench (D7)
+makes recruitment a visible opportunity cost, who was *passed over* also
+registers. What remains open is the magnitude and whether the deserter himself
+returns with a trust penalty, a trust bonus, or a chip on his shoulder.
 
-### D34 ⚠ Does the player see the desertion arithmetic, or only the outcome?
-Legibility of *cause* is mandatory; exposing the numbers is optional and
-probably belongs to the tactical-blueprint and exec-lab skins only.
+### D34 ✅ Testimony only — resolved (ADR 0018)
+Owner: *"the player should not see the calculation, only whatever
+rationalization the piece offers."* Legibility of *cause* stays mandatory;
+legibility of arithmetic is now forbidden, including in the exec-lab skin.
+
+### D41–D44 ⚠ Follow-ons from the belief model (ADR 0016)
+**D41** does attention *prune* lines the piece does not appear in, or merely
+deprioritize them? Pruning is cheaper, more dramatic, and produces more refusals
+of winning moves. **D42** rumor propagation rate — fast enough to panic, slow
+enough to intervene. **D43** do egocentric evaluation weights drift with trauma,
+giving `B_i` a perceptual job as well as an affective one? **D44** can a piece
+believe the room about the position but not about the leader?
+See `docs/belief_model.md` §6.
 
 ### D25–D29 ⚠ Trust-loop follow-ons
 Which costly signals ship (D25), how long the trap runs before collapse (D26),
@@ -139,10 +171,10 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D19** — during Milestone 3 calibration, with the harness in hand.
-2. **D9** — before the engine layer is built; D5 (symmetric psychology) and
-   D31 (every piece needs its own view of the position) both make it more
-   expensive, so it is now the last blocking technical unknown.
-3. **D35** — with the harness, alongside D19.
-4. **D25–D27, D33, D34** — during Milestones 3–5.
+1. **D36–D37** — now the blocking pair: `V_leader_implied` and the credence
+   curve. ADR 0016 answers D36 *in substance* (memory as a prior on the leader);
+   what remains is its functional form.
+2. **D41** — before the engine layer is built; it changes the pool's contract.
+3. **D35, D42–D43** — with the harness, alongside credence tuning.
+4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D14, D17** — as UI and content work begins.

@@ -58,7 +58,7 @@ Consequences:
 │ chess/          chess.js wrapper: legality, FEN, SAN, threat maps,    │
 │                 capture-probability features consumed by psychology.  │
 ├───────────────────────────────────────────────────────────────────────┤
-│ engine/         stockfish.wasm worker pool + insight broker           │
+│ engine/         stockfish.wasm pool; shared search, private scoring   │
 │                 (per-piece depth budgets, cancellation, caching).     │
 ├───────────────────────────────────────────────────────────────────────┤
 │ narrative/      Template dialogue engine (deterministic) + optional   │
@@ -138,7 +138,7 @@ psychology reducer, the layering is wrong.
 The true evaluation is still computed — the audit shows it beside the piece's
 own — but it flows to `orchestration/` and the audit only, never into a verdict.
 
-If D19 resolves as credence (ADR 0015), this boundary carries one more thing:
+Under ADR 0015 this boundary carries one more thing:
 `engine/` must also supply `V_leader_implied(m)`, the value a piece *infers* the
 leader must see given that he ordered `m`. It is an inference, not the true
 score, so it stays on the psychology side of the wall — and the audit stops
