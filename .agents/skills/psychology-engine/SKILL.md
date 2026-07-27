@@ -15,8 +15,11 @@ harness, so it must stay pure, integer-clamped, and fast.
 equation set and is normative for names, formulas, thresholds, and defaults.
 `docs/psychology_engine.md` restates it and lists reconciliation issues in §10
 (trust-term dominance, `w_prestige` and `B_i` dead-wired, morale has no update
-rule). **D19 is open and blocking; D20–D23 are wiring to settle in review with a
-sensitivity probe each.** Never pass a `D_max` evaluation into a reducer — every
+rule). **D19 is open and blocking** — ADR 0015 proposes resolving it by making
+trust a credence weight rather than an additive term
+(`docs/credence_model.md`); until it is accepted, implement neither branch
+unilaterally. **D20–D23 are wiring to settle in review with a sensitivity probe
+each.** Never pass a `D_max` evaluation into a reducer — every
 piece decides from its own view (ADR 0013). Do not
 quietly "fix" them in code.
 

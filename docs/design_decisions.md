@@ -57,11 +57,21 @@ honestly attribute anything.
 
 - **A.** Normalize: `w_loyalty · (T_i / 100)`, all terms on a comparable
   `[-10, +10]` axis, then *tune* `w_loyalty` up until trust visibly dominates.
-  Recommended — same result, but chosen and measurable.
 - **B.** Scale the board and peer terms up ~10× instead.
 - **C.** Keep as-is and accept that only trust matters.
+- **D. Trust as credence — recommended** (ADR 0015, `docs/credence_model.md`).
+  Trust stops being an additive term and becomes the weight on the leader's
+  judgment: `V_perceived = (1−τ)·V_own + τ·V_leader_implied`, `τ ∈ [0,1]`. The
+  scale contest disappears, trust becomes *more* decisive rather than less, and
+  the "he was wrong / he was disloyal" ambiguity becomes structural instead of a
+  display problem.
 
-**Resolve during Milestone 3 calibration; blocks the psychology reducers.**
+Owner framing behind D: *"the unwillingness to substitute judgement — doubt, a
+lack of faith, an unwillingness to do the trust fall — as disloyalty."*
+
+**D is more implementation than A–C**: it needs `V_leader_implied` (D36) and a
+credence curve (D37). Resolve during Milestone 3 calibration; blocks the
+psychology reducers.
 
 ### D9 ⛔ Engine topology
 Owner: not decided yet, and now the **last blocking technical unknown**. Options
@@ -80,6 +90,17 @@ only viable option; what remains open is how the shallow view is *derived*
 ---
 
 ## Open — non-blocking
+
+### D36–D40 ⚠ Follow-ons if D19 resolves as credence (ADR 0015)
+**D36** how `V_leader_implied(m)` is computed — fixed optimism prior, inference
+from the player's track record (makes reputation mechanical), or a fixed offset
+above `V_own`; the central unknown. **D37** the shape of `credence(T_i)` —
+logistic gives the "something snapped" experience. **D38** whether `τ` is
+domain-specific (competence-trust vs. benevolence-trust — a piece may trust the
+leader's tactics but not his care for its safety). **D39** whether faith
+rewarded compounds faster than faith unrewarded decays. **D40** whether a
+residual affective loyalty term survives alongside `τ`.
+See `docs/credence_model.md` §6.
 
 ### D35 ⚠ How expensive is an override? (new, from ADR 0014)
 The sharpest single knob in the game. Too cheap and refusal is decorative — the

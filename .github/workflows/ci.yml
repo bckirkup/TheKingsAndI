@@ -22,6 +22,7 @@ jobs:
                    docs/architecture.md docs/development_plan.md \
                    docs/design_decisions.md docs/psychology_engine.md docs/data_model.md \
                    docs/trust_dynamics.md docs/desertion_model.md \
+                   docs/credence_model.md \
                    docs/testing_strategy.md docs/llm_integration.md \
                    docs/risks_and_open_questions.md docs/spec/living-chess-srs.md \
                    docs/spec/psychology-engine.reference.ts; do

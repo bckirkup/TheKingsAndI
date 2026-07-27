@@ -31,6 +31,7 @@ the mathematical specification, the development plan, and the decision register.
 | [docs/spec/psychology-engine.reference.ts](docs/spec/psychology-engine.reference.ts) | Normative equations and default coefficients |
 | [docs/trust_dynamics.md](docs/trust_dynamics.md) | Why a strong player loses early, and how the spiral is escaped |
 | [docs/desertion_model.md](docs/desertion_model.md) | Why a piece walks off, and why the rout is intended |
+| [docs/credence_model.md](docs/credence_model.md) | Trust as the willingness to substitute the leader's judgment for your own |
 | [docs/data_model.md](docs/data_model.md) | Entities, persistence, identity rules |
 | [docs/development_plan.md](docs/development_plan.md) | Milestones 0–8, exit criteria, estimates |
 | [docs/testing_strategy.md](docs/testing_strategy.md) | Golden + sensitivity tests, balance metrics |

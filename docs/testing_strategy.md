@@ -122,7 +122,13 @@ means the model has collapsed:
 17. **Omniscience leak:** a piece's decisions correlate with the `D_max`
     evaluation beyond what its own `D_i` view explains. Enforce structurally too
     — the true score must not be reachable from `psychology/` (ADR 0013).
-18. **Override degeneracy:** either `tyrannical` and `supportive` policies
+18. **Credence inertness** (only if ADR 0015 is accepted): tactical strength of
+    the leader correlates with win rate *equally* at high and low mean `τ`. The
+    whole claim of the model is that an untrusted commander's skill cannot reach
+    the board; if it reaches anyway, `τ` is decorative. The paired check: a
+    novice piece's effective play strength must differ materially between high
+    and low `τ`, since faith is worth most where verification is weakest.
+19. **Override degeneracy:** either `tyrannical` and `supportive` policies
     override at indistinguishable rates (the price is not felt), or overriding
     is never worth it under any policy (a trap button). Both mean D35 is
     mis-tuned (ADR 0014).
