@@ -15,7 +15,8 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
 | `docs/spec/psychology-engine.reference.ts` | **Normative** equations, thresholds, coefficients |
 | `docs/trust_dynamics.md` | The competence trap: outcome→trust loop, costly signals, intended spiral |
 | `docs/desertion_model.md` | Why a piece quits the board; the intended cascade |
-| `docs/credence_model.md` | Proposed D19 resolution: trust as the weight on the leader's judgment |
+| `docs/credence_model.md` | D19: trust as the weight on the leader's judgment |
+| `docs/belief_model.md` | How a piece imputes the position — perception, memory, rumor |
 | `LICENSING.md` | Dual-license terms and the Stockfish GPL constraint |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
@@ -47,13 +48,17 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    with cooldowns, caps, or morale floors (ADR 0011). Every piece decides from
    its own depth-`D_i` view and the true evaluation must never reach
    `psychology/` (ADR 0013). The player can always override a refusal, so no
-   position is ever unplayable (ADR 0014). There is no runtime LLM and no API
+   position is ever unplayable (ADR 0014). No piece is ever wrong about *where*
+   a piece stands — divergence is interpretive, never perceptual, and rumor
+   carries appraisals only, never board facts (ADR 0016). The player never sees
+   the arithmetic; a piece's stated reason may be a rationalization, but it must
+   always name a cause (ADR 0018). There is no runtime LLM and no API
    key (ADR 0004). Trust never decays toward a baseline on its own (ADR 0007).
 9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
-   The blocking ones are now **D19** (trust-term scale — a resolution is
-   *proposed* in ADR 0015 but not accepted; do not implement either branch
-   unilaterally) and **D9** (engine topology).
+   D19 and D9 are settled (ADR 0015, ADR 0017). The blocking ones are now
+   **D36** (functional form of `V_leader_implied`), **D37** (credence curve),
+   and **D41** (does attention prune or deprioritize?).
 
 ## Setup (once code lands; not yet applicable)
 ```bash

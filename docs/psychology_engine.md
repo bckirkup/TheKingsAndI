@@ -275,7 +275,13 @@ invariant is that no absorbing state exists for a player who changes policy.
 12. Every evaluation a piece uses is its own depth-`D_i` view. The true
     evaluation must never reach a psychology reducer (ADR 0013).
 13. The player can always force a move; no position is unplayable (ADR 0014).
-14. *If ADR 0015 is accepted:* trust never enters as an additive term. It is the
+14. *Under ADR 0015:* trust never enters as an additive term. It is the
     weight on the leader's judgment — `V_perceived = (1−τ)·V_own + τ·V_leader_implied`
     — so a refusal always requires both a bad-looking move and insufficient
     credence to bridge it (`docs/credence_model.md`).
+15. No piece is ever wrong about *where* a piece stands. Divergence is
+    interpretive — depth, egocentric evaluation, attention, memory, and rumor —
+    and rumor carries appraisals only, never board facts (ADR 0016).
+16. The player never sees the arithmetic. A piece's stated reason is generated
+    from its verdict and may be a rationalization, but it must always name a
+    cause (ADR 0018).

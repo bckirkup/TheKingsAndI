@@ -58,6 +58,8 @@ likely source of subtle, save-corrupting bugs in the entire project.
 | 2.3 | Verdict ladder + refusal/quiet-quit state machines. Refusal is free to re-plan (ADR 0002), so the commit step must handle a rejected intent with no state change beyond the psychology event |
 | 2.3c | Override path (ADR 0014): forced-move event, trust penalty to the piece, witness penalties, audit classification. This is what makes "every legal move refused" a non-case |
 | 2.3b | Desertion: the `U_desert` vs `U_stay` comparison, removal from the board, and **cascade re-evaluation of all remaining pieces after each departure** (`docs/desertion_model.md`, ADR 0011). King exempt |
+| 2.3d | Belief channels (ADR 0016): egocentric eval profiles, attention weighting, leader-prior memory feeding `V_leader_implied`, and the two-scalar rumor diffusion over the affinity graph. Rumor must never carry a board feature |
+| 2.3e | Witness appraisal of a desertion (ADR 0018): each witness scores the refused order at its own `D_j`; brave-vs-ran splits the affinity and trust updates. Store the refused order on the event, not new state |
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
 | 2.5b | Outcome→trust reducers and costly-signal detection per `docs/trust_dynamics.md` (ADR 0007) |

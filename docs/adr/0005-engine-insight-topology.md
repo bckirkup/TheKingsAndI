@@ -1,6 +1,8 @@
 # ADR 0005 — Engine determinism accepted; topology still open
 
-- **Status:** partially accepted — D10 accepted 2026-07-26; **D9 remains open**
+- **Status:** partially accepted — D10 accepted 2026-07-26; **D9 resolved by
+  ADR 0017** (shared search, private scoring). The topology discussion below is
+  superseded; the determinism half stands.
 - **Date:** 2026-07-26
 
 ## Context

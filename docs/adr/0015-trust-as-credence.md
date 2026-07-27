@@ -1,6 +1,6 @@
 # ADR 0015 — Trust is credence: the weight on the leader's judgment
 
-- **Status:** proposed (owner-stated framing, 2026-07-26); resolves **D19** as option D
+- **Status:** accepted (owner ruling, 2026-07-26); resolves **D19** as option D
 - **Date:** 2026-07-26
 - **Refines:** ADR 0013 (pieces reason from their own knowledge)
 
@@ -57,9 +57,9 @@ Detail and open sub-questions in `docs/credence_model.md`.
 - **Faith is worth most where verification is weakest**, so trusted novices play
   above their level and developing a piece partially substitutes for earning its
   trust — a genuine leadership trade-off rather than a mechanic.
-- **Cost:** the model needs `V_leader_implied(m)`, which does not exist yet
-  (D36), and a shape for `credence()` (D37). This is more implementation than
-  option A and is the reason the status is *proposed* rather than accepted.
+- **Cost:** the model needs `V_leader_implied(m)` (D36 — answered in substance
+  by ADR 0016: a prior on the leader built from what obedience has cost) and a
+  shape for `credence()` (D37). Both are now the blocking pair.
 - Fits ADR 0013 exactly: `V_own` is the piece's own depth-`D_i` view, and
   `V_leader_implied` is an *inference from the order*, not the true evaluation.
   The engine's true score still must never reach `psychology/`.
