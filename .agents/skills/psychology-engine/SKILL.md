@@ -19,7 +19,11 @@ rule). **D19 is decided (ADR 0015): trust is a credence weight, not an additive
 term** — `V_perceived = (1−τ)·V_own + τ·V_leader_implied`, see
 `docs/credence_model.md`. `V_own` and `V_leader_implied` come from the three
 belief channels in `docs/belief_model.md` (ADR 0016); rumor carries appraisals
-only, never board facts. The blocking sub-questions are now D36, D37, D41. **D20–D23 are wiring to settle in review with a sensitivity probe
+only, never board facts. Credence is **two channels** (ADR 0019): `τ_benev` moves fast up, cliffs down,
+and erodes only on *omissions*; `τ_abil` accretes slowly in `1/n` from
+vindicated orders and is what `V_leader_implied` is made of. Log them
+separately — if they correlate above ~0.9 the design's best lesson is gone. No
+open decision blocks this layer any more. **D20–D23 are wiring to settle in review with a sensitivity probe
 each.** Never pass a `D_max` evaluation into a reducer — every
 piece decides from its own view (ADR 0013). Do not
 quietly "fix" them in code.

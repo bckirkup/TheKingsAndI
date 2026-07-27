@@ -114,20 +114,19 @@ like people rather than a threshold table.
 
 ## 6. Open questions this creates
 
-- **D36:** How is `V_leader_implied(m)` computed? **Answered in substance by
-  ADR 0016**: it is a prior on the leader built from what obedience has
-  previously cost this piece, its class, and its friends — reputation becomes
-  mechanical rather than authored. What remains open is the functional form.
-- **D37:** The shape of `credence(T_i)`. Linear, logistic, or threshold-like?
-  A logistic curve gives the "something snapped" experience of a relationship
-  crossing a line, which is closer to how faith actually fails.
-- **D38:** Does `τ` differ by *domain*? A piece might trust the leader's tactics
-  while distrusting his care for its safety — which is exactly the distinction
-  between competence-trust and benevolence-trust in the leadership literature,
-  and probably the single richest extension available here.
-- **D39:** Does a piece update `τ` from *outcomes* of orders it took on faith?
-  Faith rewarded should compound faster than faith unrewarded decays — otherwise
-  the trust fall is never worth doing.
+- **D36: decided (ADR 0019).** `V_leader_implied` is the **ability** channel,
+  `τ_abil`, accreting Bayesian-style from vindicated and falsified orders — so a
+  reputation for competence builds slowly and is hard to move late in a campaign.
+  ADR 0016 supplies its raw material: what obedience has cost this piece, its
+  class, and its friends.
+- **D37–D39: decided (ADR 0019).** `τ` splits into `τ_benev` (fast up on being
+  heard, logistic cliff on betrayal, slow erosion under neglect) and `τ_abil`
+  (slow Bayesian accretion from vindicated orders). The curve question dissolves:
+  benevolence snaps, ability creeps.
+- **D38: decided — yes, `τ` is domain-specific** (ADR 0019), and the two channels
+  produce two refusals needing opposite responses: *"he's probably wrong"* (low
+  ability, unfixable by kindness) and *"he thinks I'm expendable"* (low
+  benevolence, unfixable by winning).
 - **D40:** Does this replace `w_loyalty · T_i` in `U` entirely, or sit alongside
   a smaller residual loyalty term for the purely affective part of trust?
 

@@ -63,6 +63,7 @@ likely source of subtle, save-corrupting bugs in the entire project.
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
 | 2.5b | Outcome→trust reducers and costly-signal detection per `docs/trust_dynamics.md` (ADR 0007) |
+| 2.5c | Two-channel credence (ADR 0019): `τ_benev` fast up / cliff down / slow erosion under neglect, `τ_abil` Bayesian in `1/n`, both separately logged. Neglect fires on *omissions* (never consulted, never defended, refusal steamrolled), never on elapsed time — ADR 0007 still forbids drift toward a baseline. The *heard* signal must gate on withdrawal having surrendered real value, or it can be farmed |
 | 2.6 | Replayer: `(rosterSnapshot, seed, intents) → identical event log` |
 
 Exit criteria: invariant suite from `psychology_engine.md` §11 passes; replay

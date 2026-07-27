@@ -179,9 +179,10 @@ people are. The information channel is exactly the one a real commander has:
 - **D45:** Does partial observability ever get built? Held open with the
   harness trigger in §3 — an expensive branch, justified only if perception-only
   divergence proves too weak, and knowingly paid for in ambiguity.
-- **D41:** Is attention a depth bonus on the piece's own lines, or a hard
-  pruning of lines it does not appear in? Pruning is more dramatic and more
-  likely to produce refusals of winning moves.
+- **D41: decided — attention prunes** (ADR 0019). A piece does not examine the
+  lines it does not appear in at all, so it can be *structurally incapable* of
+  seeing why a deep move is good. Owner: *"it mirrors real people who often
+  don't think n steps ahead."*
 - **D42:** Rumor propagation rate. Fast enough to cause panic cascades, slow
   enough that the player can intervene between plies.
 - **D43:** Are the egocentric evaluation weights a fixed trait, or do they drift

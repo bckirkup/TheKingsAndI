@@ -57,8 +57,9 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
 9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
    D19 and D9 are settled (ADR 0015, ADR 0017). The blocking ones are now
-   **D36** (functional form of `V_leader_implied`), **D37** (credence curve),
-   and **D41** (does attention prune or deprioritize?).
+   D36–D39 and D41 are settled by ADR 0019 as well, so **no open decision
+   blocks Milestone 1–2 code.** Remaining calibration decisions (D35, D40,
+   D42–D44) belong to the harness in Milestone 3.
 
 ## Setup (once code lands; not yet applicable)
 ```bash
