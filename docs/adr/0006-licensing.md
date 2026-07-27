@@ -1,23 +1,33 @@
-# ADR 0006 — Licensing posture
+# ADR 0006 — Licensing: dual-license AGPL-3.0 + commercial
 
-- **Status:** OPEN — decision required, time-sensitive (design_decisions.md D16)
+- **Status:** accepted — owner decision, 2026-07-26 (design_decisions.md D16)
 - **Date:** 2026-07-26
 
 ## Context
-The repository is AGPL-3.0. The executive-leadership-lab audience track implies
-possible commercial/white-label licensing, which corporate and government buyers
-frequently refuse under AGPL. Dual-licensing requires single-copyright ownership,
-so it must be decided before outside contributions arrive.
+The repository is AGPL-3.0. The leadership-training path implies possible
+commercial/white-label licensing, which corporate and government buyers
+frequently refuse under AGPL. Dual-licensing requires single-copyright
+ownership, so it had to be decided before outside contributions arrive.
 
-## Options
-- A. Keep AGPL-3.0
-- B. Dual-license: AGPL-3.0 + commercial (requires CLA or sole authorship)
-- C. Relicense to MIT/Apache-2.0
+## Decision
+**Dual-license.** AGPL-3.0 remains the open build; commercial terms are
+available separately from the copyright holder. Declared now, before any outside
+contribution exists. See [`LICENSING.md`](../../LICENSING.md).
 
-## Recommendation
-B if there is any chance of pursuing the exec-lab revenue path; otherwise A.
-Decide before the first external contribution.
+## Consequences
+- Every contribution needs an explicit relicensing grant. `CONTRIBUTING.md` now
+  carries those terms and requires `git commit -s`. Merging an outside PR without
+  it silently forecloses the commercial track.
+- **Dependency licenses become a gate.** Prefer MIT/BSD/Apache-2.0/ISC.
+- **Stockfish is GPL-3.0** and cannot be linked into a proprietary build. This is
+  the largest practical constraint on the commercial track and needs a plan
+  before it is real: keep the engine only in the AGPL build, isolate it as a
+  separate GPL component behind a process boundary, substitute a permissive
+  engine, or keep the commercial offering AGPL-compliant and sell content and
+  support instead. Discovering this late would be expensive.
+- ADR 0012 (Steam) makes the commercial build a real artifact rather than a
+  hypothetical, so the Stockfish question is on the Milestone 1 critical path.
 
-## Consequences (of B)
-Needs a CLA/DCO process and copyright hygiene in every PR; enables selling a
-non-copyleft license later without re-licensing negotiations.
+## Alternatives considered
+Keep AGPL only (forecloses the corporate path); relicense to MIT/Apache-2.0
+(maximum adoption, no leverage, and irreversible).

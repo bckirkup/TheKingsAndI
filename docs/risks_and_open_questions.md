@@ -5,24 +5,29 @@ _Ordered by expected damage. "Mitigation" names the milestone that retires it._
 ---
 
 ## R1 — The psychology model is not fun (design risk, highest)
-Refusal and mutiny may read as *the game cheating* rather than as drama. Every
+Refusal and desertion may read as *the game cheating* rather than as drama. Every
 comparable system (Close Combat's suppression, RimWorld's mental breaks) works
 because the player can see the cause coming and had agency to prevent it.
 
 **Mitigation:** M3 calibration + M4 playtest with an explicit "was that fair?"
-question; always expose the piece's reasoning and a pre-move risk preview
-(`design_decisions.md` D4). If a refusal ever surprises the player, that is a
-UX bug, not a feature.
+question; always expose the piece's reasoning and a pre-move risk preview. If a
+refusal ever surprises the player, that is a UX bug, not a feature. Under ADR
+0011 the cascade makes this sharper: a rout is fast and irreversible, so the
+player must be able to watch `P_loss` climb and read each departure's grievance
+*while it is happening*, not only in the post-match audit.
 
 ## R2 — Chess integrity collapses (design + math risk)
-Turn loss, frozen pieces, and defection all mutate the game tree. Refusals can
-create zugzwang-like states not covered by chess.js's draw/stalemate rules; a
-frozen piece changes stalemate detection ("all my legal moves are refused" — is
-that a loss, a draw, or a forced null move?).
+Largely retired by ADR 0002 and ADR 0003: refusal costs no turn, and desertion is
+a plain piece removal, so the position stays legal at every ply and no frozen
+board object exists for chess.js or Stockfish to misread.
 
-**Mitigation:** decide D2/D3 before M2; write explicit rules for
-"no compliant legal move exists" and cover it with goldens. Suspect this edge
-case will appear in real play more often than intuition suggests.
+What remains is the total-refusal case: "every legal move is refused" — a loss, a
+draw, or a forced move? Chess has no pass, and ADR 0002 removed the forfeit path.
+
+**Mitigation:** settle **D30** before M2 (the recommendation is a player override
+at a steep trust cost, which also makes the tyrant path playable), and cover it
+with goldens. This edge case will appear in real play more often than intuition
+suggests, especially during a cascade when few pieces remain.
 
 ## R3 — Piece identity tracking through chess.js (engineering risk)
 chess.js has no notion of piece identity. Castling, promotion, en passant, and
@@ -48,6 +53,8 @@ tuning (`docs/testing_strategy.md` §4), timebox M3 to one week, and accept
 "non-degenerate and directionally correct" over "elegant."
 
 ## R6 — Licensing forecloses the highest-revenue path (business risk)
+_Substantially retired by ADR 0006 (dual license, declared before any outside
+contribution). The residual is dependency hygiene and Stockfish — see R10._
 AGPL-3.0 plus outside contributors makes dual-licensing effectively impossible
 later. See D16. Cheap to fix today, expensive-to-impossible in six months.
 
@@ -58,12 +65,36 @@ audits, and campaign debriefs. That is a content pipeline, not a feature.
 **Mitigation:** one theme through M6; treat the rest as post-MVP content work
 with its own budget.
 
-## R8 — LLM prose quality and cost drift (product risk)
-Prose that is generic ("The Rook is displeased.") is worse than a good template.
-Model deprecation and pricing changes are outside our control.
+## R8 — Authored dialogue undercovers the situation space (product risk)
+With no runtime LLM (ADR 0004), variety is bounded by what was written. Generic
+lines ("The Rook is displeased.") or repetition within a single match reads as
+cheapness — and ADR 0002 makes refusal cheap to trigger, so those lines will be
+seen constantly.
 
-**Mitigation:** templates are the product baseline; LLM must beat them in a
-blind read-through before shipping. Keep the provider adapter one file thick.
+**Mitigation:** author composable *fragments* conditioned on rich state
+(grievance, target, repeat count) rather than whole sentences; CI coverage
+validator over the tree; blind read-through before shipping. The retained
+provider port makes the decision reversible if authoring cannot keep up.
+
+## R10 — Stockfish is GPL-3.0 (legal risk, commercial track)
+ADR 0006 commits to a dual license and ADR 0012 commits to Steam, but a GPL
+engine cannot be linked into a proprietary build. Discovering this during
+packaging would be expensive.
+
+**Mitigation:** decide before Steam work begins — keep the engine in the AGPL
+build only, isolate it behind a process boundary as a separate GPL component,
+substitute a permissive engine, or sell content and support around an
+AGPL-compliant binary. See `LICENSING.md`.
+
+## R11 — Steam refunds versus a designed first-campaign loss (commercial risk)
+ADR 0007 makes losing campaign 1 the intended experience, and ADR 0011 lets a
+roster rout in minutes. On Steam, a player can refund inside two hours — which
+is roughly the window in which the game is at its most punishing and least
+explained.
+
+**Mitigation:** the first hour must make *cause* legible even while the player
+is losing; consider making campaign 1 short enough that the turn begins before
+the refund window closes.
 
 ## R9 — Exec-lab claims outrun evidence (credibility risk)
 Selling this as leadership *training* implies validity. There is no evidence yet
@@ -86,7 +117,7 @@ refund-risk decision in the project and should be playtested before Milestone 7.
 
 ## Open questions (no owner yet)
 
-1. What happens when *every* legal move is refused? (see R2)
+1. What happens when *every* legal move is refused? (D30, see R2)
 2. Can the player negotiate — spend something (a promise, a protective escort,
    a share of victory) to buy compliance? A bargaining verb would make the trust
    economy two-sided instead of purely punitive.
@@ -96,8 +127,12 @@ refund-risk decision in the project and should be playtested before Milestone 7.
 4. Is there a draft/recruitment phase where the player chooses trait profiles,
    and does that reward min-maxing sycophants?
 5. Should the *King* have psychology (i.e. does the player's avatar judge them)?
+   Note the King is exempt from desertion (ADR 0003), but exemption from
+   *leaving* is not the same as exemption from *feeling*.
 6. Multiplayer: does the opponent see your roster's morale? Enormous
-   information-warfare surface if yes.
+   information-warfare surface if yes — and D5 makes both armies psychological,
+   so a leadership-vs-leadership match is now a coherent mode rather than a
+   thought experiment.
 7. ~~Does the campaign have a fail state?~~ **Yes** — ADR 0007 makes campaign
    collapse a supported terminal state, and the intended experience for a player
    who does not adapt. Open sub-question: how long phase 2 runs before it

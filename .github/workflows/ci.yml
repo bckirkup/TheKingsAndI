@@ -18,10 +18,13 @@ jobs:
         uses: pre-commit/action@v3.0.1
       - name: Required planning docs present
         run: |
-          for f in AGENTS.md README.md docs/architecture.md docs/development_plan.md \
+          for f in AGENTS.md README.md CONTRIBUTING.md LICENSING.md \
+                   docs/architecture.md docs/development_plan.md \
                    docs/design_decisions.md docs/psychology_engine.md docs/data_model.md \
+                   docs/trust_dynamics.md docs/desertion_model.md \
                    docs/testing_strategy.md docs/llm_integration.md \
-                   docs/risks_and_open_questions.md docs/spec/living-chess-srs.md; do
+                   docs/risks_and_open_questions.md docs/spec/living-chess-srs.md \
+                   docs/spec/psychology-engine.reference.ts; do
             test -f "$f" || { echo "missing $f"; exit 1; }
           done
       - name: Skills have frontmatter

@@ -1,6 +1,6 @@
 ---
 name: balance-simulation
-description: Run and interpret the Living Chess headless self-play harness to calibrate psychology weights and detect degenerate balance. Use for any balance, tuning, or emergent-behavior question in TheKingAndI.
+description: Run and interpret The King and I headless self-play harness to calibrate psychology weights and detect degenerate balance. Use for any balance, tuning, or emergent-behavior question in TheKingAndI.
 ---
 
 # Balance Simulation & Calibration
@@ -23,7 +23,8 @@ or the model is not responding to leadership behavior at all.
 
 ## Run configuration rules
 
-- Narration provider = templates (LLM off). Never spend API calls in the harness.
+- Narration is an authored tree with no model call anywhere (ADR 0004), so the
+  harness needs no "LLM off" switch and costs nothing to run.
 - Engine in deterministic mode: fixed depth, single thread, fixed hash.
 - One seed per match, derived from a campaign seed; record both in the output so
   any interesting match can be replayed exactly.
@@ -32,15 +33,19 @@ or the model is not responding to leadership behavior at all.
 
 ## Metrics to collect
 
-refusal rate · quiet-quit ply share · mutiny incidence per campaign · trust
+refusal rate · **refused-good-move rate** · quiet-quit ply share · desertion
+incidence per campaign · cascade length · trust
 trajectory (mean/variance, per role class) · class-bias drift · roster turnover
 and its win-rate cost · win rate vs. plain-chess control at matched engine
 strength · archetype classification distribution.
 
 ## Degeneracy detectors (fail the build)
 
-1. Mutiny rate ≈ 0 for `tyrannical` → no consequences.
-2. Mutiny rate > 80% for `supportive` → noise dominates signal.
+1. Desertion rate ≈ 0 for `tyrannical` → no consequences. A tyrant whose roster
+   never routs is a bug, not a balanced game (ADR 0011).
+2. Desertion rate > 80% for `supportive` → noise dominates signal.
+2b. Refused-good-move rate ≈ 0 → refusal is toothless, and under ADR 0002 +
+   ADR 0008 it is the only mid-match lever the psychology has.
 3. Refusal rate ≈ 0 or ≈ 1 across all styles → thresholds mis-scaled.
 4. Trust monotonic regardless of play → something is dead-wired.
 5. Class-bias variance ≈ 0 after 20 matches → relationship layer inert.
@@ -64,7 +69,9 @@ central tension is absent and no amount of prose will hide it.
 
 ## Interpreting results
 
-- Look at *distributions*, not means. A model with the right mean mutiny rate but
+- Never "fix" a cascade with damping — see ADR 0011. If a rout looks wrong,
+  the bug is in `λ_i` scaling or in legibility, not in the cascade.
+- Look at *distributions*, not means. A model with the right mean desertion rate but
   bimodal outcomes plays as random cruelty.
 - Always ask which ply the narrative turning point landed on. If turning points
   cluster at ply 1–3, pieces are judging the player before the player has done

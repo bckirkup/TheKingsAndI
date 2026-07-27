@@ -1,18 +1,20 @@
 ---
 name: living-chess
-description: Orient in and work on the Living Chess (TheKingAndI) repository — a chess game whose pieces have persistent memory, trust, class prejudice, and the ability to refuse orders. Use for any task in this repo, including planning, architecture, implementation, and balance work.
+description: Orient in and work on The King and I (TheKingAndI) repository — a chess game whose pieces have persistent memory, trust, class prejudice, and the ability to refuse orders or walk off the board. Use for any task in this repo, including planning, architecture, implementation, and balance work.
 ---
 
-# Living Chess (TheKingAndI)
+# The King and I (TheKingAndI)
+
+_"Living Chess" is the internal codename only (ADR 0010)._
 
 ## What this project is
 
-Chess where the 16 pieces are agents with persistent identities across matches.
-They hold trust in the player (`T_i`), morale (`M_i`), grief (`B_i`), per-peer
-affinity (`A_{i,j}`), and role-class prejudice (`C_{r,r'}`). Player utility and
-piece utility are orthogonal, so orders can be met with enthusiasm, compliance,
-quiet quitting, refusal, or mutiny. A second product surface reuses the same
-telemetry as a leadership-development simulation.
+Chess where the pieces are agents with persistent identities across matches.
+They hold trust in the player (`T_i`), morale (`M_i`), capture trauma (`B_i`),
+per-peer affinity (`A_{i,j}`), and role-class prejudice (`C_{r,r'}`). Player
+utility and piece utility are orthogonal, so orders can be met with enthusiasm,
+compliance, quiet quitting, refusal, or desertion. A second product surface
+reuses the same telemetry as a leadership-development simulation.
 
 ## Current status (check before assuming otherwise)
 
@@ -22,7 +24,7 @@ Milestone 0 in `docs/development_plan.md` is the first code to land.
 
 ## Orientation order
 
-1. `docs/design_decisions.md` — open questions; **do not silently resolve one in code**
+1. `docs/design_decisions.md` — the decision register; **do not silently resolve an open one in code**. Blocking: D19, D31, D9
 2. `docs/architecture.md` — layering + the move pipeline (the 7 steps matter)
 3. `docs/psychology_engine.md` — the math
 4. `docs/development_plan.md` — what milestone we are in and its exit criteria
@@ -37,7 +39,12 @@ Milestone 0 in `docs/development_plan.md` is the first code to land.
 | Engine search is depth-limited only | wall-clock search makes every golden flaky |
 | Event log is the only source of truth | audits/debriefs are folds; no drifting counters |
 | `psychology/` is pure | it is the part that must be simulated a million times |
-| The King cannot mutiny | otherwise matches end by psychology, not by chess |
+| The King cannot desert | otherwise matches end by psychology, not by chess |
+| A commanded move is always the move played | insight is advice only (ADR 0008) |
+| Refusal never costs a turn | free re-plan (ADR 0002); the cost is losing the option |
+| Pieces desert, never defect | defection is not expressible in legal chess (ADR 0003) |
+| The desertion cascade is never damped | a rout is a designed outcome (ADR 0011) |
+| No runtime LLM, no API key | personality is an authored tree (ADR 0004) |
 
 ## Common tasks
 
@@ -60,5 +67,8 @@ prose affect a verdict, a delta, or a save file, it is wrong.
 - Implementing "one Stockfish worker per piece" literally (memory blowup — ADR 0005).
 - Adding a tuning weight without a sensitivity probe (dead wiring is invisible).
 - Storing computed audit aggregates as the only copy (they must be folds).
-- Deciding refusal-turn-cost or mutiny representation in code instead of an ADR.
+- Adding cooldowns, caps, or morale floors to "fix" a desertion cascade (ADR 0011).
+- Making a piece play a move other than the one commanded (ADR 0008).
+- Introducing a runtime model call or an API key (ADR 0004).
+- Adding a GPL/AGPL-only dependency without flagging it (`LICENSING.md`).
 - Building UI polish before the harness says the model is non-degenerate.

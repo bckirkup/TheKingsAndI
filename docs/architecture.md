@@ -1,4 +1,4 @@
-# Living Chess — System Architecture
+# The King and I — System Architecture
 
 _Status: planning. No implementation exists yet. This document is the target
 architecture that `docs/development_plan.md` builds toward._
@@ -10,11 +10,12 @@ Sources of record: `docs/spec/living-chess-srs.md` (requirements) and
 
 ## 1. Architectural thesis
 
-Living Chess is **a deterministic simulation with a cosmetic narrative skin**.
+The King and I is **a deterministic simulation with a cosmetic narrative skin**.
 
 Everything that affects game state — legality, trust, affinity, refusal,
-mutiny, engine depth allocation — is computed by pure, seeded, testable
-functions. The LLM layer only *renders* that state as prose. This split is the
+desertion, engine depth allocation — is computed by pure, seeded, testable
+functions. The narration layer only *renders* that state as prose, from an
+authored decision tree with no model call at runtime (ADR 0004). This split is the
 single most important architectural constraint in the project:
 
 ```
@@ -90,7 +91,9 @@ player selects move m for piece P_i
         │                                 material delta, king safety delta
         ▼
 3. engine/ insight request (async) ...... depth D_i = f(E_i, η_i); may be
-        │                                 served from cache; cancellable
+        │                                 served from cache; cancellable.
+        │                                 ADVICE ONLY (ADR 0008): this never
+        │                                 substitutes a different move.
         ▼
 4. psychology/ evaluate ................. U(P_i, m) vs Θ_refusal(T_i) → verdict ∈
         │                                 {HEROIC_EXECUTION, COMPLIANT_EXECUTION,
@@ -103,13 +106,24 @@ player selects move m for piece P_i
 6. psychology/ witnessed-event pass ..... captures/sacrifices seen by peers →
         │                                 A_{i,j}, C_{r,r'}, T_i, B_i updates
         ▼
-7. narrative/ render (fire-and-forget) .. template line now; LLM rewrite when
-                                          it arrives (or never)
+7. narrative/ render ..................... authored dialogue-tree lookup;
+                                          synchronous, deterministic, no network
 ```
 
-Step 7 is intentionally outside the transaction. Steps 1–6 are synchronous and
-pure given `(state, move, insight, seed)`; that tuple is what the replay log
-stores, which is what makes matches reproducible.
+Steps 1–6 are synchronous and pure given `(state, move, insight, seed)`; that
+tuple is what the replay log stores, which is what makes matches reproducible.
+Step 7 reads that state and cannot write to it.
+
+Two accepted decisions change what step 5 can do. A `MORAL_REFUSAL` commits no
+move and costs no turn — the player simply issues another intent (ADR 0002). A
+`DESERTION_MUTINY` removes the piece from the board for the remainder of the
+match and never changes its color (ADR 0003); because each departure raises
+`P_loss` for everyone left, step 6 must re-evaluate desertion for all remaining
+pieces, which is how a cascade propagates within a single ply (ADR 0011).
+
+Both armies may run this pipeline: opponent psychology is symmetric and either
+side may be human- or AI-led (D5). Build the pipeline side-agnostic from the
+start; retrofitting a hardcoded "player is White" assumption is expensive.
 
 ## 4. Event sourcing and replay
 
@@ -160,12 +174,17 @@ default theme, a default narration persona, and which overlays start visible.
 
 ## 7. Deployment topology
 
-- **Phase 1 (MVP):** static site + service worker. IndexedDB only. Zero
-  backend, zero per-user cost. LLM optional via user-supplied key.
-- **Phase 2:** signed roster export/import (Ed25519 over a canonical JSON
+- **Phase 1 (MVP):** static web build. IndexedDB only. Zero backend, zero
+  per-user cost, no API key of any kind (ADR 0004). The lightest possible
+  distribution, chosen so the psychology can be validated by strangers from a
+  link (ADR 0012).
+- **Phase 2:** desktop shell via Tauri for Steam. Same web build plus a native
+  wrapper; nothing may depend on browser-only APIs beyond IndexedDB and Web
+  Workers, or this stops being a packaging step.
+- **Phase 3:** signed roster export/import (Ed25519 over a canonical JSON
   encoding) for asynchronous friend challenges; still no server.
-- **Phase 3:** thin backend (ladder, matchmaking, LLM key proxy, telemetry for
-  the exec-lab product) introduced only when metrics justify it.
+- **Phase 4:** thin backend (ladder, matchmaking, exec-lab telemetry) only when
+  metrics justify it.
 
-An LLM proxy is the *first* thing that forces a backend if we ship a shared
-API key — see `docs/adr/0004-llm-key-strategy.md`.
+Note the engine memory budget is set by the *web* target, and D5's symmetric
+opponent psychology roughly doubles engine work — both bear on D9.

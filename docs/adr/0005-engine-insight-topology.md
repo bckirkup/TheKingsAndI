@@ -1,22 +1,32 @@
-# ADR 0005 — Engine insight topology
+# ADR 0005 — Engine determinism accepted; topology still open
 
-- **Status:** proposed (recommended; see design_decisions.md D9, D10)
+- **Status:** partially accepted — D10 accepted 2026-07-26; **D9 remains open**
 - **Date:** 2026-07-26
 
 ## Context
 A literal "each piece is its own Stockfish evaluator" implementation means up to
-16 WASM instances per side: memory blowup on mobile plus largely duplicated
-search of the same position.
+16 WASM instances per side: memory blowup plus largely duplicated search of the
+same position. Separately, time-based search would make every golden test flaky
+and every replay non-reproducible.
 
-## Decision (proposed)
-A worker pool of `min(hardwareConcurrency - 1, 4)`. One canonical multi-PV search
-per position at `d_max`; per-piece insight is a truncation of that tree to `d_i`
-plus a bias/noise model for low-experience or disengaged pieces. Optionally run
-genuinely separate shallow searches for the few pieces the player is actively
-consulting. Search is depth-limited only (`go depth N`), single-threaded, fixed
-hash, pinned stockfish.wasm version, and `deterministic` is recorded per match.
+## Decision — determinism (D10, accepted)
+Depth-limited search only: `go depth N`, single thread, fixed hash, pinned
+stockfish.wasm version, with `deterministic` recorded in every `MatchRecord`.
+No time-based search, ever.
+
+## Still open — topology (D9)
+The owner has not ruled. The recommendation stands: a worker pool of
+`min(hardwareConcurrency - 1, 4)`, one canonical multi-PV search per position at
+`D_max`, with per-piece insight as a truncation of that tree to `D_i` plus a
+bias/noise model — and optionally genuine shallow searches for the few pieces the
+player is actively consulting.
+
+Two later decisions raise the stakes: ADR 0012 sets the memory budget from the
+*web* build, and D5 (symmetric opponent psychology) roughly doubles engine work.
+Both argue against the per-piece reading.
 
 ## Consequences
-Bounded memory; reproducible goldens and replays; "novice pieces are wrong in a
-plausible way" becomes an explicit model we must design rather than an emergent
-property of shallow search.
+Reproducible goldens and replays are guaranteed by the accepted half. "Novice
+pieces are wrong in a plausible way" becomes an explicit model to design rather
+than an emergent property of shallow search — and under ADR 0008 that wrongness
+surfaces as advice and as willingness to obey, never as a substituted move.

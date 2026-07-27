@@ -15,7 +15,7 @@ Nothing here is implemented; it is the target model.
 ## 1. The loop the spec is missing
 
 The reference spec has **no** outcome→trust edge. Trust gates behavior (depth,
-refusal, mutiny) but nothing writes it back from match results, so the loop
+refusal, desertion) but nothing writes it back from match results, so the loop
 cannot occur:
 
 ```
@@ -37,7 +37,7 @@ much of that ceiling they are permitted to use.
 
 This system is deliberately **positive feedback with no automatic damping**. A
 player who keeps playing pure chess should watch a roster deteriorate to
-refusal, mutiny, and loss, campaign after campaign, and *should not be rescued
+refusal, desertion, and loss, campaign after campaign, and *should not be rescued
 by a decay term*. Auto-forgiveness would delete the lesson: it would teach that
 mistreatment costs nothing if you wait.
 
@@ -87,7 +87,7 @@ The insight takes multiple games to arrive, so the unit of the arc is the
 |---|---|---|
 | **1. Audition** | low `T`, low `E`, shallow `D_i` | "I'm playing 400 points below my strength and I don't know why." |
 | **2. The trap** | losses compound; refusals appear | "I keep finding the right move and being told no." |
-| **3. Collapse** | mutiny, roster attrition, campaign lost | The intended failure. Losing campaign 1 is a legitimate, non-buggy outcome. |
+| **3. Collapse** | desertion cascade, roster attrition, campaign lost | The intended failure. Losing campaign 1 is a legitimate, non-buggy outcome, and the rout that ends it is designed (ADR 0011). |
 | **4. Insight** | new campaign, changed policy | "This is not exactly chess." The product's actual moment. |
 | **5. Command** | high `T`, high `E`, `D_i → 16` | Full tactical strength *plus* pieces that volunteer. |
 | **6. Relapse** | one betrayal, one firing | The asymmetry never switches off. |
@@ -120,7 +120,7 @@ criteria for this whole subsystem:
 
 | Assertion | Meaning |
 |---|---|
-| `pure_tactician` spirals to mutiny in the large majority of campaigns | **required**; if it recovers, the lesson is absent |
+| `pure_tactician` spirals to desertion and rout in the large majority of campaigns | **required**; if it recovers, the lesson is absent |
 | `pure_tactician` win rate declines monotonically across a campaign | the loop is live |
 | `redeemer` measurably recovers within ~1–2 campaigns of switching | the spiral is escapable *by insight* |
 | `redeemer` does **not** recover immediately | the asymmetry holds |

@@ -1,80 +1,104 @@
-# Narration & LLM Integration
+# Narration — authored personality, no runtime LLM
 
-_Planning document. Invariant: narration is presentation-only (`design_decisions.md`
-D11). No LLM output ever re-enters game state._
+_Decided: **D11 personality only**, distilled where possible from a large model
+into a decision tree; **D12 simplest possible approach first** (ADR 0004).
+The shipped game makes no model calls, holds no API key, and needs no network._
 
 ---
 
 ## 1. Provider port
 
+The port survives, because a BYO-key provider may be added later. What changes
+is that the shipped configuration has exactly one implementation.
+
 ```ts
 interface NarrationProvider {
-  pieceLine(ctx: PieceLineContext): Promise<string>;
-  narratorIntro(ctx: MatchIntroContext): Promise<string>;
-  matchAudit(ctx: MatchTelemetry): Promise<AuditProse>;
-  campaignDebrief(ctx: CampaignTelemetry): Promise<DebriefProse>;
+  pieceLine(ctx: PieceLineContext): string;         // sync — no network
+  narratorIntro(ctx: MatchIntroContext): string;
+  matchAudit(ctx: MatchTelemetry): AuditProse;
+  campaignDebrief(ctx: CampaignTelemetry): DebriefProse;
 }
 ```
 
-Two implementations:
+- `AuthoredProvider` — **the only shipped implementation.** A deterministic
+  decision tree over `(verdict, event, persona, trustBand, affinityBand,
+  grievanceKind, repeatCount)` with a seeded pick among leaf variants. Same
+  match, same seed, same dialogue, byte for byte.
+- `LlmProvider` — not shipped. Kept as a port so the decision is reversible
+  without touching the core. If it ever ships, it decorates `AuthoredProvider`
+  and falls back to it silently.
 
-- `TemplateProvider` — deterministic, offline, always available, and the
-  **default**. Selection is a pure function of
-  `(verdict, event, persona, trustBand, affinityBand)` plus a seeded pick among
-  variants, so the same match replays with the same dialogue.
-- `LlmProvider` — wraps a provider-agnostic HTTP adapter (Gemini 2.5 Flash or
-  Claude Haiku; structured-JSON mode required). Wraps `TemplateProvider` and
-  falls back to it on timeout, invalid schema, or refusal.
+Note the signatures are **synchronous**. There is no await, no loading state, no
+"the model is thinking," and no way for narration to desynchronize from state.
 
-The UI renders the template line immediately and swaps in LLM prose if it
-arrives within the budget. The player never waits on the network to move.
+## 2. Distillation is a build step, not a runtime
 
-## 2. Context contracts
+A large model is an *authoring tool*, used offline:
 
-Prompt inputs are **projections of the event log**, assembled by a dedicated
-`narrative/context` module — never raw internal state. This keeps the prompt
-surface stable when psychology internals change, and keeps secrets/derived
-values (e.g. the engine's true evaluation) out of prose the player shouldn't see.
+```
+authoring corpus  ──► LLM (offline, developer machine)  ──► reviewed lines
+       │                                                        │
+       │  situation matrix: verdict × grievance × persona ×      ▼
+       │  trust band × relationship × repeat count        dialogue-tree JSON
+       │                                                        │
+       └──────────── committed to the repo ◄────────────────────┘
+```
 
-Per-call context budgets (hard caps, enforced by the assembler):
+Rules:
 
-| Call | Cap |
-|---|---|
-| `pieceLine` | ≤ 400 tokens in, ≤ 60 out |
-| `narratorIntro` | ≤ 700 in, ≤ 150 out |
-| `matchAudit` | ≤ 1,500 in, ≤ 500 out |
-| `campaignDebrief` | ≤ 3,000 in, ≤ 900 out |
+1. Generated lines are **reviewed and committed as data**, exactly like art
+   assets. The tree is in version control; its generation script is too.
+2. The tree is a build input, not a network dependency. CI validates coverage —
+   every reachable situation has at least one line, and no leaf is empty.
+3. Regeneration is a deliberate, reviewable diff. Nobody ships prose nobody read.
 
-Schemas follow the SRS §6.2–6.5 examples; each has a Zod validator, and
-validation failure means fallback, never a crash and never a retry storm.
+### Coverage is the product risk
+The interesting situations are combinatorial: which grievance, about which peer,
+for the how-manyth time, at what trust band. Undercover it and pieces repeat
+themselves within one match, which reads as cheapness. The mitigation is to
+condition leaves on **rich state** and to author *fragments* that compose
+(grievance + target + intensity) rather than whole sentences.
 
-## 3. Cost model (why templates are the default)
+Priority order for authoring, by narrative weight:
 
-Assume ~40 plies/match and a line for every ply plus intro and audit:
+1. Desertion — the irreversible act; every departure needs a specific reason.
+2. Refusal — the most frequent player-facing verdict (ADR 0002 makes it cheap
+   to trigger, so it will be seen constantly and must not repeat).
+3. Witnessed sacrifice and its gratitude/contempt shifts.
+4. Quiet quitting — must be *detectable in the prose* without being announced.
+5. Match audit and campaign debrief.
 
-| Mode | Calls/match | Rough cost/match | Cost per 20-match campaign |
-|---|---|---|---|
-| Templates only | 0 | $0 | $0 |
-| LLM on notable plies only (verdict ≠ COMPLIANT, ~8/match) + intro + audit | ~10 | fractions of a cent | ~cents |
-| LLM every ply | ~42 | several × above | noticeable at scale |
+## 3. Legibility is a hard requirement, not flavor
 
-Conclusion: gate LLM calls on *narrative salience* (refusals, sacrifices,
-mutinies, class shifts, turning points), not on every move. Cache by prompt hash;
-identical situations reuse prose.
+ADR 0007 and ADR 0011 make losing — and the rout — intended experiences. The
+only thing separating that from a bug report is that the player can reconstruct
+*why*. Therefore:
+
+- Every trust loss, refusal, and desertion carries a stated grievance that names
+  the specific player action that caused it.
+- The audit reconstructs causal chains ("Aldric left after you spent Maren;
+  three more followed within two moves").
+- Prose never discloses the *strategy* (D28 — discovery is the mechanic), but it
+  always discloses the *cause*.
 
 ## 4. Safety & robustness
 
-1. **Prompt injection:** piece names are user-supplied. Sanitize (strip control
-   chars, cap length, escape delimiters) and pass names in a structured JSON
-   field, never interpolated into the system prompt.
-2. **Output containment:** prose is rendered as text, never HTML; no
-   tool/function calling; no model output parsed into numbers.
-3. **Tone guardrails per persona:** the exec-lab persona needs a "safe mode"
-   (`design_decisions.md` D17) since simulated resentment can produce lines a
-   corporate facilitator would not want on screen.
-4. **Key handling:** BYO key stored in IndexedDB, never committed, never logged,
-   masked in the UI, with an explicit warning that a client-side key is visible
-   to anyone with access to the device.
-5. **Offline parity:** every LLM-produced surface has a template equivalent, so
-   the game is fully playable and fully debriefable with the network off. This is
-   also what makes the harness able to run 1,000 matches for free.
+1. **Prompt injection is not a runtime concern** — there is no runtime prompt.
+   It *is* an authoring-time concern: never feed player-supplied piece names into
+   the offline authoring model.
+2. **Player-supplied names** are sanitized (control chars stripped, length
+   capped) and substituted into tree leaves as data, rendered as text, never HTML.
+3. **Tone guardrails per persona** are enforced at authoring time by review
+   (D17). The exec-lab persona needs a reviewed safe-mode subset of the tree.
+4. **No keys, anywhere.** No key storage, no key UI, no key in logs, because
+   there is no key.
+5. **Offline parity is total** — the game has no online mode to be at parity
+   with, and the 1,000-match harness needs no "LLM off" switch.
+
+## 5. If the authored tree proves insufficient
+
+The escape hatch, in order: enrich the conditioning state (cheap); author more
+fragments (linear cost); regenerate the tree with a better authoring prompt
+(cheap); and only then reconsider a runtime provider behind the retained port —
+which would reopen ADR 0004 and reintroduce keys, cost, latency, and
+non-determinism. The bar for that reversal should be high.
