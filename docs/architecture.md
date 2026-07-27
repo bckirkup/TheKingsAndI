@@ -1,4 +1,4 @@
-# The King and I — System Architecture
+# The Kings and I — System Architecture
 
 _Status: planning. No implementation exists yet. This document is the target
 architecture that `docs/development_plan.md` builds toward._
@@ -10,7 +10,7 @@ Sources of record: `docs/spec/living-chess-srs.md` (requirements) and
 
 ## 1. Architectural thesis
 
-The King and I is **a deterministic simulation with a cosmetic narrative skin**.
+The Kings and I is **a deterministic simulation with a cosmetic narrative skin**.
 
 Everything that affects game state — legality, trust, affinity, refusal,
 desertion, engine depth allocation — is computed by pure, seeded, testable

@@ -1,6 +1,6 @@
 ---
 name: narrative-llm
-description: Implement or modify The King and I narration layer — the authored dialogue tree, narrator broadcasts, match audits, and campaign debriefs — without breaking determinism or offline play. There is no runtime LLM. Use when touching src/narrative/ or the dialogue tree.
+description: Implement or modify The Kings and I narration layer — the authored dialogue tree, narrator broadcasts, match audits, and campaign debriefs — without breaking determinism or offline play. There is no runtime LLM. Use when touching src/narrative/ or the dialogue tree.
 ---
 
 # Narration Layer (authored dialogue tree, no runtime LLM)

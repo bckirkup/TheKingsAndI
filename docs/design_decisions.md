@@ -1,6 +1,6 @@
 # Design Decisions
 
-The decision register for **The King and I**. Owner rulings of 2026-07-26 are
+The decision register for **The Kings and I**. Owner rulings of 2026-07-26 are
 recorded below and, where consequential, as ADRs in `docs/adr/`.
 
 Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks Milestone 4+** · **🕐 can wait**
@@ -24,7 +24,7 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D13 | Distribution | **Lightest shell first** to validate the psychology (web build); **Steam via a desktop wrapper** as the commercial target. Not Electron. | [0012](adr/0012-distribution.md) |
 | D15 | Save compatibility | **No compatibility promise during development.** Saves may be invalidated by recalibration. | — |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
-| D18 | Naming | **The King and I.** "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
+| D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
 | D24 | Trust feedback loop | Outcome and conduct write back into `T_i`; **no** automatic decay toward baseline. The spiral is the lesson. | [0007](adr/0007-trust-feedback-loop.md) |
 | — | Desertion mechanics | Expected-cost decision, not a threshold; **the cascade to a rout is intended** and must not be damped. | [0011](adr/0011-desertion-cascade.md) |
 | D31 | Whose evaluation? | **Its own.** A piece decides from its depth-`D_i` view, never the true one — so it can refuse a winning move in good faith. Also settles **D32**. | [0013](adr/0013-pieces-reason-from-own-knowledge.md) |

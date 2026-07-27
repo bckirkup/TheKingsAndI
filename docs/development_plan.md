@@ -1,4 +1,4 @@
-# The King and I — Development Plan
+# The Kings and I — Development Plan
 
 _Greenfield plan, drafted 2026-07-26. Repo currently contains planning docs
 only. Sequencing is chosen so that the riskiest unknowns are answered first and

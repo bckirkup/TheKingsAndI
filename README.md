@@ -1,4 +1,4 @@
-# The King and I: Sacrifice and Command
+# The Kings and I: Sacrifice and Command
 
 **A chess game of sacrifice and command.**
 
@@ -11,7 +11,7 @@ follow in a matter of moves.
 You can be the better chess player and still lose, because being right is not
 the same as being followed.
 
-The King and I layers a persistent multi-agent psychology model over standard
+The Kings and I layers a persistent multi-agent psychology model over standard
 chess rules, and reuses the same telemetry as a leadership-dynamics simulation:
 a post-match audit of how you led, and a campaign debrief of the culture you
 built. *(Internal codename: Living Chess.)*
