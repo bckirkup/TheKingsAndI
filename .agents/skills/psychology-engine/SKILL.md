@@ -1,6 +1,6 @@
 ---
 name: psychology-engine
-description: Modify or extend The King and I psychology model — trust, morale, grief, dyadic affinity, class bias, move utility, verdict ladder, witnessed events, and firing decay — without breaking determinism or balance. Use when changing anything under src/psychology/ or docs/psychology_engine.md.
+description: Modify or extend The Kings and I psychology model — trust, morale, grief, dyadic affinity, class bias, move utility, verdict ladder, witnessed events, and firing decay — without breaking determinism or balance. Use when changing anything under src/psychology/ or docs/psychology_engine.md.
 ---
 
 # Working on the Psychology Engine

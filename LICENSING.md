@@ -2,7 +2,7 @@
 
 **Decision (D16, ADR 0006): dual-license.**
 
-*The King and I* is released under two sets of terms:
+*The Kings and I* is released under two sets of terms:
 
 1. **GNU AGPL-3.0** — the open build. See [`LICENSE`](LICENSE). Anyone may use,
    modify, and redistribute under AGPL terms, including the network-use
@@ -45,6 +45,7 @@ discovered late.
 
 ## Trademark
 
-The name *The King and I* is a well-known musical title. The software name is
-not itself a claim to that mark, but a store listing will likely need a
-distinguishing subtitle. Check before publishing (ADR 0010).
+*The King and I* is a well-known musical title. The software name pluralizes it
+to *The Kings and I* and carries the subtitle *Sacrifice and Command*, which
+reduces the likelihood of confusion as to origin but is not itself a clearance.
+Check before publishing (ADR 0010).

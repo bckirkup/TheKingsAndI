@@ -1,6 +1,6 @@
 ---
 name: balance-simulation
-description: Run and interpret The King and I headless self-play harness to calibrate psychology weights and detect degenerate balance. Use for any balance, tuning, or emergent-behavior question in TheKingAndI.
+description: Run and interpret The Kings and I headless self-play harness to calibrate psychology weights and detect degenerate balance. Use for any balance, tuning, or emergent-behavior question in TheKingAndI.
 ---
 
 # Balance Simulation & Calibration

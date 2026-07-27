@@ -4,7 +4,7 @@
 - **Date:** 2026-07-26
 
 ## Context
-The King and I has many coupled decisions (mechanics, engine, licensing, narration)
+The Kings and I has many coupled decisions (mechanics, engine, licensing, narration)
 whose rationale will be forgotten within weeks. The project is also expected to be
 worked on by AI agents, which need durable, discoverable rationale rather than
 tribal memory.

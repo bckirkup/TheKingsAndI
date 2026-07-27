@@ -1,7 +1,7 @@
-# AGENTS.md — AI Agent Guidelines for The King and I
+# AGENTS.md — AI Agent Guidelines for The Kings and I
 
 ## Repository Purpose
-*The King and I* (internal codename: Living Chess): chess where the pieces have
+*The Kings and I* (internal codename: Living Chess): chess where the pieces have
 persistent identities, memory, trust, class prejudice, and the ability to refuse
 orders or walk off the board. Doubles as a leadership-dynamics simulation.
 **Status: planning only — no application code exists yet.**
