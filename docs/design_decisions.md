@@ -27,6 +27,8 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D18 | Naming | **The King and I.** "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
 | D24 | Trust feedback loop | Outcome and conduct write back into `T_i`; **no** automatic decay toward baseline. The spiral is the lesson. | [0007](adr/0007-trust-feedback-loop.md) |
 | — | Desertion mechanics | Expected-cost decision, not a threshold; **the cascade to a rout is intended** and must not be damped. | [0011](adr/0011-desertion-cascade.md) |
+| D31 | Whose evaluation? | **Its own.** A piece decides from its depth-`D_i` view, never the true one — so it can refuse a winning move in good faith. Also settles **D32**. | [0013](adr/0013-pieces-reason-from-own-knowledge.md) |
+| D30 | Every legal move refused | **The player may override any refusal**, at a large trust cost to the piece and a smaller one to every witness. The board is never stuck. | [0014](adr/0014-refusal-override.md) |
 
 Downgraded to ordinary implementation wiring by owner ruling — to be settled in
 code review during Milestones 1–3, each with a sensitivity probe:
@@ -61,44 +63,29 @@ honestly attribute anything.
 
 **Resolve during Milestone 3 calibration; blocks the psychology reducers.**
 
-### D31 ⛔ Does a piece refuse using *its own* evaluation, or the true one?
-Follows from D4 being advice-only. Under ADR 0002 (free re-plan) and ADR 0008,
-refusal is the psychology's only lever on the board mid-match, so this decides
-whether it has teeth.
-
-- **A. Piece's own depth-`D_i` evaluation.** A novice refuses good moves it
-  cannot see the point of, and accepts bad ones. Insight reaches the board
-  through *willingness* while never substituting a move — arguably the truest
-  reading of "advice only."
-- **B. True evaluation.** All pieces judge the move correctly and differ only by
-  trust and traits. Simpler, fairer-feeling, but experience then affects nothing
-  a player can lose to, and `D_i` becomes cosmetic.
-
-**Recommendation: A.** Note that desertion already uses the piece's own estimates
-(ADR 0011), so B would make the model internally inconsistent.
-
 ### D9 ⛔ Engine topology
-Owner: not decided yet. Options unchanged: worker-per-piece (16 WASM instances,
-unusable on mobile), pool + one deep search truncated per piece (recommended),
-or pool + separate shallow searches for the few pieces the player is consulting.
-D5 (symmetric opponent psychology) roughly doubles the engine budget, which
-argues against the literal per-piece reading.
+Owner: not decided yet, and now the **last blocking technical unknown**. Options
+unchanged: worker-per-piece (16 WASM instances, unusable on mobile), pool + one
+deep search truncated per piece (recommended), or pool + separate shallow
+searches for the few pieces the player is consulting.
+
+Two accepted decisions raised the cost since this was written: D5 (symmetric
+opponent psychology) roughly doubles the engine budget, and **ADR 0013 means
+every piece needs its own view of the position** for utility, danger, and
+desertion — not merely the handful the player is consulting. The pooled design
+with per-piece truncation now looks less like an optimization and more like the
+only viable option; what remains open is how the shallow view is *derived*
+(truncation + noise vs. genuine shallow search) and how it is cached.
 
 ---
 
 ## Open — non-blocking
 
-### D30 ⚠ What if every legal move is refused?
-Chess has no "pass," and ADR 0002 removed the forfeit path. Options: allow the
-player to **override** a refusal at a large trust cost to the piece and every
-witness (makes the tyrant path playable and keeps the board legal at all times —
-recommended); force the least-refused move automatically; or treat total refusal
-as resignation.
-
-### D32 ⚠ Whose evaluation supplies `P_loss` for the desertion calculation?
-Shared engine evaluation (cheap, consistent) or each piece's truncated view
-(faithful to ADR 0008; lets a novice panic in a drawn position). See
-`docs/desertion_model.md` §7.
+### D35 ⚠ How expensive is an override? (new, from ADR 0014)
+The sharpest single knob in the game. Too cheap and refusal is decorative — the
+player clicks through the psychology. Too expensive and it is a trap button
+nobody presses twice. Calibrate against *override rate by leader archetype*:
+`tyrannical` should use it freely, `supportive` almost never.
 
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 
@@ -131,9 +118,10 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D31** — decides whether refusal (the only mid-match lever left) has teeth.
-2. **D19** — during Milestone 3 calibration, with the harness in hand.
-3. **D9** — before the engine layer is built; D5 makes it more expensive.
-4. **D30** — needed the first time a full-refusal position occurs in the harness.
-5. **D25–D27, D32–D34** — during Milestone 3–5.
-6. **D1, D14, D17** — as UI and content work begins.
+1. **D19** — during Milestone 3 calibration, with the harness in hand.
+2. **D9** — before the engine layer is built; D5 (symmetric psychology) and
+   D31 (every piece needs its own view of the position) both make it more
+   expensive, so it is now the last blocking technical unknown.
+3. **D35** — with the harness, alongside D19.
+4. **D25–D27, D33, D34** — during Milestones 3–5.
+5. **D1, D14, D17** — as UI and content work begins.

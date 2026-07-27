@@ -11,7 +11,14 @@ because the player can see the cause coming and had agency to prevent it.
 
 **Mitigation:** M3 calibration + M4 playtest with an explicit "was that fair?"
 question; always expose the piece's reasoning and a pre-move risk preview. If a
-refusal ever surprises the player, that is a UX bug, not a feature. Under ADR
+refusal ever surprises the player, that is a UX bug, not a feature.
+
+ADR 0013 sharpens this: a piece can now refuse a *winning* move in good faith
+because it cannot see that far. That is the most fun-critical thing in the
+design and the most likely to read as cheating. It only works if the UI shows
+the piece's reasoning next to the truth — "Aldric thinks this loses a Rook; he
+is wrong" — so the player learns that the failure was communication, not
+loyalty. Under ADR
 0011 the cascade makes this sharper: a rout is fast and irreversible, so the
 player must be able to watch `P_loss` climb and read each departure's grievance
 *while it is happening*, not only in the post-match audit.
@@ -21,13 +28,13 @@ Largely retired by ADR 0002 and ADR 0003: refusal costs no turn, and desertion i
 a plain piece removal, so the position stays legal at every ply and no frozen
 board object exists for chess.js or Stockfish to misread.
 
-What remains is the total-refusal case: "every legal move is refused" — a loss, a
-draw, or a forced move? Chess has no pass, and ADR 0002 removed the forfeit path.
+The total-refusal case is closed by ADR 0014: the player can always override a
+refusal, so the position is always playable and no special stalemate handling is
+needed. **This risk is retired.**
 
-**Mitigation:** settle **D30** before M2 (the recommendation is a player override
-at a steep trust cost, which also makes the tyrant path playable), and cover it
-with goldens. This edge case will appear in real play more often than intuition
-suggests, especially during a cascade when few pieces remain.
+What it leaves behind is a *balance* risk, not an integrity one — see D35: an
+override priced too low makes the entire psychology skippable with one extra
+click. Cover the override path with goldens and track its rate in the harness.
 
 ## R3 — Piece identity tracking through chess.js (engineering risk)
 chess.js has no notion of piece identity. Castling, promotion, en passant, and
@@ -117,10 +124,14 @@ refund-risk decision in the project and should be playtested before Milestone 7.
 
 ## Open questions (no owner yet)
 
-1. What happens when *every* legal move is refused? (D30, see R2)
+1. ~~What happens when *every* legal move is refused?~~ **Answered** — the
+   player may override any refusal at a steep trust cost (ADR 0014). Remaining
+   sub-question is the price (D35).
 2. Can the player negotiate — spend something (a promise, a protective escort,
    a share of victory) to buy compliance? A bargaining verb would make the trust
-   economy two-sided instead of purely punitive.
+   economy two-sided instead of purely punitive. ADR 0014 gives the player a
+   *coercive* answer to a refusal; a persuasive one would be its natural
+   counterpart, and the contrast between them is most of the leadership content.
 3. Do pieces gossip? Should `A_{i,j}` propagate second-hand ("the Rook told me
    what you did to the Pawn")? Cheap to implement, potentially the most
    organizationally realistic mechanic in the design.

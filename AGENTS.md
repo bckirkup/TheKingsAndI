@@ -43,13 +43,15 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    the move played (insight is advice, ADR 0008). Refusal is free to re-plan; it
    never costs a turn (ADR 0002). Pieces desert; they never defect (ADR 0003).
    Desertion is an expected-cost decision and its cascade must never be damped
-   with cooldowns, caps, or morale floors (ADR 0011). There is no runtime LLM
-   and no API key (ADR 0004). Trust never decays toward a baseline on its own
-   (ADR 0007).
+   with cooldowns, caps, or morale floors (ADR 0011). Every piece decides from
+   its own depth-`D_i` view and the true evaluation must never reach
+   `psychology/` (ADR 0013). The player can always override a refusal, so no
+   position is ever unplayable (ADR 0014). There is no runtime LLM and no API
+   key (ADR 0004). Trust never decays toward a baseline on its own (ADR 0007).
 9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
-   The blocking ones are **D19** (trust-term scale), **D31** (does a piece refuse
-   using its own evaluation or the true one), and **D9** (engine topology).
+   The blocking ones are now **D19** (trust-term scale) and **D9** (engine
+   topology).
 
 ## Setup (once code lands; not yet applicable)
 ```bash

@@ -21,9 +21,9 @@ its opinion. A piece never plays a move other than the one commanded.
   gives you depth-4 advice while appearing to be a depth-16 asset. That is a good
   mechanic and a very good leadership metaphor.
 - Combined with ADR 0002 (free re-plan) and ADR 0003 (no defection), refusal is
-  now the psychology's only lever on the board. Whether that lever has teeth
-  depends entirely on D31: does a piece decide to refuse using *its own* limited
-  evaluation, or using the true one?
+  now the psychology's only lever on the board. **ADR 0013 gives that lever its
+  teeth:** a piece decides using its own depth-`D_i` view, so it can refuse a
+  winning move in good faith.
 - Golden tests get simpler: the played move is always the commanded move.
 
 ## Alternatives considered

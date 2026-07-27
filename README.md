@@ -1,4 +1,4 @@
-# The King and I
+# The King and I: Sacrifice and Command
 
 **A chess game of sacrifice and command.**
 
@@ -66,6 +66,11 @@ state is deterministic, seeded, and replayable.
   automatic forgiveness. ([ADR 0007](docs/adr/0007-trust-feedback-loop.md))
 - **A rout is a designed outcome, not a bug.**
   ([ADR 0011](docs/adr/0011-desertion-cascade.md))
+- **A piece knows only what it can see.** It reasons from its own shallow view,
+  so it can refuse a winning move in good faith.
+  ([ADR 0013](docs/adr/0013-pieces-reason-from-own-knowledge.md))
+- **You can always force a move** — and pay for it, in front of everyone.
+  ([ADR 0014](docs/adr/0014-refusal-override.md))
 - **No runtime LLM.** Personality is authored offline and shipped as a
   deterministic tree. ([ADR 0004](docs/adr/0004-llm-key-strategy.md))
 

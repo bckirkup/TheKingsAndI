@@ -24,7 +24,7 @@ Milestone 0 in `docs/development_plan.md` is the first code to land.
 
 ## Orientation order
 
-1. `docs/design_decisions.md` — the decision register; **do not silently resolve an open one in code**. Blocking: D19, D31, D9
+1. `docs/design_decisions.md` — the decision register; **do not silently resolve an open one in code**. Blocking: D19, D9
 2. `docs/architecture.md` — layering + the move pipeline (the 7 steps matter)
 3. `docs/psychology_engine.md` — the math
 4. `docs/development_plan.md` — what milestone we are in and its exit criteria
@@ -45,6 +45,8 @@ Milestone 0 in `docs/development_plan.md` is the first code to land.
 | Pieces desert, never defect | defection is not expressible in legal chess (ADR 0003) |
 | The desertion cascade is never damped | a rout is a designed outcome (ADR 0011) |
 | No runtime LLM, no API key | personality is an authored tree (ADR 0004) |
+| A piece reasons only from its own depth-`D_i` view | the true score must never reach `psychology/` (ADR 0013) |
+| The player can always override a refusal | the board is never stuck; the tyrant path is playable (ADR 0014) |
 
 ## Common tasks
 

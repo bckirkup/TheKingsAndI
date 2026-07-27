@@ -78,8 +78,10 @@ the most likely silent bug in a system this parameter-heavy.
 Emitted by `pnpm sim` as CSV/JSON; CI asserts loose bands, calibration tightens
 them (initial hypotheses in `docs/development_plan.md` M3):
 
-- refusal rate, **refused-good-move rate**, quiet-quit ply share, desertion
-  incidence and cascade length
+- refusal rate, **refused-good-move rate**, **override rate**, quiet-quit ply
+  share, desertion incidence and cascade length
+- divergence between each piece's evaluation and the true one (the "he was
+  wrong" vs. "he was disloyal" split)
 - trust trajectory (mean, variance, per-class)
 - class-bias drift (contempt → solidarity)
 - roster turnover and its win-rate cost
@@ -115,7 +117,15 @@ means the model has collapsed:
 16. **Toothless refusal:** the refused-good-move rate is ≈ 0. Under ADR 0002
     (free re-plan) and ADR 0008 (advice-only), denying the player good moves is
     the psychology's only mid-match lever; if pieces only ever refuse bad moves,
-    distrust costs nothing.
+    distrust costs nothing — and it means the model collapsed back to
+    omniscience despite ADR 0013.
+17. **Omniscience leak:** a piece's decisions correlate with the `D_max`
+    evaluation beyond what its own `D_i` view explains. Enforce structurally too
+    — the true score must not be reachable from `psychology/` (ADR 0013).
+18. **Override degeneracy:** either `tyrannical` and `supportive` policies
+    override at indistinguishable rates (the price is not felt), or overriding
+    is never worth it under any policy (a trap button). Both mean D35 is
+    mis-tuned (ADR 0014).
 
 ## 5. Stochastic-system rules
 

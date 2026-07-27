@@ -54,8 +54,9 @@ likely source of subtle, save-corrupting bugs in the entire project.
 | Task | Deliverable |
 |---|---|
 | 2.1 | `PieceState` reducers; event types; append-only match log |
-| 2.2 | `U(P_i, m)` and `Θ_refusal(T_i)` per `docs/spec/psychology-engine.reference.ts`, with all coefficients in one `ENGINE_CONFIG` object |
+| 2.2 | `U(P_i, m)` and `Θ_refusal(T_i)` per `docs/spec/psychology-engine.reference.ts`, with all coefficients in one `ENGINE_CONFIG` object. All inputs are the piece's own depth-`D_i` view; the true evaluation must not be reachable from `psychology/` (ADR 0013) |
 | 2.3 | Verdict ladder + refusal/quiet-quit state machines. Refusal is free to re-plan (ADR 0002), so the commit step must handle a rejected intent with no state change beyond the psychology event |
+| 2.3c | Override path (ADR 0014): forced-move event, trust penalty to the piece, witness penalties, audit classification. This is what makes "every legal move refused" a non-case |
 | 2.3b | Desertion: the `U_desert` vs `U_stay` comparison, removal from the board, and **cascade re-evaluation of all remaining pieces after each departure** (`docs/desertion_model.md`, ADR 0011). King exempt |
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
@@ -98,6 +99,7 @@ policy by the player (the `redeemer` oracle).
 | 4.1 | chessground board + drag input → intent pipeline |
 | 4.2 | Piece state overlays: aura rings (trust), morale gauge, betrayal marker |
 | 4.3 | Refusal / quiet-quit / desertion UX — how a refused move is communicated without feeling like a bug, and how a rout is made legible while it happens |
+| 4.3b | Override UX: a deliberate act showing who will be hurt and by how much, never a dismissible dialog. Plus the "he was wrong vs. he was disloyal" display (ADR 0013) |
 | 4.4 | Relationship inspector: who protects whom, class-bias heatmap |
 | 4.5 | Authored dialogue tree v1 (deterministic, relationship-aware; ~200 lines seeded by verdict + event + persona) |
 | 4.6 | One theme only (`tactical-blueprint`: cheapest to draw, best for debugging) |

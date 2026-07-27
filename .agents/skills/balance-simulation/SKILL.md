@@ -45,7 +45,10 @@ strength · archetype classification distribution.
    never routs is a bug, not a balanced game (ADR 0011).
 2. Desertion rate > 80% for `supportive` → noise dominates signal.
 2b. Refused-good-move rate ≈ 0 → refusal is toothless, and under ADR 0002 +
-   ADR 0008 it is the only mid-match lever the psychology has.
+   ADR 0008 it is the only mid-match lever the psychology has. It also means
+   pieces have gone omniscient despite ADR 0013.
+2c. `tyrannical` and `supportive` override at indistinguishable rates, or nobody
+   ever overrides → the override price (D35) is mis-tuned (ADR 0014).
 3. Refusal rate ≈ 0 or ≈ 1 across all styles → thresholds mis-scaled.
 4. Trust monotonic regardless of play → something is dead-wired.
 5. Class-bias variance ≈ 0 after 20 matches → relationship layer inert.
