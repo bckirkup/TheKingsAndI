@@ -122,7 +122,7 @@ means the model has collapsed:
 17. **Omniscience leak:** a piece's decisions correlate with the `D_max`
     evaluation beyond what its own `D_i` view explains. Enforce structurally too
     — the true score must not be reachable from `psychology/` (ADR 0013).
-18. **Credence inertness** (only if ADR 0015 is accepted): tactical strength of
+18. **Credence inertness** (ADR 0015): tactical strength of
     the leader correlates with win rate *equally* at high and low mean `τ`. The
     whole claim of the model is that an untrusted commander's skill cannot reach
     the board; if it reaches anyway, `τ` is decorative. The paired check: a
@@ -141,14 +141,14 @@ means the model has collapsed:
     lines the piece does not appear in are prioritized normally. If attention
     does not produce refusals of moves that are good for reasons the piece never
     examined, the belief model is a costless ornament.
-21. **Illegible testimony** (ADR 0018): a trust loss the player cannot attribute
+22. **Illegible testimony** (ADR 0018): a trust loss the player cannot attribute
     to any action of theirs from the piece's own stated reason. Rationalization
     is permitted; an unattributable cause is the top refund risk in
     `docs/trust_dynamics.md`.
-22. **Witness verdicts do not split** (ADR 0018): every desertion is read the
+23. **Witness verdicts do not split** (ADR 0018): every desertion is read the
     same way by the whole roster. If "he was brave" and "he ran" never both
     occur for the same departure, witnesses are not using their own views.
-23. **Override degeneracy:** either `tyrannical` and `supportive` policies
+24. **Override degeneracy:** either `tyrannical` and `supportive` policies
     override at indistinguishable rates (the price is not felt), or overriding
     is never worth it under any policy (a trap button). Both mean D35 is
     mis-tuned (ADR 0014).
