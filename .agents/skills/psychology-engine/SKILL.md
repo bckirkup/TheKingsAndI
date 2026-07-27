@@ -15,8 +15,9 @@ harness, so it must stay pure, integer-clamped, and fast.
 equation set and is normative for names, formulas, thresholds, and defaults.
 `docs/psychology_engine.md` restates it and lists reconciliation issues in §10
 (trust-term dominance, `w_prestige` and `B_i` dead-wired, morale has no update
-rule). **D19 and D31 are open and blocking; D20–D23 are wiring to settle in
-review with a sensitivity probe each.** Do not
+rule). **D19 is open and blocking; D20–D23 are wiring to settle in review with a
+sensitivity probe each.** Never pass a `D_max` evaluation into a reducer — every
+piece decides from its own view (ADR 0013). Do not
 quietly "fix" them in code.
 
 ## Contract

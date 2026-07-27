@@ -92,8 +92,10 @@ player selects move m for piece P_i
         ▼
 3. engine/ insight request (async) ...... depth D_i = f(E_i, η_i); may be
         │                                 served from cache; cancellable.
-        │                                 ADVICE ONLY (ADR 0008): this never
+        │                                 ADVICE ONLY (ADR 0008): never
         │                                 substitutes a different move.
+        │                                 Returns THE PIECE'S VIEW, not the
+        │                                 true evaluation (ADR 0013).
         ▼
 4. psychology/ evaluate ................. U(P_i, m) vs Θ_refusal(T_i) → verdict ∈
         │                                 {HEROIC_EXECUTION, COMPLIANT_EXECUTION,
@@ -124,6 +126,22 @@ pieces, which is how a cascade propagates within a single ply (ADR 0011).
 Both armies may run this pipeline: opponent psychology is symmetric and either
 side may be human- or AI-led (D5). Build the pipeline side-agnostic from the
 start; retrofitting a hardcoded "player is White" assumption is expensive.
+
+### The epistemic boundary (ADR 0013)
+`psychology/` must **never receive the `D_max` evaluation.** Every piece decides
+from its own depth-`D_i` view — utility, `P_captured`, peer safety, and the
+desertion comparison alike — so `engine/` exposes "what does piece *i* believe
+about this position," keyed `(position, D_i)`, not merely "what is the best
+move." This is a reviewable architectural rule: if a true score can reach a
+psychology reducer, the layering is wrong.
+
+The true evaluation is still computed — the audit needs it to distinguish *"he
+was wrong"* from *"he was disloyal"* — but it flows to `orchestration/` and the
+audit only, never into a verdict.
+
+A refused intent produces no move and no turn cost (ADR 0002); the player may
+re-plan, or **override** at a steep trust cost to the piece and every witness
+(ADR 0014), which is what guarantees the board is never stuck.
 
 ## 4. Event sourcing and replay
 

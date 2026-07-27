@@ -93,7 +93,8 @@ difference between a lesson and a bug report.
 | Decision | Interaction |
 |---|---|
 | ADR 0002 (free re-plan) | Refusal costs nothing, so desertion is the only *irreversible* consequence in the game. It carries the entire stake. |
-| ADR 0008 (advice-only insight) | `P_capture(i)` and `P_loss` are the piece's *own* depth-`D_i` estimates — a novice may desert from an imagined threat, or fail to leave a genuinely lost position. Insight therefore reaches the board through desertion even though it never changes a commanded move. |
+| ADR 0008 + ADR 0013 | `P_capture(i)` and `P_loss` are the piece's *own* depth-`D_i` estimates — a novice may desert from an imagined threat, or fail to leave a genuinely lost position. Insight therefore reaches the board through desertion even though it never changes a commanded move. |
+| ADR 0014 (override) | Forcing a move is the fastest route into a cascade: it drives `T_i` down, which drives `λ_i` down, which is exactly what makes pieces leave. |
 | ADR 0009 (capture is trauma) | `pain_i` grows with `B_i`, so a piece spent repeatedly becomes progressively more likely to walk. Repeated sacrifice is priced automatically. |
 | ADR 0003 (King exempt) | The King never deserts; the army can dissolve around it. |
 | D22 (morale) | `M_i` no longer gates desertion as a trip-wire; it feeds `λ_i`. Morale still needs an update rule, but it is no longer load-bearing for reachability. |
@@ -121,10 +122,9 @@ difference between a lesson and a bug report.
 
 ## 7. Open
 
-- **D32:** Does `P_loss(team)` come from the shared Stockfish evaluation
-  (cheap, consistent) or from each piece's own truncated view (faithful to
-  ADR 0008, and lets a novice panic in a drawn position)? Recommend the latter
-  for consulted pieces, the former for the rest, per ADR 0005.
+- ~~**D32:** whose evaluation supplies `P_loss`?~~ **Closed by ADR 0013:** the
+  piece's own. A novice may panic in a drawn position or fail to leave a lost
+  one, and both are correct behavior.
 - **D33:** Can a deserter be re-recruited in a later match, and at what cost?
 - **D34:** Does the player see the desertion calculation, or only the outcome?
   Legibility of *cause* is required (§3); exposing the arithmetic is optional and

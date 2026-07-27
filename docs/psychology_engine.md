@@ -268,3 +268,6 @@ invariant is that no absorbing state exists for a player who changes policy.
     threshold, and is never damped by cooldowns or caps (ADR 0011).
 11. A commanded move is always the move played — insight never substitutes a
     different move (ADR 0008).
+12. Every evaluation a piece uses is its own depth-`D_i` view. The true
+    evaluation must never reach a psychology reducer (ADR 0013).
+13. The player can always force a move; no position is unplayable (ADR 0014).
