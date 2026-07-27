@@ -20,7 +20,8 @@ issue another. No turn, tempo, or clock cost.
   roster removes the player's best moves from the menu, so they play the
   second-best move, lose position, and lose trust further (ADR 0007's loop).
   Refusal is therefore only as meaningful as the model's willingness to refuse
-  *good* moves — see D31.
+  *good* moves, which ADR 0013 supplies: pieces judge from their own limited
+  view. ADR 0014 adds the escape valve — the player may override, at a price.
 - Expect brute-force probing: the player will poll pieces to find who will obey.
   That is acceptable and arguably the intended learning behavior ("who still
   follows me?"), but the UI should make polling cheap and legible rather than a
