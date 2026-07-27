@@ -18,6 +18,7 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
 | `docs/credence_model.md` | D19: trust as the weight on the leader's judgment |
 | `docs/belief_model.md` | How a piece imputes the position — perception, memory, rumor |
 | `LICENSING.md` | Dual-license terms and the Stockfish GPL constraint |
+| `docs/engine_licensing.md` | `EnginePort`, engine swap strategy, verified permissive candidates |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |

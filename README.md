@@ -33,6 +33,7 @@ the mathematical specification, the development plan, and the decision register.
 | [docs/desertion_model.md](docs/desertion_model.md) | Why a piece walks off, and why the rout is intended |
 | [docs/credence_model.md](docs/credence_model.md) | Trust as the willingness to substitute the leader's judgment for your own |
 | [docs/belief_model.md](docs/belief_model.md) | How each piece imputes the position: perception, memory, rumor |
+| [docs/engine_licensing.md](docs/engine_licensing.md) | The engine port, and why the GPL problem binds later than it looks |
 | [docs/data_model.md](docs/data_model.md) | Entities, persistence, identity rules |
 | [docs/development_plan.md](docs/development_plan.md) | Milestones 0–8, exit criteria, estimates |
 | [docs/testing_strategy.md](docs/testing_strategy.md) | Golden + sensitivity tests, balance metrics |

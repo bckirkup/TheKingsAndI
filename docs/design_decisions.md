@@ -107,6 +107,14 @@ only viable option; what remains open is how the shallow view is *derived*
 
 ## Open — non-blocking
 
+### D46–D47 🕐 Engine licensing (from ADR 0020)
+**D46** which permissive engine ships in the enterprise build — decide by
+harness measurement at capped depth, not by rating lists. Verified MIT
+candidates: Lozza (JS, no toolchain), Avalanche (Zig, NNUE), Blunder (Go),
+Baislicka (C). **D47** does the paid Steam build stay GPL-compliant (source
+offer, no DRM wrapper) or wait for a permissive engine? The former ships far
+sooner and is recommended. See `docs/engine_licensing.md`.
+
 ### D40 ⚠ Does a residual affective loyalty term survive alongside `τ`?
 The only survivor of the D36–D40 group; D36–D39 are decided in ADR 0019. Given
 that `τ_benev` already carries the affective load, a separate loyalty term is

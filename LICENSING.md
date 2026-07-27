@@ -32,16 +32,28 @@ consequences, both of which must be respected from now on:
   adding any dependency, check that its license is permissive (MIT, BSD,
   Apache-2.0, ISC) or that a commercial license is obtainable.
 
-### Known dependency to watch
+### Known dependency to watch — resolved in shape (ADR 0020)
 
-**Stockfish is GPL-3.0.** Shipping it linked into a proprietary commercial build
-is not permitted. Options, all of which should be settled before the commercial
-track is real: keep Stockfish only in the AGPL build; isolate it behind a
-process/worker boundary and ship it as a separate GPL component with source;
-substitute a permissively licensed engine for the commercial build; or keep the
-commercial offering itself AGPL-compliant and sell support and content instead.
-This is the single largest practical constraint on D16 and should not be
-discovered late.
+**Stockfish is GPL-3.0**, so it cannot be linked into a proprietary commercial
+build. Three facts make this bind later than it first appeared:
+
+- **GPL forbids proprietary distribution, not selling.** A paid, GPL-compliant
+  Steam build is legal; its costs are a written source offer and
+  incompatibility with DRM wrappers.
+- **AGPL-3.0 project + GPL-3.0 engine is compatible** via §13 of both licenses,
+  so the open build is fine as-is.
+- **Engine strength is nearly irrelevant to this design** (depth is capped,
+  attention prunes, psychology reads relative evaluations), so a permissive
+  engine is a real option rather than a crippling downgrade.
+
+Therefore all engine access goes through `EnginePort` from Milestone 1 with a
+conformance suite, Stockfish ships first as the calibration baseline, and the
+permissive engine is needed only for the **enterprise** build — the last
+audience. Verified permissive candidates (MIT): Lozza, Avalanche, Blunder,
+Baislicka. Note that GitHub's license metadata fails to detect the MIT license
+of Lozza and Blunder, so dependency scanners will flag them as unknown.
+Full analysis and open items D46/D47 in
+[`docs/engine_licensing.md`](docs/engine_licensing.md).
 
 ## Trademark
 
