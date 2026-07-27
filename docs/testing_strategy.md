@@ -148,7 +148,15 @@ means the model has collapsed:
 23. **Witness verdicts do not split** (ADR 0018): every desertion is read the
     same way by the whole roster. If "he was brave" and "he ran" never both
     occur for the same departure, witnesses are not using their own views.
-24. **Override degeneracy:** either `tyrannical` and `supportive` policies
+24. **Trust farming** (ADR 0019): mean `τ_benev` rises under a policy that
+    issues deliberately bad orders and warmly withdraws them. Being heard must
+    only count when the withdrawal surrendered real value on the true-evaluation
+    audit path — backing off a bad move is theater and must register as nothing.
+25. **Channel collapse** (ADR 0019): `τ_benev` and `τ_abil` correlate above
+    ~0.9 across a campaign, or the audit cannot tell a player which one he is
+    failing. Two channels that always move together are one channel with extra
+    bookkeeping, and the design's best lesson is gone.
+26. **Override degeneracy:** either `tyrannical` and `supportive` policies
     override at indistinguishable rates (the price is not felt), or overriding
     is never worth it under any policy (a trap button). Both mean D35 is
     mis-tuned (ADR 0014).

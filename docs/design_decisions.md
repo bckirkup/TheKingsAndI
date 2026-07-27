@@ -31,6 +31,8 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D30 | Every legal move refused | **The player may override any refusal**, at a large trust cost to the piece and a smaller one to every witness. The board is never stuck. | [0014](adr/0014-refusal-override.md) |
 | D19 | Scale of the trust term | **Trust is credence**, not an additive term: `V_perceived = (1−τ)·V_own + τ·V_leader_implied`. The unwillingness to substitute judgment *is* the model. | [0015](adr/0015-trust-as-credence.md) |
 | D34 | Does the player see the arithmetic? | **No — testimony only.** The piece offers a reason generated from its verdict, which may be a rationalization. Cause must be legible; numbers must not. | [0018](adr/0018-witness-judgment-and-testimony.md) |
+| D36–D39 | Rate and form of credence | **Two channels.** `τ_benev` (does he care about me) moves fast up, cliffs down, erodes under neglect; `τ_abil` (are his orders right) accretes slowly, Bayesian in `1/n`. `V_leader_implied` is the ability channel. | [0019](adr/0019-two-channel-trust.md) |
+| D41 | Attention: prune or deprioritize? | **Prune.** A piece does not examine lines it does not appear in — computationally necessary, and people don't think *n* steps ahead either. | [0019](adr/0019-two-channel-trust.md) |
 
 Downgraded to ordinary implementation wiring by owner ruling — to be settled in
 code review during Milestones 1–3, each with a sensitivity probe:
@@ -84,7 +86,7 @@ a single search are re-scored under each piece's own weights, truncated to `D_i`
 with only its attention lines extended; cached on
 `(position, D_i, evalProfile_i)`. ADR 0016 forced this: with sixteen distinct
 evaluation profiles, per-piece *search* is unaffordable but per-piece *scoring*
-is nearly free. Remaining sub-question is D41 (prune vs. deprioritize).
+is nearly free. D41 is decided: attention **prunes** (ADR 0019).
 
 Original analysis follows.
 
@@ -105,16 +107,22 @@ only viable option; what remains open is how the shallow view is *derived*
 
 ## Open — non-blocking
 
-### D36–D40 ⚠ Follow-ons if D19 resolves as credence (ADR 0015)
-**D36** how `V_leader_implied(m)` is computed — fixed optimism prior, inference
-from the player's track record (makes reputation mechanical), or a fixed offset
-above `V_own`; the central unknown. **D37** the shape of `credence(T_i)` —
-logistic gives the "something snapped" experience. **D38** whether `τ` is
-domain-specific (competence-trust vs. benevolence-trust — a piece may trust the
-leader's tactics but not his care for its safety). **D39** whether faith
-rewarded compounds faster than faith unrewarded decays. **D40** whether a
-residual affective loyalty term survives alongside `τ`.
-See `docs/credence_model.md` §6.
+### D46–D47 🕐 Engine licensing (from ADR 0020)
+**D46** which permissive engine ships in the enterprise build — decide by
+harness measurement at capped depth, not by rating lists. Verified MIT
+candidates: Lozza (JS, no toolchain), Avalanche (Zig, NNUE), Blunder (Go),
+Baislicka (C). **D47** does the paid Steam build stay GPL-compliant (source
+offer, no DRM wrapper) or wait for a permissive engine? The former ships far
+sooner and is recommended. See `docs/engine_licensing.md`.
+
+### D40 ⚠ Does a residual affective loyalty term survive alongside `τ`?
+The only survivor of the D36–D40 group; D36–D39 are decided in ADR 0019. Given
+that `τ_benev` already carries the affective load, a separate loyalty term is
+probably redundant — decide with the harness.
+
+Owner's four rates, which produced ADR 0019: *"Feeling heard builds faith fast.
+A single act of perceived betrayal can break it quickly. However, feeling
+ignored erodes faith and a reputation for competence builds slowly."*
 
 ### D35 ⚠ How expensive is an override? (new, from ADR 0014)
 The sharpest single knob in the game. Too cheap and refusal is decorative — the
@@ -152,14 +160,12 @@ identical positions, and the refused-good-move rate. If perception-only
 divergence cannot produce refusals of genuinely good moves at a meaningful rate,
 the expensive branch is justified — accepting the ambiguity loss deliberately.
 
-### D41–D44 ⚠ Follow-ons from the belief model (ADR 0016)
-**D41** does attention *prune* lines the piece does not appear in, or merely
-deprioritize them? Pruning is cheaper, more dramatic, and produces more refusals
-of winning moves. **D42** rumor propagation rate — fast enough to panic, slow
+### D42–D44 ⚠ Follow-ons from the belief model (ADR 0016)
+D41 is decided: attention **prunes** (ADR 0019). **D42** rumor propagation rate — fast enough to panic, slow
 enough to intervene. **D43** do egocentric evaluation weights drift with trauma,
 giving `B_i` a perceptual job as well as an affective one? **D44** can a piece
 believe the room about the position but not about the leader?
-See `docs/belief_model.md` §6.
+See `docs/belief_model.md` §7.
 
 ### D25–D29 ⚠ Trust-loop follow-ons
 Which costly signals ship (D25), how long the trap runs before collapse (D26),
@@ -186,10 +192,10 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D36–D37** — now the blocking pair: `V_leader_implied` and the credence
-   curve. ADR 0016 answers D36 *in substance* (memory as a prior on the leader);
-   what remains is its functional form.
-2. **D41** — before the engine layer is built; it changes the pool's contract.
-3. **D35, D42–D43** — with the harness, alongside credence tuning.
+1. *(Nothing blocks Milestone 1–2 code as of ADR 0019.)*
+2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
+   partly answered in substance: an override is the canonical benevolence cliff
+   (ADR 0019), so its price falls out of that channel's calibration rather than
+   being an independent constant.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D14, D17** — as UI and content work begins.

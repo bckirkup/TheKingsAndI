@@ -279,9 +279,12 @@ invariant is that no absorbing state exists for a player who changes policy.
     weight on the leader's judgment — `V_perceived = (1−τ)·V_own + τ·V_leader_implied`
     — so a refusal always requires both a bad-looking move and insufficient
     credence to bridge it (`docs/credence_model.md`).
-15. No piece is ever wrong about *where* a piece stands. Divergence is
+15. Credence has two channels with different physics: `τ_benev` moves fast and
+    cliffs, `τ_abil` accretes slowly. Neglect erodes `τ_benev` only through
+    *omissions*, never through elapsed time (ADR 0019, ADR 0007).
+16. No piece is ever wrong about *where* a piece stands. Divergence is
     interpretive — depth, egocentric evaluation, attention, memory, and rumor —
     and rumor carries appraisals only, never board facts (ADR 0016).
-16. The player never sees the arithmetic. A piece's stated reason is generated
+17. The player never sees the arithmetic. A piece's stated reason is generated
     from its verdict and may be a rationalization, but it must always name a
     cause (ADR 0018).

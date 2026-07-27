@@ -24,7 +24,7 @@ Milestone 0 in `docs/development_plan.md` is the first code to land.
 
 ## Orientation order
 
-1. `docs/design_decisions.md` — the decision register; **do not silently resolve an open one in code**. Blocking: D36, D37 (credence: `docs/credence_model.md`), D41 (attention: `docs/belief_model.md`)
+1. `docs/design_decisions.md` — the decision register; **do not silently resolve an open one in code**. **Nothing blocks Milestone 1–2 code** as of ADR 0019; remaining decisions (D35, D40, D42–D44) are harness calibration
 2. `docs/architecture.md` — layering + the move pipeline (the 7 steps matter)
 3. `docs/psychology_engine.md` — the math
 4. `docs/development_plan.md` — what milestone we are in and its exit criteria

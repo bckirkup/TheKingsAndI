@@ -34,7 +34,7 @@ tree — so pieces that end up in total disagreement still share most of the wor
 - The true `D_max` score exists in this layer and must not cross into
   `psychology/` (ADR 0013); the pool's public surface is *"what does piece i
   believe"*, with the true evaluation exposed on a separate audit-only path.
-- **Open:** whether attention *prunes* lines or merely deprioritizes them (D41).
-  Pruning is cheaper and more dramatic; it also makes refusals of winning moves
-  more common, which is either the best feature in the game or its worst bug
-  report.
+- **Resolved by ADR 0019:** attention **prunes** the lines a piece does not
+  appear in. Cheapest option and the dramatic one — refusals of winning moves
+  become common, which is either the best feature in the game or its worst bug
+  report; testimony (ADR 0018) is the mitigation.

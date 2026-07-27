@@ -43,7 +43,8 @@ green in CI on a fresh clone.
 |---|---|
 | 1.1 | `chess/` wrapper over chess.js: legality, FEN/SAN, per-piece identity mapping (chess.js has no piece identity — we maintain a square→PieceId map through every move, capture, castle, promotion, and en-passant) |
 | 1.2 | Threat/feature extractor: `ΔP_capture(j, m)` for all pieces, material delta, king-safety delta |
-| 1.3 | Engine broker: stockfish.wasm pool, `go depth N` only, deterministic mode, insight truncation + novice-bias noise model |
+| 1.3 | Engine broker behind `EnginePort` (ADR 0020): stockfish.wasm pool, `go depth N` only, deterministic mode, shared search + private per-piece scoring (ADR 0017). Nothing outside `engine/` learns which engine exists; `determinismId` goes into every `MatchRecord` |
+| 1.3b | Engine conformance suite (fixed FEN × depth corpus → stable output) **plus one permissive adapter** — Lozza, MIT, pure JS, no toolchain — purely to prove the port is real. An untested port is not a port (ADR 0020) |
 | 1.4 | Golden tests: known positions → known threat maps; identity map survives 1,000 random legal games |
 
 Risk retired here: **piece identity through chess.js mutations** is the most
@@ -63,6 +64,7 @@ likely source of subtle, save-corrupting bugs in the entire project.
 | 2.4 | Witnessed-event detection (sacrifice attribution is non-trivial: a capture counts as a sacrifice only if it removed a threat to a peer or enabled a forced win line — attribute via engine eval, not heuristics) |
 | 2.5 | Firing/benching roster decay |
 | 2.5b | Outcome→trust reducers and costly-signal detection per `docs/trust_dynamics.md` (ADR 0007) |
+| 2.5c | Two-channel credence (ADR 0019): `τ_benev` fast up / cliff down / slow erosion under neglect, `τ_abil` Bayesian in `1/n`, both separately logged. Neglect fires on *omissions* (never consulted, never defended, refusal steamrolled), never on elapsed time — ADR 0007 still forbids drift toward a baseline. The *heard* signal must gate on withdrawal having surrendered real value, or it can be farmed |
 | 2.6 | Replayer: `(rosterSnapshot, seed, intents) → identical event log` |
 
 Exit criteria: invariant suite from `psychology_engine.md` §11 passes; replay
