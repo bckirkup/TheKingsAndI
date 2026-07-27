@@ -1,9 +1,9 @@
 ---
 name: living-chess
-description: Orient in and work on The Kings and I (TheKingAndI) repository — a chess game whose pieces have persistent memory, trust, class prejudice, and the ability to refuse orders or walk off the board. Use for any task in this repo, including planning, architecture, implementation, and balance work.
+description: Orient in and work on The Kings and I (TheKingsAndI) repository — a chess game whose pieces have persistent memory, trust, class prejudice, and the ability to refuse orders or walk off the board. Use for any task in this repo, including planning, architecture, implementation, and balance work.
 ---
 
-# The Kings and I (TheKingAndI)
+# The Kings and I (TheKingsAndI)
 
 _"Living Chess" is the internal codename only (ADR 0010)._
 
