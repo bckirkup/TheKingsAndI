@@ -132,7 +132,12 @@ means the model has collapsed:
     a piece's `P_loss` estimate and the roster mean either never moves (gossip
     does nothing) or collapses to zero within a ply (the roster is one mind).
     Panic must be able to outrun the position without becoming instantaneous.
-20. **Attention is decorative** (ADR 0016): refusal rates are unchanged when
+20. **Perception-only divergence is too weak** (D45): dispersion of `V_own`
+    across pieces evaluating identical positions, paired with the
+    refused-good-move rate. This is the explicit trigger for reconsidering
+    partial observability — the one detector whose failure justifies an
+    expensive architectural branch rather than a re-tune.
+21. **Attention is decorative** (ADR 0016): refusal rates are unchanged when
     lines the piece does not appear in are prioritized normally. If attention
     does not produce refusals of moves that are good for reasons the piece never
     examined, the belief model is a costless ornament.

@@ -46,9 +46,17 @@ about where a piece stands. Divergence is produced by three cheap channels
 - **Cost:** the engine must serve sixteen evaluation profiles. See ADR 0017.
 
 ## Alternatives considered
-- **True partial observability / fog of war.** Rejected: intractable, breaks
-  replay, and dissolves the perfect-information premise that makes the
-  disagreement interesting.
+- **True partial observability / fog of war** (pawns see two squares, pieces
+  block sight lines). Rejected — but on a stronger ground than cost:
+  **fog dissolves the ambiguity ADR 0015 exists to create.** A perceptually
+  handicapped piece gives every refusal an unambiguous reading as an information
+  failure, so *"was he wrong or was he disloyal?"* becomes answerable and the
+  lesson degrades to "brief your people better." Doubt requires access.
+  Conceded in its favor: it is markedly more legible, and legibility is the
+  scarce resource under ADR 0018. Mitigated by making attention **geometric**
+  (salience decaying with distance and behind blocked lines), which yields
+  *"I couldn't see past him"* as honest testimony without hiding any state.
+  Held open as D45 with an explicit harness trigger (`docs/belief_model.md` §3).
 - **Noise on a shared evaluation.** Cheaper, but random error is not
   perspective: it produces pieces that are *unreliable* rather than pieces that
   are *differently invested*, and it cannot generate the competent skeptic.

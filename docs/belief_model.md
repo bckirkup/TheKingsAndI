@@ -41,7 +41,7 @@ are cheap, deterministic, and inspectable.
 |---|---|
 | **Depth `D_i`** | ADR 0013's existing lever: how far ahead it can actually calculate |
 | **Egocentric evaluation** | The piece overweights its own safety, its own mobility, and the fate of its own class. A pawn's evaluation is not a grandmaster's evaluation of a pawn |
-| **Attention** | *It searches the lines it appears in.* Variations involving the piece itself and its high-affinity peers get extra depth; variations involving pieces it does not care about get less |
+| **Attention** | *It searches the lines it appears in.* Variations involving the piece itself and its high-affinity peers get extra depth; variations involving pieces it does not care about get less. Weighted **geometrically** — salience decays with distance and behind blocked lines (§3) |
 
 Attention is the sharpest of the three, because it reproduces the actual failure
 mode: **nobody analyzes the position, everyone analyzes their part of it.** A
@@ -87,7 +87,62 @@ begin because the mood spread faster than the material loss, which is the most
 recognizable thing about real collapses and is impossible to get from any
 per-piece calculation done in isolation.
 
-## 3. What this deliberately does not model
+## 3. Why not line of sight — and the one argument that decides it
+
+The intuitive design is perceptual: a pawn sees two squares out, tall pieces
+block sight lines, a rook reads the file it stands on. It is a good instinct, it
+is more distinctive than what is proposed here, and one point strongly favors
+it: **it is far more legible.** *"I couldn't see past the knight"* is better
+testimony than anything an attention model will produce, and under ADR 0018
+testimony is the player's only channel. Interpretive divergence is genuinely
+harder to dramatize. That cost is real and is accepted here with reservations.
+
+The decisive argument against it is not cost. It is that **fog dissolves the
+ambiguity ADR 0015 exists to create.**
+
+If a piece is perceptually handicapped, every refusal has an unambiguous
+explanation available to everyone: an information failure. The leader knows it,
+the audit can prove it, and the lesson degrades to *brief your people better* —
+a real lesson, but a smaller one, and one no chess player needed this game to
+learn. The thesis is the other thing: the piece **has** the facts, sees exactly
+what the leader sees, and still will not substitute the leader's judgment for
+its own. Doubt requires access. Take away access and there is nothing left to
+doubt with.
+
+So a fog model would make the game's central question — *was he wrong, or was he
+disloyal?* — answerable for the first time, which is precisely the wrong
+direction.
+
+### The middle: geometric salience
+
+Attention (Channel 1) should be **geometric**, which buys most of the flavor for
+almost nothing:
+
+- salience decays with board distance from the piece;
+- salience decays along blocked lines and behind walls of bodies;
+- so a pawn's attention really is concentrated a couple of squares out, and a
+  piece really does under-weight what is happening behind a crowd.
+
+Nothing is hidden. No state is unknown. It is a weighting on *search*, not a fog
+over *facts* — and the testimony layer may still say *"I couldn't see past
+him,"* because as a description of where the piece's attention went, that is
+true. The player gets line-of-sight drama; the model keeps the ambiguity.
+
+### If this is wrong (D45)
+
+This is a bet that interpretive divergence generates enough real disagreement,
+and it should be settled by the harness rather than by taste. The trigger is
+explicit:
+
+> Measure the dispersion of `V_own` across pieces evaluating identical
+> positions, and the resulting **refused-good-move rate**. If perception-only
+> divergence cannot produce refusals of genuinely good moves at a meaningful
+> rate, the partial-observability branch is justified.
+
+If that trigger fires, escalating is the right call — with the ambiguity cost
+above priced in and given up deliberately, not discovered later.
+
+## 4. What this deliberately does not model
 
 - No uncertainty about piece locations. No hidden squares, no fog rendering.
 - No belief distribution over positions, ever.
@@ -95,7 +150,7 @@ per-piece calculation done in isolation.
 - Rumor never transmits a board feature — only appraisals. A piece cannot learn
   a tactic through gossip, only a mood.
 
-## 4. Consequences for the engine (see ADR 0017)
+## 5. Consequences for the engine (see ADR 0017)
 
 Sixteen distinct minds must not mean sixteen engines. Perception decomposes into
 a shared part and a private part:
@@ -111,7 +166,7 @@ Search is what costs; scoring is nearly free. Because attention is a *depth
 allocation* rather than a different tree, most of the work is shared even
 between pieces that end up disagreeing completely.
 
-## 5. Consequences for the player
+## 6. Consequences for the player
 
 The player never sees any of this (D34, ADR 0018). What they see is a piece
 giving a reason — and the reason may be a rationalization, because a piece
@@ -119,8 +174,11 @@ reporting its own attention failure would have to be more self-aware than
 people are. The information channel is exactly the one a real commander has:
 **testimony**.
 
-## 6. Open questions
+## 7. Open questions
 
+- **D45:** Does partial observability ever get built? Held open with the
+  harness trigger in §3 — an expensive branch, justified only if perception-only
+  divergence proves too weak, and knowingly paid for in ambiguity.
 - **D41:** Is attention a depth bonus on the piece's own lines, or a hard
   pruning of lines it does not appear in? Pruning is more dramatic and more
   likely to produce refusals of winning moves.

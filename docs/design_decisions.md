@@ -137,6 +137,21 @@ Owner: *"the player should not see the calculation, only whatever
 rationalization the piece offers."* Legibility of *cause* stays mandatory;
 legibility of arithmetic is now forbidden, including in the exec-lab skin.
 
+### D45 🕐 Does partial observability ever get built? (held open with a trigger)
+Owner's instinct was a perceptual model — pawns seeing two squares, pieces
+blocking sight lines. ADR 0016 declines it, primarily because **fog dissolves the
+ambiguity ADR 0015 exists to create**: a piece that could not see has an
+unambiguous excuse, and the game stops asking whether he was wrong or disloyal.
+Conceded against that: line of sight is far more legible, which matters under
+ADR 0018. Mitigation is **geometric salience** — attention decaying with
+distance and behind blocked lines, so testimony may honestly say *"I couldn't
+see past him"* while nothing is hidden.
+
+**Trigger for revisiting:** harness dispersion of `V_own` across pieces on
+identical positions, and the refused-good-move rate. If perception-only
+divergence cannot produce refusals of genuinely good moves at a meaningful rate,
+the expensive branch is justified — accepting the ambiguity loss deliberately.
+
 ### D41–D44 ⚠ Follow-ons from the belief model (ADR 0016)
 **D41** does attention *prune* lines the piece does not appear in, or merely
 deprioritize them? Pruning is cheaper, more dramatic, and produces more refusals
