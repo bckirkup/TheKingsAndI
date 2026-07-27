@@ -14,8 +14,10 @@ Bangkok* — the chess-as-spectacle, arrogant-grandmaster register, not high
 fantasy.
 
 ## Consequences
-- README, UI copy, and store pages use *The Kings and I*; the repository name
-  stays `TheKingAndI`.
+- README, UI copy, and store pages use *The Kings and I*. The repository was
+  renamed in place `TheKingAndI` → `TheKingsAndI`; GitHub redirects the old URL,
+  so existing clones and links keep working. The filename of this ADR
+  (`0010-naming-the-king-and-i.md`) is left alone to keep inbound links stable.
 - The title carries the thesis for free: the pieces you command are sovereigns
   in their own right, and the question of the whole game is who is really in
   command of whom.
