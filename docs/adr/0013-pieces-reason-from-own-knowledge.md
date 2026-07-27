@@ -32,10 +32,10 @@ There is no privileged oracle anywhere in the psychology layer.
   position that was actually fine. That is the mechanic. Experience is now
   something you can *lose games to*, which is what makes developing pieces
   matter.
-- **The audit must distinguish "he was wrong" from "he was disloyal."** Two
-  refusals with identical trust can have completely different causes, and a
-  player who cannot tell them apart cannot learn. Log both the piece's
-  evaluation and the true one; show the divergence.
+- **The audit shows the divergence between the piece's evaluation and the true
+  one.** Log both. *Revised by ADR 0015:* do not adjudicate "he was wrong" versus
+  "he was disloyal" — under the credence model those are one parameter seen from
+  two sides, and the honest report is *he would not take it on faith*.
 - **Panic and misplaced confidence are emergent**, not scripted: a low-`D_i`
   piece has a noisier and shallower view, so it over-reacts to visible threats
   and misses deep compensation.

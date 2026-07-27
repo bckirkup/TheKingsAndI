@@ -99,7 +99,7 @@ policy by the player (the `redeemer` oracle).
 | 4.1 | chessground board + drag input → intent pipeline |
 | 4.2 | Piece state overlays: aura rings (trust), morale gauge, betrayal marker |
 | 4.3 | Refusal / quiet-quit / desertion UX — how a refused move is communicated without feeling like a bug, and how a rout is made legible while it happens |
-| 4.3b | Override UX: a deliberate act showing who will be hurt and by how much, never a dismissible dialog. Plus the "he was wrong vs. he was disloyal" display (ADR 0013) |
+| 4.3b | Override UX: a deliberate act showing who will be hurt and by how much, never a dismissible dialog. Plus the divergence display — the piece's own evaluation beside the true one; it presents *he would not take it on faith*, it does not adjudicate wrong-vs-disloyal (ADR 0013, revised by ADR 0015) |
 | 4.4 | Relationship inspector: who protects whom, class-bias heatmap |
 | 4.5 | Authored dialogue tree v1 (deterministic, relationship-aware; ~200 lines seeded by verdict + event + persona) |
 | 4.6 | One theme only (`tactical-blueprint`: cheapest to draw, best for debugging) |

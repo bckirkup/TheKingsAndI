@@ -178,6 +178,10 @@ These came out of comparing the reference implementation against the SRS prose.
 Each is a decision, not a bug I should silently "fix".
 
 ### 10.1 The loyalty term dominates utility by an order of magnitude
+> **Update:** the owner's reframing of trust as *the unwillingness to substitute
+> judgement* supersedes the arithmetic fixes below. See ADR 0015 and
+> `docs/credence_model.md`: trust becomes a mixing weight in `[0,1]`, not a term
+> on the same axis as board value, and the scale contest disappears.
 `w_loyalty · T_i` spans `±100`. Every other term is small: `ΔV_board` is `±10`,
 `ΔV_capture` is `0..9`, the risk term is `0..1`, and `Φ` contributes at most
 `w_empathy` per peer. Meanwhile `Θ_refusal` moves only `±50`. Net effect:
@@ -271,3 +275,7 @@ invariant is that no absorbing state exists for a player who changes policy.
 12. Every evaluation a piece uses is its own depth-`D_i` view. The true
     evaluation must never reach a psychology reducer (ADR 0013).
 13. The player can always force a move; no position is unplayable (ADR 0014).
+14. *If ADR 0015 is accepted:* trust never enters as an additive term. It is the
+    weight on the leader's judgment — `V_perceived = (1−τ)·V_own + τ·V_leader_implied`
+    — so a refusal always requires both a bad-looking move and insufficient
+    credence to bridge it (`docs/credence_model.md`).

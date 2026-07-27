@@ -135,9 +135,15 @@ about this position," keyed `(position, D_i)`, not merely "what is the best
 move." This is a reviewable architectural rule: if a true score can reach a
 psychology reducer, the layering is wrong.
 
-The true evaluation is still computed — the audit needs it to distinguish *"he
-was wrong"* from *"he was disloyal"* — but it flows to `orchestration/` and the
-audit only, never into a verdict.
+The true evaluation is still computed — the audit shows it beside the piece's
+own — but it flows to `orchestration/` and the audit only, never into a verdict.
+
+If D19 resolves as credence (ADR 0015), this boundary carries one more thing:
+`engine/` must also supply `V_leader_implied(m)`, the value a piece *infers* the
+leader must see given that he ordered `m`. It is an inference, not the true
+score, so it stays on the psychology side of the wall — and the audit stops
+adjudicating *"he was wrong"* versus *"he was disloyal"*, because under that
+model they are one parameter seen from two sides.
 
 A refused intent produces no move and no turn cost (ADR 0002); the player may
 re-plan, or **override** at a steep trust cost to the piece and every witness
