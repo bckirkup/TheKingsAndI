@@ -89,6 +89,23 @@ Rules 1 and 3 are **decided** (ADR 0009); rule 2 remains as specified.
    preferences — they like winning, hate losing, and really hate being taken —
    and those preferences are the primary between-match writers of `T_i`.
 
+## 2b. Open structural decisions (D49–D51)
+
+Three schema questions are unresolved and expensive to retrofit:
+
+- **D49 — credence is trust in *someone*.** With symmetric psychology (D5) and
+  persistent rosters, `τ_benev`/`τ_abil` should be keyed by leader:
+  `credence: Record<LeaderId, { benev: number; abil: number }>`. Flattening it to
+  scalars forecloses a second commander, an AI-led army with its own relational
+  history, and a piece that trusted a predecessor.
+- **D50 — where the true evaluation lives.** The audit (ADR 0018) and the
+  trust-farming detector (ADR 0019) need it, but it must never be loadable into
+  psychology (ADR 0013). Recommended: a **separate audit stream** with no code
+  path from the psychology loader, so the boundary holds at rest as well as at
+  runtime, and so the stream can be dropped from a shipping save.
+- **D51 — does the King carry psychology at all?** Determines whether
+  `PieceState` stays uniform across every piece.
+
 ## 3. Dexie schema (v1 draft)
 
 ```ts
