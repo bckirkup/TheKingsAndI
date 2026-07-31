@@ -99,6 +99,25 @@ difference between a lesson and a bug report.
 | ADR 0003 (King exempt) | The King never deserts; the army can dissolve around it. |
 | D22 (morale) | `M_i` no longer gates desertion as a trip-wire; it feeds `λ_i`. Morale still needs an update rule, but it is no longer load-bearing for reachability. |
 
+## 4b. Dismissal is the cheaper exit (ADR 0021)
+
+Desertion is not the only way out from under a bad commander, and it is the
+expensive one. A piece that withdraws confidence and lets the King act pays
+none of desertion's costs — no capture risk on the way out, no witness cost, no
+affinity damage from the pieces that stayed — and the roster survives intact.
+
+So the model must price the two against each other:
+
+```
+desert    : escapes personal danger, pays witness + affinity cost, army likely loses
+withdraw  : pays nothing physical, forfeits the victory it wanted
+```
+
+The brake on the cheap option is **glory**, so `w_ambition` and `w_prestige` are
+what keep an ambitious piece serving a commander it dislikes. If dismissal ever
+dominates desertion across every trait vector, no roster will rout and ADR 0011's
+intended cascade quietly disappears — tracked as the *costless mutiny* detector.
+
 ## 5. Calibration targets (Milestone 3)
 
 | Metric | Target |

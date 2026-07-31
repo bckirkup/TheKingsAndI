@@ -288,3 +288,10 @@ invariant is that no absorbing state exists for a player who changes policy.
 17. The player never sees the arithmetic. A piece's stated reason is generated
     from its verdict and may be a rationalization, but it must always name a
     cause (ADR 0018).
+18. The King is a character, not the player's avatar: `PieceState` stays uniform,
+    his attention is unpruned (he appears at the tips of every line) but no
+    deeper than `D_king`, and his credence is the player's **mandate** rather
+    than an obedience gate. He cannot desert as a matter of arithmetic, not of
+    exemption. Losing the mandate is a terminal state in which the roster
+    survives, braked only by the glory the pieces forfeit — `w_ambition` and
+    `w_prestige` (ADR 0021).

@@ -161,6 +161,24 @@ means the model has collapsed:
     is never worth it under any policy (a trap button). Both mean D35 is
     mis-tuned (ADR 0014).
 
+25. **Royal oracle.** `V_own_king` correlates with the true `D_max` evaluation
+    above ~0.85, or players learn to read the King's testimony as tactical
+    advice. His attention is global in *breadth* and still bounded in *depth*
+    (ADR 0021); if breadth becomes truth he is an omniscience leak and a hint
+    system (ADR 0013).
+26. **Inert mandate.** The King's credence never moves, or moving it changes
+    nothing measurable in roster behavior — the mandate must propagate through
+    rumor and visibly weaken orders, or ADR 0021 bought a scalar nobody feels.
+
+27. **Costless mutiny.** Dismissal rate is insensitive to `w_ambition` and
+    `w_prestige`, or withdrawing confidence dominates desertion for every trait
+    vector. Dismissal is the ending where nobody dies, so glory forfeited is the
+    only brake on it (ADR 0021 §6.2); without a live brake no roster ever routs.
+28. **Dismissal preempts nothing.** Under a tyrannical leader the King must
+    relieve the player *before* the rout in most seeds — the mandate is the
+    early-warning channel (ADR 0021 §6.4). If routs consistently arrive first,
+    the King's breadth is not doing its job or his patience is mis-tuned.
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

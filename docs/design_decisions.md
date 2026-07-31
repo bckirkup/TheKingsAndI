@@ -108,7 +108,7 @@ only viable option; what remains open is how the shallow view is *derived*
 ## Open — architecture
 
 These are structural: expensive or impossible to retrofit, and distinct from the
-calibration knobs below. Items D48–D51 surfaced from ADRs 0016–0019 and were not
+calibration knobs below. Items D48–D53 surfaced from ADRs 0016–0021 and were not
 previously recorded.
 
 ### D48 ⛔ Deterministic sequencing of async engine results
@@ -145,14 +145,47 @@ loader has no code path to read. This makes ADR 0013's epistemic boundary
 enforceable at rest rather than only at runtime, and it lets the audit stream be
 dropped from a shipping save without breaking play.
 
-### D51 ⚠ Does the King have psychology?
-Never decided. The King is exempt from desertion (ADR 0003), but it is unstated
-whether he holds credence in the player at all — and what it means for the piece
-that *is* the loss condition to distrust its commander. Either answer is
-defensible; the choice determines whether `PieceState` stays uniform and whether
-the endgame has any psychological reading.
+### D51 ✅ Does the King have psychology? — yes, as a mandate (ADR 0021, proposed)
+Resolved by the owner's own observation that *"the king is involved in every
+branch of the game... at the tips, especially."* Under ADR 0019's pruning rule
+that makes the King the only piece with **global attention** — broad, not deep.
+He sees the whole board shallowly; a knight sees its corner deeply.
 
-Design question in architectural clothing; owner instinct wanted.
+Consequences: his desertion exemption becomes a theorem rather than a rule
+(`P_capture(king)` *is* `P_loss(team)`, so `U_desert` can never win); his
+egocentrism *is* the objective function; and his credence inverts direction —
+a sovereign does not obey a commander, he grants him authority, so the King's
+`τ` is the player's **mandate**. Losing it propagates through rumor, weakens
+every order, and at the floor relieves the player of command. `PieceState` stays
+uniform; only his attention mask, evaluation profile, and the *interpretation*
+of his credence differ. See ADR 0021. Rejected: incarnation (the player is not a
+king — the title says so).
+
+**Guard:** new degeneracy detector *royal oracle* — breadth must not become
+truth, or he is an omniscience leak and a hint system (ADR 0013).
+
+### D54 ✅ Dismissal is a terminal state — the survivable one (ADR 0021 §6)
+Owner ruling: *"It's not loss for the pieces per se. They lose the opportunity at
+glorious victory, but they are not taken."* Dismissal is the only ending where
+nobody dies, which makes it **cheaper for a piece than deserting** — no capture
+risk, no witness cost — so the roster gains a non-violent route out from under a
+bad commander: withdraw confidence and let the sovereign act. The brake is
+glory, not danger: `w_ambition`/`w_prestige` make the ambitious tolerate a
+commander they dislike, so dismissal is a *coalition* split by trait rather than
+a trust threshold.
+
+Severity ladder, each needing its own epilogue (D29): **checkmate** = outplayed,
+roster spent; **dismissal** = they still want to win, just not with you, roster
+intact; **rout** = they would rather lose than serve, roster shattered. Dismissal
+is the middle outcome and must not read as the worst.
+
+Because the King's attention is broad (ADR 0021 §1) he sees collapse forming
+first, so dismissal fires *earlier* than a rout — the mandate is the game's
+early-warning system, not a fourth failure mode.
+
+**Remaining knob (calibration, Milestone 3):** the King's *patience*, which
+interacts with D26 — dismiss too early and the player never reaches the insight;
+too late and the rout preempts the mechanic.
 
 ### D52 ⚠ The narration situation-key schema
 Every line the game will ever say is keyed on it, so it bounds what a piece can
@@ -256,8 +289,8 @@ before any exec-lab use. Not yet considered by the owner.
 1. **D48, D49** — before the engine layer and the first schema respectively.
    Both are cheap now and structural later; D48 is the one whose absence
    presents as a mysterious psychology bug.
-1b. **D51** — before `PieceState` is finalized. Needs owner instinct, not
-   analysis.
+1b. **King's patience (D54 residue)** — with the harness, alongside D26.
+   (D51 and D54 are resolved by ADR 0021.)
 1c. **D50, D52** — before persistence and before any dialogue is authored.
 2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
    partly answered in substance: an override is the canonical benevolence cliff
