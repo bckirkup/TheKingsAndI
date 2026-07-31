@@ -68,6 +68,14 @@ Priority order for authoring, by narrative weight:
 4. Quiet quitting — must be *detectable in the prose* without being announced.
 5. Match audit and campaign debrief.
 
+## 2b. The situation key outlives everything else (D52, open)
+
+Every line the game will ever say is keyed on the situation key, so it bounds
+what a piece can ever express — and changing it invalidates all authored content.
+It must carry the two credence channels **separately** (ADR 0019), or a piece can
+never say *"I know it was right, I just don't think you care"*, which is the most
+valuable sentence in the design. Decide before authoring begins.
+
 ## 3. Legibility is a hard requirement, not flavor
 
 ADR 0007 and ADR 0011 make losing — and the rout — intended experiences. The

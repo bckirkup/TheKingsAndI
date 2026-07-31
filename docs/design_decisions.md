@@ -105,6 +105,67 @@ only viable option; what remains open is how the shallow view is *derived*
 
 ---
 
+## Open — architecture
+
+These are structural: expensive or impossible to retrofit, and distinct from the
+calibration knobs below. Items D48–D51 surfaced from ADRs 0016–0019 and were not
+previously recorded.
+
+### D48 ⛔ Deterministic sequencing of async engine results
+The sharpest remaining architecture decision. With ADR 0017, every piece queries
+the pool each ply; results arrive asynchronously; byte-identical replay requires
+a fixed resolution order. Without an explicit ordering rule, replays diverge on
+faster hardware and the bug looks like a psychology bug.
+
+**Recommended:** a barrier per ply — all engine queries issued, all results
+collected and sorted by `PieceId`, and only then may psychology reducers run. No
+reducer may observe arrival order, and nothing may short-circuit on the first
+result to return. Enforce with a test that shuffles resolution order and asserts
+an identical event log.
+
+### D49 ⛔ Is credence indexed by leader identity?
+D5 makes psychology symmetric and campaigns persist rosters, so `τ_benev` and
+`τ_abil` are trust *in someone* rather than scalars on a piece. If credence is
+not keyed by leader from the first schema, the project can never have a second
+commander, an AI-led opposing army with its own relational history, or a piece
+that trusted a predecessor.
+
+**Recommended:** key it — `credence: Record<LeaderId, {benev, abil}>`. Nearly
+free now; a migration and a psychology rewrite later. Interacts with D27
+(cross-campaign roster memory).
+
+### D50 ⚠ Does the true evaluation get persisted in the event log?
+The audit needs it (ADR 0018) and the trust-farming detector needs it
+(ADR 0019), but persisting truth beside belief inflates the payload and places
+the forbidden number inside the save file, where a future loader may read it into
+psychology by accident.
+
+**Recommended:** persist it in a **separate audit stream** that the psychology
+loader has no code path to read. This makes ADR 0013's epistemic boundary
+enforceable at rest rather than only at runtime, and it lets the audit stream be
+dropped from a shipping save without breaking play.
+
+### D51 ⚠ Does the King have psychology?
+Never decided. The King is exempt from desertion (ADR 0003), but it is unstated
+whether he holds credence in the player at all — and what it means for the piece
+that *is* the loss condition to distrust its commander. Either answer is
+defensible; the choice determines whether `PieceState` stays uniform and whether
+the endgame has any psychological reading.
+
+Design question in architectural clothing; owner instinct wanted.
+
+### D52 ⚠ The narration situation-key schema
+Every line the game will ever say is keyed on it, so it bounds what a piece can
+ever express, and changing it invalidates all authored content (ADR 0004,
+`docs/llm_integration.md`). It must carry the two credence channels *separately*
+or a piece can never say *"I know it was right, I just don't think you care."*
+
+### D53 🕐 Content-pack / theming architecture
+Whether themes and the exec-lab track are data packs or code paths. Only
+load-bearing once a second audience is real (D1), but retrofitting is expensive.
+
+---
+
 ## Open — non-blocking
 
 ### D46–D47 🕐 Engine licensing (from ADR 0020)
@@ -192,7 +253,12 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. *(Nothing blocks Milestone 1–2 code as of ADR 0019.)*
+1. **D48, D49** — before the engine layer and the first schema respectively.
+   Both are cheap now and structural later; D48 is the one whose absence
+   presents as a mysterious psychology bug.
+1b. **D51** — before `PieceState` is finalized. Needs owner instinct, not
+   analysis.
+1c. **D50, D52** — before persistence and before any dialogue is authored.
 2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
    partly answered in substance: an override is the canonical benevolence cliff
    (ADR 0019), so its price falls out of that channel's calibration rather than
