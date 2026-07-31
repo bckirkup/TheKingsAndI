@@ -57,14 +57,16 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    key (ADR 0004). Trust never decays toward a baseline on its own (ADR 0007).
 9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
-   D19 and D9 are settled (ADR 0015, ADR 0017). The blocking ones are now
-   D36–D39 and D41 are settled by ADR 0019. Remaining calibration decisions
+   D19 and D9 are settled (ADR 0015, ADR 0017); D36–D39 and D41 by ADR 0019;
+   D51 by ADR 0021. Remaining calibration decisions
    (D35, D40, D42–D44) belong to the harness in Milestone 3. **Four architecture
    decisions are open and must not be resolved silently in code:** D48
    (deterministic sequencing of async engine results), D49 (is credence keyed by
    leader identity?), D50 (is the true evaluation persisted, and where), D51
-   (does the King have psychology?). D52 (narration situation-key schema) blocks
-   authoring, not code.
+   (D54 is now resolved). D52 (narration
+   situation-key schema) blocks authoring, not code. The King is a character,
+   not the player's avatar: uniform `PieceState`, unpruned attention, and his
+   credence is a mandate, not an obedience gate (ADR 0021).
 
 ## Setup (once code lands; not yet applicable)
 ```bash

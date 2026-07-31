@@ -103,8 +103,12 @@ Three schema questions are unresolved and expensive to retrofit:
   psychology (ADR 0013). Recommended: a **separate audit stream** with no code
   path from the psychology loader, so the boundary holds at rest as well as at
   runtime, and so the stream can be dropped from a shipping save.
-- **D51 — does the King carry psychology at all?** Determines whether
-  `PieceState` stays uniform across every piece.
+- **D51 is resolved (ADR 0021):** `PieceState` stays **uniform** — the King
+  carries the same fields. What differs is his attention mask (unpruned, because
+  he appears at the tips of every line), his evaluation profile (own safety *is*
+  the objective function), and the interpretation of his credence, which is the
+  player's **mandate** rather than a willingness to obey. No royal special-casing
+  in the reducers.
 
 ## 3. Dexie schema (v1 draft)
 
