@@ -195,6 +195,17 @@ means the model has collapsed:
     strongly in the debrief. They must move independently, or the central
     finding — *worse orders, better outcomes* — cannot be shown (ADR 0022 §5).
 
+33. **Roster laundering.** A leader policy that burns and replaces pieces
+    reaches a mean credence comparable to one that maintains a roster. Then
+    reputation transfer (ADR 0023 §2) is too weak and the bench is an escape
+    hatch from the entire subject of the game.
+34. **Act one is the whole game.** Acts two and three do not measurably differ
+    in starting credence or difficulty — the reputation carried between kings is
+    decorative (ADR 0023 §2).
+35. **Pack coverage.** Any situation key reachable by the simulation with no line
+    in a shipped content pack, or an implicit rather than declared fallback
+    (ADR 0023 §4).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

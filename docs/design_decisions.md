@@ -226,15 +226,42 @@ floor. The roster then holds a comparison it never had. Earned rather than
 forgiven, still requiring the changed policy D24 demands. Rate is a calibration
 knob; a recall *within* a match is a hard failure, not a tuning issue.
 
-### D52 ⚠ The narration situation-key schema
-Every line the game will ever say is keyed on it, so it bounds what a piece can
-ever express, and changing it invalidates all authored content (ADR 0004,
-`docs/llm_integration.md`). It must carry the two credence channels *separately*
-or a piece can never say *"I know it was right, I just don't think you care."*
+### D52 ✅ Situation keys are role-abstract (ADR 0023 §4)
+Keys name relationships and events, never board objects or geometry:
+`subordinate.refused.high_risk_order.after_betrayal_by_this_leader`, never
+`pawn_refused_diagonal_advance`. They carry the two credence channels separately
+(ADR 0019) so a piece can say *"I know it was right, I just don't think you
+care"* in any skin. This is what lets a pack rename Pawn → Analyst without
+touching a key.
 
-### D53 🕐 Content-pack / theming architecture
-Whether themes and the exec-lab track are data packs or code paths. Only
-load-bearing once a second audience is real (D1), but retrofitting is expensive.
+### D53 ✅ Content is data packs, not code paths (ADR 0023 §4)
+The enterprise track is the same simulation with different nouns, so a pack is
+`{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
+second codebase maintained forever. Pack coverage becomes a CI check.
+
+### D57 ✅ Three kings, three acts — the career is the unit of play (ADR 0023 §1)
+Owner: *"once none of them are willing to start a game with you, it is time to
+kill the account."* A career holds up to three appointments; each dismissal burns
+a king. Capture and desertion are not permadeath for a piece — dismissal **is**
+permadeath for the player, so the roster outlives its commanders, which is what
+the plural in the title has meant all along. Ship one act, put three in the
+schema (`CareerId`, `ActId`/`KingId`): the content is what gets cut when a date
+arrives, but the migration is not.
+
+### D58 ✅ Bench ~32, made safe by reputation transfer (ADR 0023 §2)
+A deep bench is a trust-**laundering** machine unless newcomers already know you.
+On joining, a recruit is seeded with `τ_abil` from the leader's record and
+`τ_benev` from the roster's current appraisal — both already carried by the rumor
+channel (ADR 0016), so it costs no new machinery. With transfer, depth is a
+comfort rather than an escape. It also gives the acts a difficulty curve for
+free: **king two has heard about you.**
+
+### D59 ✅ A career is won when the army exceeds the player's ceiling (ADR 0023 §3)
+Winning matches shows the player is not failing; it is not what a career is for.
+Using the two columns from ADR 0022 §5, the victory condition is the sustained
+inverse of dismissal: realized position quality above `V_own(player)`, held
+across matches. Leadership is when the organization outperforms the leader —
+one number, computed from the existing event log.
 
 ---
 

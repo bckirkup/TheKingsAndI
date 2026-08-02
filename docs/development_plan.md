@@ -122,6 +122,9 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
 | 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
 | 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |
+| 5.8 | Career/act schema (ADR 0023): `CareerId`, `ActId`/`KingId`, up to three appointments, career-terminal state. Ship one act; the schema carries three |
+| 5.9 | Reputation transfer on recruitment — `τ_abil` from the leader's record, `τ_benev` from roster appraisal via rumor. Ship with the *roster laundering* detector; a ~32 bench is unsafe without it |
+| 5.10 | Career victory condition: realized position quality sustained above `V_own(player)` — the army exceeding the leader's ceiling |
 | 5.5 | Three terminal states with distinct epilogues (ADR 0021 §6.3): checkmate (outplayed, roster spent), **dismissal** (roster intact, they still want the win — the middle outcome, not the worst), rout (roster shattered). Mandate propagates through rumor; King's patience is a calibration knob shared with D26 |
 
 ## Milestone 6 — Narration layer (≈1.5 weeks)
@@ -138,7 +141,7 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 
 | Task | Deliverable |
 |---|---|
-| 7.1 | Remaining three themes as token sets + persona mappings |
+| 7.1 | Content packs as **data** (ADR 0023 §4): `{themeTokens, nounMap, dialogue, epilogues}` bound to role-abstract situation keys; pack-coverage CI check over reachable keys |
 | 7.2 | Four onboarding manuals (indie / exec-lab / purist / academic) |
 | 7.3 | Accessibility: colorblind-safe aura encoding (shape + number, not hue alone), keyboard play, reduced-motion |
 | 7.4 | Exec-lab facilitator export bundle (CSV/PDF) |

@@ -63,8 +63,9 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    decisions are open and must not be resolved silently in code:** D48
    (deterministic sequencing of async engine results), D49 (is credence keyed by
    leader identity?), D50 (is the true evaluation persisted, and where), D51
-   (D54 is now resolved). D52 (narration
-   situation-key schema) blocks authoring, not code. The King is a character,
+   (D54 is now resolved; D52/D53 by ADR 0023). Situation keys are role-abstract —
+   they name relationships and events, never board objects — and content ships
+   as data packs, so the exec-lab track is a rename rather than a fork. The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
    credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
    the campaign under the King's command with the player spectating, and the
