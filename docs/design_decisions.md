@@ -21,7 +21,7 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D10 | Stockfish determinism | **Fixed depth.** `go depth N`, single thread, fixed hash, pinned WASM build. No time-based search, ever. | [0005](adr/0005-engine-insight-topology.md) |
 | D11 | May the LLM affect mechanics? | **No — personality only**, and distilled where possible from a large model into a shipped decision tree. | [0001](adr/0001-deterministic-core-narrative-skin.md) |
 | D12 | LLM key strategy | **Simplest possible first**: no runtime LLM, no keys, no backend. Authored/distilled content ships in the bundle; a BYO-key provider comes later if the prose demands it. | [0004](adr/0004-llm-key-strategy.md) |
-| D13 | Distribution | **Lightest shell first** to validate the psychology (web build); **Steam via a desktop wrapper** as the commercial target. Not Electron. | [0012](adr/0012-distribution.md) |
+| D13 | Distribution | **Lightest shell first** to validate the psychology (web build); **Steam via a desktop wrapper** as the commercial target. Not Electron. *Partially reversed by D72: a shared piece community needs identity and a registry; see ADR 0026 §5.* | [0012](adr/0012-distribution.md) |
 | D15 | Save compatibility | **No compatibility promise during development.** Saves may be invalidated by recalibration. | — |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
 | D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
@@ -238,6 +238,49 @@ touching a key.
 The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
+
+### D69 ✅ Capture is never permanent; exhaustion is (ADR 0026 §1)
+A taken piece loses the match, gains trauma, and remembers **who took it** and
+**who spent it**. ADR 0006 stands — no commander can destroy a piece. But in a
+shared world the trauma pool is **common property**, and accumulation across all
+commanders eventually produces **retirement**: the piece declines everyone,
+permanently, and leaves the world. No single leader kills a piece; every careless
+one contributes. Leadership failure as a **tragedy of the commons**, which cannot
+exist in a single-player roster.
+
+### D70 ✅ Pieces are free agents, not property (ADR 0026 §2)
+Between engagements a piece may **decline** a commander; recruitment is mutual.
+Reputation becomes a market position rather than a save-file scalar, and the end
+of a bad career is not the King's dismissal but nobody taking your calls — the
+community enforcing what ADR 0023 had the fiction enforce. Affinity crosses
+rosters, so a piece may be taken by one it served beside for three campaigns, and
+may respect the opposing commander who took it cleanly.
+
+### D71 ✅ Retirement is the only permanent loss, and it is a world event (ADR 0026 §1)
+It needs an epilogue, a public record of which commanders contributed, and an
+effect on their standing — otherwise the externality is free and the commons has
+no feedback.
+
+### D72 ⚠ Which infrastructure tier ships — reverses part of D13 (ADR 0026 §5)
+Offline-first with no accounts and no backend cannot host a shared registry. The
+ladder: **(1) passports** — signed piece exports carried between players by hand,
+offline intact; **(2) registry** — a thin service owning identity, the free-agent
+market, and retirement, with matches still local; **(3) authoritative world** —
+not recommended. Recommendation: ship tier 1, make the schema tier-2 ready.
+Moderation and privacy, not engineering, are the real cost of tier 2.
+
+### D73 ✅ Determinism becomes anti-cheat (ADR 0026 §6)
+A match is a seed plus an event log, so a registry can **replay-verify** submitted
+results rather than trusting or re-simulating them. Requires ADR 0020's
+`determinismId` in every `MatchRecord`; unrecognized engine identities are
+unverifiable and must be rejected.
+
+### D74 ✅ AI commanders are permanent market infrastructure (ADR 0026 §4)
+Not merely calibration stand-ins: they populate the market at cold start so pieces
+have histories and opinions before there is a second human, and they are never
+removed. A thin market is what kills a game of this shape in month two.
+Single-player must remain whole — a player with no network sees a world of AI
+commanders and loses no mechanic.
 
 ### D64 ✅ The opponent is a commander, not an engine (ADR 0025 §1)
 The enemy army has trust, refusals, desertion, and routs of its own, driven by an
