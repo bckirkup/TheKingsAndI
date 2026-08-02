@@ -23,6 +23,8 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D12 | LLM key strategy | **Simplest possible first**: no runtime LLM, no keys, no backend. Authored/distilled content ships in the bundle; a BYO-key provider comes later if the prose demands it. | [0004](adr/0004-llm-key-strategy.md) |
 | D13 | Distribution | **Lightest shell first** to validate the psychology (web build); **Steam via a desktop wrapper** as the commercial target. Not Electron. *Partially reversed by D72: a shared piece community needs identity and a registry; see ADR 0026 §5.* | [0012](adr/0012-distribution.md) |
 | D15 | Save compatibility | **No compatibility promise during development.** Saves may be invalidated by recalibration. | — |
+| D14 | Language and package/state stack | **TypeScript strict everywhere** — UI, core, and harness — with pnpm, Vite + React 18, Vitest, ESLint flat + Prettier, and Zustand for view state only. Transcendental math is banned in `psychology/` because JS engines disagree in the last bits; the Rust/WASM escape hatch is scoped to `psychology/` alone. | [0032](adr/0032-language-and-toolchain.md) |
+| D80 | Static analysis and coverage gate | **SonarQube Cloud** (`bckirkup_TheKingsAndI`), CI-based analysis with Vitest lcov coverage, gate on new code. Sonar advises; ESLint owns the project invariants. | [0033](adr/0033-static-analysis-and-quality-gate.md) |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
 | D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
 | D24 | Trust feedback loop | Outcome and conduct write back into `T_i`; **no** automatic decay toward baseline. The spiral is the lesson. | [0007](adr/0007-trust-feedback-loop.md) |
@@ -607,10 +609,11 @@ then Steam. That implies the tactical/debug skin during development and an indie
 release publicly, with the exec-lab track derived later from the same event logs.
 Confirm when the UI scope is set.
 
-### D14 🕐 Package/state stack
-Vite + React 18 + TS strict is settled. Still open, with recommendations: pnpm,
-Zustand (thin — the event log is the real state), Vitest, and a chart library for
-debriefs. Owner has no preference; defaults will be taken unless overridden.
+### D14 ✅ Package/state stack — resolved by ADR 0032
+The recommended defaults were taken (pnpm, Zustand kept thin, Vitest) and the
+language choice they presupposed is now stated and argued rather than assumed.
+Still genuinely open, and deferred to Milestone 5 when there is something to
+plot: **the chart library for debriefs**.
 
 ### D17 🕐 Content policy for narrative prose
 Pieces expressing fear, resentment, and betrayal can produce output a corporate
@@ -633,4 +636,5 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
-5. **D1, D14, D17** — as UI and content work begins.
+5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
+   only its chart-library residue is left, and it waits for Milestone 5.)

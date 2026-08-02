@@ -1,0 +1,74 @@
+---
+name: typescript-toolchain
+description: Build, lint, typecheck, test, and run The Kings and I TypeScript codebase, and keep its determinism rules (seeded RNG, banned transcendentals, layer boundaries) intact. Use for any code change in this repo, or when a build/lint/test command fails.
+---
+
+# TypeScript Toolchain (ADR 0032)
+
+TypeScript strict everywhere — UI, orchestration, psychology, chess, engine
+adapters, persistence, and the headless harness. One language so the harness
+validates the shipping code rather than a re-implementation of it.
+
+## Commands
+
+```bash
+pnpm install          # pnpm is pinned via packageManager; do not use npm/yarn
+pnpm dev              # Vite dev server (app shell only until Milestone 4)
+pnpm lint             # eslint + prettier --check
+pnpm format           # prettier --write
+pnpm typecheck        # tsc --noEmit, strict, covers src/ sim/ and tests
+pnpm test             # vitest run
+pnpm test:coverage    # vitest run --coverage -> coverage/lcov.info (Sonar reads this)
+pnpm build            # vite build
+pnpm sim --matches=20 --leader=tyrannical    # headless harness; a CI gate
+pre-commit run --all-files                   # repo hygiene hooks
+```
+
+All of the above must be green before a PR. Node 20 LTS.
+
+## Determinism rules the lint config enforces
+
+These are not style preferences; they are what makes replay and every golden
+test possible. If a rule fires, fix the code — never widen the rule.
+
+| Rule | Why |
+|---|---|
+| `Math.random` banned outside the seeded PRNG module | replay, golden tests, bug reproduction (AGENTS.md rule 2) |
+| `Math.exp` / `Math.pow` / `Math.log` / trig / `**` banned in `psychology/` and `chess/` | implementation-defined across JS engines — a replay recorded in Chrome must not diverge in Safari (ADR 0032 §4). The deterministic math module that replaces them lands with its first consumer in Milestone 2; if you need a logistic before then, write that module (with goldens) rather than reaching for `Math.exp` |
+| Layer imports flow downward only (`app > ui > orchestration > psychology > chess > engine`); `psychology/` may import `core/` and chess *types* only | `psychology/` must stay pure and engine-agnostic (AGENTS.md rule 4, ADR 0013) |
+
+Corollaries not expressible as lint rules, so they are on you:
+
+- Persisted psychological state is integer-valued and clamped.
+- Quantize before a comparison that decides a branch, so a last-bit float
+  difference cannot flip a verdict.
+- The seeded generator is **injected**, never imported ambiently, into anything
+  in `psychology/`; it must support snapshot/restore for replay.
+- Zustand holds view state only. A store field that duplicates a fold over the
+  event log is a review failure (AGENTS.md rule 5).
+
+## Conventions
+
+- No `any`. No non-null `!` without a comment justifying it.
+- Discriminated unions for events and verdicts; exhaustive `switch` with a
+  `never` default.
+- `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are on: indexing a
+  record by `PieceId` yields `T | undefined` and you must handle it.
+- Pure functions in `psychology/`: no I/O, no clock, no ambient RNG.
+- Every config knob ships with a golden test **and** a sensitivity probe — see
+  the `ci-test-design` skill. A parsed-but-unwired knob is a review failure.
+
+## Dependencies are a licensing gate
+
+The project is dual-licensed (AGPL-3.0 + commercial), so a GPL/AGPL-only
+dependency is a blocker, not a footnote — prefer MIT/BSD/Apache-2.0/ISC and flag
+anything else in the PR. Stockfish is the one known, deliberate exception
+(`LICENSING.md`, ADR 0020). Pin versions; avoid floating ranges; prefer releases
+that have been public for at least a week.
+
+## Escape hatch, if the harness gets too slow
+
+Do **not** rewrite the project. `psychology/` is pure by construction, so the
+sanctioned move is porting that module alone to Rust/WASM behind the identical
+signature, validated against the existing golden corpus (ADR 0032 §5). The
+trigger is measured Milestone 3 wall-clock, not a hunch.

@@ -46,6 +46,7 @@ Two hard rules for every milestone:
 | 0.2 | CI: lint, typecheck, unit tests, headless sim smoke (20 matches) |
 | 0.3 | `pnpm sim` CLI stub, seeded RNG utility, canonical JSON encoder |
 | 0.4 | ADR process live; ADRs 0001–0006 decided (see `docs/adr/`) |
+| 0.5 | Language and toolchain settled (ADR 0032, resolving D14); SonarQube Cloud analysis and coverage gate wired (ADR 0033) |
 
 Exit criteria: `pnpm lint && pnpm typecheck && pnpm test && pnpm sim --matches=20`
 green in CI on a fresh clone.

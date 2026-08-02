@@ -20,8 +20,16 @@ built. *(Internal codename: Living Chess.)*
 
 ## Status
 
-**Planning.** No application code yet. This repository holds the architecture,
-the mathematical specification, the development plan, and the decision register.
+**Milestone 0 — building.** The architecture, the mathematical specification,
+the development plan, and the decision register are settled enough to build
+against, and the scaffolding has landed: TypeScript strict, the seeded PRNG, the
+canonical encoder, and the headless harness skeleton. There is no game yet.
+
+```bash
+pnpm install
+pnpm lint && pnpm typecheck && pnpm test
+pnpm sim --matches=20 --leader=tyrannical
+```
 
 | Document | What it answers |
 |---|---|
@@ -77,18 +85,26 @@ state is deterministic, seeded, and replayable.
 - **No runtime LLM.** Personality is authored offline and shipped as a
   deterministic tree. ([ADR 0004](docs/adr/0004-llm-key-strategy.md))
 
-## Planned stack
+## Stack
 
-React 18 + TypeScript + Vite · chessground · chess.js · stockfish.wasm ·
-Dexie (IndexedDB) · Vitest. Web build first, Steam via a Tauri shell later
+**TypeScript strict, everywhere** — UI, core, and the headless harness share one
+language so that a calibration run validates the shipping code rather than a
+re-implementation of it ([ADR 0032](docs/adr/0032-language-and-toolchain.md)).
+React 18 + Vite · pnpm · Vitest · Zustand (view state only) · chessground ·
+chess.js · stockfish.wasm · Dexie (IndexedDB). Static analysis and the coverage
+gate run on SonarQube Cloud
+([ADR 0033](docs/adr/0033-static-analysis-and-quality-gate.md)).
+
+Web build first, Steam via a Tauri shell later
 ([ADR 0012](docs/adr/0012-distribution.md)). Offline-first: no server, no
 account, no API key, ever.
 
 ## For AI agents
 
 Start with [AGENTS.md](AGENTS.md) and the skills in
-[.agents/skills/](.agents/skills/): `living-chess`, `psychology-engine`,
-`balance-simulation`, `narrative-llm`, `ci-test-design`.
+[.agents/skills/](.agents/skills/): `living-chess`, `typescript-toolchain`,
+`psychology-engine`, `balance-simulation`, `narrative-llm`, `ci-test-design`,
+`sonarqube-quality-gate`.
 
 ## License
 
