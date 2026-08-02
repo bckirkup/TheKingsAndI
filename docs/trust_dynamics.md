@@ -120,8 +120,9 @@ exists to make.
 
 Recall (D56) is the one recovery path that does not violate the
 no-free-forgiveness rule: it is triggered by the successor's *measured*
-performance, never by elapsed time or contrition, and surviving it still
-requires the changed policy §3 demands.
+performance, never by elapsed time or contrition, it is offered only at the
+**start of a later match** so the consequence plays out in full first, and
+surviving it still requires the changed policy §3 demands.
 
 ## 5. What must be true — and what must NOT be fixed
 

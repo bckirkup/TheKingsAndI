@@ -46,11 +46,30 @@ A new leader begins with `τ_benev` high — he has never betrayed anyone — an
 slow, so **every** new leader inherits relational credit and evidential doubt.
 No special-casing: a successor is simply a `LeaderId` with an empty history.
 
-### 4. The King's weakness in command is specific and legible
-A King in personal command is a commander whose own safety *is* the objective
-function (ADR 0021 §3), so he plays **cautiously** — grinding draws where the
-player would have pressed for a win. His failure mode is therefore neither
-stupidity nor malice, and it is visible to a watching player within a few moves.
+### 4. The King is broad and **shallow** — his depth is strictly lower
+> **"The King, by the way, should likely be a worse player in terms of depth of
+> vision, or else the player should be taking notes about how to play chess."**
+
+Decisive, and it pins a parameter ADR 0021 left loose:
+
+```
+D_king  <  D_player_effective        (strict, enforced in config and asserted in test)
+```
+
+The King sees **every** line (unpruned attention, ADR 0021 §1) and **none of
+them far**. Broad and shallow is a better model of the executive than broad and
+deep, and it guarantees the successor's advantage is *purely* fidelity: there is
+nothing to learn from his moves, and everything to learn from the fact that they
+worked.
+
+Without this, the coda degrades into a chess tutorial — the player takes notes
+on the successor's play, which inverts the entire lesson. See the *tutorial
+coda* detector below.
+
+His second, softer weakness stands: his own safety is the objective function
+(ADR 0021 §3), so he plays cautiously, grinding draws where the player would
+have pressed. Neither failure mode is stupidity or malice, and both are visible
+to a watching player within a few moves.
 
 ### 5. The debrief scores two columns, not one
 | Column | Measures | Under a dismissed player |
@@ -74,10 +93,25 @@ Two epilogues, selected by what the roster's state actually supports:
 Both must occur across seeds. A successor who always succeeds is the game
 lecturing, and is a bug — see the detector below.
 
-### 7. Recall is computed, not granted (D56)
-If the successor stalls — `P(loss)` under his command drifting worse than it was
-under the player, with the player's mandate off the floor — the King may recall
-the player. The roster then holds something it never had before: a **comparison**.
+### 7. Recall happens **between matches**, never mid-game (D56)
+> **"I'm not sure that recall should be an option during a single game. I think
+> that this is something that has to play itself out, and then decisions can be
+> made at the start of the next game."**
+
+A mid-game recall is a rescue, and a rescue is what ADR 0007 forbids. It also
+spares the player the part that teaches: sitting through the consequence with no
+authority. So:
+
+1. Dismissal ends the player's command **for the remainder of the match**.
+2. The coda plays out to a real result under the King (§1–§6).
+3. Only at the **start of the next match** may the King reinstate him.
+
+The verdict has to land before the door reopens.
+
+Reinstatement is computed, not granted: it becomes available when `P(loss)`
+under the successor drifts worse than it was under the player and the player's
+mandate is off the floor. The roster then holds something it never had before —
+a **comparison**.
 
 This is the redemption arc ADR 0007 refused to give away for free. It is earned
 rather than forgiven, it requires a changed policy to survive (D24), and it is
@@ -92,7 +126,13 @@ than a simulated consequence, which violates ADR 0001 in spirit: the narration
 would be determining the outcome.
 
 **New degeneracy detector — cheap recall.** Recall fires so often that dismissal
-carries no weight, or never fires at all, making §7 dead content.
+carries no weight, or never fires at all, making §7 dead content. Any recall
+occurring *within* a match is a hard failure, not a tuning issue.
+
+**New degeneracy detector — tutorial coda.** The successor's move quality is at
+or above the player's, or players report learning chess from watching him.
+`D_king < D_player_effective` must hold strictly (§4); if the coda teaches
+tactics rather than leadership, the lesson is inverted.
 
 **Determinism.** Successor play is ordinary AI leadership under the seeded PRNG,
 so the coda replays byte-identically like any other segment (D48 barrier

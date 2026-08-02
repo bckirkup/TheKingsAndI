@@ -197,8 +197,11 @@ The successor is **a worse tactician who gets better results**, which is not
 authored but ADR 0015 with the coefficients swapped: the player's `V_own` was
 the strongest on the board and his `τ` had collapsed; the King's breadth without
 depth makes him mediocre, but full mandate means his mediocre plan is actually
-executed. His specific weakness is caution — his own safety is the objective
-function, so he grinds draws the player would have pressed.
+executed. He is **broad and shallow**: `D_king < D_player_effective` strictly, so he sees
+every line and none of them far. That is enforced rather than flavor — if the
+successor's moves were good, the coda would become a chess tutorial and the
+lesson would invert. His second weakness is caution: his own safety is the
+objective function, so he grinds draws the player would have pressed.
 
 The debrief therefore scores **board quality** (quality of orders issued) and
 **execution fidelity** (share of orders actually carried out) as separate
@@ -209,13 +212,19 @@ outperforms you; *broke the roster* → he fails too, which is the **worse**
 ending. A successor who always succeeds is the game lecturing — detector
 *scripted humiliation*.
 
-### D56 ✅ Recall is computed, not granted (ADR 0022 §7)
-If `P(loss)` under the successor drifts worse than it was under the player, and
-the player's mandate is off the floor, the King may recall him — and the roster
-now holds a comparison it never had. This is the redemption arc ADR 0007 refused
-to hand out: earned, requiring a changed policy to survive (D24), and the only
-path on which dismissal makes the player better. Rate is a calibration knob —
-too frequent and dismissal carries no weight, never and §7 is dead content.
+### D56 ✅ Recall happens between matches, never mid-game (ADR 0022 §7)
+Owner: *"this is something that has to play itself out, and then decisions can be
+made at the start of the next game."* A mid-game recall is a rescue, which
+ADR 0007 forbids, and it spares the player the part that teaches — sitting
+through the consequence with no authority. Dismissal ends command for the
+remainder of the match; the coda plays to a real result; only at the start of the
+next match may the King reinstate.
+
+Reinstatement is computed, not granted: available when `P(loss)` under the
+successor drifts worse than it was under the player and the mandate is off the
+floor. The roster then holds a comparison it never had. Earned rather than
+forgiven, still requiring the changed policy D24 demands. Rate is a calibration
+knob; a recall *within* a match is a hard failure, not a tuning issue.
 
 ### D52 ⚠ The narration situation-key schema
 Every line the game will ever say is keyed on it, so it bounds what a piece can

@@ -300,4 +300,6 @@ invariant is that no absorbing state exists for a player who changes policy.
     the ADR 0019 rates — and the player spectates. The successor is a worse
     tactician with full mandate, so the army plays better under him; whether he
     actually succeeds must be *computed* from the roster's state, never
-    guaranteed (ADR 0022).
+    guaranteed. `D_king < D_player_effective` strictly — broad and shallow — or
+    the coda teaches chess instead of leadership. Reinstatement is a
+    start-of-next-match decision; there is no mid-game recall (ADR 0022).

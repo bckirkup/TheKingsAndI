@@ -185,8 +185,13 @@ means the model has collapsed:
     than a simulated consequence (ADR 0022 §6) — a player who genuinely broke
     his roster must watch the successor fail too.
 30. **Cheap recall.** Recall fires so often that dismissal carries no weight, or
-    never fires at all, leaving ADR 0022 §7 as dead content.
-31. **Columns collapse.** Board quality and execution fidelity correlate
+    never fires at all, leaving ADR 0022 §7 as dead content. A recall occurring
+    *within* a match is a hard failure, not a tuning issue — reinstatement is a
+    start-of-next-match decision only.
+31. **Tutorial coda.** The successor's move quality is at or above the player's.
+    `D_king < D_player_effective` must hold strictly (ADR 0022 §4); if watching
+    the King teaches tactics rather than leadership, the lesson is inverted.
+32. **Columns collapse.** Board quality and execution fidelity correlate
     strongly in the debrief. They must move independently, or the central
     finding — *worse orders, better outcomes* — cannot be shown (ADR 0022 §5).
 
