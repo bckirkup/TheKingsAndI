@@ -239,6 +239,78 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D80 ✅ Steam is trust, delivery, and identity — not a world host (ADR 0028 §1)
+It cannot host the world; it can host the binary and the identity. **SteamID**
+gives identity with no accounts and no PII we must hold, **Steam Cloud** stores
+tier-1 passports for free, and the install confidence is real: people run an
+unknown executable from Steam that they would never run from a website. The
+consumer tier thus gets most of a registry's value at near-zero infrastructure
+cost. Nothing mechanical may require it — the DRM-free and facilitator builds
+stay feature-complete.
+
+### D81 ✅ One local host serves seminar, LAN party, and friend group (ADR 0028 §2)
+A facilitator-hosted cohort service and a friend hosting a weekend world are the
+same binary with a different label: closed membership, local host, no moderation,
+AI commanders filling the market. Building it once ends the divergence between
+the enterprise and consumer tracks.
+
+### D82 ✅ The facilitator is a leader, and the instrument measures him (ADR 0028 §3)
+Third-party seminars are welcome, but a thoughtless one delivers little — and the
+system can say so, because everything is deterministic and logged. A cohort run
+records how the facilitator paired students, when he intervened and when he let a
+spiral run, whom he benched, and whether burnout in the shared pool was
+distributed or concentrated. **He receives the same audit a student does.** The
+trust/defect/recruit layer above the game is modelled exactly as it is inside it.
+
+### D83 ✅ Worlds are instanced and sovereign; promotion is gated (ADR 0028 §4)
+Trauma accumulates across every commander a piece has served, so a careless host
+could damage the commons. Each cohort or LAN world is its own world by default,
+and promotion of piece passports into a wider world is gated on evidence from the
+facilitator audit. A bad seminar then harms only its own cohort, and a roster
+that earns its way out is a real credential. AGPL means third parties may fork
+and self-host; what does not travel is the shared world's acceptance of their
+passports — the commons is protected by the gate, not the licence.
+
+### D75 ✅ The cohort is the first community — registry ships for enterprise first (ADR 0027 §1)
+Twelve to twenty-four people, one room, one facilitator install: enrollment is
+identity, a facilitator is moderation, consent is privacy, AI commanders are the
+cold start, and a scheduled course is discovery. Every reason ADR 0026's tier-2
+registry looked expensive for consumer disappears in a seminar, so **tier 2 ships
+for the seminar and consumer stays on tier-1 passports** — the reverse of ADR
+0026's provisional recommendation, and lower risk. Students play each other,
+pieces circulate, and the trauma pool is shared: *the pieces you burned Monday
+are the ones your colleague inherits Wednesday.*
+
+### D76 ✅ Two seminar formats, teaching different halves (ADR 0027 §2)
+**Intensive** (4 days + half-day indoc + half-day debrief, ~24 matches) is
+roughly one act — learn it is not chess, be dismissed, be debriefed — and sells
+as a **diagnostic**; it cannot teach recovery, which needs a second appointment
+with a reputation attached. **Nibelungen** (13 weeks × 3–4, ~52) is the full
+three-king career and is the behaviour-change product. Pacing: **four matches a
+day plus a structured midday debrief beats six** — the spiral needs between-match
+thinking, and the trap wants 8–12 matches (D26), not 24.
+
+### D77 ✅ Facilitator ratio is bounded by debrief, not supervision (ADR 0027 §3)
+Play is deterministic and audited, so nobody needs watching: ~12 students with
+individual debriefs, ~24 in plenary with a cohort dashboard whose material is the
+cross-student piece flow.
+
+### D78 ✅ What Steam is for — and the refund window (ADR 0027 §4)
+Discovery, payments, and a self-funding stream of calibration data from players
+who do not want a lesson and will break the model in ways executives never will.
+It does nothing for the seminar track. The hazard to design for now: **Steam's
+two-hour refund window versus a first act designed to be lost.** If the hook
+lands at match eight, buyers refund at match three having concluded the chess AI
+is stupid — so the consumer build needs a compelling first ninety minutes that
+the seminar build does not. A pacing decision, not a different game.
+
+### D79 ✅ Build order: harness → debrief artifact → playable (ADR 0027 §5)
+"Offline-first" was really the question of what gets built and tested first. The
+central risk is whether the psychology is interesting and non-degenerate, which
+simulation answers without a UI; then the **debrief artifact**, because an audit
+from AI-versus-AI matches is a sellable deliverable with no game attached — the
+earliest point at which anyone outside the team can validate the project.
+
 ### D69 ✅ Capture is never permanent; exhaustion is (ADR 0026 §1)
 A taken piece loses the match, gains trauma, and remembers **who took it** and
 **who spent it**. ADR 0006 stands — no commander can destroy a piece. But in a
@@ -261,13 +333,15 @@ It needs an epilogue, a public record of which commanders contributed, and an
 effect on their standing — otherwise the externality is free and the commons has
 no feedback.
 
-### D72 ⚠ Which infrastructure tier ships — reverses part of D13 (ADR 0026 §5)
+### D72 ✅ Resolved by D75: tier 2 for the seminar, tier 1 for consumer (ADR 0027 §1)
 Offline-first with no accounts and no backend cannot host a shared registry. The
 ladder: **(1) passports** — signed piece exports carried between players by hand,
 offline intact; **(2) registry** — a thin service owning identity, the free-agent
 market, and retirement, with matches still local; **(3) authoritative world** —
-not recommended. Recommendation: ship tier 1, make the schema tier-2 ready.
-Moderation and privacy, not engineering, are the real cost of tier 2.
+not recommended. Moderation and privacy, not engineering, are the real cost of
+tier 2 — and a cohort pays neither, so **tier 2 ships first for the seminar while
+consumer stays on tier-1 passports** (D75). ADR 0026's provisional
+"tier 1 everywhere" recommendation is superseded.
 
 ### D73 ✅ Determinism becomes anti-cheat (ADR 0026 §6)
 A match is a seed plus an event log, so a registry can **replay-verify** submitted

@@ -242,6 +242,25 @@ means the model has collapsed:
 47. **Offline amputation.** Any mechanic unavailable to a player with no network.
     A world of AI commanders must be whole.
 
+48. **The ninety-minute cliff.** Under a consumer pacing profile, nothing
+    legible about the leadership mechanic occurs inside the first ninety minutes
+    of play. Steam's refund window makes this a commercial failure, not only a
+    pacing one (ADR 0027 §4).
+49. **Cohort collapse.** In a simulated cohort, cross-student piece flow does not
+    measurably transmit consequences between students — the seminar's central
+    claim is decorative (ADR 0027 §1).
+50. **Diagnostic overrun.** The trap needs more played matches to close than fit
+    in an intensive week (~16–20), so the four-day format cannot deliver its
+    diagnostic (ADR 0027, D26).
+
+51. **Unaccountable host.** The facilitator audit cannot distinguish a well-run
+    cohort from a badly-run one on any measure that survives seed variation —
+    D82 is theatre (ADR 0028 §3).
+52. **Commons contamination.** A single hostile host's cohort measurably degrades
+    a world it did not host (ADR 0028 §4).
+53. **Identity lock-in.** Any mechanic requiring SteamID, and therefore unable to
+    function in the seminar, LAN, or DRM-free build (ADR 0028 §1).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`
