@@ -6,6 +6,19 @@ so there is a playable artifact by the end of Milestone 3._
 
 ---
 
+## 0a. Build order (ADR 0027 §5)
+
+1. **Headless harness** — the central risk is whether the psychology is
+   interesting and non-degenerate, and simulation answers that without a UI.
+2. **The debrief artifact** — AI-versus-AI matches produce real audits, and an
+   audit is a sellable deliverable with no game attached. Earliest external
+   validation.
+3. **One playable act**, then the rest.
+
+Enterprise is the first *community* (a cohort, ADR 0027 §1) even though consumer
+is the first *playable*. Facilitator tooling is therefore a Milestone-5
+deliverable, not Milestone-7 polish.
+
 ## 0. Strategy in one paragraph
 
 Build the **deterministic core first** (chess + psychology + replay + headless
@@ -122,6 +135,9 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
 | 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
 | 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |
+| 5.8g | Cohort registry (ADR 0027 §1): facilitator-hosted tier-2 service for a closed 12–24 seat cohort — enrollment as identity, shared piece pool, cross-student circulation. Consumer stays on tier-1 passports |
+| 5.8h | Facilitator tooling: cohort dashboard, per-student audit export, roster-circulation view; plenary debrief supports ~24, individual ~12 |
+| 5.8i | Consumer pacing profile (ADR 0027 §4): something legible about the leadership mechanic inside the first ninety minutes, against Steam's refund window |
 | 5.8e | World-scale piece identity (ADR 0026): provenance, cross-commander trauma, retirement state, credence keyed by `LeaderId` including commanders never served — serializable and portable whether or not a registry ships |
 | 5.8f | Piece **passports** (tier 1): signed export/import so identities travel between players offline; `determinismId` + seed in every `MatchRecord` so a future registry can replay-verify rather than trust |
 | 5.8a | Opposing commander (ADR 0025): AI leader archetype driving the enemy roster's full psychology; difficulty selects the archetype, never engine depth; enemy state exposed to the player only as behaviour |
