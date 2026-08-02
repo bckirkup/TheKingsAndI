@@ -67,7 +67,11 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    they name relationships and events, never board objects — and content ships
    as data packs, so the exec-lab track is a rename rather than a fork. Warmth
    is not required to win: a cold, highly able leader must be able to win a
-   career, and `τ_benev` buys resilience rather than compliance (ADR 0024). The King is a character,
+   career, and `τ_benev` buys resilience rather than compliance (ADR 0024). Both
+   armies are led: the opponent is a commander with a real roster, difficulty is
+   an opposing *leader policy* and never an engine depth, and no enemy
+   psychological state may reach the player except as observable behaviour
+   (ADR 0025). The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
    credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
    the campaign under the King's command with the player spectating, and the

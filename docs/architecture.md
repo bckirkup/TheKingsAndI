@@ -127,6 +127,16 @@ Both armies may run this pipeline: opponent psychology is symmetric and either
 side may be human- or AI-led (D5). Build the pipeline side-agnostic from the
 start; retrofitting a hardcoded "player is White" assumption is expensive.
 
+### Both armies are led (ADR 0025)
+Orchestration is side-agnostic and runs the full psychology pipeline for the
+opposing army under an AI leader policy. Two rules constrain the seam:
+
+- **No cross-side reads.** The player's UI and audit may consume only the enemy's
+  *observable behaviour* — moves, tempo, and pieces leaving the board. Enemy
+  credence, verdicts, and testimony never cross.
+- **Difficulty is a leader policy, never an engine depth.** The difficulty knob
+  selects the opposing archetype and its roster quality.
+
 ### Determinism under an async pool (D48, open)
 ADR 0017 has every piece querying the engine pool each ply, so results arrive
 asynchronously and **replay determinism depends on an explicit ordering rule.**

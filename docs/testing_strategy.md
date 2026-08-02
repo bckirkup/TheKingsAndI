@@ -220,6 +220,16 @@ means the model has collapsed:
     borne outside the move; if that cost is unmeasurable the verdict is
     decorative (ADR 0024 §2).
 
+40. **Inert opposition.** Enemy morale never affects the outcome, or no policy
+    can win by cohesion attack alone against a stronger tactician (ADR 0025 §2).
+41. **Telepathy.** Any enemy psychological state reaching the player except
+    through observable behaviour — no gauges, no cross-side audit, no testimony
+    from the other army.
+42. **Difficulty by depth.** Harness difficulty that scales by raising engine
+    depth rather than by improving the opposing leader policy (ADR 0025 §3).
+43. **Asymmetry leak.** Any psychology feature that only works when the player
+    is the leader being modelled. Symmetry is a standing requirement (D5).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`
