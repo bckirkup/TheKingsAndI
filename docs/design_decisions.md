@@ -239,6 +239,38 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D80 ✅ Steam is trust, delivery, and identity — not a world host (ADR 0028 §1)
+It cannot host the world; it can host the binary and the identity. **SteamID**
+gives identity with no accounts and no PII we must hold, **Steam Cloud** stores
+tier-1 passports for free, and the install confidence is real: people run an
+unknown executable from Steam that they would never run from a website. The
+consumer tier thus gets most of a registry's value at near-zero infrastructure
+cost. Nothing mechanical may require it — the DRM-free and facilitator builds
+stay feature-complete.
+
+### D81 ✅ One local host serves seminar, LAN party, and friend group (ADR 0028 §2)
+A facilitator-hosted cohort service and a friend hosting a weekend world are the
+same binary with a different label: closed membership, local host, no moderation,
+AI commanders filling the market. Building it once ends the divergence between
+the enterprise and consumer tracks.
+
+### D82 ✅ The facilitator is a leader, and the instrument measures him (ADR 0028 §3)
+Third-party seminars are welcome, but a thoughtless one delivers little — and the
+system can say so, because everything is deterministic and logged. A cohort run
+records how the facilitator paired students, when he intervened and when he let a
+spiral run, whom he benched, and whether burnout in the shared pool was
+distributed or concentrated. **He receives the same audit a student does.** The
+trust/defect/recruit layer above the game is modelled exactly as it is inside it.
+
+### D83 ✅ Worlds are instanced and sovereign; promotion is gated (ADR 0028 §4)
+Trauma accumulates across every commander a piece has served, so a careless host
+could damage the commons. Each cohort or LAN world is its own world by default,
+and promotion of piece passports into a wider world is gated on evidence from the
+facilitator audit. A bad seminar then harms only its own cohort, and a roster
+that earns its way out is a real credential. AGPL means third parties may fork
+and self-host; what does not travel is the shared world's acceptance of their
+passports — the commons is protected by the gate, not the licence.
+
 ### D75 ✅ The cohort is the first community — registry ships for enterprise first (ADR 0027 §1)
 Twelve to twenty-four people, one room, one facilitator install: enrollment is
 identity, a facilitator is moderation, consent is privacy, AI commanders are the

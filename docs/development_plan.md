@@ -135,6 +135,9 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
 | 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
 | 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |
+| 5.8j | **Local world host** (ADR 0028 §2) — one service labelled three ways: seminar cohort, LAN party, friend group. Closed membership, local, AI commanders filling the market |
+| 5.8k | Facilitator audit (ADR 0028 §3): pairings, interventions, benchings, burnout distribution across the shared pool — the same audit a student receives |
+| 5.8l | Instanced worlds with **gated passport promotion** (ADR 0028 §4); SteamID/Steam Cloud as optional identity and passport storage, never required by any mechanic |
 | 5.8g | Cohort registry (ADR 0027 §1): facilitator-hosted tier-2 service for a closed 12–24 seat cohort — enrollment as identity, shared piece pool, cross-student circulation. Consumer stays on tier-1 passports |
 | 5.8h | Facilitator tooling: cohort dashboard, per-student audit export, roster-circulation view; plenary debrief supports ~24, individual ~12 |
 | 5.8i | Consumer pacing profile (ADR 0027 §4): something legible about the leadership mechanic inside the first ninety minutes, against Steam's refund window |

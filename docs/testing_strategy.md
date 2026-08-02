@@ -253,6 +253,14 @@ means the model has collapsed:
     in an intensive week (~16–20), so the four-day format cannot deliver its
     diagnostic (ADR 0027, D26).
 
+51. **Unaccountable host.** The facilitator audit cannot distinguish a well-run
+    cohort from a badly-run one on any measure that survives seed variation —
+    D82 is theatre (ADR 0028 §3).
+52. **Commons contamination.** A single hostile host's cohort measurably degrades
+    a world it did not host (ADR 0028 §4).
+53. **Identity lock-in.** Any mechanic requiring SteamID, and therefore unable to
+    function in the seminar, LAN, or DRM-free build (ADR 0028 §1).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`
