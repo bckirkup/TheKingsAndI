@@ -239,6 +239,36 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D91 ✅ The commendation set (ADR 0031 §2)
+A seminar must celebrate as well as diagnose, without asserting anything about the
+person. Eight, each a fold over the event log: **evenness of attention** (Gini
+over consultation and use — who was never asked, never defended, never fielded);
+**the best of the best** (top-quartile pieces against their own ceiling, since
+stars underperform under bad leadership and a win/loss record hides it); **nobody
+drowned** (bottom quartile, no retirements, the lowest-credence piece never at the
+floor); **overcoming a weakness**; **grit and endurance** (sound policy sustained
+*through* a losing streak — where ADR 0024 says cold leaders come apart); **overall
+improvement** (the learning delta); **the honest sacrifice** (a piece spent for a
+real win whose trust survived it); **the repaired breach**. Facilitators should
+steer hardest toward *nobody drowned* — least intuitive, most transferable.
+
+### D92 ✅ Commendations must be non-dominating (ADR 0031 §1)
+No player may hold all of them, because the good ones trade off: getting the most
+from your strongest pieces competes for attention and tempo with keeping the
+weakest afloat. If one player can sweep, the awards have collapsed into a single
+score. This is a **tested property** — each oracle policy should win a different
+subset.
+
+### D93 ✅ Criteria are computed at debrief, never shown during play (ADR 0031 §3)
+The moment a student can watch an evenness meter, evenness stops being leadership
+and becomes the game. Facilitators may see commendation state live, since steering
+is their job; students see it after. Hard rule, not a default.
+
+### D94 ✅ The facilitator's parallel set (ADR 0031 §4)
+Even distribution of hard seeds; growth of the *weakest* student rather than the
+average; pairing quality — whether matchups produced learning or humiliation; and
+even expenditure of the cohort's people.
+
 ### D86 ✅ The transcript is the artifact; the certificate is its cover page (ADR 0030)
 "Played the Game" proves attendance. The system records every order, refusal,
 override, concession, and casualty — and can re-run all of it — so the deliverable

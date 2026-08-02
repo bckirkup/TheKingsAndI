@@ -138,6 +138,7 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.8j | **Local world host** (ADR 0028 §2) — one service labelled three ways: seminar cohort, LAN party, friend group. Closed membership, local, AI commanders filling the market |
 | 5.8k | Facilitator audit (ADR 0028 §3): pairings, interventions, benchings, burnout distribution across the shared pool — the same audit a student receives |
 | 5.8l | Instanced worlds bounded by their curriculum (ADR 0029): defined end and disposition — export the player's certificate and achievements, then archive or discard. SteamID/Steam Cloud as optional identity and passport storage, never required by any mechanic |
+| 5.8r | Commendations (ADR 0031): eight player awards computed at debrief only, never surfaced during play; facilitator set covering seed distribution, weakest-student growth, pairing quality, and even expenditure of the cohort |
 | 5.8o | **Transcript** (ADR 0030): board quality vs execution fidelity, channel trajectories, override ledger, concession quality, Gini over trauma, attrition — all folds over the event log, computable from AI-vs-AI logs before any UI exists |
 | 5.8p | Counterfactual benchmarking (offline, at world end): re-run the player's own seeds under `pure_tactician`, `cold_winner`, and rebuilder oracles; cohort peer norming on identical seeds |
 | 5.8q | Learning delta across acts — override rate, concession quality, benevolence recovery on the second roster |
