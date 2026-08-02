@@ -230,6 +230,18 @@ means the model has collapsed:
 43. **Asymmetry leak.** Any psychology feature that only works when the player
     is the leader being modelled. Symmetry is a standing requirement (D5).
 
+44. **Free commons.** Trauma accumulates but retirement never fires, or
+    retirement fires without measurably affecting any contributing commander's
+    ability to recruit. Then the tragedy of the commons is decoration
+    (ADR 0026 §1).
+45. **Captive labour.** Decline rate ≈ 0 even for the worst leader policies, so
+    free agency is nominal and reputation has no market consequence.
+46. **Thin market.** Recruitment pools collapsing below a viable size, or AI
+    commanders absent from them — the month-two failure mode, reproduced in the
+    harness (ADR 0026 §4).
+47. **Offline amputation.** Any mechanic unavailable to a player with no network.
+    A world of AI commanders must be whole.
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

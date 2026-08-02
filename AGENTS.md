@@ -71,7 +71,10 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    armies are led: the opponent is a commander with a real roster, difficulty is
    an opposing *leader policy* and never an engine depth, and no enemy
    psychological state may reach the player except as observable behaviour
-   (ADR 0025). The King is a character,
+   (ADR 0025). Pieces are **community entities**, not save-file contents: capture
+   is never permanent, accumulated trauma across *all* commanders can retire a
+   piece permanently, and a free agent may decline a commander (ADR 0026).
+   Single-player must remain whole with AI commanders only. The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
    credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
    the campaign under the King's command with the player spectating, and the

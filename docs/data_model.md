@@ -155,6 +155,26 @@ Content packs are data, not code:
 `ContentPack { themeTokens, nounMap, dialogue, epilogues }`, bound to
 role-abstract situation keys that never name board objects.
 
+## 3c. World-scale identity (ADR 0026)
+
+Pieces are members of a **community**, not contents of a save file. Identity,
+provenance, and retirement state must be serializable and portable from day one,
+whether or not a registry ever ships (D72).
+
+```ts
+PieceIdentity {
+  id, name, provenance: LeaderId[],   // everyone it has ever served
+  trauma,                             // accumulates across ALL commanders
+  retired: boolean,                   // permanent; the only permanent loss
+  credence: Map<LeaderId, {benev, abil}>   // incl. commanders never served
+}
+CaptureRecord { pieceId, byLeaderId, byPieceId, servingLeaderId, matchId }
+MatchRecord   { ..., seed, determinismId }   // replay-verifiable (ADR 0026 §6)
+```
+
+Capture is never permanent (ADR 0006); **retirement** is, and it is a world event
+with an epilogue and a public record of contributing commanders.
+
 ## 4. Roster export format (Phase 2)
 
 Canonical JSON (sorted keys, no floats beyond 3 decimals) + detached Ed25519
