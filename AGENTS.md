@@ -66,7 +66,10 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    (D54 is now resolved). D52 (narration
    situation-key schema) blocks authoring, not code. The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
-   credence is a mandate, not an obedience gate (ADR 0021).
+   credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
+   the campaign under the King's command with the player spectating, and the
+   successor's success or failure is computed from roster state, never scripted
+   (ADR 0022).
 
 ## Setup (once code lands; not yet applicable)
 ```bash

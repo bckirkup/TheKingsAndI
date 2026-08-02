@@ -179,6 +179,17 @@ means the model has collapsed:
     early-warning channel (ADR 0021 §6.4). If routs consistently arrive first,
     the King's breadth is not doing its job or his patience is mis-tuned.
 
+29. **Scripted humiliation.** Successor performance after dismissal is
+    insensitive to roster state, or the successor outperforms the player across
+    substantially all seeds. Both mean the epilogue is an authored lesson rather
+    than a simulated consequence (ADR 0022 §6) — a player who genuinely broke
+    his roster must watch the successor fail too.
+30. **Cheap recall.** Recall fires so often that dismissal carries no weight, or
+    never fires at all, leaving ADR 0022 §7 as dead content.
+31. **Columns collapse.** Board quality and execution fidelity correlate
+    strongly in the debrief. They must move independently, or the central
+    finding — *worse orders, better outcomes* — cannot be shown (ADR 0022 §5).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

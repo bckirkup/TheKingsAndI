@@ -109,6 +109,20 @@ This makes several previously-open questions load-bearing:
   disclosure of solution. The exec-lab onboarding track is the exception — a
   facilitated session probably front-loads the lesson.
 
+## 4b. Dismissal, succession, and the only earned recovery (ADR 0021, ADR 0022)
+
+The spiral has an ending that is not a rout: the King relieves the player and
+takes personal command. The lesson lands because the successor is *worse at
+chess* and gets *better results* — full mandate means a mediocre plan is
+actually executed, while the player's superior judgment could not reach the
+board through collapsed credence. Watching that is the argument this project
+exists to make.
+
+Recall (D56) is the one recovery path that does not violate the
+no-free-forgiveness rule: it is triggered by the successor's *measured*
+performance, never by elapsed time or contrition, and surviving it still
+requires the changed policy §3 demands.
+
 ## 5. What must be true — and what must NOT be fixed
 
 The harness runs scripted leader policies. Two of them define the acceptance
