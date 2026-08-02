@@ -120,6 +120,8 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.2 | Roster screen: bench/fire flows with explicit consequence preview |
 | 5.3 | Campaign loop (5–20 matches), culture drift computed as a fold |
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
+| 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
+| 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |
 | 5.5 | Three terminal states with distinct epilogues (ADR 0021 §6.3): checkmate (outplayed, roster spent), **dismissal** (roster intact, they still want the win — the middle outcome, not the worst), rout (roster shattered). Mandate propagates through rumor; King's patience is a calibration knob shared with D26 |
 
 ## Milestone 6 — Narration layer (≈1.5 weeks)

@@ -295,3 +295,11 @@ invariant is that no absorbing state exists for a player who changes policy.
     exemption. Losing the mandate is a terminal state in which the roster
     survives, braked only by the glory the pieces forfeit — `w_ambition` and
     `w_prestige` (ADR 0021).
+19. Dismissal does not end the campaign. The King takes field command as an
+    ordinary `LeaderId` with an empty history — high `τ_benev`, low `τ_abil` by
+    the ADR 0019 rates — and the player spectates. The successor is a worse
+    tactician with full mandate, so the army plays better under him; whether he
+    actually succeeds must be *computed* from the roster's state, never
+    guaranteed. `D_king < D_player_effective` strictly — broad and shallow — or
+    the coda teaches chess instead of leadership. Reinstatement is a
+    start-of-next-match decision; there is no mid-game recall (ADR 0022).

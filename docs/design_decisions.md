@@ -187,6 +187,45 @@ early-warning system, not a fourth failure mode.
 interacts with D26 — dismiss too early and the player never reaches the insight;
 too late and the rout preempts the mechanic.
 
+### D55 ✅ After dismissal the game continues without the player (ADR 0022)
+Owner: *"the show must go on."* The King takes personal field command and the
+player watches — no order authority, same rendering, same audit. Free
+structurally: D5 already makes leadership side-agnostic and AI-drivable, D49
+already keys credence by `LeaderId`.
+
+The successor is **a worse tactician who gets better results**, which is not
+authored but ADR 0015 with the coefficients swapped: the player's `V_own` was
+the strongest on the board and his `τ` had collapsed; the King's breadth without
+depth makes him mediocre, but full mandate means his mediocre plan is actually
+executed. He is **broad and shallow**: `D_king < D_player_effective` strictly, so he sees
+every line and none of them far. That is enforced rather than flavor — if the
+successor's moves were good, the coda would become a chess tutorial and the
+lesson would invert. His second weakness is caution: his own safety is the
+objective function, so he grinds draws the player would have pressed.
+
+The debrief therefore scores **board quality** (quality of orders issued) and
+**execution fidelity** (share of orders actually carried out) as separate
+columns. The gap between them is the player's diagnosis in numbers.
+
+Outcome is computed, never guaranteed: *lost the room* → the successor
+outperforms you; *broke the roster* → he fails too, which is the **worse**
+ending. A successor who always succeeds is the game lecturing — detector
+*scripted humiliation*.
+
+### D56 ✅ Recall happens between matches, never mid-game (ADR 0022 §7)
+Owner: *"this is something that has to play itself out, and then decisions can be
+made at the start of the next game."* A mid-game recall is a rescue, which
+ADR 0007 forbids, and it spares the player the part that teaches — sitting
+through the consequence with no authority. Dismissal ends command for the
+remainder of the match; the coda plays to a real result; only at the start of the
+next match may the King reinstate.
+
+Reinstatement is computed, not granted: available when `P(loss)` under the
+successor drifts worse than it was under the player and the mandate is off the
+floor. The roster then holds a comparison it never had. Earned rather than
+forgiven, still requiring the changed policy D24 demands. Rate is a calibration
+knob; a recall *within* a match is a hard failure, not a tuning issue.
+
 ### D52 ⚠ The narration situation-key schema
 Every line the game will ever say is keyed on it, so it bounds what a piece can
 ever express, and changing it invalidates all authored content (ADR 0004,
@@ -289,8 +328,9 @@ before any exec-lab use. Not yet considered by the owner.
 1. **D48, D49** — before the engine layer and the first schema respectively.
    Both are cheap now and structural later; D48 is the one whose absence
    presents as a mysterious psychology bug.
-1b. **King's patience (D54 residue)** — with the harness, alongside D26.
-   (D51 and D54 are resolved by ADR 0021.)
+1b. **King's patience and recall rate** (D54/D56 residue) — with the harness,
+   alongside D26. (D51 and D54 are resolved by ADR 0021; D55 and D56 by
+   ADR 0022.)
 1c. **D50, D52** — before persistence and before any dialogue is authored.
 2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
    partly answered in substance: an override is the canonical benevolence cliff
