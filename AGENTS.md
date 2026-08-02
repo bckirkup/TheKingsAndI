@@ -4,7 +4,7 @@
 *The Kings and I* (internal codename: Living Chess): chess where the pieces have
 persistent identities, memory, trust, class prejudice, and the ability to refuse
 orders or walk off the board. Doubles as a leadership-dynamics simulation.
-**Status: planning only — no application code exists yet.**
+**Status: Milestone 0 — scaffolding has landed; there is no game yet.**
 
 ## Read This First
 | Doc | Purpose |
@@ -31,12 +31,18 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
 1. **Deterministic core, narrative skin.** No LLM output ever re-enters game
    state (ADR 0001). Narration is presentation-only.
 2. **Seeded randomness only.** All RNG flows through the seeded PRNG module;
-   `Math.random` is banned outside it. Every match records its seed.
+   `Math.random` is banned outside it (by lint). Every match records its seed.
+   `Math.exp`/`Math.pow`/`Math.log`/trig/`**` are likewise banned (by lint) in
+   `psychology/` and `chess/` — JS engines disagree in the last bits, so a replay
+   recorded in one browser must not diverge in another. The deterministic math
+   module that replaces them lands with its first consumer (ADR 0032 §4).
 3. **Depth-limited engine search only.** `go depth N`, never `movetime`; pinned
    stockfish.wasm version. Wall-clock-dependent search breaks every golden test.
-4. **Layer boundaries.** A layer imports only from layers below it
-   (`app > ui > orchestration > psychology > chess > engine`). `psychology/`
-   receives board features as plain data; it must not import `engine/` or `ui/`.
+4. **Layer boundaries.** A layer imports only from itself, `src/core/`, and
+   layers below it (`app > ui > orchestration > psychology > chess > engine`).
+   Importing *upward* is the lint error. `psychology/` is stricter still: it
+   receives board features as plain data, so it may import `core/` and chess
+   *types*, never `chess/` values, `engine/`, or `ui/`.
 5. **Event log is the source of truth.** Audits, debriefs, and culture drift are
    folds over the log, never separately maintained counters.
 6. **Every config knob gets a golden test AND a sensitivity test.** See the
@@ -84,27 +90,26 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    successor's success or failure is computed from roster state, never scripted
    (ADR 0022).
 
-## Setup (once code lands; not yet applicable)
+## Setup
 ```bash
 pnpm install
 pre-commit install
 ```
 
 ## Validation Commands
-Docs-only phase (now):
 ```bash
 pre-commit run --all-files
-```
-After Milestone 0:
-```bash
 pnpm lint          # eslint + prettier check
 pnpm typecheck     # tsc --noEmit, strict
 pnpm test          # vitest run
+pnpm test:coverage # lcov for the SonarQube gate (ADR 0033)
 pnpm sim --matches=20 --leader=tyrannical   # headless balance smoke
 ```
+See the `typescript-toolchain` and `sonarqube-quality-gate` skills.
 
 ## Planned Layout
 ```
+src/core/           seeded PRNG, canonical encoder, deterministic math — depends on nothing
 src/app/            React shell, routing, theme provider, onboarding tracks
 src/ui/             board, overlays, gauges, dashboards (no game logic)
 src/orchestration/  match loop; only place allowed to mutate match state
