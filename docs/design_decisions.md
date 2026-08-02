@@ -239,6 +239,39 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D86 ✅ The transcript is the artifact; the certificate is its cover page (ADR 0030)
+"Played the Game" proves attendance. The system records every order, refusal,
+override, concession, and casualty — and can re-run all of it — so the deliverable
+is a **report card**: proof of performance and evidence of learning.
+
+### D87 ✅ The behavioural metric set (ADR 0030 §2)
+All folds over the event log, never separate counters: **board quality vs
+execution fidelity** (the gap is the finding); **channel trajectories** — `τ_abil`
+vs `τ_benev`, separating *"they thought I was wrong"* from *"they thought I didn't
+care"*; the **override ledger**; **concession quality**, since withdrawing a good
+move is a concession and withdrawing a bad one is theatre (the trust-farming
+detector doubles as a listening metric); **distribution of harm**, a Gini
+coefficient over trauma — concentrated or spread; and attrition.
+
+### D88 ✅ Counterfactual benchmarking and peer norming (ADR 0030 §3)
+Only determinism affords these. **Counterfactual:** re-run the player's own
+positions under oracle policies and report what was achievable on the boards he
+faced — not *"you lost six"* but *"the pure tactician also lost six; the rebuilder
+lost three."* **Peer norming:** deal a cohort identical seeds, so comparisons are
+on the same positions with the same rosters.
+
+### D89 ✅ The learning delta is the headline enterprise metric (ADR 0030 §4)
+Act one diagnoses; act two — diminished command, reputation attached — is where a
+*change in policy* can be measured: override rate, concession quality, whether the
+second roster's benevolence channel recovers. This is why the thirteen-week format
+is the behaviour-change product and the four-day format a diagnostic.
+
+### D90 ✅ Behaviour in simulation, never traits (ADR 0030 §5)
+Defensible: *"Overrode 34% of refusals; 71% of those came after a loss."* Not
+earned: *"Low empathy."* Trait inference, psychometric scoring, and predictive
+claims about job performance are out of scope until a validation study exists, and
+no shipped copy may imply them.
+
 ### D84 ✅ A world lives exactly as long as its curriculum (ADR 0029 §1)
 Owner: *"the pieces should not outlast the seminar/curriculum."* A cohort, LAN, or
 single-player world is created for a course and ends with it. This is a

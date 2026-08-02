@@ -269,6 +269,15 @@ means the model has collapsed:
 56. **Infinite pool.** Curriculum length and pool size set such that retirement
     never binds, restoring the rounding-error problem ADR 0029 removes.
 
+57. **Flattering counterfactual.** Oracle policies that never outperform the
+    player on his own seeds, making the benchmark vacuous (ADR 0030 §3).
+58. **Metric collinearity.** Transcript metrics correlating so strongly that six
+    columns carry one signal — the column-collapse problem generalised.
+59. **Trait leakage.** Any shipped transcript or certificate string asserting a
+    disposition rather than a behaviour (ADR 0030 §5).
+60. **Unmeasurable learning.** A player who demonstrably changes policy between
+    acts and whose learning delta does not move (ADR 0030 §4).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`
