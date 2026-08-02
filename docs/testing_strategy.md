@@ -261,6 +261,14 @@ means the model has collapsed:
 53. **Identity lock-in.** Any mechanic requiring SteamID, and therefore unable to
     function in the seminar, LAN, or DRM-free build (ADR 0028 §1).
 
+54. **Participation certificate.** A certificate issuable without a
+    discriminating signal from the audit, or whose contents do not vary with how
+    the player actually led (ADR 0029 §3).
+55. **Unverifiable claim.** A certificate that cannot be replay-verified from its
+    attached seed and event log, or that omits the `determinismId` (ADR 0020).
+56. **Infinite pool.** Curriculum length and pool size set such that retirement
+    never binds, restoring the rounding-error problem ADR 0029 removes.
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

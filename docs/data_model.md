@@ -175,6 +175,21 @@ MatchRecord   { ..., seed, determinismId }   // replay-verifiable (ADR 0026 §6)
 Capture is never permanent (ADR 0006); **retirement** is, and it is a world event
 with an epilogue and a public record of contributing commanders.
 
+## 3d. World lifespan (ADR 0029)
+
+A `World` is created for a curriculum and **ends with it**; pieces do not outlive
+it. Only claims about the *player* are portable.
+
+```ts
+World { id, kind: 'cohort'|'lan'|'solo', curriculumId, createdAt, endsAt,
+        disposition: 'archive'|'discard' }
+Certificate { playerId, worldId, findings,      // from the audit, not attendance
+              seed, eventLogRef, determinismId } // replay-verifiable
+```
+
+Pool size relative to curriculum length is a calibration knob: it sets what a
+burned piece actually costs.
+
 ## 4. Roster export format (Phase 2)
 
 Canonical JSON (sorted keys, no floats beyond 3 decimals) + detached Ed25519
