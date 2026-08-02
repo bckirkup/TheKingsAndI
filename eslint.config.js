@@ -2,11 +2,54 @@ import eslint from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
+const higherLayers = {
+  app: ['**/app/**'],
+  ui: ['**/app/**'],
+  orchestration: ['**/app/**', '**/ui/**'],
+  psychology: ['**/app/**', '**/ui/**', '**/orchestration/**'],
+  chess: ['**/app/**', '**/ui/**', '**/orchestration/**', '**/psychology/**'],
+  engine: [
+    '**/app/**',
+    '**/ui/**',
+    '**/orchestration/**',
+    '**/psychology/**',
+    '**/chess/**',
+  ],
+};
+
+const boundaryRule = (patterns) => ({
+  '@typescript-eslint/no-restricted-imports': [
+    'error',
+    {
+      patterns: patterns.map((group) => ({
+        group: [group],
+        message: 'Layer imports must flow downward only.',
+      })),
+    },
+  ],
+});
+
+const transcendentalProperties = [
+  'exp',
+  'pow',
+  'log',
+  'log2',
+  'log10',
+  'sin',
+  'cos',
+  'tan',
+  'atan',
+  'cbrt',
+  'hypot',
+];
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
     ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
+  },
+  {
     rules: {
       'no-restricted-properties': [
         'error',
@@ -27,79 +70,80 @@ export default tseslint.config(
   {
     name: 'app-layer-boundary',
     files: ['src/app/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                '**/orchestration/**',
-                '**/psychology/**',
-                '**/chess/**',
-                '**/engine/**',
-              ],
-              message:
-                'App may only import UI and lower-level presentation code.',
-            },
-          ],
-        },
-      ],
-    },
+    rules: boundaryRule(['**/engine/**']),
   },
   {
     name: 'ui-layer-boundary',
     files: ['src/ui/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                '**/orchestration/**',
-                '**/psychology/**',
-                '**/chess/**',
-                '**/engine/**',
-              ],
-              message: 'UI may only import presentation code.',
-            },
-          ],
-        },
-      ],
-    },
+    rules: boundaryRule([...higherLayers.ui, '**/engine/**']),
   },
   {
     name: 'orchestration-layer-boundary',
     files: ['src/orchestration/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/psychology/**', '**/chess/**', '**/engine/**'],
-              message: 'Orchestration may not import above its layer.',
-            },
-          ],
-        },
-      ],
-    },
+    rules: boundaryRule([...higherLayers.orchestration, '**/engine/**']),
   },
   {
     name: 'psychology-layer-boundary',
     files: ['src/psychology/**'],
     rules: {
-      'no-restricted-imports': [
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           patterns: [
+            ...higherLayers.psychology.map((group) => ({
+              group: [group],
+              message: 'Layer imports must flow downward only.',
+            })),
             {
-              group: ['**/ui/**', '**/engine/**'],
+              group: ['**/chess/**'],
+              allowTypeImports: true,
               message:
-                'Psychology must remain pure and independent of UI and engine.',
+                'Psychology may only use core values; chess imports are type-only.',
+            },
+            {
+              group: ['**/engine/**'],
+              message:
+                'Engine implementations are private to the engine layer.',
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    name: 'chess-layer-boundary',
+    files: ['src/chess/**'],
+    rules: boundaryRule([...higherLayers.chess, '**/engine/**']),
+  },
+  {
+    name: 'engine-layer-boundary',
+    files: ['src/engine/**'],
+    rules: boundaryRule(higherLayers.engine),
+  },
+  {
+    name: 'deterministic-math',
+    files: ['src/psychology/**', 'src/chess/**'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Use the injected seeded PRNG instead of Math.random.',
+        },
+        ...transcendentalProperties.map((property) => ({
+          object: 'Math',
+          property,
+          message:
+            'Transcendentals are banned here; see ADR 0032 §4 for deterministic math.',
+        })),
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "BinaryExpression[operator='**']",
+          message:
+            'Transcendentals are banned here; see ADR 0032 §4 for deterministic math.',
         },
       ],
     },

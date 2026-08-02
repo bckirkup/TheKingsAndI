@@ -57,10 +57,24 @@ function parseArguments(
   argumentsList: readonly string[],
 ): SimulationOptions & { out: string | undefined } {
   const values = new Map<string, string>();
+  const supportedFlags = new Set(['matches', 'leader', 'seed', 'out']);
   for (const argument of argumentsList) {
-    const [key, value] = argument.split('=', 2);
-    if (key?.startsWith('--') && value !== undefined)
-      values.set(key.slice(2), value);
+    if (!argument.startsWith('--')) {
+      throw new Error(`Unrecognised argument: ${argument}`);
+    }
+    const separator = argument.indexOf('=');
+    if (separator < 3) {
+      throw new Error(`Expected --flag=value form: ${argument}`);
+    }
+    const key = argument.slice(2, separator);
+    const value = argument.slice(separator + 1);
+    if (!supportedFlags.has(key)) {
+      throw new Error(`Unrecognised flag: --${key}`);
+    }
+    if (values.has(key)) {
+      throw new Error(`Repeated flag: --${key}`);
+    }
+    values.set(key, value);
   }
   const matches = Number(values.get('matches') ?? 1);
   const leaderValue = values.get('leader') ?? 'random';
@@ -71,6 +85,8 @@ function parseArguments(
   const seed = Number(values.get('seed') ?? 0);
   if (!Number.isSafeInteger(seed))
     throw new Error('--seed must be an integer.');
+  if (values.has('out') && values.get('out') === '')
+    throw new Error('--out must not be empty.');
   return {
     matches,
     leader: leaderValue as Leader,
@@ -78,6 +94,8 @@ function parseArguments(
     out: values.get('out'),
   };
 }
+
+export { parseArguments };
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
