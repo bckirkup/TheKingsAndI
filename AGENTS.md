@@ -74,7 +74,10 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    (ADR 0025). Pieces are **community entities**, not save-file contents: capture
    is never permanent, accumulated trauma across *all* commanders can retire a
    piece permanently, and a free agent may decline a commander (ADR 0026).
-   Single-player must remain whole with AI commanders only. The King is a character,
+   Single-player must remain whole with AI commanders only. A world lives exactly
+   as long as its curriculum and pieces do not outlive it; only claims about the
+   *player* leave — gameable achievements, and an evidence-backed, replay-
+   verifiable Certificate of Completion (ADR 0029). The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
    credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
    the campaign under the King's command with the player spectating, and the

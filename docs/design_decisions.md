@@ -239,6 +239,33 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D84 ✅ A world lives exactly as long as its curriculum (ADR 0029 §1)
+Owner: *"the pieces should not outlast the seminar/curriculum."* A cohort, LAN, or
+single-player world is created for a course and ends with it. This is a
+simplification: no global registry, no promotion gate (**D83 superseded**), no
+permanent-commons moderation, no long-lived PII. And retirement gets *sharper* —
+in an unbounded world, exhausting a piece is a rounding error; in a thirteen-week
+world a piece burned in week three is gone for the remaining ten, so the cohort
+lives with the scarcity it created. The tragedy of the commons plays at the scale
+it actually occurs at: an organisation, not a universe.
+
+The four layers — `piece → King → player → facilitator` — each hold credence in
+the one above and are measured by the one below, which is why the facilitator
+audit needed no new machinery.
+
+### D85 ✅ Only claims about the player leave the world (ADR 0029 §3)
+Nothing about a piece is portable. **Achievements** say what you did, are backed
+by play, and are gameable by design — that is their job. A **Certificate of
+Completion** says what the log shows about how you led, is generated from the
+audit, and must be **evidence-backed, never participation-backed**: the moment it
+can be earned by attendance it is worth nothing to an enterprise buyer. Because a
+match is a seed plus an event log, a certificate ships with the material to
+**verify** it by replay rather than to believe it.
+
+### D83 ⛔ Superseded by D84 — gated passport promotion
+There is nowhere to promote to once a world ends with its curriculum
+(ADR 0029 §1).
+
 ### D80 ✅ Steam is trust, delivery, and identity — not a world host (ADR 0028 §1)
 It cannot host the world; it can host the binary and the identity. **SteamID**
 gives identity with no accounts and no PII we must hold, **Steam Cloud** stores
