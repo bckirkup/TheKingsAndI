@@ -134,6 +134,27 @@ Rules:
   under 1 MB. No pruning needed at MVP, but cap event log growth from
   `PSYCH_DELTA` spam by batching per-ply deltas into one event per piece.
 
+## 3b. Career, acts, and content packs (ADR 0023)
+
+The **career** is the top-level save entity: up to three acts, one king each,
+ending when no king will appoint the player. Roster identities persist across
+acts within a career and, as legacy history, across careers.
+
+```ts
+Career    { id, seed, acts: ActId[], outcome }
+Act       { id, careerId, kingId, matches: MatchId[], terminalState }
+Recruit   // on joining, seeded — never naive:
+          //   τ_abil  ← leader's record
+          //   τ_benev ← roster appraisal via rumor (ADR 0016)
+```
+
+Bench cap ≈ 32 identities. Depth is only safe because reputation transfers; see
+ADR 0023 §2 and the *roster laundering* detector.
+
+Content packs are data, not code:
+`ContentPack { themeTokens, nounMap, dialogue, epilogues }`, bound to
+role-abstract situation keys that never name board objects.
+
 ## 4. Roster export format (Phase 2)
 
 Canonical JSON (sorted keys, no floats beyond 3 decimals) + detached Ed25519

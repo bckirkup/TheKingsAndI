@@ -22,7 +22,12 @@ belief channels in `docs/belief_model.md` (ADR 0016); rumor carries appraisals
 only, never board facts. Credence is **two channels** (ADR 0019): `τ_benev` moves fast up, cliffs down,
 and erodes only on *omissions*; `τ_abil` accretes slowly in `1/n` from
 vindicated orders and is what `V_leader_implied` is made of. Log them
-separately — if they correlate above ~0.9 the design's best lesson is gone. No
+separately — if they correlate above ~0.9 the design's best lesson is gone.
+`τ_abil` **can substitute** for `τ_benev`: the cold, highly able leader is a
+legitimate winning strategy, and what warmth buys is resilience, not compliance
+— only the warm leader survives a losing streak (ADR 0024). The ladder also
+carries `FATALISTIC_COMPLIANCE`: full effort, no faith, full knowledge, with the
+cost borne by witnesses and future willingness rather than by the move. No
 open decision blocks this layer any more. **D20–D23 are wiring to settle in review with a sensitivity probe
 each.** Never pass a `D_max` evaluation into a reducer — every
 piece decides from its own view (ADR 0013). Do not

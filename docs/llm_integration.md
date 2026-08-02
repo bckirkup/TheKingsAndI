@@ -68,13 +68,25 @@ Priority order for authoring, by narrative weight:
 4. Quiet quitting — must be *detectable in the prose* without being announced.
 5. Match audit and campaign debrief.
 
-## 2b. The situation key outlives everything else (D52, open)
+## 2b. Situation keys are role-abstract (D52, resolved by ADR 0023 §4)
 
 Every line the game will ever say is keyed on the situation key, so it bounds
-what a piece can ever express — and changing it invalidates all authored content.
-It must carry the two credence channels **separately** (ADR 0019), or a piece can
-never say *"I know it was right, I just don't think you care"*, which is the most
-valuable sentence in the design. Decide before authoring begins.
+what a piece can ever express, and changing it invalidates all authored content.
+Two rules, both now settled:
+
+1. Keys carry the two credence channels **separately** (ADR 0019), or a piece can
+   never say *"I know it was right, I just don't think you care"* — the most
+   valuable sentence in the design.
+2. Keys name **relationships and events, never board objects**:
+
+```
+BAD   pawn_refused_diagonal_advance_after_capture
+GOOD  subordinate.refused.high_risk_order.after_betrayal_by_this_leader
+```
+
+That is what allows a content pack to rename Pawn → Analyst for the exec-lab
+track as data (D53) instead of forking the codebase. Pack coverage over reachable
+keys is a CI check.
 
 ## 3. Legibility is a hard requirement, not flavor
 

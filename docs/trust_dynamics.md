@@ -124,6 +124,18 @@ performance, never by elapsed time or contrition, it is offered only at the
 **start of a later match** so the consequence plays out in full first, and
 surviving it still requires the changed policy §3 demands.
 
+## 4c. The cold winner is a legitimate strategy (ADR 0024)
+
+The spiral is not a lesson in kindness. A leader with extreme `τ_abil` and
+little `τ_benev` — Jobs, Patton — holds an army together *while winning*, and
+the harness must confirm that such a career can be won. What warmth buys is not
+compliance but **resilience**: the cold leader has no reserve when results turn,
+so his collapse arrives with the first losing streak, while a warm leader is
+carried through it.
+
+If the harness cannot produce a winning `cold_winner` policy, the design has
+become a morality play — see the *saint's monopoly* detector.
+
 ## 5. What must be true — and what must NOT be fixed
 
 The harness runs scripted leader policies. Two of them define the acceptance

@@ -195,6 +195,41 @@ means the model has collapsed:
     strongly in the debrief. They must move independently, or the central
     finding — *worse orders, better outcomes* — cannot be shown (ADR 0022 §5).
 
+33. **Roster laundering.** A leader policy that burns and replaces pieces
+    reaches a mean credence comparable to one that maintains a roster. Then
+    reputation transfer (ADR 0023 §2) is too weak and the bench is an escape
+    hatch from the entire subject of the game.
+34. **Act one is the whole game.** Acts two and three do not measurably differ
+    in starting credence or difficulty — the reputation carried between kings is
+    decorative (ADR 0023 §2).
+35. **Pack coverage.** Any situation key reachable by the simulation with no line
+    in a shipped content pack, or an implicit rather than declared fallback
+    (ADR 0023 §4).
+
+36. **The saint's monopoly.** No cold, high-ability leader policy can reach a
+    winning career. Then D60 has failed and the game is moralizing — the harness
+    needs a `cold_winner` oracle alongside `pure_tactician` and `redeemer`.
+37. **Invulnerable cold streak.** A cold winner survives a sustained losing run
+    as well as a warm leader does. Then `τ_benev` is not acting as variance
+    insurance and the channels have collapsed in practice, however their
+    correlation looks (ADR 0024 §1).
+38. **No McClellan.** Dismissal never occurs while roster mandate is high — the
+    King's results channel is inert (ADR 0024 §3).
+39. **Fatalism invisible.** `FATALISTIC_COMPLIANCE` never fires, or firing it
+    changes nothing in witness state and future willingness. Its entire cost is
+    borne outside the move; if that cost is unmeasurable the verdict is
+    decorative (ADR 0024 §2).
+
+40. **Inert opposition.** Enemy morale never affects the outcome, or no policy
+    can win by cohesion attack alone against a stronger tactician (ADR 0025 §2).
+41. **Telepathy.** Any enemy psychological state reaching the player except
+    through observable behaviour — no gauges, no cross-side audit, no testimony
+    from the other army.
+42. **Difficulty by depth.** Harness difficulty that scales by raising engine
+    depth rather than by improving the opposing leader policy (ADR 0025 §3).
+43. **Asymmetry leak.** Any psychology feature that only works when the player
+    is the leader being modelled. Symmetry is a standing requirement (D5).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

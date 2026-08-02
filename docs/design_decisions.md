@@ -226,15 +226,104 @@ floor. The roster then holds a comparison it never had. Earned rather than
 forgiven, still requiring the changed policy D24 demands. Rate is a calibration
 knob; a recall *within* a match is a hard failure, not a tuning issue.
 
-### D52 ⚠ The narration situation-key schema
-Every line the game will ever say is keyed on it, so it bounds what a piece can
-ever express, and changing it invalidates all authored content (ADR 0004,
-`docs/llm_integration.md`). It must carry the two credence channels *separately*
-or a piece can never say *"I know it was right, I just don't think you care."*
+### D52 ✅ Situation keys are role-abstract (ADR 0023 §4)
+Keys name relationships and events, never board objects or geometry:
+`subordinate.refused.high_risk_order.after_betrayal_by_this_leader`, never
+`pawn_refused_diagonal_advance`. They carry the two credence channels separately
+(ADR 0019) so a piece can say *"I know it was right, I just don't think you
+care"* in any skin. This is what lets a pack rename Pawn → Analyst without
+touching a key.
 
-### D53 🕐 Content-pack / theming architecture
-Whether themes and the exec-lab track are data packs or code paths. Only
-load-bearing once a second audience is real (D1), but retrofitting is expensive.
+### D53 ✅ Content is data packs, not code paths (ADR 0023 §4)
+The enterprise track is the same simulation with different nouns, so a pack is
+`{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
+second codebase maintained forever. Pack coverage becomes a CI check.
+
+### D64 ✅ The opponent is a commander, not an engine (ADR 0025 §1)
+The enemy army has trust, refusals, desertion, and routs of its own, driven by an
+AI leader with an archetype — the same oracle policies the harness already uses.
+Side-agnostic orchestration (D5) makes this configuration, not a new subsystem.
+
+### D65 ✅ Morale warfare wins games; enemy state is behavioural only (ADR 0025 §2)
+A player may beat a stronger tactician by making the enemy army stop believing in
+its commander. No enemy gauges, no numbers, no cross-side audit — their state is
+read from behaviour, which is already public: hesitation, wasted tempo, a piece
+that stops covering, and desertion, which is a piece walking off *their* board in
+front of you. No new UI, no information leak.
+
+### D67 ✅ Difficulty comes from opposing leadership, not engine depth (ADR 0025 §3)
+Raising engine depth teaches nothing; facing a leader whose army actually
+executes is hard in the way the game is about. Permanently retires the
+stronger-engine pressure and confirms ADR 0020 from the other side.
+
+### D66 ✅ The rival replaces you (ADR 0025 §4)
+Dismissal hands the army to the commander who beat you, and the player watches
+his own roster execute for the rival — sharper than the King taking over, with
+ADR 0022's computation unchanged. The King remains the fallback successor. Note a
+rival will usually *not* satisfy `D_rival < D_player_effective`, so the
+tutorial-coda guard applies to the King only; a rival's edge must be shown to
+come from fidelity in the debrief columns.
+
+### D68 ✅ Deserters resurface in other rosters between careers (ADR 0025 §5)
+D3 stands — nobody defects mid-match — but an identity driven off the board
+becomes a free agent between careers, and the labour market may place it with a
+commander who kept faith with his people. It does not forget. One foreign key,
+and the most economical storytelling in the design.
+
+### D60 ✅ Ability substitutes for benevolence; warmth is variance insurance (ADR 0024 §1)
+Second-act Jobs was not warmer, he was *right* — visibly and repeatedly; Patton
+was feared and revered at once. A **high-ability / low-benevolence equilibrium
+must be viable**, or the game teaches "be nice and you win," which is false and
+dull. The honest asymmetry: a cold leader retains compliance *while winning* and
+has nothing to draw on during a losing run, so his collapse is immediate; a warm
+leader survives bad runs. Two viable strategies with different failure profiles.
+Substitution rate is the sharpest knob this creates.
+
+### D61 ✅ Fatalistic compliance is its own verdict (ADR 0024 §2)
+Fredericksburg: soldiers pinned their names to their coats and charged anyway.
+Neither compliance nor quiet quitting — full effort, no faith, full knowledge.
+Inserted into the ladder as `FATALISTIC_COMPLIANCE`; its cost lands on the
+**witnesses** and on the piece's future willingness, never on the move, so a
+leader can spend an army this way and see nothing wrong in the move log.
+
+### D62 ✅ The King judges results himself (ADR 0024 §3)
+McClellan's army adored him; Lincoln fired him anyway, twice. Under ADR 0021
+alone mandate falls via rumor *from the roster*, so a beloved commander could
+never be dismissed. The King keeps his own `τ_abil` formed from results, giving
+two independent paths: **fired by the room** (relief, rout-adjacent) and **fired
+by the boss** (protest, the army liked you).
+
+### D63 ✅ Second appointments are diminished, not merely harder (ADR 0024 §4)
+Jobs's second act was NeXT; Patton's was a decoy army. Act two is a *lesser*
+command — fewer strong identities, a lesser king, less at stake — which is where
+`τ_abil` can be rebuilt cheaply, and it makes the return to a real command
+something earned twice. Content investment follows: thin act one, rich act two,
+because act two is the only place the player can demonstrate he learned that
+this is not chess.
+
+### D57 ✅ Three kings, three acts — the career is the unit of play (ADR 0023 §1)
+Owner: *"once none of them are willing to start a game with you, it is time to
+kill the account."* A career holds up to three appointments; each dismissal burns
+a king. Capture and desertion are not permadeath for a piece — dismissal **is**
+permadeath for the player, so the roster outlives its commanders, which is what
+the plural in the title has meant all along. Ship one act, put three in the
+schema (`CareerId`, `ActId`/`KingId`): the content is what gets cut when a date
+arrives, but the migration is not.
+
+### D58 ✅ Bench ~32, made safe by reputation transfer (ADR 0023 §2)
+A deep bench is a trust-**laundering** machine unless newcomers already know you.
+On joining, a recruit is seeded with `τ_abil` from the leader's record and
+`τ_benev` from the roster's current appraisal — both already carried by the rumor
+channel (ADR 0016), so it costs no new machinery. With transfer, depth is a
+comfort rather than an escape. It also gives the acts a difficulty curve for
+free: **king two has heard about you.**
+
+### D59 ✅ A career is won when the army exceeds the player's ceiling (ADR 0023 §3)
+Winning matches shows the player is not failing; it is not what a career is for.
+Using the two columns from ADR 0022 §5, the victory condition is the sustained
+inverse of dismissal: realized position quality above `V_own(player)`, held
+across matches. Leadership is when the organization outperforms the leader —
+one number, computed from the existing event log.
 
 ---
 
