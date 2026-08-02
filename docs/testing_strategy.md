@@ -278,6 +278,15 @@ means the model has collapsed:
 60. **Unmeasurable learning.** A player who demonstrably changes policy between
     acts and whose learning delta does not move (ADR 0030 §4).
 
+61. **Dominating strategy.** Any leader policy earning substantially all
+    commendations across seeds. Non-domination must hold in the harness, and
+    `pure_tactician`, `cold_winner`, and the rebuilder should each win a
+    *different* subset (ADR 0031 §1).
+62. **Commendation leakage.** Any commendation state visible to a student during
+    play — including implicitly, through UI ordering, prose, or hint text.
+63. **Unwinnable award.** A commendation no policy ever earns across the harness,
+    or one every policy earns. Both are dead content.
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`
