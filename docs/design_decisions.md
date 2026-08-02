@@ -239,6 +239,37 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D64 ✅ The opponent is a commander, not an engine (ADR 0025 §1)
+The enemy army has trust, refusals, desertion, and routs of its own, driven by an
+AI leader with an archetype — the same oracle policies the harness already uses.
+Side-agnostic orchestration (D5) makes this configuration, not a new subsystem.
+
+### D65 ✅ Morale warfare wins games; enemy state is behavioural only (ADR 0025 §2)
+A player may beat a stronger tactician by making the enemy army stop believing in
+its commander. No enemy gauges, no numbers, no cross-side audit — their state is
+read from behaviour, which is already public: hesitation, wasted tempo, a piece
+that stops covering, and desertion, which is a piece walking off *their* board in
+front of you. No new UI, no information leak.
+
+### D67 ✅ Difficulty comes from opposing leadership, not engine depth (ADR 0025 §3)
+Raising engine depth teaches nothing; facing a leader whose army actually
+executes is hard in the way the game is about. Permanently retires the
+stronger-engine pressure and confirms ADR 0020 from the other side.
+
+### D66 ✅ The rival replaces you (ADR 0025 §4)
+Dismissal hands the army to the commander who beat you, and the player watches
+his own roster execute for the rival — sharper than the King taking over, with
+ADR 0022's computation unchanged. The King remains the fallback successor. Note a
+rival will usually *not* satisfy `D_rival < D_player_effective`, so the
+tutorial-coda guard applies to the King only; a rival's edge must be shown to
+come from fidelity in the debrief columns.
+
+### D68 ✅ Deserters resurface in other rosters between careers (ADR 0025 §5)
+D3 stands — nobody defects mid-match — but an identity driven off the board
+becomes a free agent between careers, and the labour market may place it with a
+commander who kept faith with his people. It does not forget. One foreign key,
+and the most economical storytelling in the design.
+
 ### D60 ✅ Ability substitutes for benevolence; warmth is variance insurance (ADR 0024 §1)
 Second-act Jobs was not warmer, he was *right* — visibly and repeatedly; Patton
 was feared and revered at once. A **high-ability / low-benevolence equilibrium
