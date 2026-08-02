@@ -65,7 +65,9 @@ orders or walk off the board. Doubles as a leadership-dynamics simulation.
    leader identity?), D50 (is the true evaluation persisted, and where), D51
    (D54 is now resolved; D52/D53 by ADR 0023). Situation keys are role-abstract —
    they name relationships and events, never board objects — and content ships
-   as data packs, so the exec-lab track is a rename rather than a fork. The King is a character,
+   as data packs, so the exec-lab track is a rename rather than a fork. Warmth
+   is not required to win: a cold, highly able leader must be able to win a
+   career, and `τ_benev` buys resilience rather than compliance (ADR 0024). The King is a character,
    not the player's avatar: uniform `PieceState`, unpruned attention, and his
    credence is a mandate, not an obedience gate (ADR 0021). Dismissal continues
    the campaign under the King's command with the player spectating, and the

@@ -206,6 +206,20 @@ means the model has collapsed:
     in a shipped content pack, or an implicit rather than declared fallback
     (ADR 0023 §4).
 
+36. **The saint's monopoly.** No cold, high-ability leader policy can reach a
+    winning career. Then D60 has failed and the game is moralizing — the harness
+    needs a `cold_winner` oracle alongside `pure_tactician` and `redeemer`.
+37. **Invulnerable cold streak.** A cold winner survives a sustained losing run
+    as well as a warm leader does. Then `τ_benev` is not acting as variance
+    insurance and the channels have collapsed in practice, however their
+    correlation looks (ADR 0024 §1).
+38. **No McClellan.** Dismissal never occurs while roster mandate is high — the
+    King's results channel is inert (ADR 0024 §3).
+39. **Fatalism invisible.** `FATALISTIC_COMPLIANCE` never fires, or firing it
+    changes nothing in witness state and future willingness. Its entire cost is
+    borne outside the move; if that cost is unmeasurable the verdict is
+    decorative (ADR 0024 §2).
+
 ## 5. Stochastic-system rules
 
 - All randomness flows through one seeded PRNG passed explicitly; `Math.random`

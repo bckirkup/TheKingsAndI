@@ -122,6 +122,8 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
 | 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
 | 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |
+| 5.8b | Diminished second appointment (ADR 0024 §4): lesser king, thinner available roster, lower stakes — the cheap place to rebuild `τ_abil` |
+| 5.8c | King's own results channel (ADR 0024 §3) so a beloved commander can still be dismissed; two dismissal paths logged distinctly |
 | 5.8 | Career/act schema (ADR 0023): `CareerId`, `ActId`/`KingId`, up to three appointments, career-terminal state. Ship one act; the schema carries three |
 | 5.9 | Reputation transfer on recruitment — `τ_abil` from the leader's record, `τ_benev` from roster appraisal via rumor. Ship with the *roster laundering* detector; a ~32 bench is unsafe without it |
 | 5.10 | Career victory condition: realized position quality sustained above `V_own(player)` — the army exceeding the leader's ceiling |

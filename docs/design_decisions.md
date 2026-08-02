@@ -239,6 +239,37 @@ The enterprise track is the same simulation with different nouns, so a pack is
 `{themeTokens, nounMap, dialogue, epilogues}` and a code-path fork would be a
 second codebase maintained forever. Pack coverage becomes a CI check.
 
+### D60 ✅ Ability substitutes for benevolence; warmth is variance insurance (ADR 0024 §1)
+Second-act Jobs was not warmer, he was *right* — visibly and repeatedly; Patton
+was feared and revered at once. A **high-ability / low-benevolence equilibrium
+must be viable**, or the game teaches "be nice and you win," which is false and
+dull. The honest asymmetry: a cold leader retains compliance *while winning* and
+has nothing to draw on during a losing run, so his collapse is immediate; a warm
+leader survives bad runs. Two viable strategies with different failure profiles.
+Substitution rate is the sharpest knob this creates.
+
+### D61 ✅ Fatalistic compliance is its own verdict (ADR 0024 §2)
+Fredericksburg: soldiers pinned their names to their coats and charged anyway.
+Neither compliance nor quiet quitting — full effort, no faith, full knowledge.
+Inserted into the ladder as `FATALISTIC_COMPLIANCE`; its cost lands on the
+**witnesses** and on the piece's future willingness, never on the move, so a
+leader can spend an army this way and see nothing wrong in the move log.
+
+### D62 ✅ The King judges results himself (ADR 0024 §3)
+McClellan's army adored him; Lincoln fired him anyway, twice. Under ADR 0021
+alone mandate falls via rumor *from the roster*, so a beloved commander could
+never be dismissed. The King keeps his own `τ_abil` formed from results, giving
+two independent paths: **fired by the room** (relief, rout-adjacent) and **fired
+by the boss** (protest, the army liked you).
+
+### D63 ✅ Second appointments are diminished, not merely harder (ADR 0024 §4)
+Jobs's second act was NeXT; Patton's was a decoy army. Act two is a *lesser*
+command — fewer strong identities, a lesser king, less at stake — which is where
+`τ_abil` can be rebuilt cheaply, and it makes the return to a real command
+something earned twice. Content investment follows: thin act one, rich act two,
+because act two is the only place the player can demonstrate he learned that
+this is not chess.
+
 ### D57 ✅ Three kings, three acts — the career is the unit of play (ADR 0023 §1)
 Owner: *"once none of them are willing to start a game with you, it is time to
 kill the account."* A career holds up to three appointments; each dismissal burns

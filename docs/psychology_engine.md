@@ -106,6 +106,12 @@ Evaluated strictly in this order:
                                       `T_i ≤ -75 && M_i == 0` trip-wire
 2. U < Θ_refusal(T_i)            → MORAL_REFUSAL         (η = 0.2)
 3. U < 0 or T_i ≤ 0              → QUIET_QUITTING        (η = 0.2)
+3b. P_capture(i) high in i's own view, credence too low to justify it,
+    yet the piece goes    → FATALISTIC_COMPLIANCE (η = 1.0)
+                             ^ ADR 0024: Fredericksburg — names pinned to
+                               coats. Full effort, no faith, full knowledge.
+                               Cost lands on WITNESSES and on i's future
+                               willingness, never on the move.
 4. T_i > 50 and (P_captured > 0.5 or ΔV_board > 2.0)
                                  → HEROIC_EXECUTION      (η = 1.0)
 5. otherwise                     → COMPLIANT_EXECUTION   (η = 1.0)
@@ -295,6 +301,9 @@ invariant is that no absorbing state exists for a player who changes policy.
     exemption. Losing the mandate is a terminal state in which the roster
     survives, braked only by the glory the pieces forfeit — `w_ambition` and
     `w_prestige` (ADR 0021).
+18b. `τ_abil` can substitute for `τ_benev`: a cold, highly able leader keeps
+    compliance *while winning*. `τ_benev` is variance insurance — the warm
+    leader survives a losing streak, the cold one does not (ADR 0024).
 19. Dismissal does not end the campaign. The King takes field command as an
     ordinary `LeaderId` with an empty history — high `τ_benev`, low `τ_abil` by
     the ADR 0019 rates — and the player spectates. The successor is a worse
