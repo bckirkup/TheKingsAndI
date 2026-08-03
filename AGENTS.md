@@ -4,7 +4,8 @@
 *The Kings and I* (internal codename: Living Chess): chess where the pieces have
 persistent identities, memory, trust, class prejudice, and the ability to refuse
 orders or walk off the board. Doubles as a leadership-dynamics simulation.
-**Status: Milestone 0 — scaffolding has landed; there is no game yet.**
+**Status: Milestone 1 — scaffolding and the chess substrate (`src/chess/`, piece
+identity + threat features) have landed; there is no game yet.**
 
 ## Read This First
 | Doc | Purpose |

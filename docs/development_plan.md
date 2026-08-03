@@ -53,6 +53,9 @@ green in CI on a fresh clone.
 
 ## Milestone 1 — Chess substrate + feature extraction (≈1 week)
 
+_Status: 1.1, 1.2, and 1.4 have landed in `src/chess/`. The engine tasks (1.3,
+1.3b, 1.3c) are still open, and 1.3c cannot land until D48 is decided by ADR._
+
 | Task | Deliverable |
 |---|---|
 | 1.1 | `chess/` wrapper over chess.js: legality, FEN/SAN, per-piece identity mapping (chess.js has no piece identity — we maintain a square→PieceId map through every move, capture, castle, promotion, and en-passant) |

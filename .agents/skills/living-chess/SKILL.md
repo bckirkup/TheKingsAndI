@@ -18,9 +18,13 @@ reuses the same telemetry as a leadership-development simulation.
 
 ## Current status (check before assuming otherwise)
 
-Planning only. `docs/` holds the plan; there is no `src/`, no `package.json`.
-If a task asks to "fix" or "extend" a component, first verify it exists —
-Milestone 0 in `docs/development_plan.md` is the first code to land.
+Milestone 1. Landed: the Milestone 0 scaffolding (`src/core/` seeded PRNG and
+canonical encoder, `sim/` harness skeleton, CI, Sonar gate) and the chess
+substrate — `src/chess/` wraps chess.js with a square → `PieceId` map and emits
+threat features (`P_captured`, peer safety deltas, King safety, material). Not
+yet written: `engine/` (Milestone 1.3, blocked on D48), `psychology/`,
+`orchestration/`, `ui/`, `persistence/`, `narrative/`. If a task asks to "fix"
+or "extend" a component, first verify it exists.
 
 ## Orientation order
 

@@ -20,10 +20,12 @@ built. *(Internal codename: Living Chess.)*
 
 ## Status
 
-**Milestone 0 — building.** The architecture, the mathematical specification,
-the development plan, and the decision register are settled enough to build
-against, and the scaffolding has landed: TypeScript strict, the seeded PRNG, the
-canonical encoder, and the headless harness skeleton. There is no game yet.
+**Milestone 1 — building.** Milestone 0 landed the scaffolding: TypeScript
+strict, the seeded PRNG, the canonical encoder, and the headless harness
+skeleton. The chess substrate now sits on top of it — a chess.js wrapper that
+adds persistent piece identity, plus the threat features the psychology engine
+will consume. The engine broker (1.3) and the psychology reducers are next, so
+there is no game yet.
 
 ```bash
 pnpm install
