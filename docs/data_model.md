@@ -48,8 +48,21 @@ interface MatchRecord {
   events: MatchEvent[];         // canonical log; audits fold over this
   result: 'WIN' | 'LOSS' | 'DRAW' | 'ABANDONED';
   engineConfig: { dMin: number; dMax: number; deterministic: boolean };
+  determinismId: string;        // engine + version + settings (ADR 0020)
+  insightRounds: RoundDigest[]; // one per barrier, in ply then round order
   psychConfigVersion: string;   // which ENGINE_CONFIG the match was played under
   schemaVersion: number;
+}
+
+/**
+ * The replay-triage record of ADR 0034 §8. On a divergence, matching digests
+ * with diverging events say the psychology diverged; a diverging digest says the
+ * engine did, and names the ply.
+ */
+interface RoundDigest {
+  ply: number;
+  round: number;                // 0-based; a dependent query opens the next one
+  digest: string;               // core/digest over the ordered InsightBundle
 }
 
 interface CampaignRecord {

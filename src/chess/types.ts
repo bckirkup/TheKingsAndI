@@ -1,5 +1,7 @@
 import type { Square } from 'chess.js';
 
+import type { PieceId } from '../core/ids';
+
 /** Chess-layer types. `psychology/` may import these as types only (ADR 0013). */
 
 export type Side = 'w' | 'b';
@@ -10,7 +12,7 @@ export type Role = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P';
 export type PromotionRole = 'Q' | 'R' | 'B' | 'N';
 
 /** Stable for the piece's whole life; minted by the roster layer. */
-export type PieceId = string;
+export type { PieceId };
 
 export type { Square };
 
