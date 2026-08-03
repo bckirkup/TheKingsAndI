@@ -54,14 +54,16 @@ green in CI on a fresh clone.
 ## Milestone 1 — Chess substrate + feature extraction (≈1 week)
 
 _Status: 1.1, 1.2, and 1.4 have landed in `src/chess/`. The engine tasks (1.3,
-1.3b, 1.3c) are still open, and 1.3c cannot land until D48 is decided by ADR._
+1.3b, 1.3c) are still open; D48 is now decided by ADR 0034, so 1.3c is
+unblocked and 1.3 should be built against the barrier from the start rather than
+retrofitted to it._
 
 | Task | Deliverable |
 |---|---|
 | 1.1 | `chess/` wrapper over chess.js: legality, FEN/SAN, per-piece identity mapping (chess.js has no piece identity — we maintain a square→PieceId map through every move, capture, castle, promotion, and en-passant) |
 | 1.2 | Threat/feature extractor: `ΔP_capture(j, m)` for all pieces, material delta, king-safety delta |
 | 1.3 | Engine broker behind `EnginePort` (ADR 0020): stockfish.wasm pool, `go depth N` only, deterministic mode, shared search + private per-piece scoring (ADR 0017). Nothing outside `engine/` learns which engine exists; `determinismId` goes into every `MatchRecord` |
-| 1.3c | Deterministic query barrier (D48): all engine queries per ply issued, collected, sorted by `PieceId`, then psychology runs. Ship with the shuffled-resolution-order replay test — without it, replay divergence will present as a psychology bug |
+| 1.3c | Deterministic query barrier (D48, ruled by ADR 0034): all engine queries per round issued and collected in `PieceId` order, bundle frozen, then psychology runs; numbered rounds for dependent queries, ordered failures, PRNG drawn after the barrier. Ship with the shuffled-resolution-order replay test and the per-round `digest` — without it, replay divergence will present as a psychology bug |
 | 1.3b | Engine conformance suite (fixed FEN × depth corpus → stable output) **plus one permissive adapter** — Lozza, MIT, pure JS, no toolchain — purely to prove the port is real. An untested port is not a port (ADR 0020) |
 | 1.4 | Golden tests: known positions → known threat maps; identity map survives 1,000 random legal games |
 
