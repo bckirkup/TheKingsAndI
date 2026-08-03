@@ -53,10 +53,12 @@ green in CI on a fresh clone.
 
 ## Milestone 1 — Chess substrate + feature extraction (≈1 week)
 
-_Status: 1.1, 1.2, and 1.4 have landed in `src/chess/`. The engine tasks (1.3,
-1.3b, 1.3c) are still open; D48 is now decided by ADR 0034, so 1.3c is
-unblocked and 1.3 should be built against the barrier from the start rather than
-retrofitted to it._
+_Status: 1.1, 1.2, and 1.4 have landed in `src/chess/`; 1.3c has landed in
+`src/engine/` (the `EnginePort` surface, the query barrier, the keyed cache, and
+the round digest, with the shuffled-resolution-order test). Left in this
+milestone: the stockfish.wasm pool and the shared-search / private-scoring broker
+(1.3), and the conformance suite plus the permissive Lozza adapter (1.3b) — both
+built behind the barrier that now exists._
 
 | Task | Deliverable |
 |---|---|

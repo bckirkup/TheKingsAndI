@@ -21,9 +21,11 @@ reuses the same telemetry as a leadership-development simulation.
 Milestone 1. Landed: the Milestone 0 scaffolding (`src/core/` seeded PRNG and
 canonical encoder, `sim/` harness skeleton, CI, Sonar gate) and the chess
 substrate — `src/chess/` wraps chess.js with a square → `PieceId` map and emits
-threat features (`P_captured`, peer safety deltas, King safety, material). Not
-yet written: `engine/` (Milestone 1.3, unblocked — D48's query barrier is ruled
-by ADR 0034 and `engine/` must be built against it), `psychology/`,
+threat features (`P_captured`, peer safety deltas, King safety, material), and
+`src/engine/`'s query barrier — `EnginePort`, `buildInsightRound`,
+`resolveInsightRound`, the `(determinismId, fen, depth, evalProfile)` cache, and
+the round digest (ADR 0034). Not yet written: the stockfish.wasm pool and the
+shared-search broker behind that port (Milestone 1.3/1.3b), `psychology/`,
 `orchestration/`, `ui/`, `persistence/`, `narrative/`. If a task asks to "fix"
 or "extend" a component, first verify it exists.
 
