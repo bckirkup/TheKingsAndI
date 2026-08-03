@@ -24,6 +24,7 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D13 | Distribution | **Lightest shell first** to validate the psychology (web build); **Steam via a desktop wrapper** as the commercial target. Not Electron. *Partially reversed by D72: a shared piece community needs identity and a registry; see ADR 0026 §5.* | [0012](adr/0012-distribution.md) |
 | D15 | Save compatibility | **No compatibility promise during development.** Saves may be invalidated by recalibration. | — |
 | D14 | Language and package/state stack | **TypeScript strict everywhere** — UI, core, and harness — with pnpm, Vite + React 18, Vitest, ESLint flat + Prettier, and Zustand for view state only. Transcendental math is banned in `psychology/` because JS engines disagree in the last bits; the Rust/WASM escape hatch is scoped to `psychology/` alone. | [0032](adr/0032-language-and-toolchain.md) |
+| D48 | Sequencing async engine results | **A per-ply query barrier.** All queries for a round issued and collected in `PieceId` order, bundle frozen before psychology runs, psychology synchronous, PRNG drawn only after the barrier. Dependent queries become numbered rounds; failures abort the ply. | [0034](adr/0034-deterministic-query-barrier.md) |
 | D80 | Static analysis and coverage gate | **SonarQube Cloud** (`bckirkup_TheKingsAndI`), CI-based analysis with Vitest lcov coverage, gate on new code. Sonar advises; ESLint owns the project invariants. | [0033](adr/0033-static-analysis-and-quality-gate.md) |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
 | D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
@@ -113,17 +114,23 @@ These are structural: expensive or impossible to retrofit, and distinct from the
 calibration knobs below. Items D48–D53 surfaced from ADRs 0016–0021 and were not
 previously recorded.
 
-### D48 ⛔ Deterministic sequencing of async engine results
-The sharpest remaining architecture decision. With ADR 0017, every piece queries
-the pool each ply; results arrive asynchronously; byte-identical replay requires
-a fixed resolution order. Without an explicit ordering rule, replays diverge on
-faster hardware and the bug looks like a psychology bug.
+### D48 ✅ resolved as a per-ply query barrier (ADR 0034)
+With ADR 0017, every piece queries the pool each ply; results arrive
+asynchronously; byte-identical replay requires a fixed resolution order. Without
+an explicit ordering rule, replays diverge on faster hardware and the bug looks
+like a psychology bug.
 
-**Recommended:** a barrier per ply — all engine queries issued, all results
-collected and sorted by `PieceId`, and only then may psychology reducers run. No
-reducer may observe arrival order, and nothing may short-circuit on the first
-result to return. Enforce with a test that shuffles resolution order and asserts
-an identical event log.
+**Ruling (ADR 0034):** a barrier per ply per side. Queries are issued *and*
+collected in `PieceId` order, the round's request set is a pure function of the
+position, the bundle is frozen before psychology runs, and psychology stays
+synchronous so no reducer can await. Three additions the original
+recommendation did not cover, each a separate leak of arrival order: a genuinely
+dependent query opens a numbered round *n+1* rather than a callback; a failure is
+an ordered `InsightFailure` that aborts the ply, never a silently dropped piece;
+and the seeded PRNG is consumed only after the barrier, in `PieceId` order.
+Enforced by the shuffled-resolution-order replay test, a per-round `digest` in
+the `MatchRecord`, and an ESLint ban on `Promise.race`/`Promise.any`/wall-clock
+timeouts in `engine/` and `orchestration/`.
 
 ### D49 ⛔ Is credence indexed by leader identity?
 D5 makes psychology symmetric and campaigns persist rosters, so `τ_benev` and
@@ -624,9 +631,9 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D48, D49** — before the engine layer and the first schema respectively.
-   Both are cheap now and structural later; D48 is the one whose absence
-   presents as a mysterious psychology bug.
+1. **D49** — before the first schema. Cheap now, structural later. (D48 is
+   resolved by ADR 0034: it was the one whose absence would have presented as a
+   mysterious psychology bug, and it had to land before `engine/`.)
 1b. **King's patience and recall rate** (D54/D56 residue) — with the harness,
    alongside D26. (D51 and D54 are resolved by ADR 0021; D55 and D56 by
    ADR 0022.)

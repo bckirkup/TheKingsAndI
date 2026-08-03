@@ -65,12 +65,15 @@ identity + threat features) have landed; there is no game yet.**
 9. **Do not resolve an open decision in `docs/design_decisions.md` by writing
    code.** Ask, or implement behind a config flag with both branches tested.
    D19 and D9 are settled (ADR 0015, ADR 0017); D36–D39 and D41 by ADR 0019;
-   D51 by ADR 0021. Remaining calibration decisions
-   (D35, D40, D42–D44) belong to the harness in Milestone 3. **Four architecture
-   decisions are open and must not be resolved silently in code:** D48
-   (deterministic sequencing of async engine results), D49 (is credence keyed by
-   leader identity?), D50 (is the true evaluation persisted, and where), D51
-   (D54 is now resolved; D52/D53 by ADR 0023). Situation keys are role-abstract —
+   D51 by ADR 0021; D48 by ADR 0034. Remaining calibration decisions
+   (D35, D40, D42–D44) belong to the harness in Milestone 3. **Two architecture
+   decisions are open and must not be resolved silently in code:** D49 (is
+   credence keyed by leader identity?) and D50 (is the true evaluation
+   persisted, and where). (D54 is resolved by ADR 0021; D52/D53 by ADR 0023.)
+   Engine results reach psychology only through a per-ply barrier: issued and
+   collected in `PieceId` order, frozen, with the seeded PRNG drawn only after
+   it closes — `Promise.race`/`Promise.any`/wall-clock timeouts are banned in
+   `engine/` and `orchestration/` (ADR 0034). Situation keys are role-abstract —
    they name relationships and events, never board objects — and content ships
    as data packs, so the exec-lab track is a rename rather than a fork. Warmth
    is not required to win: a cold, highly able leader must be able to win a

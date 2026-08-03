@@ -148,5 +148,41 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    name: 'query-barrier',
+    files: ['src/engine/**', 'src/orchestration/**'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Use the injected seeded PRNG instead of Math.random.',
+        },
+        ...['race', 'any'].map((property) => ({
+          object: 'Promise',
+          property,
+          message:
+            'A ply may not proceed on the first result back; await the whole round (ADR 0034 §4).',
+        })),
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...['setTimeout', 'setInterval'].map((name) => ({
+          name,
+          message:
+            'Wall-clock deadlines make replay hardware-dependent (ADR 0034 §4).',
+        })),
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='now']",
+          message:
+            'The clock may not influence a ply; depth is fixed (ADR 0005, ADR 0034 §4).',
+        },
+      ],
+    },
+  },
   prettier,
 );

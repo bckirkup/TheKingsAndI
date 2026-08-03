@@ -137,15 +137,25 @@ opposing army under an AI leader policy. Two rules constrain the seam:
 - **Difficulty is a leader policy, never an engine depth.** The difficulty knob
   selects the opposing archetype and its roster quality.
 
-### Determinism under an async pool (D48, open)
+### Determinism under an async pool (ADR 0034)
 ADR 0017 has every piece querying the engine pool each ply, so results arrive
 asynchronously and **replay determinism depends on an explicit ordering rule.**
-Recommended shape: a per-ply barrier — issue all queries, collect all results,
-sort by `PieceId`, and only then run psychology. No reducer may observe arrival
-order and nothing may short-circuit on the first result back. The test that
-proves it is a shuffled-resolution-order replay asserting an identical event log.
-This is unresolved and must not be settled implicitly by whatever the first
-implementation happens to do.
+ADR 0034 resolves D48 with a per-ply barrier per side: queries for a round are
+issued *and* collected in `PieceId` order, the round's request set is a pure
+function of the position, and the frozen bundle is handed to psychology, which
+stays synchronous and therefore cannot await a race. Step 3 of the pipeline is
+the only async step, and step 4 may not begin until it has closed.
+
+Three further ways arrival order leaks, each closed by that ADR: a query that
+depends on another answer opens a numbered round *n+1* instead of a callback; an
+engine failure is an ordered `InsightFailure` that aborts the ply rather than a
+silently dropped piece; and the seeded PRNG is consumed only after the barrier,
+in `PieceId` order — otherwise arrival order picks each piece's numbers even
+when every piece saw the right insight. `Promise.race`, `Promise.any`, and
+wall-clock timeouts are lint errors in `engine/` and `orchestration/`. The tests
+that prove it are a shuffled-resolution-order replay asserting a byte-identical
+event log, and a per-round `digest` in the `MatchRecord` that says whether a
+divergence was engine-side or psychology-side.
 
 ### The epistemic boundary (ADR 0013)
 `psychology/` must **never receive the `D_max` evaluation.** Every piece decides
