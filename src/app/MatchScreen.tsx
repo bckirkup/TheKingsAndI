@@ -17,6 +17,7 @@ import {
   DesertionPanel,
   DialogueBubble,
   OverridePanel,
+  QuietQuitPanel,
 } from '../ui/panels/VerdictPanels';
 import { RelationshipInspector } from '../ui/panels/RelationshipInspector';
 
@@ -142,12 +143,15 @@ export function MatchScreen({
               board={board}
               playerSide={playerSide}
               interactive={interactive}
+              {...(snapshot.lastMove === null
+                ? {}
+                : { lastMove: [snapshot.lastMove[0], snapshot.lastMove[1]] })}
               onMove={(intent) => {
                 session.submitPlayerIntent(intent);
                 refresh();
               }}
             />
-            <div className="board-stack__overlays" aria-hidden>
+            <div className="board-stack__overlays">
               {playerPieces.map((piece) => {
                 const state = roster.find((p) => p.id === piece.id);
                 if (state === undefined) return null;
@@ -157,6 +161,12 @@ export function MatchScreen({
                     piece={state}
                     square={piece.square}
                     selected={snapshot.selectedPieceId === piece.id}
+                    onSelect={() => {
+                      session.selectPiece(
+                        snapshot.selectedPieceId === piece.id ? null : piece.id,
+                      );
+                      refresh();
+                    }}
                   />
                 );
               })}
@@ -179,6 +189,17 @@ export function MatchScreen({
             roster={roster}
             selectedPieceId={snapshot.selectedPieceId}
           />
+
+          {dialogueCue?.eventKind === 'quiet_quit' && pending === null ? (
+            <QuietQuitPanel
+              role={
+                roster.find((p) => p.id === dialogueCue.pieceId)?.role ??
+                'Piece'
+              }
+              san={dialogueCue.san}
+              trust={roster.find((p) => p.id === dialogueCue.pieceId)?.T_i ?? 0}
+            />
+          ) : null}
 
           {pending?.verdict === 'MORAL_REFUSAL' ? (
             <OverridePanel

@@ -68,8 +68,14 @@
   grid-template-rows: repeat(8, 1fr);
 }
 
+.board-stack__overlays .piece-overlay {
+  pointer-events: auto;
+}
+
 .piece-overlay {
   position: relative;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .piece-overlay--selected {

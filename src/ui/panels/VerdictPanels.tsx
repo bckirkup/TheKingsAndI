@@ -1,3 +1,4 @@
+import { calculateEngineSearchDepth } from '../../psychology/depth';
 import { ENGINE_CONFIG } from '../../psychology/config';
 import type { PendingVerdict } from '../../orchestration/matchSession';
 
@@ -11,19 +12,24 @@ export function DivergenceDisplay({
   const own = pending.moveEval.deltaV_board;
   const leader = pending.moveEval.vLeaderImplied;
   const gap = leader - own;
+  const searchDepth = calculateEngineSearchDepth(
+    pending.actor.E_i,
+    pending.actor.engagementFactor,
+  );
   return (
     <div className="divergence">
       <h3>Evaluation divergence</h3>
       <p className="divergence__note">
-        The piece reasons from its own depth budget — not omniscience.
+        The piece reasons from depth {searchDepth} — not the true score (ADR
+        0013). This gap is faith, not disloyalty.
       </p>
       <dl>
         <div>
-          <dt>Piece view</dt>
+          <dt>Piece view (depth {searchDepth})</dt>
           <dd>{own.toFixed(2)}</dd>
         </div>
         <div>
-          <dt>Leader implied</dt>
+          <dt>Commander implied</dt>
           <dd>{leader.toFixed(2)}</dd>
         </div>
         <div>
@@ -127,6 +133,32 @@ export function DesertionPanel({
       <button type="button" className="btn btn--danger" onClick={onAcknowledge}>
         Acknowledge departure
       </button>
+    </div>
+  );
+}
+
+export interface QuietQuitPanelProps {
+  readonly role: string;
+  readonly san: string;
+  readonly trust: number;
+}
+
+export function QuietQuitPanel({
+  role,
+  san,
+  trust,
+}: QuietQuitPanelProps): JSX.Element {
+  return (
+    <div className="verdict-panel verdict-panel--quiet-quit">
+      <h2>Quiet compliance</h2>
+      <p>
+        <strong>{role}</strong> played <code>{san}</code> without enthusiasm.
+        Trust is {trust}; engagement is low. The order went through — the army
+        did not.
+      </p>
+      <p className="divergence__note">
+        This is not a bug. The piece complied while withholding effort.
+      </p>
     </div>
   );
 }

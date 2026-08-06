@@ -64,6 +64,7 @@ export interface MatchSessionSnapshot {
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
   readonly winScore: number;
+  readonly lastMove: readonly [Square, Square] | null;
 }
 
 export interface MatchSessionConfig {
@@ -119,6 +120,7 @@ export class MatchSession {
   private readonly playerSide: Side;
   private selectedPieceId: string | null = null;
   private rout = false;
+  private lastMove: readonly [Square, Square] | null = null;
 
   constructor(config: MatchSessionConfig = {}) {
     const seed = config.seed ?? 1;
@@ -151,6 +153,7 @@ export class MatchSession {
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
       winScore: this.winScore(),
+      lastMove: this.lastMove,
     };
   }
 
@@ -343,7 +346,8 @@ export class MatchSession {
     actor: PieceState,
     outcome: MoveDecisionOutcome,
   ): void {
-    this.board.applyMove(intent);
+    const applied = this.board.applyMove(intent);
+    this.lastMove = [applied.from, applied.to];
     this.events.push({
       t: 'MOVE',
       ply: this.ply,
@@ -396,7 +400,8 @@ export class MatchSession {
       this.phase = 'game_over';
       return;
     }
-    this.board.applySan(san);
+    const applied = this.board.applySan(san);
+    this.lastMove = [applied.from, applied.to];
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
     this.ply += 1;
     if (this.board.isGameOver()) {
