@@ -6,7 +6,9 @@ import {
 } from '../src/orchestration/campaignConfig';
 import {
   evaluateCareerVictory,
+  evaluateReinstatement,
   resolveCampaignTerminal,
+  rosterLaunderingRisk,
   shouldDismiss,
 } from '../src/orchestration/campaignPolicy';
 import {
@@ -63,9 +65,9 @@ describe('campaign policy', () => {
 
   it('detects sustained career victory (5.10)', () => {
     const matches = [
-      { audit: { boardQuality: 80 } },
-      { audit: { boardQuality: 75 } },
-      { audit: { boardQuality: 78 } },
+      { audit: { realizedQuality: 80 } },
+      { audit: { realizedQuality: 75 } },
+      { audit: { realizedQuality: 78 } },
     ];
     expect(evaluateCareerVictory(matches)).toBe(true);
     expect(evaluateCareerVictory(matches.slice(0, 2))).toBe(false);
@@ -73,10 +75,29 @@ describe('campaign policy', () => {
 
   it('resolves rout before victory when both could apply', () => {
     const terminal = resolveCampaignTerminal(['ROUT', 'WIN', 'WIN', 'WIN'], 3, [
-      { audit: { boardQuality: 90 } },
-      { audit: { boardQuality: 90 } },
-      { audit: { boardQuality: 90 } },
+      { audit: { realizedQuality: 90 } },
+      { audit: { realizedQuality: 90 } },
+      { audit: { realizedQuality: 90 } },
     ]);
     expect(terminal).toBe('rout');
+  });
+
+  it('offers reinstatement when trust recovers after dismissal', () => {
+    expect(evaluateReinstatement([makePiece(-10), makePiece(-5)], 5)).toBe(
+      true,
+    );
+    expect(evaluateReinstatement([makePiece(-30), makePiece(-25)], -5)).toBe(
+      false,
+    );
+  });
+
+  it('flags roster laundering on deep bench with high-trust recruits', () => {
+    const incoming = Array.from({ length: 16 }, (_, index) => ({
+      ...makePiece(80),
+      id: `w:N:g${index}`,
+      status: 'DESERTED' as const,
+    }));
+    expect(rosterLaunderingRisk(incoming, 30)).toBe(true);
+    expect(rosterLaunderingRisk(incoming.slice(0, 1), 8)).toBe(false);
   });
 });

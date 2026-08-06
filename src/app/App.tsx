@@ -9,29 +9,36 @@ import { ThemeProvider } from './ThemeProvider';
 import { finalizeCampaignIfComplete } from '../orchestration/campaignFinalize';
 import { CareerRepository } from '../persistence';
 import type {
+  ActRecord,
   CampaignRecord,
   CareerRecord,
   MatchRecord,
   StoredPieceState,
 } from '../persistence';
+import type { MatchEvent } from '../psychology';
 
 type AppScreen =
   | { readonly kind: 'hub' }
   | {
       readonly kind: 'roster';
       readonly career: CareerRecord;
+      readonly act: ActRecord;
       readonly campaign: CampaignRecord;
       readonly roster: StoredPieceState[];
+      readonly freeAgents: StoredPieceState[];
       readonly matchIndex: number;
       readonly seed: number;
+      readonly leaderAbilityTrust: number;
     }
   | {
       readonly kind: 'match';
       readonly career: CareerRecord;
+      readonly act: ActRecord;
       readonly campaign: CampaignRecord;
       readonly roster: StoredPieceState[];
       readonly matchIndex: number;
       readonly seed: number;
+      readonly rosterPreamble: readonly MatchEvent[];
     }
   | {
       readonly kind: 'matchAudit';
@@ -49,16 +56,23 @@ export function App(): JSX.Element {
     <ThemeProvider>
       {screen.kind === 'hub' ? (
         <CampaignHub
-          onStartMatch={(input) =>
-            setScreen({
-              kind: 'roster',
-              career: input.career,
-              campaign: input.campaign,
-              roster: input.roster,
-              matchIndex: input.matchIndex,
-              seed: input.seed,
-            })
-          }
+          onStartMatch={(input) => {
+            void (async () => {
+              await repo.init();
+              const freeAgents = await repo.listFreeAgents();
+              setScreen({
+                kind: 'roster',
+                career: input.career,
+                act: input.act,
+                campaign: input.campaign,
+                roster: input.roster,
+                freeAgents,
+                matchIndex: input.matchIndex,
+                seed: input.seed,
+                leaderAbilityTrust: input.leaderAbilityTrust,
+              });
+            })();
+          }}
           onViewDebrief={(campaignId) =>
             setScreen({ kind: 'debrief', campaignId })
           }
@@ -68,18 +82,22 @@ export function App(): JSX.Element {
       {screen.kind === 'roster' ? (
         <RosterScreen
           roster={screen.roster}
+          freeAgents={screen.freeAgents}
+          leaderAbilityTrust={screen.leaderAbilityTrust}
           onBack={() => setScreen({ kind: 'hub' })}
-          onConfirm={(roster) => {
+          onConfirm={(roster, preambleEvents) => {
             void (async () => {
               await repo.init();
               await repo.saveRoster(roster);
               setScreen({
                 kind: 'match',
                 career: screen.career,
+                act: screen.act,
                 campaign: screen.campaign,
                 roster,
                 matchIndex: screen.matchIndex,
                 seed: screen.seed,
+                rosterPreamble: preambleEvents,
               });
             })();
           }}
@@ -90,22 +108,24 @@ export function App(): JSX.Element {
         <MatchScreen
           seed={screen.seed}
           initialRoster={screen.roster}
+          opponentArchetype={screen.act.opponentArchetype}
+          rosterPreamble={screen.rosterPreamble}
           onMatchFinished={(result) => {
             void (async () => {
               await repo.init();
-              const actId = screen.career.actIds[0] ?? screen.campaign.actId;
+              const events = [...screen.rosterPreamble, ...result.events];
               const record = await repo.recordMatch({
                 campaignId: screen.campaign.id,
-                actId,
+                actId: screen.act.id,
                 matchIndex: screen.matchIndex,
                 seed: screen.seed,
                 rosterSnapshot: screen.roster,
                 rosterEnd: result.rosterEnd,
-                events: result.events,
+                events,
                 result: result.result,
               });
               const matches = await repo.listMatches(screen.campaign.id);
-              const act = await repo.getAct(actId);
+              const act = await repo.getAct(screen.act.id);
               const finalized =
                 act === undefined
                   ? null
@@ -116,7 +136,7 @@ export function App(): JSX.Element {
                     });
               if (finalized !== null) {
                 await repo.updateCampaignTerminal({
-                  actId,
+                  actId: screen.act.id,
                   careerId: screen.career.id,
                   terminalState: finalized.terminal,
                   careerOutcome: finalized.outcome,

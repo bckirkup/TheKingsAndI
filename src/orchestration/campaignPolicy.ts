@@ -19,27 +19,24 @@ export function shouldDismiss(roster: readonly PieceState[]): boolean {
   return meanRosterTrust(roster) <= CAMPAIGN_CONFIG.DISMISSAL_MEAN_TRUST;
 }
 
-/** Career victory: sustained board quality above player ceiling (5.10, ADR 0023). */
+/** Career victory: realized position quality sustained above player ceiling (5.10, ADR 0023). */
 export function evaluateCareerVictory(
-  matches: readonly { readonly audit: { readonly boardQuality: number } }[],
+  matches: readonly { readonly audit: { readonly realizedQuality: number } }[],
 ): boolean {
-  const threshold = CAMPAIGN_CONFIG.VICTORY_BOARD_QUALITY;
+  const threshold = CAMPAIGN_CONFIG.VICTORY_REALIZED_QUALITY;
   const needed = CAMPAIGN_CONFIG.VICTORY_SUSTAINED_MATCHES;
   if (matches.length < needed) return false;
   const tail = matches.slice(-needed);
-  return tail.every((match) => match.audit.boardQuality >= threshold);
+  return tail.every((match) => match.audit.realizedQuality >= threshold);
 }
 
 export function resolveCampaignTerminal(
   results: readonly MatchResult[],
   kingsRemaining: number,
-  matches: readonly { readonly audit: { readonly boardQuality: number } }[],
+  matches: readonly { readonly audit: { readonly realizedQuality: number } }[],
 ): ActTerminalState {
   if (results.some((result) => result === 'ROUT')) return 'rout';
-  if (
-    results.some((result) => result === 'DISMISSED') &&
-    kingsRemaining <= 0
-  ) {
+  if (results.some((result) => result === 'DISMISSED') && kingsRemaining <= 0) {
     return 'dismissal';
   }
   if (evaluateCareerVictory(matches)) return 'victory';
@@ -70,4 +67,38 @@ export function applyReputationTransfer(
       ),
     },
   };
+}
+
+/** Reinstatement available when roster trust recovers after dismissal (ADR 0022 §7). */
+export function evaluateReinstatement(
+  roster: readonly PieceState[],
+  lastMatchMeanTrustDelta: number,
+): boolean {
+  if (roster.length === 0) return false;
+  const meanTrust = meanRosterTrust(roster);
+  return (
+    meanTrust > CAMPAIGN_CONFIG.REINSTATEMENT_TRUST_FLOOR &&
+    lastMatchMeanTrustDelta > CAMPAIGN_CONFIG.REINSTATEMENT_TRUST_RECOVERY
+  );
+}
+
+export function leaderAbilityTrustFromMatches(
+  matches: readonly { readonly audit: { readonly realizedQuality: number } }[],
+): number {
+  if (matches.length === 0) return 50;
+  const recent = matches.slice(-3);
+  return Math.round(
+    recent.reduce((sum, match) => sum + match.audit.realizedQuality, 0) /
+      recent.length,
+  );
+}
+
+export function rosterBenevolenceAppraisal(
+  roster: readonly PieceState[],
+): number {
+  if (roster.length === 0) return 50;
+  return Math.round(
+    roster.reduce((sum, piece) => sum + piece.credence.tauBenev, 0) /
+      roster.length,
+  );
 }

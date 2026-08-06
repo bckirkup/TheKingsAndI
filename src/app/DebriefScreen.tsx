@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 
 import { CareerRepository } from '../persistence';
 import type { CampaignDebrief } from '../persistence';
-import { EPILOGUE_STUB } from '../orchestration/terminalState';
+import { certificateToJson } from '../persistence/certificate';
+import { EPILOGUE_BY_TERMINAL } from '../orchestration/terminalState';
 import { DebriefBarChart } from '../ui/panels/DebriefChart';
 
 export interface DebriefScreenProps {
@@ -32,10 +33,12 @@ export function DebriefScreen({
   if (error !== null) return <p>{error}</p>;
   if (debrief === null) return <p>Computing debrief…</p>;
 
+  const { transcript } = debrief;
+
   return (
     <section className="debrief-screen">
       <h1>Campaign debrief</h1>
-      <p>{EPILOGUE_STUB[debrief.actTerminalState]}</p>
+      <p>{EPILOGUE_BY_TERMINAL[debrief.actTerminalState]}</p>
 
       <DebriefBarChart matches={debrief.matches} />
 
@@ -44,6 +47,7 @@ export function DebriefScreen({
           <tr>
             <th>Match</th>
             <th>Board quality</th>
+            <th>Realized quality</th>
             <th>Execution fidelity</th>
             <th>Gap</th>
             <th>Result</th>
@@ -54,6 +58,7 @@ export function DebriefScreen({
             <tr key={match.id}>
               <td>{match.matchIndex}</td>
               <td>{match.audit.boardQuality.toFixed(1)}</td>
+              <td>{match.audit.realizedQuality.toFixed(1)}</td>
               <td>{(match.audit.executionFidelity * 100).toFixed(0)}%</td>
               <td>
                 {(
@@ -67,11 +72,42 @@ export function DebriefScreen({
         </tbody>
       </table>
 
+      <h2>Transcript (ADR 0030)</h2>
+      <dl className="debrief-screen__folds">
+        <div>
+          <dt>Quality gap</dt>
+          <dd>{transcript.qualityGap.toFixed(1)}</dd>
+        </div>
+        <div>
+          <dt>Concessions (good moves withdrawn)</dt>
+          <dd>{transcript.concessionCount}</dd>
+        </div>
+        <div>
+          <dt>Trauma Gini</dt>
+          <dd>{transcript.traumaGini.toFixed(2)}</dd>
+        </div>
+        <div>
+          <dt>Overrides</dt>
+          <dd>{transcript.overrideLedger.length}</dd>
+        </div>
+        <div>
+          <dt>Attrition (desert / refuse / fire)</dt>
+          <dd>
+            {transcript.attrition.desertions} / {transcript.attrition.refusals}{' '}
+            / {transcript.attrition.firings}
+          </dd>
+        </div>
+      </dl>
+
       <h2>Campaign folds</h2>
       <dl className="debrief-screen__folds">
         <div>
           <dt>Mean board quality</dt>
           <dd>{debrief.meanBoardQuality.toFixed(1)}</dd>
+        </div>
+        <div>
+          <dt>Mean realized quality</dt>
+          <dd>{debrief.meanRealizedQuality.toFixed(1)}</dd>
         </div>
         <div>
           <dt>Mean execution fidelity</dt>
@@ -93,9 +129,33 @@ export function DebriefScreen({
         </div>
       </dl>
 
-      <button type="button" className="btn" onClick={onBack}>
-        Back to campaign
-      </button>
+      <div className="campaign-hub__actions">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            void (async () => {
+              const repo = new CareerRepository();
+              await repo.init();
+              const bundle = await repo.buildCertificate(campaignId);
+              const blob = new Blob([certificateToJson(bundle)], {
+                type: 'application/json',
+              });
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement('a');
+              anchor.href = url;
+              anchor.download = `certificate-${campaignId}.json`;
+              anchor.click();
+              URL.revokeObjectURL(url);
+            })();
+          }}
+        >
+          Download certificate bundle
+        </button>
+        <button type="button" className="btn" onClick={onBack}>
+          Back to campaign
+        </button>
+      </div>
     </section>
   );
 }

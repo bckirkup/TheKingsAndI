@@ -252,6 +252,31 @@
   color: var(--text-muted);
 }
 
+.campaign-hub__length {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.campaign-hub__reinstatement,
+.campaign-hub__suspended {
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.roster-screen__warning {
+  color: var(--accent-warn, #c9a227);
+  font-size: 0.9rem;
+}
+
+.verdict-panel--succession {
+  border-color: var(--accent-muted, #6b7c93);
+}
+
 .campaign-hub__actions,
 .roster-screen__actions {
   display: flex;

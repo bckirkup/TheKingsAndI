@@ -1,9 +1,11 @@
 import { compileCampaignCultureDrift } from '../psychology/events';
 import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
+import { foldCampaignTranscript } from './transcript';
 import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   type ActTerminalState,
+  type CampaignDebrief,
   type MatchAudit,
   type MatchRecord,
   type StoredPieceState,
@@ -80,9 +82,17 @@ export function foldMatchAudit(
   const executionFidelity =
     commandsIssued === 0 ? 1 : faithfulMoves / commandsIssued;
 
+  const executedQualities = events
+    .filter((event) => event.t === 'MOVE')
+    .map(
+      (event) =>
+        event.orderQualityCp ?? VERDICT_QUALITY_CP[event.verdict] ?? 50,
+    );
+
   return {
     boardQuality: mean(orderQualities),
     executionFidelity,
+    realizedQuality: mean(executedQualities),
     refusalCount,
     overrideCount,
     desertionCount,
@@ -131,15 +141,7 @@ export function buildCampaignDebrief(
   initialRoster: readonly StoredPieceState[],
   finalRoster: readonly StoredPieceState[],
   actTerminalState: ActTerminalState,
-): {
-  readonly campaignId: string;
-  readonly matches: readonly MatchRecord[];
-  readonly cultureDrift: CampaignCultureDriftVector;
-  readonly meanBoardQuality: number;
-  readonly meanExecutionFidelity: number;
-  readonly foldVersion: string;
-  readonly actTerminalState: ActTerminalState;
-} {
+): CampaignDebrief {
   const cultureDrift = foldCampaignCultureDrift(
     matches,
     initialRoster,
@@ -151,13 +153,18 @@ export function buildCampaignDebrief(
   const meanExecutionFidelity = mean(
     matches.map((match) => match.audit.executionFidelity),
   );
+  const meanRealizedQuality = mean(
+    matches.map((match) => match.audit.realizedQuality),
+  );
   return {
     campaignId,
     matches,
     cultureDrift,
     meanBoardQuality,
     meanExecutionFidelity,
+    meanRealizedQuality,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
+    transcript: foldCampaignTranscript(matches),
   };
 }
