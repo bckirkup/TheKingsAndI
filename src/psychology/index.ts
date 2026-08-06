@@ -1,6 +1,39 @@
 export { ENGINE_CONFIG } from './config';
 export type { EngineConfig } from './config';
+export {
+  attentionWeight,
+  applyRumorDiffusion,
+  calculateLeaderImpliedValue,
+  diffuseRumor,
+} from './belief';
+export {
+  clampAffinity,
+  clampCredence,
+  clampInt,
+  clampMorale,
+  clampPermille,
+  clampTrauma,
+  clampTrust,
+} from './clamp';
+export {
+  applyAbilityObservation,
+  applyBetrayalSignal,
+  applyHeardSignal,
+  applyNeglectSignal,
+  calculateFaithGap,
+  calculatePerceivedValue,
+  isExpendableRefusal,
+} from './credence';
 export { calculateEngineSearchDepth } from './depth';
+export {
+  calculateLambda,
+  calculatePain,
+  calculateUDesert,
+  calculateUStay,
+  isKingExempt,
+  raiseLossEstimatesAfterDesertion,
+  shouldDesert,
+} from './desertion';
 export {
   appendEvent,
   applyWitnessedSacrificeEvent,
@@ -8,10 +41,22 @@ export {
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
 } from './events';
+export { applyOverride } from './override';
+export {
+  defaultCredence,
+  defaultRumor,
+  normalizePieceState,
+  removePieceFromRoster,
+  updatePieceInRoster,
+} from './reducers';
+export { replayDigest, replayMatch } from './replay';
 export type {
   CampaignCultureDriftVector,
   CandidateMoveEvaluation,
   ClassPrestigeMatrix,
+  CostlySignalKind,
+  CredenceState,
+  DesertionContext,
   MatchEvent,
   MoveDecisionOutcome,
   MoveResponseVerdict,
@@ -19,10 +64,25 @@ export type {
   PieceState,
   PieceTraits,
   PsychField,
+  ReplayManifest,
+  ReplayPly,
+  ReplayResult,
+  RumorState,
+  SacrificeAttribution,
 } from './types';
+export {
+  applyCostlySignal,
+  applyMatchOutcomeTrust,
+  costlySignalCredit,
+} from './trust';
 export {
   calculateInterPieceProtection,
   calculateMoveUtility,
   calculateRefusalThreshold,
 } from './utility';
-export { evaluateMoveResponse } from './verdict';
+export { evaluateDesertionCascade, evaluateMoveResponse } from './verdict';
+export {
+  appraiseDesertionWitness,
+  isWitnessedSacrifice,
+  sharedBondScalar,
+} from './witness';

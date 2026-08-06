@@ -6,6 +6,9 @@ import {
   calculateMoveUtility,
   calculateRefusalThreshold,
   evaluateMoveResponse,
+  defaultCredence,
+  defaultRumor,
+  normalizePieceState,
   type CandidateMoveEvaluation,
   type PieceState,
 } from '../src/psychology';
@@ -20,7 +23,7 @@ const neutralTraits = {
 } as const;
 
 function makePiece(overrides: Partial<PieceState> = {}): PieceState {
-  return {
+  return normalizePieceState({
     id: 'w:N:g1',
     role: 'Knight',
     traits: neutralTraits,
@@ -38,13 +41,16 @@ function makePiece(overrides: Partial<PieceState> = {}): PieceState {
       King: 0,
     },
     engagementFactor: 1.0,
+    credence: defaultCredence(),
+    rumor: defaultRumor(),
     ...overrides,
-  };
+  });
 }
 
 const quietMove: CandidateMoveEvaluation = {
   moveNotation: 'Nf3',
   deltaV_board: 0.2,
+  vLeaderImplied: 0.3,
   deltaV_capture: 0,
   P_captured: 0.1,
   peerSafetyDeltas: {},
@@ -53,6 +59,7 @@ const quietMove: CandidateMoveEvaluation = {
 const braveMove: CandidateMoveEvaluation = {
   moveNotation: 'Nxf7',
   deltaV_board: 3.0,
+  vLeaderImplied: 3.5,
   deltaV_capture: 3,
   P_captured: 0.8,
   peerSafetyDeltas: {},
@@ -76,26 +83,28 @@ describe('refusal threshold golden values', () => {
 });
 
 describe('move utility golden values', () => {
-  it('combines trust, honor, ambition, risk, and peer protection', () => {
+  it('combines honor, ambition, risk, and peer protection without additive trust', () => {
     const actor = makePiece({ T_i: 40 });
     const peer = makePiece({ id: 'w:P:e2', role: 'Pawn' });
     const moveEval: CandidateMoveEvaluation = {
       moveNotation: 'Nd5',
       deltaV_board: 1.0,
+      vLeaderImplied: 1.2,
       deltaV_capture: 0,
       P_captured: 0.2,
       peerSafetyDeltas: { 'w:P:e2': 0.5 },
     };
     const utility = calculateMoveUtility(actor, moveEval, [actor, peer]);
-    // loyalty: 0.5*40=20, honor: 0.5*1=0.5, ambition: 0, risk: 0.5*0.2=0.1,
-    // protection: 0.5*((0+0)/200)*0.5 = 0
-    expect(utility).toBeCloseTo(20.4, 5);
+    expect(utility).toBeCloseTo(0.4, 5);
   });
 });
 
 describe('verdict ladder', () => {
-  it('returns MORAL_REFUSAL when utility is below the trust-scaled threshold', () => {
-    const actor = makePiece({ T_i: -80 });
+  it('returns MORAL_REFUSAL when perceived value is below threshold', () => {
+    const actor = makePiece({
+      T_i: -80,
+      credence: { tauBenev: 10, tauAbil: 10 },
+    });
     const outcome = evaluateMoveResponse(actor, quietMove, [actor]);
     expect(outcome.verdict).toBe('MORAL_REFUSAL');
     expect(outcome.engagementFactor).toBe(ENGINE_CONFIG.QUIET_QUIT_ENGAGEMENT);
@@ -103,10 +112,14 @@ describe('verdict ladder', () => {
   });
 
   it('returns QUIET_QUITTING when trust is exhausted but the move is tolerable', () => {
-    const actor = makePiece({ T_i: 0 });
+    const actor = makePiece({
+      T_i: 0,
+      credence: { tauBenev: 80, tauAbil: 80 },
+    });
     const toleratedMove: CandidateMoveEvaluation = {
       ...quietMove,
       deltaV_board: 1.0,
+      vLeaderImplied: 1.0,
       P_captured: 0.1,
     };
     const outcome = evaluateMoveResponse(actor, toleratedMove, [actor]);

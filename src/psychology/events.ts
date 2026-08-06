@@ -4,6 +4,7 @@ import type {
   MatchEvent,
   PieceState,
 } from './types';
+import { sharedBondScalar } from './witness';
 
 export function appendEvent(
   log: readonly MatchEvent[],
@@ -44,7 +45,6 @@ export function applyWitnessedSacrificeEvent(
 export function calculateBenchingTrustPenalties(
   benchedPiece: PieceState,
   survivingActivePieces: readonly PieceState[],
-  sharedBondMap: Readonly<Record<string, number>>,
 ): {
   readonly benchedPieceNewTrust: number;
   readonly updatedPeers: PieceState[];
@@ -54,7 +54,7 @@ export function calculateBenchingTrustPenalties(
     benchedPiece.T_i + ENGINE_CONFIG.DEFAULT_BENCHING_SELF_PENALTY,
   );
   const updatedPeers = survivingActivePieces.map((peer) => {
-    const sharedBond = sharedBondMap[peer.id] ?? 0;
+    const sharedBond = sharedBondScalar(peer, benchedPiece);
     const deltaTj =
       ENGINE_CONFIG.DEFAULT_BENCHING_PEER_BASE_PENALTY *
       (1 + peer.traits.w_empathy) *
@@ -94,9 +94,12 @@ export function compileCampaignCultureDrift(
     (totalRosterSize - reassignedCount) / totalRosterSize,
   );
   const burnoutIndex = Math.min(100, quietQuitTurnsTotal * 2.5);
-  const loyaltyStabilityScore = Math.max(
-    0,
-    100 - burnoutIndex + Math.max(0, deltaAverageTrustLongitudinal),
+  const loyaltyStabilityScore = Math.min(
+    100,
+    Math.max(
+      0,
+      100 - burnoutIndex + Math.max(0, deltaAverageTrustLongitudinal),
+    ),
   );
   return {
     deltaAverageTrustLongitudinal,
