@@ -120,7 +120,7 @@ export function MatchScreen({
   return (
     <div className="match-screen">
       <header className="match-screen__header">
-        <h1>Match</h1>
+        <h1>The Kings and I</h1>
         <p className="match-screen__status">
           Ply {snapshot.ply} ·{' '}
           {phase === 'rout'
