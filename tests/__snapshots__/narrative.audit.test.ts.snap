@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`campaign debrief > folds the campaign into a debrief (golden) 1`] = `
+{
+  "findings": [
+    "Maren the queen retired from the world for good.",
+  ],
+  "headline": "The command of Vane, in the round.",
+  "paragraphs": [
+    "Across 3 matches under Vane: 1 won, 1 drawn, 1 lost outright, 0 ended in dismissal, 0 in rout.",
+    "Execution fidelity rose from 40 to 70 across the campaign — how much of what you ordered actually happened.",
+  ],
+}
+`;
+
+exports[`match audit > reconstructs the desertion cascade in ply order (golden) 1`] = `
+{
+  "findings": [
+    "You overrode 2 refusals by force.",
+    "Aldric the pawn walked at move 10 after you spent Maren the queen. Then 2 more followed within 2 moves.",
+  ],
+  "headline": "A rout. They would rather lose than serve.",
+  "paragraphs": [
+    "The match ran 58 plies and ended in a rout.",
+    "Your orders scored 74 for quality, but only 41 of them were carried out. The plan was sound; the room did not follow it.",
+  ],
+}
+`;

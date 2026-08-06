@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "sim": "tsx sim/cli.ts"
+    "sim": "tsx sim/cli.ts",
+    "narrative:generate": "tsx src/narrative/authoring/generate.ts"
   },
   "dependencies": {
     "chess.js": "1.4.0",

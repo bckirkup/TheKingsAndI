@@ -121,6 +121,20 @@ export default tseslint.config(
     rules: boundaryRule(higherLayers.engine),
   },
   {
+    name: 'narrative-layer-boundary',
+    files: ['src/narrative/**'],
+    rules: boundaryRule([
+      '**/app/**',
+      '**/ui/**',
+      '**/orchestration/**',
+      '**/psychology/**',
+      '**/chess/**',
+      '**/engine/**',
+      '**/persistence/**',
+      '**/sim/**',
+    ]),
+  },
+  {
     name: 'deterministic-math',
     files: ['src/psychology/**', 'src/chess/**'],
     rules: {
