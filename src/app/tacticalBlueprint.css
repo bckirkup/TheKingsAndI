@@ -225,6 +225,103 @@
   letter-spacing: 0.08em;
 }
 
+.campaign-hub,
+.roster-screen,
+.debrief-screen {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.campaign-hub h1,
+.roster-screen h1,
+.debrief-screen h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.campaign-hub__note {
+  color: var(--text-muted);
+}
+
+.campaign-hub__actions,
+.roster-screen__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.roster-screen__list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.roster-screen__piece {
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.roster-screen__piece--selected {
+  border-color: var(--accent);
+}
+
+.roster-screen__preview {
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.debrief-screen__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+
+.debrief-screen__table th,
+.debrief-screen__table td {
+  border: 1px solid var(--grid-line);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.debrief-screen__folds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.debrief-screen__folds div {
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  padding: 0.5rem 0.75rem;
+}
+
+.debrief-screen__folds dt {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.debrief-screen__folds dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+}
+
 @media (max-width: 900px) {
   .match-screen__layout {
     grid-template-columns: 1fr;
