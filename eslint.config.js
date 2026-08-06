@@ -121,6 +121,37 @@ export default tseslint.config(
     rules: boundaryRule(higherLayers.engine),
   },
   {
+    name: 'narrative-layer-boundary',
+    files: ['src/narrative/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...[
+              '**/app/**',
+              '**/ui/**',
+              '**/orchestration/**',
+              '**/persistence/**',
+              '**/sim/**',
+              '**/chess/**',
+              '**/engine/**',
+            ].map((group) => ({
+              group: [group],
+              message: 'Layer imports must flow downward only.',
+            })),
+            {
+              group: ['**/psychology/**'],
+              allowTypeImports: true,
+              message:
+                'Narration renders projections; psychology imports are type-only.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: 'deterministic-math',
     files: ['src/psychology/**', 'src/chess/**'],
     rules: {

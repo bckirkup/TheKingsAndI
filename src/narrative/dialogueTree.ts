@@ -3,7 +3,10 @@ import type { PieceRole } from '../psychology';
 export type SituationKey =
   | 'refusal.low_trust'
   | 'refusal.expendable'
+  | 'refusal.able_uncared'
+  | 'refusal.no_faith'
   | 'override.forced'
+  | 'override.able_uncared'
   | 'desertion.mutiny'
   | 'quiet_quit.compliance'
   | 'compliant.order'
@@ -45,12 +48,36 @@ export const DIALOGUE_LINES: Record<SituationKey, readonly string[]> = {
     'I am not the price of your {san}.',
     'Command {san} from someone you have not already burned.',
   ]),
+  // Two-channel credence (ADR 0019 / D19): the piece rates the *order* (τ_abil)
+  // and the *leader's care* (τ_benev) separately, so it can say the sentence the
+  // design exists for — "I know it was right, I just don't think you care."
+  'refusal.able_uncared': expandForRoles([
+    'I know {san} is the right move. I just do not believe you care what it costs me.',
+    'Yes, {san} wins. No, I do not think you would mourn this {role}.',
+    '{san} is correct and you are cold. I will not be spent by a hand that will not grieve me.',
+    'The order is sound; your regard for me is not. I will not play {san}.',
+    'I see exactly why {san} is right. I have also seen how little I matter to you.',
+  ]),
+  'refusal.no_faith': expandForRoles([
+    'I trust neither the order nor the hand that gives it. Not {san}.',
+    '{san} is wrong, and you have not earned the benefit of the doubt.',
+    'Neither your judgment nor your care has held up. I refuse {san}.',
+    'A poor move from a leader I no longer believe in: no to {san}.',
+    'You ask a {role} to trust {san}. I have no faith left to give.',
+  ]),
   'override.forced': expandForRoles([
     'So be it. I will play {san}, but I will remember who forced it.',
     'You overrode my refusal. {san} is on your conscience, not mine.',
     'I obey {san}. Do not ask me to trust the order was wise.',
     'The {role} moves to {san}. The wound stays.',
     'Forced {san} is still a record, Commander.',
+  ]),
+  'override.able_uncared': expandForRoles([
+    'I play {san} because you forced it. I always knew it was right — and that you did not care.',
+    'Forced to {san}. The move was sound. So was my grievance.',
+    'You overrode me. {san} it is: correct, and cold.',
+    'The {role} obeys {san}. I was never wrong about the move, nor about you.',
+    'Fine — {san}. Right order, wrong heart. I will remember both.',
   ]),
   'desertion.mutiny': expandForRoles([
     'I leave the board. Command {san} yourself.',

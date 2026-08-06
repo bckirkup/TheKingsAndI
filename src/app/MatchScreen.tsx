@@ -86,6 +86,7 @@ export function MatchScreen({
       cue: dialogueCue,
       pieceRole: piece.role,
       trust: piece.T_i,
+      credence: piece.credence,
       ply: snapshot.ply,
       seed,
     });

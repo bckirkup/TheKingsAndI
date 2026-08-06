@@ -1,9 +1,20 @@
-import type { MatchRecord } from '../persistence';
+import { matchAuditProse, type NarratedOutcome } from '../narrative';
+import type { MatchRecord, MatchResult } from '../persistence';
+import type { PieceRole } from '../psychology';
 
 export interface MatchAuditScreenProps {
   readonly match: MatchRecord;
   readonly onContinue: () => void;
 }
+
+const OUTCOME_BY_RESULT: Readonly<Record<MatchResult, NarratedOutcome>> = {
+  WIN: 'WIN',
+  LOSS: 'LOSS',
+  DRAW: 'DRAW',
+  ROUT: 'ROUT',
+  DISMISSED: 'DISMISSED',
+  ABANDONED: 'ABANDONED',
+};
 
 export function MatchAuditScreen({
   match,
@@ -11,10 +22,37 @@ export function MatchAuditScreen({
 }: MatchAuditScreenProps): JSX.Element {
   const gap = match.audit.boardQuality - match.audit.executionFidelity * 100;
 
+  const roleOf: Record<string, PieceRole> = {};
+  for (const piece of match.rosterSnapshot) roleOf[piece.id] = piece.role;
+  const prose = matchAuditProse({
+    result: OUTCOME_BY_RESULT[match.result],
+    boardQuality: match.audit.boardQuality,
+    executionFidelity: match.audit.executionFidelity,
+    overrideCount: match.audit.overrideCount,
+    desertionCount: match.audit.desertionCount,
+    refusalCount: match.audit.refusalCount,
+    events: match.events,
+    roleOf,
+  });
+
   return (
     <section className="match-audit-screen">
       <h1>Match {match.matchIndex} audit</h1>
       <p className="match-audit-screen__result">Result: {match.result}</p>
+
+      <div className="narration-audit">
+        <h2 className="narration-audit__headline">{prose.headline}</h2>
+        {prose.paragraphs.map((paragraph) => (
+          <p key={paragraph} className="narration-audit__paragraph">
+            {paragraph}
+          </p>
+        ))}
+        <ul className="narration-audit__findings">
+          {prose.findings.map((finding) => (
+            <li key={finding}>{finding}</li>
+          ))}
+        </ul>
+      </div>
 
       <table className="debrief-screen__table">
         <tbody>

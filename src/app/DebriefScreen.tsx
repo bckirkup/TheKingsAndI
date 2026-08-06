@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
 
+import { campaignDebriefProse, type NarratedOutcome } from '../narrative';
 import { CareerRepository } from '../persistence';
-import type { CampaignDebrief } from '../persistence';
+import type { CampaignDebrief, MatchResult } from '../persistence';
 import { certificateToJson } from '../persistence/certificate';
 import { EPILOGUE_BY_TERMINAL } from '../orchestration/terminalState';
 import { DebriefBarChart } from '../ui/panels/DebriefChart';
+
+const OUTCOME_BY_RESULT: Readonly<Record<MatchResult, NarratedOutcome>> = {
+  WIN: 'WIN',
+  LOSS: 'LOSS',
+  DRAW: 'DRAW',
+  ROUT: 'ROUT',
+  DISMISSED: 'DISMISSED',
+  ABANDONED: 'ABANDONED',
+};
 
 export interface DebriefScreenProps {
   readonly campaignId: string;
@@ -35,10 +45,35 @@ export function DebriefScreen({
 
   const { transcript } = debrief;
 
+  const prose = campaignDebriefProse({
+    matches: debrief.matches.map((match) => ({
+      result: OUTCOME_BY_RESULT[match.result],
+      executionFidelity: match.audit.executionFidelity,
+    })),
+    tauAbilTrajectory: transcript.tauAbilTrajectory,
+    tauBenevTrajectory: transcript.tauBenevTrajectory,
+    attrition: transcript.attrition,
+    traumaGini: transcript.traumaGini,
+  });
+
   return (
     <section className="debrief-screen">
       <h1>Campaign debrief</h1>
       <p>{EPILOGUE_BY_TERMINAL[debrief.actTerminalState]}</p>
+
+      <div className="narration-audit">
+        <h2 className="narration-audit__headline">{prose.headline}</h2>
+        {prose.paragraphs.map((paragraph) => (
+          <p key={paragraph} className="narration-audit__paragraph">
+            {paragraph}
+          </p>
+        ))}
+        <ul className="narration-audit__findings">
+          {prose.findings.map((finding) => (
+            <li key={finding}>{finding}</li>
+          ))}
+        </ul>
+      </div>
 
       <DebriefBarChart matches={debrief.matches} />
 

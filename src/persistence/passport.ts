@@ -24,9 +24,7 @@ export function exportPiecePassport(input: {
   };
 }
 
-export function importPiecePassport(
-  passport: PiecePassport,
-): {
+export function importPiecePassport(passport: PiecePassport): {
   readonly piece: StoredPieceState;
   readonly identity: PieceIdentityRecord;
 } | null {
