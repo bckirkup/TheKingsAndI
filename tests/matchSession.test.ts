@@ -21,6 +21,17 @@ describe('match session', () => {
     expect(after.events.some((event) => event.t === 'MOVE')).toBe(true);
     expect(after.board.turn()).toBe('w');
     expect(after.ply).toBeGreaterThan(1);
+    expect(after.lastMove).not.toBeNull();
+    expect(after.lastMove).toHaveLength(2);
+  });
+
+  it('tracks selected piece id from selectPiece', () => {
+    const session = new MatchSession({ seed: 5 });
+    const snapshot = session.snapshot();
+    const first = snapshot.roster[0];
+    expect(first).toBeDefined();
+    session.selectPiece(first?.id ?? null);
+    expect(session.snapshot().selectedPieceId).toBe(first?.id ?? null);
   });
 
   it('builds chessground dests for all legal moves', () => {

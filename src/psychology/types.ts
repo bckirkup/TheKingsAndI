@@ -118,6 +118,8 @@ export type MatchEvent =
       readonly san: string;
       readonly pieceId: PieceId;
       readonly verdict: MoveResponseVerdict;
+      /** Centipawn-quality proxy for the order issued (ADR 0022 §5). */
+      readonly orderQualityCp?: number;
     }
   | {
       readonly t: 'REFUSAL';

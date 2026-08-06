@@ -1,5 +1,9 @@
 import type { PieceRole, MoveResponseVerdict } from '../psychology';
 
+import { DIALOGUE_LINES, type SituationKey } from './dialogueTree';
+
+export type { SituationKey } from './dialogueTree';
+
 export interface DialogueCue {
   readonly eventKind:
     | 'refusal'
@@ -14,16 +18,6 @@ export interface DialogueCue {
   readonly verdict?: MoveResponseVerdict;
 }
 
-export type SituationKey =
-  | 'refusal.low_trust'
-  | 'refusal.expendable'
-  | 'override.forced'
-  | 'desertion.mutiny'
-  | 'quiet_quit.compliance'
-  | 'compliant.order'
-  | 'heroic.sacrifice'
-  | 'rout.cascade';
-
 export interface NarrationRequest {
   readonly cue: DialogueCue;
   readonly pieceRole: PieceRole;
@@ -32,56 +26,13 @@ export interface NarrationRequest {
   readonly seed: number;
 }
 
-const LINES: Record<SituationKey, readonly string[]> = {
-  'refusal.low_trust': [
-    'I will not take {san}. You have not earned that order.',
-    'No. Not after how you have led on this file.',
-    'Ask someone who still trusts your judgment for {san}.',
-  ],
-  'refusal.expendable': [
-    'You see a win; I see a funeral. Find another way than {san}.',
-    '{san} spends me cheaply. I refuse to be expendable.',
-    'Your plan needs a sacrifice. It will not be me.',
-  ],
-  'override.forced': [
-    'So be it. I will play {san}, but I will remember who forced it.',
-    'You overrode my refusal. {san} is on your conscience, not mine.',
-    'I obey {san}. Do not ask me to trust the order was wise.',
-  ],
-  'desertion.mutiny': [
-    'I leave the board. Command {san} yourself.',
-    'This army no longer deserves my square. I am done.',
-    'You demanded {san}. I answer by walking off.',
-  ],
-  'quiet_quit.compliance': [
-    'I play {san}. Do not expect my best.',
-    '{san}, as ordered. My heart is not in it.',
-    'A hollow yes: {san}.',
-  ],
-  'compliant.order': [
-    '{san}. As you command.',
-    'Moving to {san}.',
-    'Understood. {san}.',
-  ],
-  'heroic.sacrifice': [
-    'For the King — {san}!',
-    'If it must be me, then {san} with honor.',
-    'I see the danger and accept {san}.',
-  ],
-  'rout.cascade': [
-    'The line breaks. Who is left to command?',
-    'One by one they leave. The rout is real.',
-    'There is no army left to order.',
-  ],
-};
-
 function trustBand(trust: number): 'low' | 'mid' | 'high' {
   if (trust < 0) return 'low';
   if (trust < 40) return 'mid';
   return 'high';
 }
 
-function situationFor(
+export function situationFor(
   cue: DialogueCue,
   trust: number,
   verdict?: MoveResponseVerdict,
@@ -113,8 +64,12 @@ function pickVariant(
   variants: readonly string[],
   seed: number,
   ply: number,
+  pieceRole: PieceRole,
 ): string {
-  const index = Math.abs((seed ^ (ply * 1_000_003)) % variants.length);
+  const roleOffset = pieceRole.charCodeAt(0) * 17;
+  const index = Math.abs(
+    (seed ^ (ply * 1_000_003) ^ roleOffset) % variants.length,
+  );
   return variants[index] ?? variants[0] ?? '';
 }
 
@@ -134,7 +89,13 @@ export function lineFor(request: NarrationRequest): string {
     request.trust,
     request.cue.verdict,
   );
-  const template = pickVariant(LINES[situation], request.seed, request.ply);
+  const variants = DIALOGUE_LINES[situation];
+  const template = pickVariant(
+    variants,
+    request.seed,
+    request.ply,
+    request.pieceRole,
+  );
   return template.replaceAll('{san}', request.cue.san);
 }
 

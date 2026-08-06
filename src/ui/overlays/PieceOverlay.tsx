@@ -4,6 +4,7 @@ export interface PieceOverlayProps {
   readonly piece: PieceState;
   readonly square: string;
   readonly selected: boolean;
+  readonly onSelect?: () => void;
 }
 
 function trustHue(trust: number): string {
@@ -22,6 +23,7 @@ export function PieceOverlay({
   piece,
   square,
   selected,
+  onSelect,
 }: PieceOverlayProps): JSX.Element {
   const trustRing = Math.max(
     2,
@@ -36,6 +38,15 @@ export function PieceOverlay({
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
       aria-label={`${piece.role} trust ${piece.T_i} morale ${piece.M_i}`}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect?.();
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div
         className="piece-overlay__aura"

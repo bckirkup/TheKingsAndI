@@ -3,13 +3,14 @@ import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
 import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
+  type ActTerminalState,
   type MatchAudit,
   type MatchRecord,
   type StoredPieceState,
 } from './types';
 
-const VERDICT_QUALITY: Record<string, number> = {
-  HEROIC_EXECUTION: 100,
+const VERDICT_QUALITY_CP: Record<string, number> = {
+  HEROIC_EXECUTION: 120,
   COMPLIANT_EXECUTION: 80,
   QUIET_QUITTING: 35,
   MORAL_REFUSAL: 0,
@@ -24,6 +25,19 @@ function mean(values: readonly number[]): number {
 function meanTrust(roster: readonly StoredPieceState[]): number {
   if (roster.length === 0) return 0;
   return roster.reduce((sum, piece) => sum + piece.T_i, 0) / roster.length;
+}
+
+function orderQualityCp(event: MatchEvent): number | null {
+  switch (event.t) {
+    case 'MOVE':
+      return event.orderQualityCp ?? VERDICT_QUALITY_CP[event.verdict] ?? 50;
+    case 'REFUSAL':
+      return Math.max(0, Math.round(event.perceivedValue * 100));
+    case 'OVERRIDE':
+      return 55;
+    default:
+      return null;
+  }
 }
 
 /** Fold a match event log into audit columns (ADR 0022 §5). */
@@ -42,16 +56,11 @@ export function foldMatchAudit(
     switch (event.t) {
       case 'REFUSAL':
         refusalCount += 1;
-        orderQualities.push(
-          Math.max(0, 50 + event.perceivedValue * 10 + event.threshold),
-        );
         break;
       case 'OVERRIDE':
         overrideCount += 1;
-        orderQualities.push(60);
         break;
       case 'MOVE':
-        orderQualities.push(VERDICT_QUALITY[event.verdict] ?? 50);
         if (event.verdict === 'QUIET_QUITTING') quietQuitCount += 1;
         break;
       case 'DESERTION':
@@ -61,12 +70,15 @@ export function foldMatchAudit(
       default:
         break;
     }
+    const quality = orderQualityCp(event);
+    if (quality !== null) orderQualities.push(quality);
   }
 
   const moveCount = events.filter((event) => event.t === 'MOVE').length;
   const commandsIssued = moveCount + refusalCount;
+  const faithfulMoves = Math.max(0, moveCount - overrideCount);
   const executionFidelity =
-    commandsIssued === 0 ? 1 : moveCount / commandsIssued;
+    commandsIssued === 0 ? 1 : faithfulMoves / commandsIssued;
 
   return {
     boardQuality: mean(orderQualities),
@@ -118,6 +130,7 @@ export function buildCampaignDebrief(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
   finalRoster: readonly StoredPieceState[],
+  actTerminalState: ActTerminalState,
 ): {
   readonly campaignId: string;
   readonly matches: readonly MatchRecord[];
@@ -125,6 +138,7 @@ export function buildCampaignDebrief(
   readonly meanBoardQuality: number;
   readonly meanExecutionFidelity: number;
   readonly foldVersion: string;
+  readonly actTerminalState: ActTerminalState;
 } {
   const cultureDrift = foldCampaignCultureDrift(
     matches,
@@ -144,5 +158,6 @@ export function buildCampaignDebrief(
     meanBoardQuality,
     meanExecutionFidelity,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
+    actTerminalState,
   };
 }

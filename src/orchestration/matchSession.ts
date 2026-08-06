@@ -22,10 +22,17 @@ import {
 } from '../psychology';
 
 import { featuresToEvaluation } from './evaluation';
+import { shouldDismiss } from './campaignPolicy';
+import { chooseKingCommandMove } from './kingCommand';
 import { chooseRandomOpponentMove } from './opponent';
 import { createStartingRoster } from './roster';
 
-export type MatchPhase = 'playing' | 'awaiting_player' | 'game_over' | 'rout';
+export type MatchPhase =
+  | 'playing'
+  | 'awaiting_player'
+  | 'game_over'
+  | 'rout'
+  | 'succession_spectate';
 
 export interface PendingVerdict {
   readonly intent: MoveIntent;
@@ -64,6 +71,8 @@ export interface MatchSessionSnapshot {
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
   readonly winScore: number;
+  readonly lastMove: readonly [Square, Square] | null;
+  readonly dismissed: boolean;
 }
 
 export interface MatchSessionConfig {
@@ -119,6 +128,8 @@ export class MatchSession {
   private readonly playerSide: Side;
   private selectedPieceId: string | null = null;
   private rout = false;
+  private lastMove: readonly [Square, Square] | null = null;
+  private dismissed = false;
 
   constructor(config: MatchSessionConfig = {}) {
     const seed = config.seed ?? 1;
@@ -151,6 +162,8 @@ export class MatchSession {
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
       winScore: this.winScore(),
+      lastMove: this.lastMove,
+      dismissed: this.dismissed,
     };
   }
 
@@ -230,8 +243,9 @@ export class MatchSession {
       return true;
     }
 
-    this.commitPlayerMove(intent, features.san, actor, outcome);
+    this.commitPlayerMove(intent, features.san, actor, outcome, moveEval);
     this.runOpponentTurn();
+    this.maybeTriggerDismissal();
     return true;
   }
 
@@ -283,6 +297,7 @@ export class MatchSession {
       pending.san,
       override.overriddenPiece,
       { ...pending.outcome, verdict: 'COMPLIANT_EXECUTION' },
+      pending.moveEval,
     );
     this.pending = null;
     this.phase = 'playing';
@@ -293,6 +308,7 @@ export class MatchSession {
       verdict: 'COMPLIANT_EXECUTION',
     };
     this.runOpponentTurn();
+    this.maybeTriggerDismissal();
   }
 
   acknowledgeDesertion(): void {
@@ -335,6 +351,65 @@ export class MatchSession {
       verdict: 'DESERTION_MUTINY',
     };
     this.runOpponentTurn();
+    this.maybeTriggerDismissal();
+  }
+
+  /** Fast-forward remainder under the King after dismissal (ADR 0022). */
+  fastForwardSuccession(): void {
+    if (
+      !this.dismissed ||
+      this.phase === 'rout' ||
+      this.phase === 'game_over'
+    ) {
+      return;
+    }
+    this.playUnderKingCommand();
+  }
+
+  private maybeTriggerDismissal(): void {
+    if (this.dismissed || this.rout || this.phase === 'game_over') return;
+    if (!shouldDismiss(this.roster)) return;
+    this.dismissed = true;
+    this.phase = 'succession_spectate';
+    this.dialogueCue = {
+      eventKind: 'rout',
+      pieceId: this.roster[0]?.id ?? 'w:K:e1',
+      san: '—',
+    };
+    this.playUnderKingCommand();
+  }
+
+  private playUnderKingCommand(): void {
+    while (
+      this.phase === 'succession_spectate' &&
+      !this.board.isGameOver() &&
+      !this.rout
+    ) {
+      if (this.board.turn() === this.playerSide) {
+        const san = chooseKingCommandMove(this.board, this.random);
+        if (san === undefined) {
+          this.phase = 'game_over';
+          return;
+        }
+        const applied = this.board.applySan(san);
+        this.lastMove = [applied.from, applied.to];
+        this.events.push({
+          t: 'MOVE',
+          ply: this.ply,
+          san,
+          pieceId: applied.moverId,
+          verdict: 'COMPLIANT_EXECUTION',
+          orderQualityCp: 40,
+        });
+        this.roster = syncRoster(this.board, this.roster, this.playerSide);
+        this.ply += 1;
+      } else {
+        this.runOpponentTurn();
+      }
+      if (this.board.isGameOver()) {
+        this.phase = 'game_over';
+      }
+    }
   }
 
   private commitPlayerMove(
@@ -342,14 +417,17 @@ export class MatchSession {
     san: string,
     actor: PieceState,
     outcome: MoveDecisionOutcome,
+    moveEval: CandidateMoveEvaluation,
   ): void {
-    this.board.applyMove(intent);
+    const applied = this.board.applyMove(intent);
+    this.lastMove = [applied.from, applied.to];
     this.events.push({
       t: 'MOVE',
       ply: this.ply,
       san,
       pieceId: actor.id,
       verdict: outcome.verdict,
+      orderQualityCp: Math.round(moveEval.deltaV_board * 100),
     });
     this.roster = updatePiece(this.roster, actor.id, (piece) => ({
       ...piece,
@@ -396,7 +474,8 @@ export class MatchSession {
       this.phase = 'game_over';
       return;
     }
-    this.board.applySan(san);
+    const applied = this.board.applySan(san);
+    this.lastMove = [applied.from, applied.to];
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
     this.ply += 1;
     if (this.board.isGameOver()) {

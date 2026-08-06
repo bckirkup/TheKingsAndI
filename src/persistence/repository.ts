@@ -5,8 +5,10 @@ import { buildCampaignDebrief, foldMatchAudit } from './folds';
 import { stampSchemaVersion } from './migrations';
 import type {
   ActRecord,
+  ActTerminalState,
   CampaignDebrief,
   CampaignRecord,
+  CareerOutcome,
   CareerRecord,
   MatchRecord,
   PieceIdentityRecord,
@@ -225,18 +227,37 @@ export class CareerRepository {
     return record;
   }
 
+  async updateCampaignTerminal(input: {
+    readonly actId: string;
+    readonly careerId: string;
+    readonly terminalState: ActTerminalState;
+    readonly careerOutcome: CareerOutcome;
+  }): Promise<void> {
+    const act = await this.db.acts.get(input.actId);
+    const career = await this.db.careers.get(input.careerId);
+    if (act === undefined || career === undefined) return;
+    await this.db.transaction('rw', this.db.acts, this.db.careers, async () => {
+      await this.db.acts.put({ ...act, terminalState: input.terminalState });
+      await this.db.careers.put({ ...career, outcome: input.careerOutcome });
+    });
+  }
+
   async buildDebrief(campaignId: string): Promise<CampaignDebrief> {
     const matches = await this.listMatches(campaignId);
     if (matches.length === 0) {
       throw new Error('No matches recorded for campaign.');
     }
+    const actId = matches[0]?.actId;
+    const act = actId === undefined ? undefined : await this.db.acts.get(actId);
     const initialRoster = matches[0]?.rosterSnapshot ?? [];
     const finalRoster = matches.at(-1)?.rosterEnd ?? [];
+    const terminal = act?.terminalState ?? 'ongoing';
     return buildCampaignDebrief(
       campaignId,
       matches,
       initialRoster,
       finalRoster,
+      terminal,
     );
   }
 }
