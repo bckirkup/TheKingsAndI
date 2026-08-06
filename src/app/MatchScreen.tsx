@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { lineFor } from '../narrative';
 import {
   MatchSession,
   type MatchSessionSnapshot,
 } from '../orchestration/matchSession';
+import { classifyMatchResult } from '../orchestration/terminalState';
+import type { MatchResult, StoredPieceState } from '../persistence';
+import {
+  activeLineup,
+  mergeRosterAfterMatch,
+} from '../orchestration/rosterActions';
 import { ChessgroundBoard } from '../ui/board/ChessgroundBoard';
 import { PieceOverlay } from '../ui/overlays/PieceOverlay';
 import {
@@ -14,12 +20,21 @@ import {
 } from '../ui/panels/VerdictPanels';
 import { RelationshipInspector } from '../ui/panels/RelationshipInspector';
 
-function useMatchSession(seed: number): {
+function useMatchSession(
+  seed: number,
+  initialRoster: readonly StoredPieceState[],
+): {
   readonly snapshot: MatchSessionSnapshot;
   readonly session: MatchSession;
   readonly refresh: () => void;
 } {
-  const [session] = useState(() => new MatchSession({ seed }));
+  const [session] = useState(
+    () =>
+      new MatchSession({
+        seed,
+        initialRoster: activeLineup(initialRoster),
+      }),
+  );
   const [revision, setRevision] = useState(0);
   const refresh = (): void => setRevision((value) => value + 1);
   void revision;
@@ -28,11 +43,24 @@ function useMatchSession(seed: number): {
 
 export interface MatchScreenProps {
   readonly seed?: number;
+  readonly initialRoster?: readonly StoredPieceState[];
+  readonly onMatchFinished?: (input: {
+    readonly events: MatchSessionSnapshot['events'];
+    readonly rosterEnd: StoredPieceState[];
+    readonly result: MatchResult;
+    readonly winScore: number;
+  }) => void;
 }
 
-export function MatchScreen({ seed = 42 }: MatchScreenProps): JSX.Element {
-  const { snapshot, session, refresh } = useMatchSession(seed);
+export function MatchScreen({
+  seed = 42,
+  initialRoster,
+  onMatchFinished,
+}: MatchScreenProps): JSX.Element {
+  const rosterForMatch = initialRoster ?? [];
+  const { snapshot, session, refresh } = useMatchSession(seed, rosterForMatch);
   const { board, roster, phase, pending, dialogueCue, playerSide } = snapshot;
+  const [reported, setReported] = useState(false);
 
   const dialogueLine = useMemo(() => {
     if (dialogueCue === null) return null;
@@ -51,6 +79,43 @@ export function MatchScreen({ seed = 42 }: MatchScreenProps): JSX.Element {
     phase === 'playing' && board.turn() === playerSide && !board.isGameOver();
 
   const playerPieces = board.piecesOf(playerSide);
+
+  useEffect(() => {
+    if (
+      reported ||
+      onMatchFinished === undefined ||
+      (phase !== 'game_over' && phase !== 'rout')
+    ) {
+      return;
+    }
+
+    const rosterEnd = mergeRosterAfterMatch(
+      rosterForMatch,
+      roster,
+      snapshot.events,
+    );
+    const result = classifyMatchResult({
+      rout: snapshot.rout,
+      winScore: snapshot.winScore,
+      dismissed: false,
+    });
+    setReported(true);
+    onMatchFinished({
+      events: snapshot.events,
+      rosterEnd,
+      result,
+      winScore: snapshot.winScore,
+    });
+  }, [
+    onMatchFinished,
+    phase,
+    reported,
+    roster,
+    rosterForMatch,
+    snapshot.events,
+    snapshot.rout,
+    snapshot.winScore,
+  ]);
 
   return (
     <div className="match-screen">

@@ -175,6 +175,10 @@ export type MatchEvent =
       readonly pieceId: PieceId;
     }
   | {
+      readonly t: 'ROSTER_FIRE';
+      readonly pieceId: PieceId;
+    }
+  | {
       readonly t: 'COSTLY_SIGNAL';
       readonly ply: number;
       readonly pieceId: PieceId;

@@ -63,12 +63,14 @@ export interface MatchSessionSnapshot {
   readonly seed: number;
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
+  readonly winScore: number;
 }
 
 export interface MatchSessionConfig {
   readonly seed?: number;
   readonly playerSide?: Side;
   readonly initialTrust?: number;
+  readonly initialRoster?: readonly PieceState[];
 }
 
 function desertionContextFor(
@@ -124,12 +126,15 @@ export class MatchSession {
     this.random = createSeededRandom(seed);
     this.playerSide = config.playerSide ?? 'w';
     this.board = LivingBoard.standard();
-    this.roster = createStartingRoster(
-      this.board,
-      this.playerSide,
-      config.initialTrust ?? 20,
-      this.random.nextInt(10_000) / 10_000,
-    );
+    this.roster =
+      config.initialRoster !== undefined
+        ? config.initialRoster.map(normalizePieceState)
+        : createStartingRoster(
+            this.board,
+            this.playerSide,
+            config.initialTrust ?? 20,
+            this.random.nextInt(10_000) / 10_000,
+          );
   }
 
   snapshot(): MatchSessionSnapshot {
@@ -145,7 +150,14 @@ export class MatchSession {
       seed: this.matchSeed,
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
+      winScore: this.winScore(),
     };
+  }
+
+  winScore(): number {
+    if (!this.board.isGameOver() && !this.rout) return 50;
+    if (this.rout) return 0;
+    return this.board.turn() === this.playerSide ? 0 : 100;
   }
 
   selectPiece(pieceId: string | null): void {
