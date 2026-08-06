@@ -95,6 +95,7 @@ describe('foldMatchAudit', () => {
       san: 'e4',
       pieceId: 'w:P:e2',
       verdict: 'COMPLIANT_EXECUTION',
+      orderQualityCp: 80,
     },
     {
       t: 'REFUSAL',
@@ -111,8 +112,33 @@ describe('foldMatchAudit', () => {
     expect(audit.foldVersion).toBe(AUDIT_FOLD_VERSION);
     expect(audit.refusalCount).toBe(1);
     expect(audit.executionFidelity).toBeCloseTo(0.5, 5);
-    expect(audit.boardQuality).toBeCloseTo(70, 5);
+    expect(audit.boardQuality).toBeCloseTo(90, 5);
     expect(audit.meanTrustDelta).toBe(-2);
+  });
+
+  it('penalizes overrides in execution fidelity', () => {
+    const withOverride: MatchEvent[] = [
+      ...events,
+      {
+        t: 'OVERRIDE',
+        ply: 3,
+        pieceId: 'w:B:c1',
+        san: 'Bc4',
+        pieceTrustDelta: -35,
+        traumaGain: 20,
+      },
+      {
+        t: 'MOVE',
+        ply: 3,
+        san: 'Bc4',
+        pieceId: 'w:B:c1',
+        verdict: 'COMPLIANT_EXECUTION',
+        orderQualityCp: 70,
+      },
+    ];
+    const audit = foldMatchAudit(withOverride, 50, 50);
+    expect(audit.overrideCount).toBe(1);
+    expect(audit.executionFidelity).toBeCloseTo(1 / 3, 5);
   });
 
   it('changes execution fidelity when refusal count changes', () => {
@@ -165,6 +191,7 @@ describe('buildCampaignDebrief', () => {
       matches,
       [makeStoredPiece('w:P:a2', 50)],
       [makeStoredPiece('w:P:a2', 48)],
+      'ongoing',
     );
     expect(debrief.meanBoardQuality).toBe(70);
     expect(debrief.meanExecutionFidelity).toBeCloseTo(0.75, 5);

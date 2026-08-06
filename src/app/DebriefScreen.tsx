@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { CareerRepository } from '../persistence';
 import type { CampaignDebrief } from '../persistence';
 import { EPILOGUE_STUB } from '../orchestration/terminalState';
+import { DebriefBarChart } from '../ui/panels/DebriefChart';
 
 export interface DebriefScreenProps {
   readonly campaignId: string;
@@ -34,7 +35,9 @@ export function DebriefScreen({
   return (
     <section className="debrief-screen">
       <h1>Campaign debrief</h1>
-      <p>{EPILOGUE_STUB.ongoing}</p>
+      <p>{EPILOGUE_STUB[debrief.actTerminalState]}</p>
+
+      <DebriefBarChart matches={debrief.matches} />
 
       <table className="debrief-screen__table">
         <thead>

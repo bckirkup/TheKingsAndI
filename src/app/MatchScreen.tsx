@@ -98,7 +98,7 @@ export function MatchScreen({
     const result = classifyMatchResult({
       rout: snapshot.rout,
       winScore: snapshot.winScore,
-      dismissed: false,
+      dismissed: snapshot.dismissed,
     });
     setReported(true);
     onMatchFinished({
@@ -126,13 +126,15 @@ export function MatchScreen({
           Ply {snapshot.ply} ·{' '}
           {phase === 'rout'
             ? 'Rout — roster shattered'
-            : phase === 'game_over'
-              ? 'Match over'
-              : phase === 'awaiting_player'
-                ? 'Awaiting your decision'
-                : board.turn() === playerSide
-                  ? 'Your command'
-                  : 'Opponent moving…'}
+            : phase === 'succession_spectate'
+              ? 'Dismissed — the King commands the remainder'
+              : phase === 'game_over'
+                ? 'Match over'
+                : phase === 'awaiting_player'
+                  ? 'Awaiting your decision'
+                  : board.turn() === playerSide
+                    ? 'Your command'
+                    : 'Opponent moving…'}
         </p>
       </header>
 

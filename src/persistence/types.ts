@@ -6,7 +6,7 @@ import type {
 
 export const SCHEMA_VERSION = 1;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
-export const AUDIT_FOLD_VERSION = 'audit-v1';
+export const AUDIT_FOLD_VERSION = 'audit-v2';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
 export const DETERMINISM_ID = 'heuristic-eval-v1';
 
@@ -105,6 +105,7 @@ export interface CampaignDebrief {
   readonly meanBoardQuality: number;
   readonly meanExecutionFidelity: number;
   readonly foldVersion: string;
+  readonly actTerminalState: ActTerminalState;
 }
 
 export interface BenchPreview {
