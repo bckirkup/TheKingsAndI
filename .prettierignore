@@ -1,5 +1,6 @@
 .agents/
 docs/
+vendor/
 AGENTS.md
 CONTRIBUTING.md
 LICENSING.md
