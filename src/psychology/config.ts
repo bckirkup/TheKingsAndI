@@ -1,5 +1,5 @@
 /**
- * Normative coefficients from `docs/spec/psychology-engine.reference.ts`.
+ * Normative coefficients from docs/spec/psychology-engine.reference.ts and ADRs.
  * Every knob here must have a golden test and a sensitivity probe.
  */
 export const ENGINE_CONFIG = {
@@ -15,16 +15,54 @@ export const ENGINE_CONFIG = {
     gamma: 0.2,
     delta: 0.1,
   },
-  /** Quiet-quitting engagement η (docs/psychology_engine.md §3). */
   QUIET_QUIT_ENGAGEMENT: 0.2,
-  /** Full engagement η for compliant and heroic execution. */
+  DESERTION_ENGAGEMENT: 0.1,
   FULL_ENGAGEMENT: 1.0,
-  /** Heroic trust floor (docs/psychology_engine.md §6 rule 4). */
   HEROIC_TRUST_FLOOR: 50,
-  /** Heroic danger threshold on P_captured. */
   HEROIC_CAPTURE_RISK: 0.5,
-  /** Heroic board-value threshold on ΔV_board. */
   HEROIC_BOARD_DELTA: 2.0,
+  /** Benevolence heard signal (ADR 0019). */
+  BENEV_HEARD_STEP: 15,
+  /** Logistic cliff scale for betrayal (ADR 0019). */
+  BENEV_BETRAYAL_CLIFF_SCALE: 4,
+  BENEV_BETRAYAL_CLIFF_DROP: 40,
+  BENEV_NEGLECT_EROSION: 3,
+  /** Benevolence floor below which expendable-refusal is possible. */
+  BENEV_EXPENDABLE_FLOOR: 25,
+  /** Minimum leader-implied gap to trigger expendable refusal. */
+  BENEV_EXPENDABLE_GAP: 1.5,
+  /** Ability channel Bayesian step numerator (ADR 0019). */
+  ABIL_BAYES_NUMERATOR: 100,
+  /** Override penalties (ADR 0014). */
+  OVERRIDE_PIECE_TRUST_PENALTY: -35,
+  OVERRIDE_PIECE_TRAUMA_GAIN: 20,
+  OVERRIDE_WITNESS_TRUST_PENALTY: -8,
+  OVERRIDE_BENEV_CLIFF_INPUT: 6,
+  /** Desertion model (docs/desertion_model.md). */
+  DESERTION_RESIDUAL_STAKE: 0.3,
+  DESERTION_HYSTERESIS: 0.05,
+  DESERTION_PAIN_BASE: 10,
+  DESERTION_PAIN_TRAUMA_SCALE: 0.5,
+  DESERTION_LAMBDA_TRUST_SCALE: 0.4,
+  DESERTION_LAMBDA_MORALE_SCALE: 0.3,
+  DESERTION_LAMBDA_LOYALTY_SCALE: 0.2,
+  DESERTION_LAMBDA_AFFINITY_SCALE: 0.1,
+  /** Rumor diffusion (docs/belief_model.md, D42 provisional). */
+  RUMOR_P_LOSS_RATE: 0.15,
+  RUMOR_LEADER_RATE: 0.1,
+  /** Match outcome trust (docs/trust_dynamics.md). */
+  OUTCOME_TRUST_LOSS_SCALE: 12,
+  /** Costly signal credits (docs/trust_dynamics.md §3). */
+  COSTLY_SIGNAL_KING_DANGER: 25,
+  COSTLY_SIGNAL_DECLINED_SACRIFICE: 15,
+  COSTLY_SIGNAL_RETAINED_PIECE: 5,
+  COSTLY_SIGNAL_AVENGED_CAPTURE: 10,
+  /** Witness desertion appraisal shifts (ADR 0018). */
+  WITNESS_BRAVE_AFFINITY_GAIN: 20,
+  WITNESS_BRAVE_TRUST_LOSS: 10,
+  WITNESS_COWARD_AFFINITY_LOSS: 25,
+  /** Egocentric attention decay per square (docs/belief_model.md §3). */
+  ATTENTION_DISTANCE_DECAY: 0.15,
 } as const;
 
 export type EngineConfig = typeof ENGINE_CONFIG;

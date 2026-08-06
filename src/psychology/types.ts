@@ -28,28 +28,41 @@ export interface ClassPrestigeMatrix {
   readonly King: number;
 }
 
+/** Two-channel credence (ADR 0019), integer 0..100. */
+export interface CredenceState {
+  readonly tauBenev: number;
+  readonly tauAbil: number;
+}
+
+/** Rumor scalars — appraisals only, never board facts (ADR 0016). */
+export interface RumorState {
+  /** Team loss probability estimate, permille 0..1000. */
+  readonly pLossTeam: number;
+  /** Leader appraisal -100..100. */
+  readonly leaderAppraisal: number;
+}
+
 export interface PieceState {
   readonly id: PieceId;
   readonly role: PieceRole;
   readonly traits: PieceTraits;
-  /** Experience level (1..100). */
   readonly E_i: number;
-  /** Trust in leader (-100..100), integer-valued. */
   readonly T_i: number;
-  /** Morale and courage (0..100). */
   readonly M_i: number;
-  /** Betrayal / disillusionment (0..100). */
   readonly B_i: number;
   readonly dyadicAffinity: Readonly<Record<PieceId, number>>;
   readonly classPrestige: ClassPrestigeMatrix;
-  /** Engagement factor η_i (0.1..1.0). */
   readonly engagementFactor: number;
+  readonly credence: CredenceState;
+  readonly rumor: RumorState;
 }
 
 export interface CandidateMoveEvaluation {
   readonly moveNotation: string;
-  /** Board evaluation delta from the piece's own depth-D_i view. */
+  /** Piece's own depth-D_i board delta (V_own component). */
   readonly deltaV_board: number;
+  /** Value the piece infers the leader must see (ADR 0015). */
+  readonly vLeaderImplied: number;
   readonly deltaV_capture: number;
   readonly P_captured: number;
   readonly peerSafetyDeltas: Readonly<Record<PieceId, number>>;
@@ -65,20 +78,39 @@ export type MoveResponseVerdict =
 export interface MoveDecisionOutcome {
   readonly verdict: MoveResponseVerdict;
   readonly utilityScore: number;
+  readonly perceivedValue: number;
   readonly refusalThreshold: number;
   readonly effectiveSearchDepth: number;
   readonly engagementFactor: number;
 }
 
+export interface DesertionContext {
+  readonly P_captured: number;
+  readonly P_lossIfStay: number;
+  readonly P_lossIfLeave: number;
+}
+
+export interface SacrificeAttribution {
+  readonly removedThreatToPeer: boolean;
+  readonly enabledForcedWin: boolean;
+}
+
+export type CostlySignalKind =
+  | 'king_endangerment'
+  | 'declined_sacrifice'
+  | 'retained_piece'
+  | 'avenged_capture';
+
 export type PsychField =
   | 'T_i'
   | 'M_i'
   | 'B_i'
+  | 'tauBenev'
+  | 'tauAbil'
   | 'engagementFactor'
   | 'dyadicAffinity'
   | 'classPrestige';
 
-/** Append-only match events — the source of truth (AGENTS.md rule 5). */
 export type MatchEvent =
   | {
       readonly t: 'MOVE';
@@ -93,6 +125,31 @@ export type MatchEvent =
       readonly pieceId: PieceId;
       readonly utility: number;
       readonly threshold: number;
+      readonly perceivedValue: number;
+    }
+  | {
+      readonly t: 'OVERRIDE';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly san: string;
+      readonly pieceTrustDelta: number;
+      readonly traumaGain: number;
+    }
+  | {
+      readonly t: 'DESERTION';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly refusedMove: string;
+      readonly uStay: number;
+      readonly uDesert: number;
+    }
+  | {
+      readonly t: 'DESERTION_WITNESS';
+      readonly ply: number;
+      readonly witnessId: PieceId;
+      readonly deserterId: PieceId;
+      readonly appraisal: 'brave' | 'coward';
+      readonly witnessOwnValue: number;
     }
   | {
       readonly t: 'PSYCH_DELTA';
@@ -106,6 +163,23 @@ export type MatchEvent =
       readonly ply: number;
       readonly victim: PieceId;
       readonly by: PieceId;
+    }
+  | {
+      readonly t: 'SACRIFICE_WITNESSED';
+      readonly ply: number;
+      readonly hero: PieceId;
+      readonly beneficiary: PieceId;
+    }
+  | {
+      readonly t: 'ROSTER_BENCH';
+      readonly pieceId: PieceId;
+    }
+  | {
+      readonly t: 'COSTLY_SIGNAL';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly kind: CostlySignalKind;
+      readonly trustCredit: number;
     };
 
 export interface CampaignCultureDriftVector {
@@ -114,4 +188,23 @@ export interface CampaignCultureDriftVector {
   readonly crossClassPrestigeShift: number;
   readonly burnoutIndex: number;
   readonly loyaltyStabilityScore: number;
+}
+
+export interface ReplayPly {
+  readonly pieceId: PieceId;
+  readonly san: string;
+  readonly moveEval: CandidateMoveEvaluation;
+  readonly desertionContext?: DesertionContext;
+  readonly forced?: boolean;
+}
+
+export interface ReplayManifest {
+  readonly seed: number;
+  readonly roster: readonly PieceState[];
+  readonly plies: readonly ReplayPly[];
+}
+
+export interface ReplayResult {
+  readonly events: readonly MatchEvent[];
+  readonly roster: readonly PieceState[];
 }
