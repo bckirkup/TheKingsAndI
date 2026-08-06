@@ -4,9 +4,10 @@ Engine ports and workers live here. Nothing outside this layer may learn which
 engine exists (ADR 0020), and results leave it only through the per-ply query
 barrier (ADR 0034).
 
-Landed: the port and the barrier. Not yet written: the stockfish.wasm pool and
-the shared-search / private-scoring broker (Milestone 1.3), the conformance suite
-and the permissive Lozza adapter (1.3b).
+Landed: the port, the barrier, the Lozza MIT adapter (`adapters/lozza.ts`),
+the UCI client, and the conformance corpus (Milestone 1.3b). Not yet written:
+the stockfish.wasm pool and the shared-search / private-scoring broker
+(Milestone 1.3).
 
 ```ts
 const requests = buildInsightRound({ fen, seats });        // pure, PieceId-ordered
