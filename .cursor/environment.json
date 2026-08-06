@@ -1,0 +1,10 @@
+{
+  "name": "The Kings and I",
+  "install": "pnpm install --frozen-lockfile && python3 -m pip install --user --quiet pre-commit",
+  "terminals": [
+    {
+      "name": "vite-dev",
+      "command": "pnpm dev --host 127.0.0.1 --port 5173"
+    }
+  ]
+}
