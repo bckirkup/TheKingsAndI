@@ -297,6 +297,20 @@ export class LivingBoard {
     }
   }
 
+  /** Remove a piece from the board without ending the game (desertion path). */
+  withdrawPiece(id: PieceId): void {
+    const square = this.squareById.get(id);
+    if (square === undefined) {
+      throw new IdentityError(`Unknown PieceId: ${id}`);
+    }
+    const role = this.requireRole(id);
+    if (role === 'K') {
+      throw new IdentityError('The King cannot leave the board.');
+    }
+    this.chess.remove(square);
+    this.removePiece(id, square);
+  }
+
   private commit(move: Move): AppliedMove {
     const moverId = this.idBySquare.get(move.from);
     if (moverId === undefined) {
