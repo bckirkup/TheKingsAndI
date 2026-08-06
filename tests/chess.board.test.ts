@@ -109,6 +109,14 @@ describe('LivingBoard identity golden values', () => {
     });
   });
 
+  it('withdraws a piece from the board for desertion', () => {
+    const board = LivingBoard.standard();
+    board.withdrawPiece('w:R:a1');
+    expect(board.pieceOf('w:R:a1')).toBeUndefined();
+    expect(board.pieceAt('a1' as Square)).toBeUndefined();
+    expect(board.piecesOf('w')).toHaveLength(15);
+  });
+
   it('rejects an illegal move without changing state', () => {
     const board = LivingBoard.standard();
     const before = board.fen();

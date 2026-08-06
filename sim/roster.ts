@@ -1,0 +1,125 @@
+import { LivingBoard, startingSquarePieceId } from '../src/chess';
+import type { PieceId, Role, Side } from '../src/chess';
+import {
+  defaultCredence,
+  defaultRumor,
+  normalizePieceState,
+  type PieceRole,
+  type PieceState,
+  type PieceTraits,
+} from '../src/psychology';
+
+const ROLE_MAP: Record<Role, PieceRole> = {
+  P: 'Pawn',
+  N: 'Knight',
+  B: 'Bishop',
+  R: 'Rook',
+  Q: 'Queen',
+  K: 'King',
+};
+
+function traitsForRole(role: Role, randomUnit: number): PieceTraits {
+  const jitter = (base: number): number =>
+    Math.max(0.1, Math.min(1, base + (randomUnit - 0.5) * 0.2));
+  const pawnLike = role === 'P';
+  const officer = role === 'N' || role === 'B' || role === 'R' || role === 'Q';
+  return {
+    w_honor: jitter(pawnLike ? 0.55 : 0.65),
+    w_courage: jitter(pawnLike ? 0.45 : 0.6),
+    w_ambition: jitter(officer ? 0.7 : 0.35),
+    w_loyalty: jitter(0.5),
+    w_empathy: jitter(pawnLike ? 0.65 : 0.45),
+    w_prestige: jitter(officer ? 0.55 : 0.35),
+  };
+}
+
+function classPrestigeFor(role: Role): PieceState['classPrestige'] {
+  const pawnBias = role === 'P' ? -10 : role === 'N' || role === 'B' ? 5 : 15;
+  return {
+    Pawn: pawnBias - 20,
+    Knight: pawnBias,
+    Bishop: pawnBias,
+    Rook: pawnBias + 10,
+    Queen: pawnBias + 20,
+    King: 50,
+  };
+}
+
+export function createStartingRoster(
+  board: LivingBoard,
+  side: Side,
+  initialTrust: number,
+  randomUnit: number,
+): PieceState[] {
+  return board.piecesOf(side).map((piece) =>
+    normalizePieceState({
+      id: piece.id,
+      role: ROLE_MAP[piece.role],
+      traits: traitsForRole(piece.role, randomUnit),
+      E_i: piece.role === 'P' ? 20 : piece.role === 'K' ? 80 : 55,
+      T_i: initialTrust,
+      M_i: 70,
+      B_i: 0,
+      dyadicAffinity: {},
+      classPrestige: classPrestigeFor(piece.role),
+      engagementFactor: 1,
+      credence: defaultCredence(),
+      rumor: defaultRumor(),
+    }),
+  );
+}
+
+/** Restore a full starting lineup while preserving carried psychological state. */
+export function mergeCampaignRoster(
+  board: LivingBoard,
+  side: Side,
+  carried: readonly PieceState[],
+  initialTrust: number,
+  randomUnit: number,
+): PieceState[] {
+  const carriedById = new Map(carried.map((piece) => [piece.id, piece]));
+  return createStartingRoster(board, side, initialTrust, randomUnit).map(
+    (piece) => {
+      const previous = carriedById.get(piece.id);
+      if (previous === undefined) return piece;
+      return normalizePieceState({
+        ...piece,
+        T_i: previous.T_i,
+        M_i: previous.M_i,
+        B_i: previous.B_i,
+        dyadicAffinity: { ...previous.dyadicAffinity },
+        classPrestige: { ...previous.classPrestige },
+        engagementFactor: previous.engagementFactor,
+        credence: { ...previous.credence },
+        rumor: { ...previous.rumor },
+      });
+    },
+  );
+}
+
+export function rosterForSide(
+  roster: readonly PieceState[],
+  pieceIds: readonly PieceId[],
+): PieceState[] {
+  const active = new Set(pieceIds);
+  return roster.filter((piece) => active.has(piece.id));
+}
+
+export function meanTrust(roster: readonly PieceState[]): number {
+  if (roster.length === 0) return 0;
+  const total = roster.reduce((sum, piece) => sum + piece.T_i, 0);
+  return total / roster.length;
+}
+
+export function meanClassContempt(roster: readonly PieceState[]): number {
+  if (roster.length === 0) return 0;
+  let total = 0;
+  let count = 0;
+  for (const piece of roster) {
+    total += piece.classPrestige.Pawn;
+    count += 1;
+  }
+  return total / count;
+}
+
+export { startingSquarePieceId };

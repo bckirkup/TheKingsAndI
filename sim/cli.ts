@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-import { createSeededRandom } from '../src/core/random';
+import { runCampaign } from './campaign';
+import { assertSmokeBounds } from './degeneracy';
+import { renderCsv } from './metrics';
 
 export const LEADERS = [
   'tyrannical',
@@ -19,45 +21,20 @@ export interface SimulationOptions {
   readonly matches: number;
   readonly leader: Leader;
   readonly seed: number;
-}
-
-export interface MatchMetric {
-  readonly match: number;
-  readonly seed: number;
-  readonly leader: Leader;
-  readonly placeholderScore: number;
-}
-
-const CSV_HEADER = 'match,seed,leader,placeholder_score';
-
-function leaderOffset(leader: Leader): number {
-  return [...leader].reduce(
-    (total, character) => total + character.charCodeAt(0),
-    0,
-  );
-}
-
-export function runSimulation(options: SimulationOptions): MatchMetric[] {
-  const random = createSeededRandom(
-    options.seed ^ leaderOffset(options.leader),
-  );
-  return Array.from({ length: options.matches }, (_, index) => ({
-    match: index + 1,
-    seed: options.seed,
-    leader: options.leader,
-    placeholderScore: random.nextInt(1_000_000),
-  }));
-}
-
-export function renderCsv(metrics: readonly MatchMetric[]): string {
-  return `${[CSV_HEADER, ...metrics.map((metric) => `${metric.match},${metric.seed},${metric.leader},${metric.placeholderScore}`)].join('\n')}\n`;
+  readonly campaign: number;
 }
 
 function parseArguments(
   argumentsList: readonly string[],
 ): SimulationOptions & { out: string | undefined } {
   const values = new Map<string, string>();
-  const supportedFlags = new Set(['matches', 'leader', 'seed', 'out']);
+  const supportedFlags = new Set([
+    'matches',
+    'leader',
+    'seed',
+    'campaign',
+    'out',
+  ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
       throw new Error(`Unrecognised argument: ${argument}`);
@@ -77,42 +54,60 @@ function parseArguments(
     values.set(key, value);
   }
   const matches = Number(values.get('matches') ?? 1);
+  const campaign = Number(values.get('campaign') ?? matches);
   const leaderValue = values.get('leader') ?? 'random';
-  if (!Number.isSafeInteger(matches) || matches < 1)
+  if (!Number.isSafeInteger(matches) || matches < 1) {
     throw new Error('--matches must be a positive integer.');
-  if (!LEADERS.includes(leaderValue as Leader))
+  }
+  if (!Number.isSafeInteger(campaign) || campaign < 1) {
+    throw new Error('--campaign must be a positive integer.');
+  }
+  if (!LEADERS.includes(leaderValue as Leader)) {
     throw new Error(`--leader must be one of: ${LEADERS.join(', ')}.`);
+  }
   const seed = Number(values.get('seed') ?? 0);
-  if (!Number.isSafeInteger(seed))
+  if (!Number.isSafeInteger(seed)) {
     throw new Error('--seed must be an integer.');
-  if (values.has('out') && values.get('out') === '')
+  }
+  if (values.has('out') && values.get('out') === '') {
     throw new Error('--out must not be empty.');
+  }
   return {
     matches,
+    campaign,
     leader: leaderValue as Leader,
     seed,
     out: values.get('out'),
   };
 }
 
-export { parseArguments };
+export { parseArguments, renderCsv };
+export { runCampaign, runSimulation } from './campaign';
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
-  const metrics = runSimulation(options);
-  const csv = renderCsv(metrics);
+  const result = runCampaign({
+    matches: options.campaign,
+    leader: options.leader,
+    seed: options.seed,
+  });
+  const csv = renderCsv(result.metrics);
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
   }
-  const total = metrics.reduce(
-    (sum, metric) => sum + metric.placeholderScore,
-    0,
+  if (options.matches <= 20) {
+    assertSmokeBounds(options.leader, result.summary);
+  }
+  console.log(
+    `Milestone 3 harness: ${result.metrics.length} matches for ${options.leader}.`,
   );
   console.log(
-    `Milestone 0 harness skeleton: ${metrics.length} placeholder matches for ${options.leader}.`,
+    `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
   );
-  console.log(`Placeholder metric total: ${total}`);
+  console.log(
+    `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
+  );
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
 }
 
