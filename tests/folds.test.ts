@@ -73,6 +73,7 @@ function makeMatchRecord(
     audit: {
       boardQuality: 70,
       executionFidelity: 0.8,
+      realizedQuality: 80,
       refusalCount: 0,
       overrideCount: 0,
       desertionCount: 0,
@@ -113,6 +114,7 @@ describe('foldMatchAudit', () => {
     expect(audit.refusalCount).toBe(1);
     expect(audit.executionFidelity).toBeCloseTo(0.5, 5);
     expect(audit.boardQuality).toBeCloseTo(90, 5);
+    expect(audit.realizedQuality).toBeCloseTo(80, 5);
     expect(audit.meanTrustDelta).toBe(-2);
   });
 

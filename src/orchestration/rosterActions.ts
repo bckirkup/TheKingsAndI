@@ -6,6 +6,12 @@ import type {
   StoredPieceState,
 } from '../persistence/types';
 
+import {
+  applyReputationTransfer,
+  rosterBenevolenceAppraisal,
+  rosterLaunderingRisk,
+} from './campaignPolicy';
+
 export function previewBench(
   piece: StoredPieceState,
   activeRoster: readonly StoredPieceState[],
@@ -73,6 +79,34 @@ export function applyFire(
   };
 }
 
+export function applyRecruit(input: {
+  readonly freeAgent: StoredPieceState;
+  readonly roster: readonly StoredPieceState[];
+  readonly leaderAbilityTrust: number;
+}): {
+  readonly roster: StoredPieceState[];
+  readonly event: MatchEvent;
+  readonly launderingRisk: boolean;
+} {
+  const benevolence = rosterBenevolenceAppraisal(
+    input.roster.filter((piece) => piece.status === 'ACTIVE'),
+  );
+  const recruited = applyReputationTransfer(
+    { ...input.freeAgent, status: 'ACTIVE' as const },
+    input.leaderAbilityTrust,
+    benevolence,
+  );
+  const roster = [...input.roster, recruited];
+  const benchDepth = roster.filter(
+    (piece) => piece.status === 'BENCHED',
+  ).length;
+  return {
+    roster,
+    event: { t: 'ROSTER_RECRUIT', pieceId: input.freeAgent.id },
+    launderingRisk: rosterLaunderingRisk([recruited], benchDepth),
+  };
+}
+
 export function activeLineup(
   roster: readonly StoredPieceState[],
 ): PieceState[] {
@@ -85,7 +119,6 @@ export function activeLineup(
     });
 }
 
-/** Merge post-match psychology state back into the full stored roster. */
 export function mergeRosterAfterMatch(
   lineupRoster: readonly StoredPieceState[],
   matchRoster: readonly PieceState[],

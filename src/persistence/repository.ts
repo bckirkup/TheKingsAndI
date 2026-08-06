@@ -35,6 +35,14 @@ function meanTrust(roster: readonly StoredPieceState[]): number {
   return roster.reduce((sum, piece) => sum + piece.T_i, 0) / roster.length;
 }
 
+function normalizeAct(act: ActRecord): ActRecord {
+  return {
+    ...act,
+    playerSuspended: act.playerSuspended ?? false,
+    opponentArchetype: act.opponentArchetype ?? 'tyrannical',
+  };
+}
+
 export class CareerRepository {
   constructor(private readonly db = getDatabase()) {}
 
@@ -59,8 +67,9 @@ export class CareerRepository {
 
     const actId = career.actIds[0];
     if (actId === undefined) return null;
-    const act = await this.db.acts.get(actId);
-    if (act === undefined) return null;
+    const rawAct = await this.db.acts.get(actId);
+    if (rawAct === undefined) return null;
+    const act = normalizeAct(rawAct);
 
     const campaigns = await this.db.campaigns
       .where('actId')
@@ -111,6 +120,8 @@ export class CareerRepository {
       matchIds: [],
       terminalState: 'ongoing',
       kingsRemaining: 3,
+      playerSuspended: false,
+      opponentArchetype: 'tyrannical',
     };
     const campaign: CampaignRecord = {
       id: campaignId,
@@ -151,8 +162,18 @@ export class CareerRepository {
     return this.db.campaigns.get(campaignId);
   }
 
+  async updateCampaignTarget(
+    campaignId: string,
+    targetMatches: number,
+  ): Promise<void> {
+    const campaign = await this.db.campaigns.get(campaignId);
+    if (campaign === undefined) return;
+    await this.db.campaigns.put({ ...campaign, targetMatches });
+  }
+
   async getAct(actId: string): Promise<ActRecord | undefined> {
-    return this.db.acts.get(actId);
+    const act = await this.db.acts.get(actId);
+    return act === undefined ? undefined : normalizeAct(act);
   }
 
   async listMatches(campaignId: string): Promise<MatchRecord[]> {
@@ -215,10 +236,17 @@ export class CareerRepository {
         }
         const act = await this.db.acts.get(input.actId);
         if (act !== undefined) {
-          await this.db.acts.put({
+          const nextAct: ActRecord = {
             ...act,
             matchIds: [...act.matchIds, matchId],
-          });
+            ...(input.result === 'DISMISSED'
+              ? {
+                  kingsRemaining: Math.max(0, act.kingsRemaining - 1),
+                  playerSuspended: true,
+                }
+              : {}),
+          };
+          await this.db.acts.put(nextAct);
         }
         await this.db.pieceStates.bulkPut([...input.rosterEnd]);
       },
@@ -239,6 +267,52 @@ export class CareerRepository {
     await this.db.transaction('rw', this.db.acts, this.db.careers, async () => {
       await this.db.acts.put({ ...act, terminalState: input.terminalState });
       await this.db.careers.put({ ...career, outcome: input.careerOutcome });
+    });
+  }
+
+  async reinstatePlayer(actId: string): Promise<void> {
+    const act = await this.db.acts.get(actId);
+    if (act === undefined) return;
+    await this.db.acts.put({ ...act, playerSuspended: false });
+  }
+
+  async listFreeAgents(): Promise<StoredPieceState[]> {
+    return this.db.pieceStates.where('status').equals('DESERTED').toArray();
+  }
+
+  async getIdentities(
+    pieceIds: readonly string[],
+  ): Promise<PieceIdentityRecord[]> {
+    return this.db.pieceIdentities
+      .where('id')
+      .anyOf([...pieceIds])
+      .toArray();
+  }
+
+  async buildCertificate(
+    campaignId: string,
+  ): Promise<import('./types').CertificateBundle> {
+    const { buildCertificateBundle } = await import('./certificate');
+    const matches = await this.listMatches(campaignId);
+    if (matches.length === 0) {
+      throw new Error('No matches recorded for campaign.');
+    }
+    const campaign = await this.getCampaign(campaignId);
+    const actId = matches[0]?.actId;
+    const act = actId === undefined ? undefined : await this.getAct(actId);
+    const careerId = act?.careerId;
+    const career =
+      careerId === undefined ? undefined : await this.db.careers.get(careerId);
+    if (career === undefined || campaign === undefined) {
+      throw new Error('Career not found for campaign.');
+    }
+    return buildCertificateBundle({
+      career,
+      campaignId,
+      matches,
+      initialRoster: matches[0]?.rosterSnapshot ?? [],
+      finalRoster: matches.at(-1)?.rosterEnd ?? [],
+      actTerminalState: act?.terminalState ?? 'ongoing',
     });
   }
 

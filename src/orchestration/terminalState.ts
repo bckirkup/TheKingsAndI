@@ -25,11 +25,16 @@ export function classifyActTerminal(
   return 'ongoing';
 }
 
-export const EPILOGUE_STUB: Record<ActTerminalState, string> = {
-  ongoing: 'The campaign continues.',
-  checkmate: 'Outplayed — the roster is spent but intact.',
+export const EPILOGUE_BY_TERMINAL: Record<ActTerminalState, string> = {
+  ongoing: 'The campaign continues. Your orders still carry weight — for now.',
+  checkmate:
+    'Outplayed. The roster marched where you pointed, but the positions you chose were losing. The pieces are spent, not shattered: they followed you into defeat.',
   dismissal:
-    'Dismissed — the roster survives and the King takes the field (ADR 0022).',
-  rout: 'Rout — the army shattered.',
-  victory: 'The army exceeded the commander’s ceiling (ADR 0023).',
+    'Dismissed. The roster survives intact and still wants the win — they lost faith in your judgment, not in the mission. The King took the field; the debrief will show whether the army played better under a worse tactician who was obeyed.',
+  rout: 'Rout. The army shattered. Desertion cascaded until only the King remained. This is the worst ending: not merely outplayed, but abandoned.',
+  victory:
+    'Victory. The army’s realized play sustained above your personal ceiling — the roster executed well enough that the positions themselves carried the campaign. You led beyond your own tactical limit.',
 };
+
+/** @deprecated Use EPILOGUE_BY_TERMINAL */
+export const EPILOGUE_STUB = EPILOGUE_BY_TERMINAL;

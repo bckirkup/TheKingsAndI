@@ -24,7 +24,7 @@ import {
 import { featuresToEvaluation } from './evaluation';
 import { shouldDismiss } from './campaignPolicy';
 import { chooseKingCommandMove } from './kingCommand';
-import { chooseRandomOpponentMove } from './opponent';
+import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import { createStartingRoster } from './roster';
 
 export type MatchPhase =
@@ -80,6 +80,8 @@ export interface MatchSessionConfig {
   readonly playerSide?: Side;
   readonly initialTrust?: number;
   readonly initialRoster?: readonly PieceState[];
+  readonly opponentArchetype?: OpponentArchetype;
+  readonly rosterPreamble?: readonly MatchEvent[];
 }
 
 function desertionContextFor(
@@ -130,12 +132,14 @@ export class MatchSession {
   private rout = false;
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
+  private readonly opponentArchetype: OpponentArchetype;
 
   constructor(config: MatchSessionConfig = {}) {
     const seed = config.seed ?? 1;
     this.matchSeed = seed;
     this.random = createSeededRandom(seed);
     this.playerSide = config.playerSide ?? 'w';
+    this.opponentArchetype = config.opponentArchetype ?? 'random';
     this.board = LivingBoard.standard();
     this.roster =
       config.initialRoster !== undefined
@@ -146,6 +150,9 @@ export class MatchSession {
             config.initialTrust ?? 20,
             this.random.nextInt(10_000) / 10_000,
           );
+    if (config.rosterPreamble !== undefined) {
+      this.events.push(...config.rosterPreamble);
+    }
   }
 
   snapshot(): MatchSessionSnapshot {
@@ -354,6 +361,37 @@ export class MatchSession {
     this.maybeTriggerDismissal();
   }
 
+  /** Advance one King command ply under succession (ADR 0022 spectate). */
+  stepSuccession(): void {
+    if (this.phase !== 'succession_spectate' || this.board.isGameOver()) {
+      return;
+    }
+    if (this.board.turn() === this.playerSide) {
+      const san = chooseKingCommandMove(this.board, this.random);
+      if (san === undefined) {
+        this.phase = 'game_over';
+        return;
+      }
+      const applied = this.board.applySan(san);
+      this.lastMove = [applied.from, applied.to];
+      this.events.push({
+        t: 'MOVE',
+        ply: this.ply,
+        san,
+        pieceId: applied.moverId,
+        verdict: 'COMPLIANT_EXECUTION',
+        orderQualityCp: 40,
+      });
+      this.roster = syncRoster(this.board, this.roster, this.playerSide);
+      this.ply += 1;
+    } else {
+      this.runOpponentTurn();
+    }
+    if (this.board.isGameOver()) {
+      this.phase = 'game_over';
+    }
+  }
+
   /** Fast-forward remainder under the King after dismissal (ADR 0022). */
   fastForwardSuccession(): void {
     if (
@@ -376,7 +414,6 @@ export class MatchSession {
       pieceId: this.roster[0]?.id ?? 'w:K:e1',
       san: '—',
     };
-    this.playUnderKingCommand();
   }
 
   private playUnderKingCommand(): void {
@@ -469,7 +506,11 @@ export class MatchSession {
     if (this.phase === 'rout' || this.phase === 'game_over') return;
     if (this.board.turn() === this.playerSide) return;
 
-    const san = chooseRandomOpponentMove(this.board, this.random);
+    const san = chooseOpponentMove(
+      this.board,
+      this.random,
+      this.opponentArchetype,
+    );
     if (san === undefined) {
       this.phase = 'game_over';
       return;

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { lineFor } from '../narrative';
+import type { OpponentArchetype } from '../persistence';
 import {
   MatchSession,
   type MatchSessionSnapshot,
 } from '../orchestration/matchSession';
 import { classifyMatchResult } from '../orchestration/terminalState';
 import type { MatchResult, StoredPieceState } from '../persistence';
+import type { MatchEvent } from '../psychology';
 import {
   activeLineup,
   mergeRosterAfterMatch,
@@ -24,6 +26,8 @@ import { RelationshipInspector } from '../ui/panels/RelationshipInspector';
 function useMatchSession(
   seed: number,
   initialRoster: readonly StoredPieceState[],
+  opponentArchetype: OpponentArchetype,
+  rosterPreamble: readonly MatchEvent[],
 ): {
   readonly snapshot: MatchSessionSnapshot;
   readonly session: MatchSession;
@@ -34,6 +38,8 @@ function useMatchSession(
       new MatchSession({
         seed,
         initialRoster: activeLineup(initialRoster),
+        opponentArchetype,
+        rosterPreamble,
       }),
   );
   const [revision, setRevision] = useState(0);
@@ -45,6 +51,8 @@ function useMatchSession(
 export interface MatchScreenProps {
   readonly seed?: number;
   readonly initialRoster?: readonly StoredPieceState[];
+  readonly opponentArchetype?: OpponentArchetype;
+  readonly rosterPreamble?: readonly MatchEvent[];
   readonly onMatchFinished?: (input: {
     readonly events: MatchSessionSnapshot['events'];
     readonly rosterEnd: StoredPieceState[];
@@ -56,10 +64,17 @@ export interface MatchScreenProps {
 export function MatchScreen({
   seed = 42,
   initialRoster,
+  opponentArchetype = 'random',
+  rosterPreamble = [],
   onMatchFinished,
 }: MatchScreenProps): JSX.Element {
   const rosterForMatch = initialRoster ?? [];
-  const { snapshot, session, refresh } = useMatchSession(seed, rosterForMatch);
+  const { snapshot, session, refresh } = useMatchSession(
+    seed,
+    rosterForMatch,
+    opponentArchetype,
+    rosterPreamble,
+  );
   const { board, roster, phase, pending, dialogueCue, playerSide } = snapshot;
   const [reported, setReported] = useState(false);
 
@@ -225,6 +240,38 @@ export function MatchScreen({
                 refresh();
               }}
             />
+          ) : null}
+
+          {phase === 'succession_spectate' ? (
+            <div className="verdict-panel verdict-panel--succession">
+              <h2>Succession coda</h2>
+              <p>
+                Dismissed. The King commands the remainder — you spectate with
+                no authority (ADR 0022).
+              </p>
+              <div className="roster-screen__actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    session.stepSuccession();
+                    refresh();
+                  }}
+                >
+                  Step King&apos;s move
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    session.fastForwardSuccession();
+                    refresh();
+                  }}
+                >
+                  Fast-forward to end
+                </button>
+              </div>
+            </div>
           ) : null}
 
           {phase === 'rout' ? (
