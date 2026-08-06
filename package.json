@@ -17,8 +17,10 @@
   },
   "dependencies": {
     "chess.js": "1.4.0",
+    "chessground": "^9.2.1",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/node": "22.10.5",
