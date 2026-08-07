@@ -49,9 +49,10 @@ function parseScoreCp(tokens: readonly string[]): number {
   }
   if (kind === 'mate') {
     const mateIn = Number(value);
-    if (!Number.isSafeInteger(mateIn) || mateIn === 0) {
+    if (!Number.isSafeInteger(mateIn)) {
       throw new Error(`Invalid mate score: ${value}`);
     }
+    if (mateIn === 0) return 29_999;
     const sign = mateIn > 0 ? 1 : -1;
     return sign * (30_000 - Math.abs(mateIn));
   }
@@ -172,12 +173,8 @@ export class UciEngine {
       const at = new Map(this.depthBest);
       const multiPvAtMax = new Map(this.multiPvAtMax);
       if (at.size === 0 && multiPvAtMax.size === 0) {
-        this.searchResolve?.(
-          Object.freeze({
-            maxDepth: this.targetDepth,
-            at: new Map([[this.targetDepth, { scoreCp: 0, pv: [] }]]),
-            multiPvAtMax: new Map([[1, { scoreCp: 0, pv: [] }]]),
-          }),
+        this.searchReject?.(
+          new Error(`Engine returned ${line} without a score`),
         );
       } else {
         this.searchResolve?.(

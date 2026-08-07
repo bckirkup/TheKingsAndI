@@ -29,6 +29,11 @@ export function evalProfileFor(piece: PieceState): EvalProfile {
   return {};
 }
 
+export function terminalMoveScore(board: LivingBoard): number | undefined {
+  if (!board.isGameOver() || board.legalMoves().length > 0) return undefined;
+  return board.isCheck() ? 29_999 : 0;
+}
+
 /**
  * Evaluate the position after `intent` from the mover's side at depth D_i.
  * Score is negated because the post-move FEN is opponent to move.
@@ -49,6 +54,23 @@ export async function resolveMoverInsights(
   const depth = calculateEngineSearchDepth(actor.E_i, actor.engagementFactor);
   const probe = board.clone();
   probe.applyMove(intent);
+  const terminalScore = terminalMoveScore(probe);
+  if (terminalScore !== undefined) {
+    const insight = Object.freeze({
+      pieceId: actor.id,
+      depth,
+      scoreCp: terminalScore,
+      pv: Object.freeze([]),
+    });
+    const leader = Object.freeze({
+      pieceId: LEADER_INSIGHT_SEAT_ID,
+      depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
+      scoreCp: terminalScore,
+      pv: Object.freeze([]),
+    });
+    handle.round += 1;
+    return { actor: insight, leader };
+  }
   const fen = probe.fen();
   const requests = buildInsightRound({
     fen,
@@ -108,6 +130,8 @@ export async function resolveAuditMoveScore(
 ): Promise<number> {
   const probe = board.clone();
   probe.applyMove(intent);
+  const terminalScore = terminalMoveScore(probe);
+  if (terminalScore !== undefined) return terminalScore;
   const fen = probe.fen();
   if (port.evaluateTrue !== undefined) {
     const trueEval = await port.evaluateTrue(fen);
