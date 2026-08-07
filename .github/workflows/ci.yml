@@ -40,8 +40,6 @@ jobs:
   app:
     name: Lint / typecheck / test / sim smoke
     runs-on: ubuntu-latest
-    # Activates automatically once Milestone 0 lands package.json.
-    if: hashFiles('package.json') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
