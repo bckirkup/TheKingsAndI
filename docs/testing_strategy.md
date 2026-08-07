@@ -15,7 +15,8 @@ _Planning document. Applies the repo-wide `ci-test-design` skill (golden values
 | Replay determinism | 100 recorded matches replay byte-identically | <60 s |
 | Migration | fixture DBs at each schema version load and upgrade | <10 s |
 | Headless sim smoke (CI) | 20 matches × 2 leader styles, assert metric bounds | <3 min |
-| Headless calibration (manual/nightly) | 1,000 matches, 20-match campaigns | minutes–hours |
+| Headless calibration (nightly GHA) | Lozza depth-cap-4, N≈100 × leader styles + one-knob sweep | minutes |
+| Headless calibration (on-demand) | Stockfish production depth via `workflow_dispatch` only | minutes–hours |
 
 ## 2. Golden anchors
 
@@ -303,3 +304,28 @@ means the model has collapsed:
   the only prose-level testing worth doing.
 - Visual pixel diffs across four themes (high maintenance, low value at MVP).
   Test the token provider and accessibility encodings instead.
+
+## 7. Who runs what (agent-free verification)
+
+Routine verification must not burn Cursor agent time. GitHub Actions owns the
+gates; agents triage failures and interpret balance deltas.
+
+| Trigger | Workflow | Engine | What it proves |
+|---|---|---|---|
+| Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, Vitest goldens + sensitivity + coverage, 20-match smoke degeneracy bounds, Sonar |
+| Nightly cron (06:15 UTC) + manual dispatch | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Lozza `--depth-cap=4` | N≈100 tyrannical + supportive campaigns and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
+| Manual `workflow_dispatch` only | same nightly workflow, `engine=stockfish` | Stockfish uncapped | Explicit budgeted fidelity spot check (`stockfish_matches`, default 1). Never on the cron path |
+
+**PR path rules.** Keep Stockfish and large-N calibration off PRs. Fake-engine
+smoke is the CI substrate; its absolute rates are not calibration results.
+
+**Developer machine.** Targeted Vitest while iterating; full local gate once
+before push. For status questions, read committed numbers in
+`docs/calibration/` instead of re-running the harness.
+
+**Cursor agents.** Wake an agent when CI or nightly is red and the fix is
+non-obvious, when a nightly artifact shows a new degeneracy, or when a PR needs
+a before/after balance write-up. Prompt with the failing job URL or artifact —
+do not ask the agent to re-run the whole suite. Do not schedule Cursor
+Automations to `pnpm test` / `pnpm sim`; that is still agent time doing work
+Actions already covers.

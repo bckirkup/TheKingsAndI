@@ -61,6 +61,19 @@ Run `pnpm test:coverage` only when the SonarQube quality gate requests it.
 For status questions, read committed calibration results in
 `docs/calibration/` instead of re-running the harness.
 
+## Agent-free verification (do not burn agent time on the gate)
+
+GitHub Actions owns routine verification — see `docs/testing_strategy.md` §7.
+
+- **PR / `main`:** `.github/workflows/ci.yml` — lint, typecheck, Vitest coverage,
+  `pnpm sim --matches=20 --leader=tyrannical --engine=fake`.
+- **Nightly / dispatch:** `.github/workflows/nightly.yml` — Lozza N≈100
+  calibration + one-knob sweep; Stockfish only via `workflow_dispatch` with an
+  explicit match budget.
+- **Cursor agents:** triage red CI/nightly jobs and interpret metric deltas.
+  Do not re-run the full suite inside an agent session when Actions already
+  ran it. Do not schedule Automations to `pnpm test` / `pnpm sim`.
+
 ## Determinism rules the lint config enforces
 
 These are not style preferences; they are what makes replay and every golden

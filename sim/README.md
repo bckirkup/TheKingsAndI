@@ -28,6 +28,12 @@ when measuring engine fidelity.
 
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 
+Scheduled Lozza calibration (N≈100, tyrannical + supportive, plus a one-knob
+sweep) runs in GitHub Actions via `.github/workflows/nightly.yml` so balance
+signal does not require Cursor agent time. Stockfish production-depth runs are
+`workflow_dispatch` only on that same workflow, with an explicit match budget.
+See `docs/testing_strategy.md` §7.
+
 ## Layout
 
 | File | Role |
