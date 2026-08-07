@@ -9,6 +9,7 @@ runtime bounded._
 - Play path: `EnginePort` → ADR 0034 barrier → `insightToEvaluation` (Phase 2).
 - Desertion cascade, witnesses, sacrifice attribution, and costly signals are live (Phase 3).
 - Runtime simulation defaults to Lozza; CI smoke explicitly uses `--engine=fake`.
+- The default Lozza CLI depth cap is 4; it is a harness-only tractability cap.
 - Stockfish remains an explicit high-fidelity calibration option.
 - Plain-chess baseline: same move picker, psychology skipped (`sim/baseline.ts`).
 - Coefficient sweeps: `pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4`.
@@ -67,7 +68,7 @@ plain-chess win delta=-50.0
 WALL_SECONDS=1.257
 ```
 
-The production-depth probe
+The uncapped production-depth probe
 `pnpm sim --matches=1 --campaign=1 --leader=tyrannical --seed=7 --engine=lozza`
 was stopped after more than three minutes without completing. The initial
 attempt also exposed concurrent use of the single Lozza UCI process; the
@@ -77,6 +78,20 @@ The remaining cost is expected from the per-ply actor and leader searches plus
 a separate audit search. The current broker's shared-FEN cache cannot reuse a
 Lozza depth ladder or true audit result. No larger optimization was attempted
 in this PR.
+
+The documented default smoke was measured with the cap:
+
+```text
+pnpm sim --matches=20 --leader=tyrannical --seed=7
+engine=lozza-11/depth-fixed/hash-16/threads-1/depth-cap-4
+refusal=0.076 quiet_quit=0.012 desertion_campaign=0.950 rout_campaign=0.950
+refused_good=0.950 override=0.446 win=0.0 trust_delta=-77.58
+WALL_SECONDS=4.597
+```
+
+This is a tractability proxy, not full-fidelity calibration. Full-fidelity
+Stockfish calibration requires an explicit runtime-budget decision; the prior
+Stockfish probe exceeded 251 seconds for one production-depth match.
 
 Both corrected reduced checks have the intended negative win delta, but
 desertion/rout remain saturated and refusal is below the tyrant target band.

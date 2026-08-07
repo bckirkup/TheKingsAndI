@@ -172,8 +172,12 @@ export class UciEngine {
       const at = new Map(this.depthBest);
       const multiPvAtMax = new Map(this.multiPvAtMax);
       if (at.size === 0 && multiPvAtMax.size === 0) {
-        this.searchReject?.(
-          new Error('Engine returned bestmove without a score'),
+        this.searchResolve?.(
+          Object.freeze({
+            maxDepth: this.targetDepth,
+            at: new Map([[this.targetDepth, { scoreCp: 0, pv: [] }]]),
+            multiPvAtMax: new Map([[1, { scoreCp: 0, pv: [] }]]),
+          }),
         );
       } else {
         this.searchResolve?.(

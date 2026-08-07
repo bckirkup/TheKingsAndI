@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
 import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
-import { parseArguments, renderCsv, runSimulation } from '../sim/cli';
+import {
+  parseArguments,
+  renderCsv,
+  runCampaign,
+  runSimulation,
+} from '../sim/cli';
 import { detectDegeneracy } from '../sim/degeneracy';
 import { aggregateCampaign } from '../sim/metrics';
 
@@ -40,6 +45,26 @@ describe('simulation harness golden output', () => {
 });
 
 describe('simulation harness sensitivity', () => {
+  it('changes output when the harness depth cap changes', async () => {
+    const base = await runCampaign({
+      matches: 1,
+      leader: 'tyrannical',
+      seed: 7,
+      engineKind: 'fake',
+      depthCap: 2,
+    });
+    const deeper = await runCampaign({
+      matches: 1,
+      leader: 'tyrannical',
+      seed: 7,
+      engineKind: 'fake',
+      depthCap: 8,
+    });
+    expect(base.determinismId).toContain('/depth-cap-2');
+    expect(deeper.determinismId).toContain('/depth-cap-8');
+    expect(base.determinismId).not.toBe(deeper.determinismId);
+  });
+
   it('changes output when seed changes', async () => {
     expect(
       renderCsv(
@@ -109,6 +134,7 @@ describe('simulation harness argument parsing', () => {
       leader: 'tyrannical',
       seed: 7,
       engine: 'lozza',
+      depthCap: 4,
       out: 'metrics.csv',
     });
   });

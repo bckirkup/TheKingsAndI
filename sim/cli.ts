@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 
 import { runCampaign } from './campaign';
 import { assertSmokeBounds } from './degeneracy';
-import type { SimEngineKind } from './engine';
+import { disposeSimEngine, type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
 
 export const LEADERS = [
@@ -26,6 +26,7 @@ export interface SimulationOptions {
   readonly seed: number;
   readonly campaign: number;
   readonly engine: SimEngineKind;
+  readonly depthCap: number | undefined;
 }
 
 function parseArguments(
@@ -39,6 +40,7 @@ function parseArguments(
     'campaign',
     'out',
     'engine',
+    'depth-cap',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -81,12 +83,25 @@ function parseArguments(
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
+  const depthCapValue =
+    values.get('depth-cap') === undefined
+      ? engineValue === 'lozza'
+        ? 4
+        : undefined
+      : Number(values.get('depth-cap'));
+  if (
+    depthCapValue !== undefined &&
+    (!Number.isSafeInteger(depthCapValue) || depthCapValue < 1)
+  ) {
+    throw new Error('--depth-cap must be a positive integer.');
+  }
   return {
     matches,
     campaign,
     leader: leaderValue as Leader,
     seed,
     engine: engineValue as SimEngineKind,
+    depthCap: depthCapValue,
     out: values.get('out'),
   };
 }
@@ -96,12 +111,18 @@ export { runCampaign, runSimulation } from './campaign';
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
-  const result = await runCampaign({
-    matches: options.campaign,
-    leader: options.leader,
-    seed: options.seed,
-    engineKind: options.engine,
-  });
+  let result;
+  try {
+    result = await runCampaign({
+      matches: options.campaign,
+      leader: options.leader,
+      seed: options.seed,
+      engineKind: options.engine,
+      depthCap: options.depthCap,
+    });
+  } finally {
+    await disposeSimEngine(options.engine);
+  }
   const csv = renderCsv(result.metrics);
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });

@@ -8,6 +8,7 @@ the shipping psychology engine and chess substrate via `src/orchestration/`.
 ```bash
 pnpm sim --matches=20 --leader=tyrannical --seed=7
 pnpm sim --matches=20 --leader=tyrannical --engine=lozza
+pnpm sim --matches=20 --leader=tyrannical --engine=lozza --depth-cap=4
 pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --seed=1 --out=metrics.csv
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
 ```
@@ -17,6 +18,13 @@ Leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`,
 
 Engines: `lozza` (default runtime), `fake` (explicit CI/test mode), `stockfish`
 (explicit high-fidelity calibration mode).
+
+Lozza uses a harness-only default depth cap of 4 so the documented 20-match
+smoke remains tractable. `--depth-cap=N` clamps only the depth sent to the
+selected engine; it does not change psychology's `calculateEngineSearchDepth`
+or any piece state. A capped run is a tractability proxy, not full-fidelity
+calibration. Pass `--depth-cap` explicitly (or use Stockfish without a cap)
+when measuring engine fidelity.
 
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 

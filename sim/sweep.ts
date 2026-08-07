@@ -13,7 +13,7 @@ import { ENGINE_CONFIG } from '../src/psychology/config';
 import { runCampaign } from './campaign';
 import { ENGINES, type Leader } from './cli';
 import { plainChessMeanWinScore } from './baseline';
-import type { SimEngineKind } from './engine';
+import { disposeSimEngine, type SimEngineKind } from './engine';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -46,6 +46,7 @@ export async function runCoefficientSweep(options: {
   readonly seed: number;
   readonly leader: Leader;
   readonly engineKind?: SimEngineKind;
+  readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
   const original = MUTABLE_CONFIG[options.knob as string];
   if (typeof original !== 'number') {
@@ -60,12 +61,15 @@ export async function runCoefficientSweep(options: {
   try {
     for (const value of options.values) {
       MUTABLE_CONFIG[options.knob as string] = value;
+      const engineKind = options.engineKind ?? 'lozza';
       const campaign = await runCampaign({
         matches: options.matches,
         leader: options.leader,
         seed: options.seed,
-        engineKind: options.engineKind ?? 'lozza',
+        engineKind,
+        depthCap: options.depthCap,
       });
+      await disposeSimEngine(engineKind);
       points.push({
         knob: String(options.knob),
         value,
@@ -90,6 +94,7 @@ function parseArgs(argv: readonly string[]): {
   seed: number;
   leader: Leader;
   engine: SimEngineKind;
+  depthCap: number | undefined;
 } {
   const map = new Map<string, string>();
   for (const argument of argv) {
@@ -105,6 +110,18 @@ function parseArgs(argv: readonly string[]): {
   if (!ENGINES.includes(engine as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
+  const depthCapValue =
+    map.get('depth-cap') === undefined
+      ? engine === 'lozza'
+        ? 4
+        : undefined
+      : Number(map.get('depth-cap'));
+  if (
+    depthCapValue !== undefined &&
+    (!Number.isSafeInteger(depthCapValue) || depthCapValue < 1)
+  ) {
+    throw new Error('--depth-cap must be a positive integer.');
+  }
   return {
     knob,
     values: parseList(map.get('values'), [15, 25, 35]),
@@ -112,6 +129,7 @@ function parseArgs(argv: readonly string[]): {
     seed: Number(map.get('seed') ?? 7),
     leader: (map.get('leader') ?? 'tyrannical') as Leader,
     engine: engine as SimEngineKind,
+    depthCap: depthCapValue,
   };
 }
 

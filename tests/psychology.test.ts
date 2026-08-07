@@ -154,6 +154,23 @@ describe('independent leader view', () => {
     ).toBe(1);
   });
 
+  it('can still refuse when independent leader insight makes a large gap', () => {
+    const actor = makePiece({
+      credence: { tauBenev: 0, tauAbil: 50 },
+    });
+    const moveEval: CandidateMoveEvaluation = {
+      ...quietMove,
+      deltaV_board: -0.1,
+      vLeaderImplied: 2.0,
+    };
+    expect(
+      calculateFaithGap(moveEval.deltaV_board, moveEval.vLeaderImplied),
+    ).toBe(2.1);
+    expect(evaluateMoveResponse(actor, moveEval, [actor]).verdict).toBe(
+      'MORAL_REFUSAL',
+    );
+  });
+
   it('makes refusal outcomes monotonic as ability credence rises', () => {
     const actor = makePiece({ T_i: 0 });
     const disagreement: CandidateMoveEvaluation = {
