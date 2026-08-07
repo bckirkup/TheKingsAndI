@@ -30,7 +30,7 @@ and architecture decisions **D49** / **D50**.
 ```bash
 pnpm install
 pnpm lint && pnpm typecheck && pnpm test
-pnpm sim --matches=20 --leader=tyrannical
+pnpm sim --matches=20 --leader=tyrannical # Lozza default; --engine=fake for CI
 ```
 
 | Document | What it answers |

@@ -74,8 +74,11 @@ export async function resolveMoverInsights(
   handle.round += 1;
   const actorInsight = insightOf(bundle, actor.id);
   const leaderInsight = insightOf(bundle, LEADER_INSIGHT_SEAT_ID);
-  if (actorInsight === undefined || leaderInsight === undefined) {
-    throw new Error(`Missing insight for ${actor.id}`);
+  if (actorInsight === undefined) {
+    throw new Error(`Missing actor insight for ${actor.id}`);
+  }
+  if (leaderInsight === undefined) {
+    throw new Error(`Missing leader insight for ${LEADER_INSIGHT_SEAT_ID}`);
   }
   // Post-move FEN is opponent-to-move; flip to mover's perspective.
   return {

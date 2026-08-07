@@ -113,7 +113,7 @@ pnpm lint # eslint + prettier check
 pnpm typecheck # tsc --noEmit, strict
 pnpm test # vitest run
 pnpm test:coverage # lcov for the SonarQube gate (ADR 0033)
-pnpm sim --matches=20 --leader=tyrannical # headless balance smoke
+pnpm sim --matches=20 --leader=tyrannical # Lozza default; use --engine=fake in CI
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4
 ```
 See the `typescript-toolchain` and `sonarqube-quality-gate` skills.

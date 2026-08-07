@@ -61,8 +61,7 @@ export async function runCampaign(
   );
   const metrics: MatchMetrics[] = [];
   const engine =
-    options.engine ??
-    (await createSimEngine(options.engineKind ?? 'stockfish'));
+    options.engine ?? (await createSimEngine(options.engineKind ?? 'lozza'));
 
   for (let match = 1; match <= options.matches; match += 1) {
     const matchSeed = options.seed ^ (match * 1_000_003);

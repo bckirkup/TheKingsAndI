@@ -15,7 +15,8 @@ pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --se
 Leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`,
 `pure_tactician`, `redeemer`.
 
-Engines: `fake` (default, CI), `lozza`, `stockfish`.
+Engines: `lozza` (default runtime), `fake` (explicit CI/test mode), `stockfish`
+(explicit high-fidelity calibration mode).
 
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 

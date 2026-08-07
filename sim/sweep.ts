@@ -64,7 +64,7 @@ export async function runCoefficientSweep(options: {
         matches: options.matches,
         leader: options.leader,
         seed: options.seed,
-        engineKind: options.engineKind ?? 'stockfish',
+        engineKind: options.engineKind ?? 'lozza',
       });
       points.push({
         knob: String(options.knob),
@@ -101,7 +101,7 @@ function parseArgs(argv: readonly string[]): {
   }
   const knob = (map.get('knob') ??
     'BENEV_EXPENDABLE_FLOOR') as keyof typeof ENGINE_CONFIG;
-  const engine = map.get('engine') ?? 'stockfish';
+  const engine = map.get('engine') ?? 'lozza';
   if (!ENGINES.includes(engine as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }

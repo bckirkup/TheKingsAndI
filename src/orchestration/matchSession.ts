@@ -188,11 +188,7 @@ export class MatchSession {
   }
 
   winScore(): number {
-    return scoreMatchOutcome(
-      this.board,
-      this.playerSide,
-      this.rout || this.dismissed,
-    );
+    return scoreMatchOutcome(this.board, this.playerSide, this.rout);
   }
 
   selectPiece(pieceId: string | null): void {

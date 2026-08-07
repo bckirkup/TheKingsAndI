@@ -108,7 +108,7 @@ describe('simulation harness argument parsing', () => {
       campaign: 20,
       leader: 'tyrannical',
       seed: 7,
-      engine: 'stockfish',
+      engine: 'lozza',
       out: 'metrics.csv',
     });
   });

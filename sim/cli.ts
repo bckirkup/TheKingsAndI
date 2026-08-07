@@ -77,7 +77,7 @@ function parseArguments(
   if (values.has('out') && values.get('out') === '') {
     throw new Error('--out must not be empty.');
   }
-  const engineValue = values.get('engine') ?? 'stockfish';
+  const engineValue = values.get('engine') ?? 'lozza';
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }

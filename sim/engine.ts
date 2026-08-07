@@ -6,11 +6,11 @@ import type { EnginePort } from '../src/engine/types';
 export type SimEngineKind = 'fake' | 'lozza' | 'stockfish';
 
 /**
- * Harness engine selection. Runtime defaults to `stockfish`; CI and tests can
+ * Harness engine selection. Runtime defaults to `lozza`; CI and tests can
  * select `fake` explicitly for speed and stable goldens.
  */
 export async function createSimEngine(
-  kind: SimEngineKind = 'stockfish',
+  kind: SimEngineKind = 'lozza',
 ): Promise<EnginePort> {
   switch (kind) {
     case 'fake':
