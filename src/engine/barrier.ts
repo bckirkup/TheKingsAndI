@@ -72,7 +72,11 @@ async function resolveOne(
     const cached = cache?.get(key);
     let evaluation: EngineEvaluation;
     if (cached === undefined) {
-      const fresh = await port.evaluate(request.fen, request.depth);
+      const fresh = await port.evaluate(
+        request.fen,
+        request.depth,
+        request.evalProfile,
+      );
       validateEvaluation(request, fresh);
       evaluation =
         cache === undefined

@@ -12,8 +12,22 @@ export interface UciSearchResult {
 }
 
 export interface UciEngineOptions {
-  /** Absolute path to the engine script (e.g. lozza.cjs). */
+  /** Absolute path to the engine script (e.g. lozza.cjs or stockfish-*.js). */
   readonly enginePath: string;
+  /** Fixed hash size in MiB (deterministic mode). */
+  readonly hashMb?: number;
+  /** Must stay 1 for determinism (ADR 0005). */
+  readonly threads?: number;
+  /** MultiPV count for shared-search trees (ADR 0017). */
+  readonly multiPv?: number;
+}
+
+/** Per-depth principal line captured from a single `go depth N` search. */
+export interface DepthLadder {
+  readonly maxDepth: number;
+  readonly at: ReadonlyMap<number, UciSearchResult>;
+  /** MultiPV lines at `maxDepth` (1-indexed multipv → result). */
+  readonly multiPvAtMax: ReadonlyMap<number, UciSearchResult>;
 }
 
 function parseScoreCp(tokens: readonly string[]): number {
@@ -52,17 +66,41 @@ function parsePv(tokens: readonly string[]): string[] {
     .filter((token) => /^[a-h][1-8][a-h][1-8]/.test(token));
 }
 
+function parseMultiPv(tokens: readonly string[]): number {
+  const index = tokens.indexOf('multipv');
+  if (index < 0) return 1;
+  const value = Number(tokens[index + 1]);
+  return Number.isSafeInteger(value) && value >= 1 ? value : 1;
+}
+
 export class UciEngine {
   private readonly process: ChildProcessWithoutNullStreams;
   private readonly reader: Interface;
   private readonly ready: Promise<void>;
-  private searchResolve: ((result: UciSearchResult) => void) | undefined;
+  private readonly hashMb: number;
+  private readonly threads: number;
+  private readonly multiPv: number;
+  private searchResolve: ((result: DepthLadder) => void) | undefined;
   private searchReject: ((cause: unknown) => void) | undefined;
   private targetDepth = 0;
-  private bestAtDepth: UciSearchResult | undefined;
+  private depthBest = new Map<number, UciSearchResult>();
+  private multiPvAtMax = new Map<number, UciSearchResult>();
   private lineWaiters: Array<(line: string) => boolean> = [];
+  private busy = false;
 
   constructor(options: UciEngineOptions) {
+    this.hashMb = options.hashMb ?? 16;
+    this.threads = options.threads ?? 1;
+    this.multiPv = options.multiPv ?? 1;
+    if (this.threads !== 1) {
+      throw new RangeError('Deterministic mode requires threads === 1.');
+    }
+    if (!Number.isSafeInteger(this.hashMb) || this.hashMb < 1) {
+      throw new RangeError('hashMb must be a positive integer.');
+    }
+    if (!Number.isSafeInteger(this.multiPv) || this.multiPv < 1) {
+      throw new RangeError('multiPv must be a positive integer.');
+    }
     this.process = spawn(process.execPath, [options.enginePath], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -77,6 +115,10 @@ export class UciEngine {
       }
     });
     this.ready = this.handshake();
+  }
+
+  get isBusy(): boolean {
+    return this.busy;
   }
 
   private dispatch(line: string): void {
@@ -98,30 +140,55 @@ export class UciEngine {
       const depthIndex = tokens.indexOf('depth');
       if (depthIndex < 0) return;
       const depth = Number(tokens[depthIndex + 1]);
-      if (!Number.isSafeInteger(depth)) return;
-      if (depth !== this.targetDepth) return;
+      if (!Number.isSafeInteger(depth) || depth < 1) return;
+      // Prefer exact scores over bounds, but keep a bound if it is all we have
+      // (Lozza often emits only a lowerbound at the target depth).
+      const isBound =
+        tokens.includes('lowerbound') || tokens.includes('upperbound');
       try {
-        this.bestAtDepth = Object.freeze({
+        const result = Object.freeze({
           scoreCp: parseScoreCp(tokens),
           pv: Object.freeze(parsePv(tokens)),
         });
+        const multipv = parseMultiPv(tokens);
+        if (multipv === 1) {
+          const prior = this.depthBest.get(depth);
+          if (prior === undefined || !isBound) {
+            this.depthBest.set(depth, result);
+          }
+        }
+        if (depth === this.targetDepth) {
+          const prior = this.multiPvAtMax.get(multipv);
+          if (prior === undefined || !isBound) {
+            this.multiPvAtMax.set(multipv, result);
+          }
+        }
       } catch {
         // Ignore malformed info lines.
       }
       return;
     }
     if (line.startsWith('bestmove ')) {
-      const result = this.bestAtDepth;
-      if (result === undefined) {
+      const at = new Map(this.depthBest);
+      const multiPvAtMax = new Map(this.multiPvAtMax);
+      if (at.size === 0 && multiPvAtMax.size === 0) {
         this.searchReject?.(
           new Error('Engine returned bestmove without a score'),
         );
       } else {
-        this.searchResolve?.(result);
+        this.searchResolve?.(
+          Object.freeze({
+            maxDepth: this.targetDepth,
+            at,
+            multiPvAtMax,
+          }),
+        );
       }
       this.searchResolve = undefined;
       this.searchReject = undefined;
-      this.bestAtDepth = undefined;
+      this.depthBest = new Map();
+      this.multiPvAtMax = new Map();
+      this.busy = false;
     }
   }
 
@@ -142,6 +209,11 @@ export class UciEngine {
   private async handshake(): Promise<void> {
     await this.send('uci');
     await this.waitForLine((line) => line === 'uciok');
+    await this.send(`setoption name Threads value ${this.threads}`);
+    await this.send(`setoption name Hash value ${this.hashMb}`);
+    if (this.multiPv > 1) {
+      await this.send(`setoption name MultiPV value ${this.multiPv}`);
+    }
     await this.send('isready');
     await this.waitForLine((line) => line === 'readyok');
     await this.send('ucinewgame');
@@ -156,21 +228,43 @@ export class UciEngine {
     });
   }
 
-  /** Evaluate `fen` at fixed depth. Score is from the side to move. */
-  async evaluate(fen: string, depth: number): Promise<UciSearchResult> {
+  /** Full depth ladder for shared search (ADR 0017). */
+  async searchLadder(fen: string, depth: number): Promise<DepthLadder> {
     if (!Number.isSafeInteger(depth) || depth < 1) {
       throw new RangeError('Depth must be a positive integer.');
     }
+    if (this.busy) {
+      throw new Error('UciEngine is busy; use the pool scheduler.');
+    }
+    this.busy = true;
     await this.ready;
     this.targetDepth = depth;
-    this.bestAtDepth = undefined;
-    const result = new Promise<UciSearchResult>((resolve, reject) => {
+    this.depthBest = new Map();
+    this.multiPvAtMax = new Map();
+    const result = new Promise<DepthLadder>((resolve, reject) => {
       this.searchResolve = resolve;
-      this.searchReject = reject;
+      this.searchReject = (cause) => {
+        this.busy = false;
+        reject(cause);
+      };
     });
     await this.send(`position fen ${fen}`);
     await this.send(`go depth ${depth}`);
     return result;
+  }
+
+  /** Evaluate `fen` at fixed depth. Score is from the side to move. */
+  async evaluate(fen: string, depth: number): Promise<UciSearchResult> {
+    const ladder = await this.searchLadder(fen, depth);
+    for (let d = depth; d >= 1; d -= 1) {
+      const atDepth = ladder.at.get(d);
+      if (atDepth !== undefined) return atDepth;
+    }
+    const fallback = ladder.multiPvAtMax.get(1);
+    if (fallback === undefined) {
+      throw new Error(`Engine produced no score at depth ${depth}`);
+    }
+    return fallback;
   }
 
   async dispose(): Promise<void> {
