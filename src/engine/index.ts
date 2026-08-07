@@ -1,5 +1,6 @@
 export { createLozzaPort, disposeLozzaPort } from './adapters/lozza';
 export type { LozzaPortOptions } from './adapters/lozza';
+export { createFakeEnginePort } from './fake';
 export {
   STOCKFISH_BUILD,
   STOCKFISH_DETERMINISM_ID,
@@ -21,10 +22,7 @@ export {
   applyPrivateScoring,
   createSharedSearchBroker,
 } from './broker';
-export type {
-  SharedSearchBroker,
-  SharedSearchBrokerOptions,
-} from './broker';
+export type { SharedSearchBroker, SharedSearchBrokerOptions } from './broker';
 export { CONFORMANCE_CORPUS } from './conformanceCorpus';
 export type { ConformanceCase } from './conformanceCorpus';
 export type { BarrierOptions } from './barrier';

@@ -5,42 +5,80 @@ import { detectDegeneracy } from '../sim/degeneracy';
 import { aggregateCampaign } from '../sim/metrics';
 
 describe('simulation harness golden output', () => {
-  it('renders a fixed CSV for a fixed configuration', () => {
+  it('renders a fixed CSV for a fixed configuration', async () => {
     const csv = renderCsv(
-      runSimulation({ matches: 2, leader: 'tyrannical', seed: 7 }),
+      await runSimulation({
+        matches: 2,
+        leader: 'tyrannical',
+        seed: 7,
+        engineKind: 'fake',
+      }),
     );
     expect(csv).toBe(
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
-        '1,1000004,tyrannical,156,12,64,2,13,4,1,0.0769,0.0128,0.0833,0.4103,-10.00,-100.00,-20.00,-5.00,50,1,tyrant',
-        '2,2000001,tyrannical,101,10,39,0,14,5,2,0.0990,0.0000,0.2000,0.3861,-15.63,-100.00,-20.00,-5.00,50,1,tyrant',
+        '1,1000004,tyrannical,179,17,80,0,2,1,10,0.0950,0.0000,0.5882,0.4469,-10.00,-67.78,-20.00,-16.67,0,0,tyrant',
+        '2,2000001,tyrannical,146,12,61,0,13,10,5,0.0822,0.0000,0.4167,0.4178,-42.50,-100.00,-20.00,-5.00,50,1,tyrant',
         '',
       ].join('\n'),
     );
   });
 
-  it('is byte-identical when repeated with the same seed', () => {
-    const options = { matches: 4, leader: 'supportive' as const, seed: 12 };
-    expect(renderCsv(runSimulation(options))).toBe(
-      renderCsv(runSimulation(options)),
+  it('is byte-identical when repeated with the same seed', async () => {
+    const options = {
+      matches: 4,
+      leader: 'supportive' as const,
+      seed: 12,
+      engineKind: 'fake' as const,
+    };
+    expect(renderCsv(await runSimulation(options))).toBe(
+      renderCsv(await runSimulation(options)),
     );
   });
 });
 
 describe('simulation harness sensitivity', () => {
-  it('changes output when seed changes', () => {
+  it('changes output when seed changes', async () => {
     expect(
-      renderCsv(runSimulation({ matches: 2, leader: 'random', seed: 1 })),
+      renderCsv(
+        await runSimulation({
+          matches: 2,
+          leader: 'random',
+          seed: 1,
+          engineKind: 'fake',
+        }),
+      ),
     ).not.toBe(
-      renderCsv(runSimulation({ matches: 2, leader: 'random', seed: 2 })),
+      renderCsv(
+        await runSimulation({
+          matches: 2,
+          leader: 'random',
+          seed: 2,
+          engineKind: 'fake',
+        }),
+      ),
     );
   });
 
-  it('changes output when leader changes', () => {
+  it('changes output when leader changes', async () => {
     expect(
-      renderCsv(runSimulation({ matches: 2, leader: 'random', seed: 1 })),
+      renderCsv(
+        await runSimulation({
+          matches: 2,
+          leader: 'random',
+          seed: 1,
+          engineKind: 'fake',
+        }),
+      ),
     ).not.toBe(
-      renderCsv(runSimulation({ matches: 2, leader: 'redeemer', seed: 1 })),
+      renderCsv(
+        await runSimulation({
+          matches: 2,
+          leader: 'redeemer',
+          seed: 1,
+          engineKind: 'fake',
+        }),
+      ),
     );
   });
 });
@@ -60,6 +98,7 @@ describe('simulation harness argument parsing', () => {
       campaign: 20,
       leader: 'tyrannical',
       seed: 7,
+      engine: 'fake',
       out: 'metrics.csv',
     });
   });
@@ -82,11 +121,12 @@ describe('simulation harness argument parsing', () => {
 });
 
 describe('degeneracy detectors', () => {
-  it('flags tyrannical campaigns with no desertions', () => {
-    const metrics = runSimulation({
+  it('flags tyrannical campaigns with no desertions', async () => {
+    const metrics = await runSimulation({
       matches: 1,
       leader: 'tyrannical',
       seed: 7,
+      engineKind: 'fake',
     });
     const summary = aggregateCampaign('tyrannical', 7, metrics);
     const findings = detectDegeneracy('tyrannical', metrics, {

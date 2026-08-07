@@ -1,8 +1,4 @@
-import type {
-  EngineEvaluation,
-  EnginePort,
-  EvalProfile,
-} from './types';
+import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
 import { EnginePool, type EnginePoolOptions } from './pool';
 import type { DepthLadder } from './uci';
 

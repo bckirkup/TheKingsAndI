@@ -20,7 +20,11 @@ export function defaultPoolSize(): number {
   return Math.max(1, Math.min(hardware - 1, 4));
 }
 
-export interface EnginePoolOptions extends UciEngineOptions {
+export interface EnginePoolOptions {
+  readonly enginePath: string;
+  readonly hashMb?: number;
+  readonly threads?: number;
+  readonly multiPv?: number;
   readonly size?: number;
 }
 

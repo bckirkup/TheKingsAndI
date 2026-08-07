@@ -11,8 +11,7 @@ import {
 } from '../src/engine';
 import type { PieceId } from '../src/core/ids';
 
-const START =
-  'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 describe('shared-search broker (Stockfish)', () => {
   afterAll(async () => {

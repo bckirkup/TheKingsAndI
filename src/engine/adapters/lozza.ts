@@ -45,8 +45,9 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
     async evaluate(
       fen: string,
       depth: number,
-      _evalProfile: EvalProfile = {},
+      evalProfile: EvalProfile = {},
     ): Promise<EngineEvaluation> {
+      void evalProfile;
       const result = await engine.evaluate(fen, depth);
       return Object.freeze({
         scoreCp: result.scoreCp,

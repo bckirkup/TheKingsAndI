@@ -1,14 +1,14 @@
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
+import type { EnginePort } from '../src/engine/types';
 import {
   runHeadlessMatch,
   type HeadlessLeaderPort,
   type HeadlessMatchResult,
 } from '../src/orchestration';
-import type { CandidateMoveEvaluation, PieceState } from '../src/psychology';
+import type { PieceState } from '../src/psychology';
 
 import type { Leader } from './cli';
-import { featuresToEvaluation, isObjectivelyGoodMove } from './eval';
 import { leaderPolicy, legalScoredMoves, type LeaderContext } from './leaders';
 import { createStartingRoster } from './roster';
 
@@ -29,15 +29,10 @@ function leaderPort(
       if (choice === undefined) return undefined;
       const mover = board.pieceAt(choice.intent.from);
       if (mover === undefined || mover.side !== side) return undefined;
-      const moveEval: CandidateMoveEvaluation = featuresToEvaluation(
-        choice.features,
-        choice.leaderImpliedBias,
-      );
       return {
         moverId: mover.id,
+        intent: choice.intent,
         san: choice.features.san,
-        moveEval,
-        objectivelyGood: isObjectivelyGoodMove(choice.features),
       };
     },
     shouldOverride(random, ply) {
@@ -52,9 +47,12 @@ export interface RunMatchOptions {
   readonly matchIndex: number;
   readonly campaignMatch: number;
   readonly roster: readonly PieceState[];
+  readonly engine: EnginePort;
 }
 
-export function runMatch(options: RunMatchOptions): HeadlessMatchResult {
+export async function runMatch(
+  options: RunMatchOptions,
+): Promise<HeadlessMatchResult> {
   const random = createSeededRandom(options.seed);
   const contextBase = {
     matchIndex: options.matchIndex,
@@ -68,14 +66,15 @@ export function runMatch(options: RunMatchOptions): HeadlessMatchResult {
     leader: leaderPort(options.leader, contextBase),
     opponent: leaderPort('random', contextBase),
     initialRoster: options.roster,
+    engine: options.engine,
   });
 }
 
-export function runMatchFromFreshRoster(
+export async function runMatchFromFreshRoster(
   options: Omit<RunMatchOptions, 'roster'> & {
     readonly initialTrust?: number;
   },
-): HeadlessMatchResult {
+): Promise<HeadlessMatchResult> {
   const board = LivingBoard.standard();
   const random = createSeededRandom(options.seed);
   const roster = createStartingRoster(

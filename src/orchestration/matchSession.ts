@@ -7,6 +7,7 @@ import {
   type Square,
 } from '../chess';
 import { createSeededRandom, type SeededRandom } from '../core/random';
+import type { EnginePort } from '../engine/types';
 import {
   applyNeglectSignal,
   evaluateMoveResponse,
@@ -21,14 +22,20 @@ import {
   type PieceState,
 } from '../psychology';
 
-import { featuresToEvaluation } from './evaluation';
+import { insightToEvaluation } from './evaluation';
 import { shouldDismiss } from './campaignPolicy';
+import {
+  createInsightRoundHandle,
+  resolveMoverInsight,
+  type InsightRoundHandle,
+} from './insight';
 import { chooseKingCommandMove } from './kingCommand';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import { createStartingRoster } from './roster';
 
 export type MatchPhase =
   | 'playing'
+  | 'thinking'
   | 'awaiting_player'
   | 'game_over'
   | 'rout'
@@ -73,9 +80,11 @@ export interface MatchSessionSnapshot {
   readonly winScore: number;
   readonly lastMove: readonly [Square, Square] | null;
   readonly dismissed: boolean;
+  readonly determinismId: string;
 }
 
 export interface MatchSessionConfig {
+  readonly engine: EnginePort;
   readonly seed?: number;
   readonly playerSide?: Side;
   readonly initialTrust?: number;
@@ -133,13 +142,17 @@ export class MatchSession {
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
   private readonly opponentArchetype: OpponentArchetype;
+  private readonly engine: EnginePort;
+  private readonly insight: InsightRoundHandle;
 
-  constructor(config: MatchSessionConfig = {}) {
+  constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
     this.matchSeed = seed;
     this.random = createSeededRandom(seed);
     this.playerSide = config.playerSide ?? 'w';
     this.opponentArchetype = config.opponentArchetype ?? 'random';
+    this.engine = config.engine;
+    this.insight = createInsightRoundHandle();
     this.board = LivingBoard.standard();
     this.roster =
       config.initialRoster !== undefined
@@ -171,6 +184,7 @@ export class MatchSession {
       winScore: this.winScore(),
       lastMove: this.lastMove,
       dismissed: this.dismissed,
+      determinismId: this.engine.determinismId,
     };
   }
 
@@ -189,7 +203,7 @@ export class MatchSession {
     this.dialogueCue = null;
   }
 
-  submitPlayerIntent(intent: MoveIntent): boolean {
+  async submitPlayerIntent(intent: MoveIntent): Promise<boolean> {
     if (this.phase !== 'playing' || this.board.turn() !== this.playerSide) {
       return false;
     }
@@ -201,8 +215,16 @@ export class MatchSession {
     const actor = this.roster.find((piece) => piece.id === mover.id);
     if (actor === undefined) return false;
 
+    this.phase = 'thinking';
     const features = extractMoveFeatures(this.board, intent);
-    const moveEval = featuresToEvaluation(features, 0);
+    const insight = await resolveMoverInsight(
+      this.engine,
+      this.board,
+      intent,
+      actor,
+      this.insight,
+    );
+    const moveEval = insightToEvaluation(features, insight, actor);
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,
@@ -253,6 +275,9 @@ export class MatchSession {
     this.commitPlayerMove(intent, features.san, actor, outcome, moveEval);
     this.runOpponentTurn();
     this.maybeTriggerDismissal();
+    if (this.phase === 'thinking') {
+      this.phase = 'playing';
+    }
     return true;
   }
 
@@ -499,6 +524,8 @@ export class MatchSession {
 
     if (this.board.isGameOver()) {
       this.phase = 'game_over';
+    } else if (this.phase === 'thinking') {
+      this.phase = 'playing';
     }
   }
 

@@ -1,21 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDests, intentFromKeys } from '../src/ui/board/boardAdapter';
+import { createFakeEnginePort } from '../src/engine/fake';
 import { LivingBoard } from '../src/chess';
 import { MatchSession } from '../src/orchestration/matchSession';
+import { buildDests, intentFromKeys } from '../src/ui/board/boardAdapter';
 
 describe('match session', () => {
   it('starts with a full player roster and playing phase', () => {
-    const session = new MatchSession({ seed: 5 });
+    const session = new MatchSession({
+      seed: 5,
+      engine: createFakeEnginePort(),
+    });
     const snapshot = session.snapshot();
     expect(snapshot.phase).toBe('playing');
     expect(snapshot.roster).toHaveLength(16);
     expect(snapshot.board.turn()).toBe('w');
+    expect(snapshot.determinismId).toContain('fake-engine');
   });
 
-  it('accepts a legal opening move and advances the opponent', () => {
-    const session = new MatchSession({ seed: 5 });
-    const accepted = session.submitPlayerIntent({ from: 'e2', to: 'e4' });
+  it('accepts a legal opening move and advances the opponent', async () => {
+    const session = new MatchSession({
+      seed: 5,
+      engine: createFakeEnginePort(),
+    });
+    const accepted = await session.submitPlayerIntent({ from: 'e2', to: 'e4' });
     expect(accepted).toBe(true);
     const after = session.snapshot();
     expect(after.events.some((event) => event.t === 'MOVE')).toBe(true);
@@ -26,7 +34,10 @@ describe('match session', () => {
   });
 
   it('tracks selected piece id from selectPiece', () => {
-    const session = new MatchSession({ seed: 5 });
+    const session = new MatchSession({
+      seed: 5,
+      engine: createFakeEnginePort(),
+    });
     const snapshot = session.snapshot();
     const first = snapshot.roster[0];
     expect(first).toBeDefined();

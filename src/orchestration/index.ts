@@ -6,7 +6,11 @@ export type {
   MatchSessionSnapshot,
   PendingVerdict,
 } from './matchSession';
-export { featuresToEvaluation } from './evaluation';
+export {
+  featuresToEvaluation,
+  insightToEvaluation,
+  isObjectivelyGoodMove,
+} from './evaluation';
 export { createStartingRoster } from './roster';
 export type {
   HeadlessLeaderPort,

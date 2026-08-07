@@ -1,8 +1,10 @@
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
+import type { EnginePort } from '../src/engine/types';
 import type { PieceState } from '../src/psychology';
 
 import type { Leader } from './cli';
+import { createSimEngine, type SimEngineKind } from './engine';
 import { runMatch } from './match';
 import {
   aggregateCampaign,
@@ -17,12 +19,15 @@ export interface CampaignOptions {
   readonly leader: Leader;
   readonly seed: number;
   readonly initialTrust?: number;
+  readonly engine?: EnginePort;
+  readonly engineKind?: SimEngineKind;
 }
 
 export interface CampaignResult {
   readonly metrics: readonly MatchMetrics[];
   readonly summary: CampaignMetrics;
   readonly finalRoster: readonly PieceState[];
+  readonly determinismId: string;
 }
 
 function leaderTrustBias(leader: Leader): number {
@@ -43,7 +48,9 @@ function leaderTrustBias(leader: Leader): number {
   }
 }
 
-export function runCampaign(options: CampaignOptions): CampaignResult {
+export async function runCampaign(
+  options: CampaignOptions,
+): Promise<CampaignResult> {
   const board = LivingBoard.standard();
   const random = createSeededRandom(options.seed);
   let roster = createStartingRoster(
@@ -53,6 +60,8 @@ export function runCampaign(options: CampaignOptions): CampaignResult {
     random.nextInt(10_000) / 10_000,
   );
   const metrics: MatchMetrics[] = [];
+  const engine =
+    options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
 
   for (let match = 1; match <= options.matches; match += 1) {
     const matchSeed = options.seed ^ (match * 1_000_003);
@@ -64,12 +73,13 @@ export function runCampaign(options: CampaignOptions): CampaignResult {
       random.nextInt(10_000) / 10_000,
     );
     const rosterStart = roster;
-    const result = runMatch({
+    const result = await runMatch({
       seed: matchSeed,
       leader: options.leader,
       matchIndex: match,
       campaignMatch: match,
       roster,
+      engine,
     });
     const metric = metricsFromMatch(
       match,
@@ -87,9 +97,12 @@ export function runCampaign(options: CampaignOptions): CampaignResult {
     metrics,
     summary: aggregateCampaign(options.leader, options.seed, metrics),
     finalRoster: roster,
+    determinismId: engine.determinismId,
   };
 }
 
-export function runSimulation(options: CampaignOptions): MatchMetrics[] {
-  return [...runCampaign(options).metrics];
+export async function runSimulation(
+  options: CampaignOptions,
+): Promise<MatchMetrics[]> {
+  return [...(await runCampaign(options)).metrics];
 }

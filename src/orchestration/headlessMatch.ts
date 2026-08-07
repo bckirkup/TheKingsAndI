@@ -1,6 +1,7 @@
-import { LivingBoard } from '../chess';
+import { extractMoveFeatures, LivingBoard, type MoveIntent } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
+import type { EnginePort } from '../engine/types';
 import {
   applyMatchOutcomeTrust,
   applyNeglectSignal,
@@ -13,11 +14,20 @@ import {
   type PieceState,
 } from '../psychology';
 
+import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import {
+  createInsightRoundHandle,
+  resolveAuditMoveScore,
+  resolveMoverInsight,
+} from './insight';
+
 export interface HeadlessMoveChoice {
   readonly moverId: string;
+  readonly intent: MoveIntent;
   readonly san: string;
-  readonly moveEval: CandidateMoveEvaluation;
-  readonly objectivelyGood: boolean;
+  /** When omitted, orchestration resolves engine insight for the mover. */
+  readonly moveEval?: CandidateMoveEvaluation;
+  readonly objectivelyGood?: boolean;
 }
 
 export interface HeadlessLeaderPort {
@@ -26,7 +36,7 @@ export interface HeadlessLeaderPort {
     side: Side,
     random: SeededRandom,
     ply: number,
-  ): HeadlessMoveChoice | undefined;
+  ): HeadlessMoveChoice | undefined | Promise<HeadlessMoveChoice | undefined>;
   shouldOverride(random: SeededRandom, ply: number): boolean;
   onMatchEnd?(roster: readonly PieceState[], winScore: number): PieceState[];
 }
@@ -38,6 +48,7 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  readonly engine: EnginePort;
 }
 
 export interface HeadlessMatchResult {
@@ -47,6 +58,7 @@ export interface HeadlessMatchResult {
   readonly winScore: number;
   readonly rout: boolean;
   readonly refusedGoodMoves: number;
+  readonly determinismId: string;
 }
 
 function desertionContextFor(
@@ -82,15 +94,16 @@ function winScoreFor(board: LivingBoard, playerSide: Side): number {
   return board.turn() === playerSide ? 0 : 100;
 }
 
-export function runHeadlessMatch(
+export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
-): HeadlessMatchResult {
+): Promise<HeadlessMatchResult> {
   const board = LivingBoard.standard();
   let roster = config.initialRoster.map(normalizePieceState);
   const events: MatchEvent[] = [];
   let ply = 1;
   let rout = false;
   let refusedGoodMoves = 0;
+  const insight = createInsightRoundHandle();
 
   while (ply <= config.maxPlies) {
     if (board.isGameOver()) break;
@@ -104,7 +117,7 @@ export function runHeadlessMatch(
       break;
     }
 
-    const choice = leader.chooseMove(board, side, config.random, ply);
+    const choice = await leader.chooseMove(board, side, config.random, ply);
     if (choice === undefined) break;
 
     if (side !== config.playerSide) {
@@ -119,10 +132,31 @@ export function runHeadlessMatch(
       continue;
     }
 
-    const desertionContext = desertionContextFor(actor, choice.moveEval);
+    const features = extractMoveFeatures(board, choice.intent);
+    const moverInsight = await resolveMoverInsight(
+      config.engine,
+      board,
+      choice.intent,
+      actor,
+      insight,
+    );
+    const moveEval =
+      choice.moveEval ?? insightToEvaluation(features, moverInsight, actor);
+    const auditScore = await resolveAuditMoveScore(
+      config.engine,
+      board,
+      choice.intent,
+      insight,
+    );
+    const bestAudit = Math.max(auditScore, moverInsight.scoreCp);
+    const objectivelyGood =
+      choice.objectivelyGood ??
+      isObjectivelyGoodMove(moverInsight.scoreCp, bestAudit);
+
+    const desertionContext = desertionContextFor(actor, moveEval);
     let outcome = evaluateMoveResponse(
       actor,
-      choice.moveEval,
+      moveEval,
       roster,
       desertionContext,
     );
@@ -153,7 +187,7 @@ export function runHeadlessMatch(
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
         });
-        if (choice.objectivelyGood) {
+        if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({
             ...piece,
@@ -214,5 +248,6 @@ export function runHeadlessMatch(
     winScore,
     rout,
     refusedGoodMoves,
+    determinismId: config.engine.determinismId,
   };
 }
