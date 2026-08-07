@@ -28,6 +28,7 @@ import {
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
 } from './psychologyHooks';
+import { scoreMatchOutcome } from './outcomeScore';
 
 export interface HeadlessMoveChoice {
   readonly moverId: string;
@@ -81,11 +82,6 @@ function updatePiece(
 
 function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
   return board.piecesOf(playerSide).map((piece) => piece.id);
-}
-
-function winScoreFor(board: LivingBoard, playerSide: Side): number {
-  if (!board.isGameOver()) return 50;
-  return board.turn() === playerSide ? 0 : 100;
 }
 
 export async function runHeadlessMatch(
@@ -274,7 +270,7 @@ export async function runHeadlessMatch(
     ply += 1;
   }
 
-  const winScore = winScoreFor(board, config.playerSide);
+  const winScore = scoreMatchOutcome(board, config.playerSide, rout);
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);

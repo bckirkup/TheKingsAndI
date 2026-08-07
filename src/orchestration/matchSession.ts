@@ -29,6 +29,7 @@ import {
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
+import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
@@ -185,9 +186,11 @@ export class MatchSession {
   }
 
   winScore(): number {
-    if (!this.board.isGameOver() && !this.rout) return 50;
-    if (this.rout) return 0;
-    return this.board.turn() === this.playerSide ? 0 : 100;
+    return scoreMatchOutcome(
+      this.board,
+      this.playerSide,
+      this.rout || this.dismissed,
+    );
   }
 
   selectPiece(pieceId: string | null): void {
