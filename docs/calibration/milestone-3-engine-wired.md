@@ -59,7 +59,7 @@ Lozza was measured with a deliberately reduced one-match, depth-4 calibration
 wrapper because production depth 12 is too slow for iterative calibration:
 
 ```text
-pnpm exec tsx -e '(runCampaign with Lozza depth cap 4, matches=1, seed=7)'
+pnpm exec tsx -e "import { createLozzaPort, disposeLozzaPort } from './src/engine/index.ts'; import { runCampaign } from './sim/campaign.ts'; (async()=>{ const base=createLozzaPort(); const engine={determinismId:'lozza-11/depth-fixed/cap-4-calibration', evaluate:(fen:string, depth:number, profile:Readonly<Record<string,number>>={})=>base.evaluate(fen, Math.min(depth,4), profile)}; const result=await runCampaign({matches:1,leader:'tyrannical',seed:7,engine}); console.log(JSON.stringify({id:result.determinismId,summary:result.summary})); await disposeLozzaPort(); })();"
 engine=lozza-11/depth-fixed/cap-4-calibration
 refusal=0.000 quiet_quit=0.024 desertion_campaign=1.000 rout_campaign=1.000
 refused_good=0.000 override=0.429 win=0.0 trust_delta=-31.00
