@@ -143,7 +143,15 @@ describe('verdict ladder', () => {
 
 describe('independent leader view', () => {
   it('keeps a positive faith gap when the piece sees a positive move', () => {
-    expect(calculateFaithGap(1, 2)).toBe(1);
+    const moveEval: CandidateMoveEvaluation = {
+      ...quietMove,
+      deltaV_board: 1,
+      vLeaderImplied: 2,
+    };
+    expect(moveEval.deltaV_board).toBeGreaterThan(0);
+    expect(
+      calculateFaithGap(moveEval.deltaV_board, moveEval.vLeaderImplied),
+    ).toBe(1);
   });
 
   it('makes refusal outcomes monotonic as ability credence rises', () => {
