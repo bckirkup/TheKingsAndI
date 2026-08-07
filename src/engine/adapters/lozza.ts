@@ -19,6 +19,7 @@ export interface LozzaPortOptions {
 }
 
 let sharedEngine: UciEngine | undefined;
+let searchQueue: Promise<void> = Promise.resolve();
 
 function getSharedEngine(enginePath: string): UciEngine {
   if (sharedEngine === undefined) {
@@ -48,7 +49,12 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       evalProfile: EvalProfile = {},
     ): Promise<EngineEvaluation> {
       void evalProfile;
-      const result = await engine.evaluate(fen, depth);
+      const search = searchQueue.then(() => engine.evaluate(fen, depth));
+      searchQueue = search.then(
+        () => undefined,
+        () => undefined,
+      );
+      const result = await search;
       return Object.freeze({
         scoreCp: result.scoreCp,
         pv: result.pv,
@@ -62,5 +68,6 @@ export async function disposeLozzaPort(): Promise<void> {
   if (sharedEngine !== undefined) {
     await sharedEngine.dispose();
     sharedEngine = undefined;
+    searchQueue = Promise.resolve();
   }
 }

@@ -1,15 +1,15 @@
 # Milestone 3 — Post engine-wiring calibration report
 
-_Date: 2026-08-07. Seed: 7. The original comparison used 20 matches; the
-post-change check deliberately uses 2 matches to keep iteration bounded.
-Engine: `sim-fake/depth-fixed` for the measured check; Stockfish is the runtime
-default._
+_Date: 2026-08-07. Seed: 7. The historical comparison used 20 matches. The
+corrected post-change checks deliberately use small match counts to keep engine
+runtime bounded._
 
 ## Harness configuration
 
 - Play path: `EnginePort` → ADR 0034 barrier → `insightToEvaluation` (Phase 2).
 - Desertion cascade, witnesses, sacrifice attribution, and costly signals are live (Phase 3).
-- CI smoke uses `--engine=fake` for speed; calibration can switch to Lozza/Stockfish.
+- Runtime simulation defaults to Lozza; CI smoke explicitly uses `--engine=fake`.
+- Stockfish remains an explicit high-fidelity calibration option.
 - Plain-chess baseline: same move picker, psychology skipped (`sim/baseline.ts`).
 - Coefficient sweeps: `pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4`.
 
@@ -30,42 +30,58 @@ default._
 
 Trust trajectory (mean trust at end of each match) is exported on `CampaignMetrics.trustTrajectory` (3.3).
 
-## Post-change spot check
+## Corrected post-change checks
 
-The following reduced run was used after independent leader seating and rout
-scoring. It is directional, not a replacement for the 20-match calibration:
+The fake implementation now uses a stable FEN-derived notional value plus a
+bounded depth error that shrinks toward the depth-16 limit. This replaces the
+invalid depth-seeded pseudo-random score that made the independent leader seat
+pure noise.
 
 ```text
 pnpm sim --matches=2 --campaign=2 --leader=tyrannical --seed=7 --engine=fake
 Milestone 3 harness: 2 matches for tyrannical (sim-fake/depth-fixed).
-refusal=0.050 quiet_quit=0.000 desertion_campaign=1.000 rout_campaign=1.000
-refused_good=0.375 override=0.475 win=0.0 trust_delta=-58.53
-WALL_SECONDS=0.984
+refusal=0.050 quiet_quit=0.024 desertion_campaign=1.000 rout_campaign=1.000
+refused_good=0.500 override=0.439 win=0.0 trust_delta=-58.53
+WALL_SECONDS=1.080
 
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=12 --matches=2 --seed=7 --engine=fake
-OUTCOME_TRUST_LOSS_SCALE,12,0.0500,1.0000,0.4750,0.0,-58.53,-50.0
-WALL_SECONDS=1.866
+OUTCOME_TRUST_LOSS_SCALE,12,0.0500,1.0000,0.4393,0.0,-58.53,-50.0
+WALL_SECONDS=1.982
 ```
 
-Compared with the original 20-match headline (refusal 7.9%, desertion 95%,
-rout 95%, override 45.6%, win score 47.5, plain-chess 27.5, delta +20,
-trust delta -76.7), the reduced post-change check measured refusal 5.0%,
-desertion 100%, rout 100%, override 47.5%, win score 0.0, plain-chess delta
--50.0, and trust delta -58.53. The different campaign length means these are
-directional only. The rout metric now uses loss score 0, and the plain-chess
-baseline calls the same outcome scorer.
+The reduced run measured refusal 5.0%, desertion 100%, rout 100%, override
+43.9%, win score 0.0, plain-chess delta -50.0, and trust delta -58.53. The
+negative win delta is now semantically correct because routs score 0 and the
+plain-chess baseline uses the same scorer. The different campaign length makes
+this directional rather than a replacement for the historical 20-match run.
 
-An attempted real-engine spot check,
-`pnpm sim --matches=1 --campaign=1 --leader=tyrannical --seed=7 --engine=stockfish`,
-was still running after approximately 251 seconds and was stopped without a
-measurement. The command emitted a near-zero-refusal degeneracy warning before
-the Stockfish search completed. A full-fidelity Stockfish sweep is therefore
-not practical for this iteration; runtime is at least several minutes per
-single-match probe in this environment.
+Lozza was measured with a deliberately reduced one-match, depth-4 calibration
+wrapper because production depth 12 is too slow for iterative calibration:
 
-The reduced result meets the intended negative win-delta direction, but
-desertion/rout remain saturated at 100%, so the tyrant target band is not
-closed. No coefficients were tuned to conceal this balance finding.
+```text
+pnpm exec tsx -e '(runCampaign with Lozza depth cap 4, matches=1, seed=7)'
+engine=lozza-11/depth-fixed/cap-4-calibration
+refusal=0.000 quiet_quit=0.024 desertion_campaign=1.000 rout_campaign=1.000
+refused_good=0.000 override=0.429 win=0.0 trust_delta=-31.00
+plain-chess win delta=-50.0
+WALL_SECONDS=1.257
+```
+
+The production-depth probe
+`pnpm sim --matches=1 --campaign=1 --leader=tyrannical --seed=7 --engine=lozza`
+was stopped after more than three minutes without completing. The initial
+attempt also exposed concurrent use of the single Lozza UCI process; the
+adapter now serializes requests through a deterministic queue.
+
+The remaining cost is expected from the per-ply actor and leader searches plus
+a separate audit search. The current broker's shared-FEN cache cannot reuse a
+Lozza depth ladder or true audit result. No larger optimization was attempted
+in this PR.
+
+Both corrected reduced checks have the intended negative win delta, but
+desertion/rout remain saturated and refusal is below the tyrant target band.
+Those are real calibration findings, not fake-engine noise. No coefficients
+were tuned to conceal them.
 
 ## Supportive leader (same seed)
 
@@ -92,9 +108,9 @@ No coefficient shipped as a new default. Defaults remain those in `src/psycholog
 ## Commands
 
 ```bash
-pnpm sim --matches=20 --leader=tyrannical --seed=7
-pnpm sim --matches=20 --leader=supportive --seed=7
+pnpm sim --matches=20 --leader=tyrannical --seed=7  # Lozza default
+pnpm sim --matches=20 --leader=supportive --seed=7  # Lozza default
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
-pnpm sim --matches=20 --leader=tyrannical --engine=lozza   # slower, real UCI
+pnpm sim --matches=20 --leader=tyrannical --engine=fake  # CI/test smoke
 pnpm sim --matches=4 --leader=tyrannical --engine=stockfish --campaign=4
 ```
