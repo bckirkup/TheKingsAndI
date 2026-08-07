@@ -24,7 +24,7 @@ import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import { shouldDismiss } from './campaignPolicy';
 import {
   createInsightRoundHandle,
-  resolveMoverInsight,
+  resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
@@ -216,14 +216,18 @@ export class MatchSession {
 
     this.phase = 'thinking';
     const features = extractMoveFeatures(this.board, intent);
-    const insight = await resolveMoverInsight(
+    const insights = await resolveMoverInsights(
       this.engine,
       this.board,
       intent,
       actor,
       this.insight,
     );
-    const moveEval = insightToEvaluation(features, insight, actor);
+    const moveEval = insightToEvaluation(
+      features,
+      insights.actor,
+      insights.leader,
+    );
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,

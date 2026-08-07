@@ -1,10 +1,6 @@
 import type { MoveFeatures } from '../chess';
 import type { EngineEvaluation } from '../engine/types';
-import {
-  calculateLeaderImpliedValue,
-  type CandidateMoveEvaluation,
-  type PieceState,
-} from '../psychology';
+import type { CandidateMoveEvaluation } from '../psychology';
 
 /**
  * Map a piece's depth-D_i engine view (post-move, mover-side cp) plus geometric
@@ -13,13 +9,10 @@ import {
 export function insightToEvaluation(
   features: MoveFeatures,
   insight: EngineEvaluation,
-  actor: PieceState,
+  leaderInsight: EngineEvaluation,
 ): CandidateMoveEvaluation {
   const deltaV_board = insight.scoreCp / 100;
-  const vLeaderImplied = calculateLeaderImpliedValue(
-    deltaV_board,
-    actor.credence.tauAbil,
-  );
+  const vLeaderImplied = leaderInsight.scoreCp / 100;
   return {
     moveNotation: features.san,
     deltaV_board,

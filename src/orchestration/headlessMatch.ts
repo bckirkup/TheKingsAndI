@@ -16,7 +16,7 @@ import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import {
   createInsightRoundHandle,
   resolveAuditMoveScore,
-  resolveMoverInsight,
+  resolveMoverInsights,
 } from './insight';
 import {
   applyCostlySignalsToRoster,
@@ -133,7 +133,7 @@ export async function runHeadlessMatch(
     }
 
     const features = extractMoveFeatures(board, choice.intent);
-    const moverInsight = await resolveMoverInsight(
+    const moverInsights = await resolveMoverInsights(
       config.engine,
       board,
       choice.intent,
@@ -141,17 +141,18 @@ export async function runHeadlessMatch(
       insight,
     );
     const moveEval =
-      choice.moveEval ?? insightToEvaluation(features, moverInsight, actor);
+      choice.moveEval ??
+      insightToEvaluation(features, moverInsights.actor, moverInsights.leader);
     const auditScore = await resolveAuditMoveScore(
       config.engine,
       board,
       choice.intent,
       insight,
     );
-    const bestAudit = Math.max(auditScore, moverInsight.scoreCp);
+    const bestAudit = Math.max(auditScore, moverInsights.actor.scoreCp);
     const objectivelyGood =
       choice.objectivelyGood ??
-      isObjectivelyGoodMove(moverInsight.scoreCp, bestAudit);
+      isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
 
     const desertionContext = desertionContextFor(actor, moveEval);
     let outcome = evaluateMoveResponse(

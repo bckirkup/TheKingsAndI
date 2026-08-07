@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ENGINE_CONFIG,
   calculateEngineSearchDepth,
+  calculateFaithGap,
   calculateMoveUtility,
   calculateRefusalThreshold,
   evaluateMoveResponse,
@@ -137,6 +138,35 @@ describe('verdict ladder', () => {
     const actor = makePiece({ T_i: 80 });
     const outcome = evaluateMoveResponse(actor, quietMove, [actor]);
     expect(outcome.verdict).toBe('COMPLIANT_EXECUTION');
+  });
+});
+
+describe('independent leader view', () => {
+  it('keeps a positive faith gap when the piece sees a positive move', () => {
+    expect(calculateFaithGap(1, 2)).toBe(1);
+  });
+
+  it('makes refusal outcomes monotonic as ability credence rises', () => {
+    const actor = makePiece({ T_i: 0 });
+    const disagreement: CandidateMoveEvaluation = {
+      ...quietMove,
+      deltaV_board: -2,
+      vLeaderImplied: 4,
+    };
+    const tauValues = [0, 25, 50, 75, 100];
+    const refusals = tauValues.map(
+      (tau) =>
+        evaluateMoveResponse(
+          { ...actor, credence: { tauBenev: 50, tauAbil: tau } },
+          disagreement,
+          [actor],
+        ).verdict === 'MORAL_REFUSAL',
+    );
+    for (let index = 1; index < refusals.length; index += 1) {
+      expect(Number(refusals[index])).toBeLessThanOrEqual(
+        Number(refusals[index - 1]),
+      );
+    }
   });
 });
 

@@ -1,11 +1,6 @@
 export { ENGINE_CONFIG } from './config';
 export type { EngineConfig } from './config';
-export {
-  attentionWeight,
-  applyRumorDiffusion,
-  calculateLeaderImpliedValue,
-  diffuseRumor,
-} from './belief';
+export { attentionWeight, applyRumorDiffusion, diffuseRumor } from './belief';
 export {
   clampAffinity,
   clampCredence,
