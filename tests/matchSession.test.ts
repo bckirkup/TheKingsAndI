@@ -33,6 +33,24 @@ describe('match session', () => {
     expect(after.lastMove).toHaveLength(2);
   });
 
+  it('records the true audit score on the player move event', async () => {
+    const engine = {
+      ...createFakeEnginePort(),
+      async evaluateTrue(): Promise<{ scoreCp: number }> {
+        return { scoreCp: -123 };
+      },
+    };
+    const session = new MatchSession({ seed: 5, engine });
+    await session.submitPlayerIntent({ from: 'e2', to: 'e4' });
+    const playerMove = session
+      .snapshot()
+      .events.find((event) => event.t === 'MOVE' && event.pieceId === 'w:P:e2');
+    expect(playerMove?.t).toBe('MOVE');
+    if (playerMove?.t === 'MOVE') {
+      expect(playerMove.orderQualityCp).toBe(123);
+    }
+  });
+
   it('tracks selected piece id from selectPiece', () => {
     const session = new MatchSession({
       seed: 5,
