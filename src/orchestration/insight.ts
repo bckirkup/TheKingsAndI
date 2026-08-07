@@ -29,6 +29,11 @@ export function evalProfileFor(piece: PieceState): EvalProfile {
   return {};
 }
 
+/**
+ * Score a post-move position the engine cannot search, already from the
+ * mover's perspective — unlike engine scores, this needs no negation.
+ * Checkmate is decisive for the mover; stalemate and draws are neutral.
+ */
 export function terminalMoveScore(board: LivingBoard): number | undefined {
   if (!board.isGameOver() || board.legalMoves().length > 0) return undefined;
   return board.isCheck() ? 29_999 : 0;
