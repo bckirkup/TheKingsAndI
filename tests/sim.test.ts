@@ -19,7 +19,7 @@ describe('simulation harness golden output', () => {
     expect(csv).toBe(
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
-        '1,1000004,tyrannical,42,0,18,1,13,13,0,0.0000,0.0238,0.0000,0.4286,-10.00,-41.00,-20.00,15.00,0,1,tyrant',
+        '1,1000004,tyrannical,44,0,22,0,13,13,0,0.0000,0.0000,0.0000,0.5000,-10.00,-41.00,-20.00,15.00,0,1,tyrant',
         '2,2000001,tyrannical,40,4,18,0,15,15,3,0.1000,0.0000,0.7500,0.4500,-11.94,-98.00,-18.75,15.00,0,1,tyrant',
         '',
       ].join('\n'),
@@ -108,7 +108,7 @@ describe('simulation harness argument parsing', () => {
       campaign: 20,
       leader: 'tyrannical',
       seed: 7,
-      engine: 'fake',
+      engine: 'stockfish',
       out: 'metrics.csv',
     });
   });

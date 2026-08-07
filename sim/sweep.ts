@@ -11,8 +11,9 @@
 import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
-import type { Leader } from './cli';
+import { ENGINES, type Leader } from './cli';
 import { plainChessMeanWinScore } from './baseline';
+import type { SimEngineKind } from './engine';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -44,6 +45,7 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
+  readonly engineKind?: SimEngineKind;
 }): Promise<readonly SweepPoint[]> {
   const original = MUTABLE_CONFIG[options.knob as string];
   if (typeof original !== 'number') {
@@ -62,7 +64,7 @@ export async function runCoefficientSweep(options: {
         matches: options.matches,
         leader: options.leader,
         seed: options.seed,
-        engineKind: 'fake',
+        engineKind: options.engineKind ?? 'stockfish',
       });
       points.push({
         knob: String(options.knob),
@@ -87,6 +89,7 @@ function parseArgs(argv: readonly string[]): {
   matches: number;
   seed: number;
   leader: Leader;
+  engine: SimEngineKind;
 } {
   const map = new Map<string, string>();
   for (const argument of argv) {
@@ -98,18 +101,26 @@ function parseArgs(argv: readonly string[]): {
   }
   const knob = (map.get('knob') ??
     'BENEV_EXPENDABLE_FLOOR') as keyof typeof ENGINE_CONFIG;
+  const engine = map.get('engine') ?? 'stockfish';
+  if (!ENGINES.includes(engine as SimEngineKind)) {
+    throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
+  }
   return {
     knob,
     values: parseList(map.get('values'), [15, 25, 35]),
     matches: Number(map.get('matches') ?? 4),
     seed: Number(map.get('seed') ?? 7),
     leader: (map.get('leader') ?? 'tyrannical') as Leader,
+    engine: engine as SimEngineKind,
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const points = await runCoefficientSweep(options);
+  const points = await runCoefficientSweep({
+    ...options,
+    engineKind: options.engine,
+  });
   console.log(
     'knob,value,refusal,desertion_campaign,override,win,trust_delta,plain_chess_win_delta',
   );

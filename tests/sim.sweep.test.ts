@@ -82,6 +82,7 @@ describe('coefficient sweep', () => {
       matches: 2,
       seed: 7,
       leader: 'tyrannical',
+      engineKind: 'fake',
     });
     expect(points).toHaveLength(2);
     expect(points[0]?.knob).toBe('OUTCOME_TRUST_LOSS_SCALE');

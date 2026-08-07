@@ -59,7 +59,7 @@ jobs:
           name: coverage-lcov
           path: coverage/lcov.info
           if-no-files-found: error
-      - run: pnpm sim --matches=20 --leader=tyrannical
+      - run: pnpm sim --matches=20 --leader=tyrannical --engine=fake
 
   sonar:
     name: SonarQube Cloud
