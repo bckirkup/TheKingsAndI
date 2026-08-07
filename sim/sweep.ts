@@ -11,8 +11,9 @@
 import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
-import type { Leader } from './cli';
+import { ENGINES, type Leader } from './cli';
 import { plainChessMeanWinScore } from './baseline';
+import { disposeSimEngine, type SimEngineKind } from './engine';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -44,6 +45,8 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
+  readonly engineKind?: SimEngineKind;
+  readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
   const original = MUTABLE_CONFIG[options.knob as string];
   if (typeof original !== 'number') {
@@ -58,12 +61,15 @@ export async function runCoefficientSweep(options: {
   try {
     for (const value of options.values) {
       MUTABLE_CONFIG[options.knob as string] = value;
+      const engineKind = options.engineKind ?? 'lozza';
       const campaign = await runCampaign({
         matches: options.matches,
         leader: options.leader,
         seed: options.seed,
-        engineKind: 'fake',
+        engineKind,
+        depthCap: options.depthCap,
       });
+      await disposeSimEngine(engineKind);
       points.push({
         knob: String(options.knob),
         value,
@@ -87,6 +93,8 @@ function parseArgs(argv: readonly string[]): {
   matches: number;
   seed: number;
   leader: Leader;
+  engine: SimEngineKind;
+  depthCap: number | undefined;
 } {
   const map = new Map<string, string>();
   for (const argument of argv) {
@@ -98,18 +106,39 @@ function parseArgs(argv: readonly string[]): {
   }
   const knob = (map.get('knob') ??
     'BENEV_EXPENDABLE_FLOOR') as keyof typeof ENGINE_CONFIG;
+  const engine = map.get('engine') ?? 'lozza';
+  if (!ENGINES.includes(engine as SimEngineKind)) {
+    throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
+  }
+  const depthCapValue =
+    map.get('depth-cap') === undefined
+      ? engine === 'lozza'
+        ? 4
+        : undefined
+      : Number(map.get('depth-cap'));
+  if (
+    depthCapValue !== undefined &&
+    (!Number.isSafeInteger(depthCapValue) || depthCapValue < 1)
+  ) {
+    throw new Error('--depth-cap must be a positive integer.');
+  }
   return {
     knob,
     values: parseList(map.get('values'), [15, 25, 35]),
     matches: Number(map.get('matches') ?? 4),
     seed: Number(map.get('seed') ?? 7),
     leader: (map.get('leader') ?? 'tyrannical') as Leader,
+    engine: engine as SimEngineKind,
+    depthCap: depthCapValue,
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const points = await runCoefficientSweep(options);
+  const points = await runCoefficientSweep({
+    ...options,
+    engineKind: options.engine,
+  });
   console.log(
     'knob,value,refusal,desertion_campaign,override,win,trust_delta,plain_chess_win_delta',
   );

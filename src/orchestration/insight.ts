@@ -8,6 +8,9 @@ import { createEvaluationCache, type EvaluationCache } from '../engine/cache';
 import { buildInsightRound } from '../engine/round';
 import type { EnginePort, EvalProfile, Insight } from '../engine/types';
 import { calculateEngineSearchDepth, type PieceState } from '../psychology';
+import { CAMPAIGN_CONFIG } from './campaignConfig';
+
+export const LEADER_INSIGHT_SEAT_ID = '\u0000leader';
 
 export interface InsightRoundHandle {
   readonly cache: EvaluationCache;
@@ -27,19 +30,52 @@ export function evalProfileFor(piece: PieceState): EvalProfile {
 }
 
 /**
+ * Score a post-move position the engine cannot search, already from the
+ * mover's perspective — unlike engine scores, this needs no negation.
+ * Checkmate is decisive for the mover; stalemate and draws are neutral.
+ */
+export function terminalMoveScore(board: LivingBoard): number | undefined {
+  if (!board.isGameOver() || board.legalMoves().length > 0) return undefined;
+  return board.isCheck() ? 29_999 : 0;
+}
+
+/**
  * Evaluate the position after `intent` from the mover's side at depth D_i.
  * Score is negated because the post-move FEN is opponent to move.
  */
-export async function resolveMoverInsight(
+export async function resolveMoverInsights(
   port: EnginePort,
   board: LivingBoard,
   intent: MoveIntent,
   actor: PieceState,
   handle: InsightRoundHandle,
-): Promise<Insight> {
+): Promise<{
+  readonly actor: Insight;
+  readonly leader: Insight;
+}> {
+  if (actor.id === LEADER_INSIGHT_SEAT_ID) {
+    throw new Error(`PieceId is reserved: ${LEADER_INSIGHT_SEAT_ID}`);
+  }
   const depth = calculateEngineSearchDepth(actor.E_i, actor.engagementFactor);
   const probe = board.clone();
   probe.applyMove(intent);
+  const terminalScore = terminalMoveScore(probe);
+  if (terminalScore !== undefined) {
+    const insight = Object.freeze({
+      pieceId: actor.id,
+      depth,
+      scoreCp: terminalScore,
+      pv: Object.freeze([]),
+    });
+    const leader = Object.freeze({
+      pieceId: LEADER_INSIGHT_SEAT_ID,
+      depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
+      scoreCp: terminalScore,
+      pv: Object.freeze([]),
+    });
+    handle.round += 1;
+    return { actor: insight, leader };
+  }
   const fen = probe.fen();
   const requests = buildInsightRound({
     fen,
@@ -48,6 +84,11 @@ export async function resolveMoverInsight(
         pieceId: actor.id,
         depth,
         evalProfile: evalProfileFor(actor),
+      },
+      {
+        pieceId: LEADER_INSIGHT_SEAT_ID,
+        depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
+        evalProfile: {},
       },
     ],
   });
@@ -58,15 +99,25 @@ export async function resolveMoverInsight(
     }),
   );
   handle.round += 1;
-  const insight = insightOf(bundle, actor.id);
-  if (insight === undefined) {
-    throw new Error(`Missing insight for ${actor.id}`);
+  const actorInsight = insightOf(bundle, actor.id);
+  const leaderInsight = insightOf(bundle, LEADER_INSIGHT_SEAT_ID);
+  if (actorInsight === undefined) {
+    throw new Error(`Missing actor insight for ${actor.id}`);
+  }
+  if (leaderInsight === undefined) {
+    throw new Error(`Missing leader insight for ${LEADER_INSIGHT_SEAT_ID}`);
   }
   // Post-move FEN is opponent-to-move; flip to mover's perspective.
-  return Object.freeze({
-    ...insight,
-    scoreCp: -insight.scoreCp,
-  });
+  return {
+    actor: Object.freeze({
+      ...actorInsight,
+      scoreCp: -actorInsight.scoreCp,
+    }),
+    leader: Object.freeze({
+      ...leaderInsight,
+      scoreCp: -leaderInsight.scoreCp,
+    }),
+  };
 }
 
 /**
@@ -84,6 +135,8 @@ export async function resolveAuditMoveScore(
 ): Promise<number> {
   const probe = board.clone();
   probe.applyMove(intent);
+  const terminalScore = terminalMoveScore(probe);
+  if (terminalScore !== undefined) return terminalScore;
   const fen = probe.fen();
   if (port.evaluateTrue !== undefined) {
     const trueEval = await port.evaluateTrue(fen);

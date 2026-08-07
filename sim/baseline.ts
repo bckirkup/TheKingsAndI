@@ -1,15 +1,13 @@
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
+import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
 
 import { legalScoredMoves, leaderPolicy, type LeaderContext } from './leaders';
 import type { Leader } from './cli';
 
 const MAX_PLIES = 200;
 
-/**
- * Plain-chess baseline: same move picker as a scripted leader, no psychology.
- * Win score is 100 if White wins, 0 if Black wins, 50 otherwise.
- */
+/** Plain-chess baseline: same move picker as a scripted leader, no psychology. */
 export function runPlainChessMatch(options: {
   readonly seed: number;
   readonly whiteLeader: Leader;
@@ -39,10 +37,7 @@ export function runPlainChessMatch(options: {
     plies += 1;
   }
 
-  let winScore = 50;
-  if (board.isGameOver()) {
-    winScore = board.turn() === 'w' ? 0 : 100;
-  }
+  const winScore = scoreMatchOutcome(board, 'w', false);
   return { plies, winScore };
 }
 

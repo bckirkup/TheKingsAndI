@@ -16,7 +16,7 @@ import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import {
   createInsightRoundHandle,
   resolveAuditMoveScore,
-  resolveMoverInsight,
+  resolveMoverInsights,
 } from './insight';
 import {
   applyCostlySignalsToRoster,
@@ -28,6 +28,7 @@ import {
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
 } from './psychologyHooks';
+import { scoreMatchOutcome } from './outcomeScore';
 
 export interface HeadlessMoveChoice {
   readonly moverId: string;
@@ -83,11 +84,6 @@ function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
   return board.piecesOf(playerSide).map((piece) => piece.id);
 }
 
-function winScoreFor(board: LivingBoard, playerSide: Side): number {
-  if (!board.isGameOver()) return 50;
-  return board.turn() === playerSide ? 0 : 100;
-}
-
 export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
 ): Promise<HeadlessMatchResult> {
@@ -137,7 +133,7 @@ export async function runHeadlessMatch(
     }
 
     const features = extractMoveFeatures(board, choice.intent);
-    const moverInsight = await resolveMoverInsight(
+    const moverInsights = await resolveMoverInsights(
       config.engine,
       board,
       choice.intent,
@@ -145,17 +141,18 @@ export async function runHeadlessMatch(
       insight,
     );
     const moveEval =
-      choice.moveEval ?? insightToEvaluation(features, moverInsight, actor);
+      choice.moveEval ??
+      insightToEvaluation(features, moverInsights.actor, moverInsights.leader);
     const auditScore = await resolveAuditMoveScore(
       config.engine,
       board,
       choice.intent,
       insight,
     );
-    const bestAudit = Math.max(auditScore, moverInsight.scoreCp);
+    const bestAudit = Math.max(auditScore, moverInsights.actor.scoreCp);
     const objectivelyGood =
       choice.objectivelyGood ??
-      isObjectivelyGoodMove(moverInsight.scoreCp, bestAudit);
+      isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
 
     const desertionContext = desertionContextFor(actor, moveEval);
     let outcome = evaluateMoveResponse(
@@ -274,7 +271,7 @@ export async function runHeadlessMatch(
     ply += 1;
   }
 
-  const winScore = winScoreFor(board, config.playerSide);
+  const winScore = scoreMatchOutcome(board, config.playerSide, rout);
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);

@@ -24,11 +24,13 @@ import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import { shouldDismiss } from './campaignPolicy';
 import {
   createInsightRoundHandle,
-  resolveMoverInsight,
+  resolveAuditMoveScore,
+  resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
+import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
@@ -55,6 +57,7 @@ export interface PendingVerdict {
   readonly actor: PieceState;
   readonly features: MoveFeatures;
   readonly moveEval: CandidateMoveEvaluation;
+  readonly orderQualityCp: number;
   readonly outcome: MoveDecisionOutcome;
   readonly verdict: 'MORAL_REFUSAL' | 'DESERTION_MUTINY';
 }
@@ -185,9 +188,7 @@ export class MatchSession {
   }
 
   winScore(): number {
-    if (!this.board.isGameOver() && !this.rout) return 50;
-    if (this.rout) return 0;
-    return this.board.turn() === this.playerSide ? 0 : 100;
+    return scoreMatchOutcome(this.board, this.playerSide, this.rout);
   }
 
   selectPiece(pieceId: string | null): void {
@@ -213,14 +214,24 @@ export class MatchSession {
 
     this.phase = 'thinking';
     const features = extractMoveFeatures(this.board, intent);
-    const insight = await resolveMoverInsight(
+    const insights = await resolveMoverInsights(
       this.engine,
       this.board,
       intent,
       actor,
       this.insight,
     );
-    const moveEval = insightToEvaluation(features, insight, actor);
+    const moveEval = insightToEvaluation(
+      features,
+      insights.actor,
+      insights.leader,
+    );
+    const orderQualityCp = await resolveAuditMoveScore(
+      this.engine,
+      this.board,
+      intent,
+      this.insight,
+    );
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,
@@ -235,6 +246,7 @@ export class MatchSession {
         actor,
         features,
         moveEval,
+        orderQualityCp,
         outcome,
         verdict: 'MORAL_REFUSAL',
       };
@@ -255,6 +267,7 @@ export class MatchSession {
         actor,
         features,
         moveEval,
+        orderQualityCp,
         outcome,
         verdict: 'DESERTION_MUTINY',
       };
@@ -274,6 +287,7 @@ export class MatchSession {
       actor,
       outcome,
       moveEval,
+      orderQualityCp,
       features,
     );
     this.runOpponentTurn();
@@ -333,6 +347,7 @@ export class MatchSession {
       override.overriddenPiece,
       { ...pending.outcome, verdict: 'COMPLIANT_EXECUTION' },
       pending.moveEval,
+      pending.orderQualityCp,
       pending.features,
     );
     this.pending = null;
@@ -488,6 +503,7 @@ export class MatchSession {
     actor: PieceState,
     outcome: MoveDecisionOutcome,
     moveEval: CandidateMoveEvaluation,
+    orderQualityCp: number,
     features?: MoveFeatures,
   ): void {
     const applied = this.board.applyMove(intent);
@@ -498,7 +514,7 @@ export class MatchSession {
       san,
       pieceId: actor.id,
       verdict: outcome.verdict,
-      orderQualityCp: Math.round(moveEval.deltaV_board * 100),
+      orderQualityCp,
     });
 
     const moveFeatures = features;

@@ -49,9 +49,13 @@ function parseScoreCp(tokens: readonly string[]): number {
   }
   if (kind === 'mate') {
     const mateIn = Number(value);
-    if (!Number.isSafeInteger(mateIn) || mateIn === 0) {
+    if (!Number.isSafeInteger(mateIn)) {
       throw new Error(`Invalid mate score: ${value}`);
     }
+    // Lozza reports an immediate forced mate as `mate 0` alongside the mating
+    // pv, so treat it as decisive for the side to move. Orchestration scores
+    // already-terminal positions itself and never queries the engine for them.
+    if (mateIn === 0) return 29_999;
     const sign = mateIn > 0 ? 1 : -1;
     return sign * (30_000 - Math.abs(mateIn));
   }
@@ -173,7 +177,7 @@ export class UciEngine {
       const multiPvAtMax = new Map(this.multiPvAtMax);
       if (at.size === 0 && multiPvAtMax.size === 0) {
         this.searchReject?.(
-          new Error('Engine returned bestmove without a score'),
+          new Error(`Engine returned ${line} without a score`),
         );
       } else {
         this.searchResolve?.(

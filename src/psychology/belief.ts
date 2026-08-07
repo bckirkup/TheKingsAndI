@@ -10,18 +10,6 @@ export function attentionWeight(distanceSquares: number): number {
   return Math.max(0.1, weight);
 }
 
-/**
- * Leader prior memory feeding V_leader_implied (ADR 0016 channel 2).
- * Simplified: track-record scalar blended with the ordered move value.
- */
-export function calculateLeaderImpliedValue(
-  moveLeaderValue: number,
-  leaderTrackRecord: number,
-): number {
-  const priorWeight = Math.max(0, Math.min(1, leaderTrackRecord / 100));
-  return moveLeaderValue * (0.5 + priorWeight * 0.5);
-}
-
 /** Diffuse rumor scalars across the affinity graph (ADR 0016 channel 3). */
 export function diffuseRumor(
   listener: PieceState,

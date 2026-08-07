@@ -4,7 +4,7 @@ import type { EnginePort } from '../src/engine/types';
 import type { PieceState } from '../src/psychology';
 
 import type { Leader } from './cli';
-import { createSimEngine, type SimEngineKind } from './engine';
+import { capEngineDepth, createSimEngine, type SimEngineKind } from './engine';
 import { runMatch } from './match';
 import {
   aggregateCampaign,
@@ -21,6 +21,8 @@ export interface CampaignOptions {
   readonly initialTrust?: number;
   readonly engine?: EnginePort;
   readonly engineKind?: SimEngineKind;
+  /** Harness-only tractability cap; does not alter psychology depth allocation. */
+  readonly depthCap?: number | undefined;
 }
 
 export interface CampaignResult {
@@ -60,8 +62,9 @@ export async function runCampaign(
     random.nextInt(10_000) / 10_000,
   );
   const metrics: MatchMetrics[] = [];
-  const engine =
-    options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
+  const baseEngine =
+    options.engine ?? (await createSimEngine(options.engineKind ?? 'lozza'));
+  const engine = capEngineDepth(baseEngine, options.depthCap);
 
   for (let match = 1; match <= options.matches; match += 1) {
     const matchSeed = options.seed ^ (match * 1_000_003);
