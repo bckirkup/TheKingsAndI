@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "sim": "tsx sim/cli.ts",
-    "sim:sweep": "tsx sim/sweep.ts"
+    "sim:sweep": "tsx sim/sweep.ts",
+    "dialogue:distill": "tsx scripts/distill-dialogue.ts",
+    "dialogue:check": "tsx scripts/distill-dialogue.ts --check"
   },
   "dependencies": {
     "chess.js": "1.4.0",

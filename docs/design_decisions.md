@@ -143,6 +143,11 @@ that trusted a predecessor.
 free now; a migration and a psychology rewrite later. Interacts with D27
 (cross-campaign roster memory).
 
+**Status (2026-08-07):** Still **open**. The engine-wiring / cascade backfill
+deliberately left credence as a single `{tauBenev, tauAbil}` pair. Do not resolve
+in code until an explicit decision; Milestone 5b (enemy roster / free-agent
+market) depends on it.
+
 ### D50 ⚠ Does the true evaluation get persisted in the event log?
 The audit needs it (ADR 0018) and the trust-farming detector needs it
 (ADR 0019), but persisting truth beside belief inflates the payload and places
@@ -153,6 +158,9 @@ psychology by accident.
 loader has no code path to read. This makes ADR 0013's epistemic boundary
 enforceable at rest rather than only at runtime, and it lets the audit stream be
 dropped from a shipping save without breaking play.
+
+**Status (2026-08-07):** Still **open**. `SharedSearchBroker.evaluateTrue` is
+ephemeral / orchestration-only; true eval is **not** written to the event log.
 
 ### D51 ✅ Does the King have psychology? — yes, as a mandate (ADR 0021, proposed)
 Resolved by the owner's own observation that *"the king is involved in every

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "career": {
+    "id": "career_fixture_v1",
+    "seed": 42,
+    "createdAt": 1,
+    "kingsAppointed": 1,
+    "terminal": null
+  },
+  "act": {
+    "id": "act_fixture_v1",
+    "careerId": "career_fixture_v1",
+    "kingId": "king_player",
+    "appointmentIndex": 0,
+    "diminished": false
+  },
+  "campaign": {
+    "id": "campaign_fixture_v1",
+    "actId": "act_fixture_v1",
+    "targetMatches": 5,
+    "status": "active"
+  },
+  "settings": [{ "key": "schemaVersion", "value": "1" }]
+}

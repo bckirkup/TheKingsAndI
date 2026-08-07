@@ -62,7 +62,7 @@ describe('coefficient sweep', () => {
 
   it('sensitivity: OUTCOME_TRUST_LOSS_SCALE changes match-end trust', () => {
     const cfg = ENGINE_CONFIG as unknown as Record<string, number>;
-    const original = cfg.OUTCOME_TRUST_LOSS_SCALE;
+    const original = cfg.OUTCOME_TRUST_LOSS_SCALE ?? 12;
     try {
       cfg.OUTCOME_TRUST_LOSS_SCALE = 0;
       const flat = applyMatchOutcomeTrust([samplePiece], 0)[0]?.T_i;
