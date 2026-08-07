@@ -26,10 +26,37 @@ or the model is not responding to leadership behavior at all.
 - Narration is an authored tree with no model call anywhere (ADR 0004), so the
   harness needs no "LLM off" switch and costs nothing to run.
 - Engine in deterministic mode: fixed depth, single thread, fixed hash.
+- `pnpm sim` defaults to the real Lozza engine behind a harness-only
+  `--depth-cap=4` wrapper. The documented 20-match smoke takes about 5 seconds
+  on the reference box. The wrapper records the cap in the determinism ID; it
+  does not change `calculateEngineSearchDepth`, psychology, or piece `D_i`
+  allocation.
+- CI must select the fast deterministic substrate explicitly:
+  `pnpm sim --matches=20 --leader=tyrannical --engine=fake`.
+- Stockfish production-depth runs are on-demand or nightly only. The measured
+  cost is more than 251 seconds **per match** for one production-depth
+  tyrannical match, so a Stockfish sweep requires an explicit runtime budget.
+  Never launch one as casual verification.
 - One seed per match, derived from a campaign seed; record both in the output so
   any interesting match can be replayed exactly.
 - Sweep one parameter at a time. A sweep that moves three weights at once tells
   you nothing about which one mattered.
+
+The coherent fake engine is a legitimate fast substrate for deterministic
+relative comparisons: it uses a stable FEN-derived deep-limit score plus a
+bounded error term that shrinks with depth. Its absolute rates are not real
+chess and must not be quoted as calibration results.
+
+## Verification discipline
+
+- While iterating, run only the targeted Vitest files covering the changed
+  behavior.
+- Before opening a PR, run the full gate once: lint, typecheck, full test,
+  build, the simulation smoke, and `pre-commit run --all-files`.
+- Run `pnpm test:coverage` only when the SonarQube gate requests coverage.
+- For status questions, read the committed numbers in
+  `docs/calibration/` first. Do not re-run the harness merely to repeat a
+  previously recorded result.
 
 ## Metrics to collect
 
@@ -60,14 +87,18 @@ central tension is absent and no amount of prose will hide it.
 ## Calibration procedure
 
 1. Fix the acceptance bands *before* tuning (`docs/testing_strategy.md` §4).
-2. Coarse pass: order-of-magnitude sweeps (0.1×, 1×, 10×) on the trait weights
+2. Use a deliberately small, documented run first when estimating direction
+   or cost. Record the exact engine, depth cap, seed set, match count, and wall
+   time in `docs/calibration/`.
+3. Coarse pass: order-of-magnitude sweeps (0.1×, 1×, 10×) on the trait weights
    (`w_courage`, `w_empathy`, `w_loyalty`, `w_honor`, `w_ambition`), the
    `Θ_refusal` slope/intercept, and the `ENGINE_CONFIG` benching and
-   sacrifice-shift constants — 200 matches each.
-3. Fine pass: 1,000 matches on the surviving 2–3 candidate configs.
-4. Commit the chosen weights **plus** the metrics file and a short rationale.
+   sacrifice-shift constants — 200 matches each. Stockfish requires an
+   explicit runtime budget before this step.
+4. Fine pass: 1,000 matches on the surviving 2–3 candidate configs.
+5. Commit the chosen weights **plus** the metrics file and a short rationale.
    A calibration commit without its evidence is unreviewable.
-5. Timebox the whole exercise (one week). Ship "non-degenerate and directionally
+6. Timebox the whole exercise (one week). Ship "non-degenerate and directionally
    correct," not "elegant."
 
 ## Interpreting results

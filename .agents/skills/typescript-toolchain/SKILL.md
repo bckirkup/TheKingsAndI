@@ -20,11 +20,46 @@ pnpm typecheck        # tsc --noEmit, strict, covers src/ sim/ and tests
 pnpm test             # vitest run
 pnpm test:coverage    # vitest run --coverage -> coverage/lcov.info (Sonar reads this)
 pnpm build            # vite build
-pnpm sim --matches=20 --leader=tyrannical    # headless harness; a CI gate
+pnpm sim --matches=20 --leader=tyrannical    # Lozza depth-cap-4 smoke
+pnpm sim --matches=20 --leader=tyrannical --engine=fake  # CI smoke
 pre-commit run --all-files                   # repo hygiene hooks
 ```
 
 All of the above must be green before a PR. Node 20 LTS.
+
+## Engine cost and verification scope
+
+The default simulation uses real Lozza with a harness-only `--depth-cap=4`
+wrapper. The documented 20-match smoke takes approximately 5 seconds on the
+reference box. The cap is recorded in the engine determinism ID and does not
+touch `calculateEngineSearchDepth`, psychology, or piece `D_i` allocation.
+It is a tractability proxy, not a psychology configuration knob.
+
+CI pins `--engine=fake` explicitly to remain fast and deterministic. The fake
+engine is position-coherent: a stable FEN-derived deep-limit score plus a
+bounded error that shrinks with depth. It is suitable for fast deterministic
+relative comparisons, but its absolute rates are not real chess and must not
+be reported as calibration results.
+
+Stockfish production-depth evaluation was measured at more than 251 seconds
+per match. Stockfish sweeps are therefore on-demand or nightly operations
+requiring an explicit runtime budget, never casual verification.
+
+While iterating, run only targeted Vitest files for the changed behavior. Run
+the full gate once before opening a PR:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm sim --matches=20 --leader=tyrannical
+pre-commit run --all-files
+```
+
+Run `pnpm test:coverage` only when the SonarQube quality gate requests it.
+For status questions, read committed calibration results in
+`docs/calibration/` instead of re-running the harness.
 
 ## Determinism rules the lint config enforces
 
