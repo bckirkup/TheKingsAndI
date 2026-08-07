@@ -12,17 +12,15 @@ import {
   applyNeglectSignal,
   evaluateMoveResponse,
   normalizePieceState,
-  raiseLossEstimatesAfterDesertion,
   applyOverride,
   type CandidateMoveEvaluation,
-  type DesertionContext,
   type MatchEvent,
   type MoveDecisionOutcome,
   type MoveResponseVerdict,
   type PieceState,
 } from '../psychology';
 
-import { insightToEvaluation } from './evaluation';
+import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import { shouldDismiss } from './campaignPolicy';
 import {
   createInsightRoundHandle,
@@ -31,6 +29,16 @@ import {
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
+import {
+  applyDesertionWithCascade,
+  applyPostMoveCredence,
+  applySacrificeWitnesses,
+  applyCostlySignalsToRoster,
+  attributeSacrifice,
+  desertionContextFor,
+  detectKingEndangermentCostlySignal,
+  isAvengedCapture,
+} from './psychologyHooks';
 import { createStartingRoster } from './roster';
 
 export type MatchPhase =
@@ -93,20 +101,6 @@ export interface MatchSessionConfig {
   readonly rosterPreamble?: readonly MatchEvent[];
 }
 
-function desertionContextFor(
-  piece: PieceState,
-  moveEval: CandidateMoveEvaluation,
-): DesertionContext {
-  const pLossBase = piece.rumor.pLossTeam / 1000;
-  const captureStress =
-    moveEval.P_captured > 0.35 ? moveEval.P_captured * 0.3 : 0;
-  return {
-    P_captured: moveEval.P_captured,
-    P_lossIfStay: Math.min(1, pLossBase + captureStress),
-    P_lossIfLeave: Math.min(1, pLossBase + 0.5),
-  };
-}
-
 function updatePiece(
   roster: PieceState[],
   pieceId: string,
@@ -144,6 +138,8 @@ export class MatchSession {
   private readonly opponentArchetype: OpponentArchetype;
   private readonly engine: EnginePort;
   private readonly insight: InsightRoundHandle;
+  private lastFriendlyCapturePly: number | undefined;
+  private abilityObservations = 0;
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -272,7 +268,14 @@ export class MatchSession {
       return true;
     }
 
-    this.commitPlayerMove(intent, features.san, actor, outcome, moveEval);
+    this.commitPlayerMove(
+      intent,
+      features.san,
+      actor,
+      outcome,
+      moveEval,
+      features,
+    );
     this.runOpponentTurn();
     this.maybeTriggerDismissal();
     if (this.phase === 'thinking') {
@@ -330,6 +333,7 @@ export class MatchSession {
       override.overriddenPiece,
       { ...pending.outcome, verdict: 'COMPLIANT_EXECUTION' },
       pending.moveEval,
+      pending.features,
     );
     this.pending = null;
     this.phase = 'playing';
@@ -347,25 +351,29 @@ export class MatchSession {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
 
-    this.events.push({
-      t: 'DESERTION',
-      ply: this.ply,
-      pieceId: pending.actor.id,
-      refusedMove: pending.san,
-      uStay: 0,
-      uDesert: 0,
-    });
-    this.board.withdrawPiece(pending.actor.id);
-    this.roster = this.roster.filter((piece) => piece.id !== pending.actor.id);
-    this.roster = raiseLossEstimatesAfterDesertion(
+    const cascade = applyDesertionWithCascade(
       this.roster,
-      pending.actor.id,
-    ).map(normalizePieceState);
+      {
+        actor: pending.actor,
+        refusedMove: pending.san,
+        refusedMoveEval: pending.moveEval,
+        uStay: 0,
+        uDesert: 0,
+      },
+      this.ply,
+    );
+    this.events.push(...cascade.events);
+    for (const event of cascade.events) {
+      if (event.t === 'DESERTION') {
+        this.board.withdrawPiece(event.pieceId);
+      }
+    }
+    this.roster = cascade.roster;
     this.pending = null;
     this.phase = 'playing';
     this.ply += 1;
 
-    if (this.roster.length <= 1) {
+    if (cascade.rout) {
       this.rout = true;
       this.phase = 'rout';
       this.dialogueCue = {
@@ -480,6 +488,7 @@ export class MatchSession {
     actor: PieceState,
     outcome: MoveDecisionOutcome,
     moveEval: CandidateMoveEvaluation,
+    features?: MoveFeatures,
   ): void {
     const applied = this.board.applyMove(intent);
     this.lastMove = [applied.from, applied.to];
@@ -491,10 +500,16 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp: Math.round(moveEval.deltaV_board * 100),
     });
-    this.roster = updatePiece(this.roster, actor.id, (piece) => ({
-      ...piece,
-      engagementFactor: outcome.engagementFactor,
-    }));
+
+    const moveFeatures = features;
+    void this.applyPostCommitPsychology(
+      actor,
+      outcome,
+      moveEval,
+      moveFeatures,
+      applied.capture !== undefined,
+    );
+
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
     this.ply += 1;
     this.selectedPieceId = null;
@@ -526,6 +541,63 @@ export class MatchSession {
       this.phase = 'game_over';
     } else if (this.phase === 'thinking') {
       this.phase = 'playing';
+    }
+  }
+
+  private applyPostCommitPsychology(
+    actor: PieceState,
+    outcome: MoveDecisionOutcome,
+    moveEval: CandidateMoveEvaluation,
+    features: MoveFeatures | undefined,
+    captured: boolean,
+  ): void {
+    this.abilityObservations += 1;
+    const objectivelyGood = isObjectivelyGoodMove(
+      Math.round(moveEval.deltaV_board * 100),
+      Math.round(moveEval.deltaV_board * 100),
+    );
+    this.roster = updatePiece(this.roster, actor.id, (piece) =>
+      applyPostMoveCredence(
+        { ...piece, engagementFactor: outcome.engagementFactor },
+        moveEval,
+        objectivelyGood,
+        this.abilityObservations,
+      ),
+    );
+
+    if (features !== undefined) {
+      const attribution = attributeSacrifice(
+        features,
+        moveEval.deltaV_board * 100,
+      );
+      const hero = this.roster.find((piece) => piece.id === actor.id) ?? actor;
+      const sacrifice = applySacrificeWitnesses(
+        this.roster,
+        hero,
+        attribution,
+        this.ply,
+      );
+      this.roster = sacrifice.roster;
+      this.events.push(...sacrifice.events);
+
+      const kinds: Array<
+        'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
+      > = [];
+      if (detectKingEndangermentCostlySignal(features)) {
+        kinds.push('king_endangerment');
+      }
+      if (captured && isAvengedCapture(this.lastFriendlyCapturePly, this.ply)) {
+        kinds.push('avenged_capture');
+      }
+      const costly = applyCostlySignalsToRoster(this.roster, kinds, this.ply);
+      this.roster = costly.roster;
+      this.events.push(...costly.events);
+    }
+
+    if (captured) {
+      // Opponent captured on prior ply is tracked when we lose a piece; here
+      // a player capture may avenge. Friendly loss is recorded on opponent turn.
+      this.lastFriendlyCapturePly = undefined;
     }
   }
 
