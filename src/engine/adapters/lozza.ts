@@ -1,11 +1,12 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import type { EngineEvaluation, EnginePort } from '../types';
+import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
 import { UciEngine } from '../uci';
 
 const LOZZA_BUILD = '11';
-const LOZZA_DETERMINISM_ID = `lozza-${LOZZA_BUILD}/depth-fixed/hash-default`;
+const LOZZA_HASH_MB = 16;
+const LOZZA_DETERMINISM_ID = `lozza-${LOZZA_BUILD}/depth-fixed/hash-${LOZZA_HASH_MB}/threads-1`;
 
 const defaultEnginePath = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -21,7 +22,12 @@ let sharedEngine: UciEngine | undefined;
 
 function getSharedEngine(enginePath: string): UciEngine {
   if (sharedEngine === undefined) {
-    sharedEngine = new UciEngine({ enginePath });
+    sharedEngine = new UciEngine({
+      enginePath,
+      hashMb: LOZZA_HASH_MB,
+      threads: 1,
+      multiPv: 1,
+    });
   }
   return sharedEngine;
 }
@@ -36,7 +42,12 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   const engine = getSharedEngine(enginePath);
   return {
     determinismId: LOZZA_DETERMINISM_ID,
-    async evaluate(fen: string, depth: number): Promise<EngineEvaluation> {
+    async evaluate(
+      fen: string,
+      depth: number,
+      evalProfile: EvalProfile = {},
+    ): Promise<EngineEvaluation> {
+      void evalProfile;
       const result = await engine.evaluate(fen, depth);
       return Object.freeze({
         scoreCp: result.scoreCp,

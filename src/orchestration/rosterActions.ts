@@ -1,5 +1,9 @@
 import { calculateBenchingTrustPenalties } from '../psychology/events';
-import type { MatchEvent, PieceState } from '../psychology';
+import {
+  applyCostlySignal,
+  type MatchEvent,
+  type PieceState,
+} from '../psychology';
 import type {
   BenchPreview,
   FirePreview,
@@ -11,6 +15,25 @@ import {
   rosterBenevolenceAppraisal,
   rosterLaunderingRisk,
 } from './campaignPolicy';
+
+/** Keep a failing piece — costly signal `retained_piece` (trust_dynamics §3). */
+export function applyRetainFailingPiece(
+  piece: StoredPieceState,
+  roster: readonly StoredPieceState[],
+  ply: number,
+): {
+  readonly roster: StoredPieceState[];
+  readonly events: MatchEvent[];
+} {
+  const events: MatchEvent[] = [];
+  const next = roster.map((entry) => {
+    const applied = applyCostlySignal(entry, 'retained_piece', ply);
+    events.push(applied.event);
+    return { ...entry, T_i: applied.piece.T_i };
+  });
+  void piece;
+  return { roster: next, events };
+}
 
 export function previewBench(
   piece: StoredPieceState,

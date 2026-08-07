@@ -1,23 +1,41 @@
-import { LivingBoard } from '../chess';
+import { extractMoveFeatures, LivingBoard, type MoveIntent } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
+import type { EnginePort } from '../engine/types';
 import {
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   evaluateMoveResponse,
   normalizePieceState,
-  raiseLossEstimatesAfterDesertion,
   type CandidateMoveEvaluation,
-  type DesertionContext,
   type MatchEvent,
   type PieceState,
 } from '../psychology';
 
+import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import {
+  createInsightRoundHandle,
+  resolveAuditMoveScore,
+  resolveMoverInsight,
+} from './insight';
+import {
+  applyCostlySignalsToRoster,
+  applyDesertionWithCascade,
+  applyPostMoveCredence,
+  applySacrificeWitnesses,
+  attributeSacrifice,
+  desertionContextFor,
+  detectKingEndangermentCostlySignal,
+  isAvengedCapture,
+} from './psychologyHooks';
+
 export interface HeadlessMoveChoice {
   readonly moverId: string;
+  readonly intent: MoveIntent;
   readonly san: string;
-  readonly moveEval: CandidateMoveEvaluation;
-  readonly objectivelyGood: boolean;
+  /** When omitted, orchestration resolves engine insight for the mover. */
+  readonly moveEval?: CandidateMoveEvaluation;
+  readonly objectivelyGood?: boolean;
 }
 
 export interface HeadlessLeaderPort {
@@ -26,7 +44,7 @@ export interface HeadlessLeaderPort {
     side: Side,
     random: SeededRandom,
     ply: number,
-  ): HeadlessMoveChoice | undefined;
+  ): HeadlessMoveChoice | undefined | Promise<HeadlessMoveChoice | undefined>;
   shouldOverride(random: SeededRandom, ply: number): boolean;
   onMatchEnd?(roster: readonly PieceState[], winScore: number): PieceState[];
 }
@@ -38,6 +56,7 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  readonly engine: EnginePort;
 }
 
 export interface HeadlessMatchResult {
@@ -47,20 +66,7 @@ export interface HeadlessMatchResult {
   readonly winScore: number;
   readonly rout: boolean;
   readonly refusedGoodMoves: number;
-}
-
-function desertionContextFor(
-  piece: PieceState,
-  moveEval: CandidateMoveEvaluation,
-): DesertionContext {
-  const pLossBase = piece.rumor.pLossTeam / 1000;
-  const captureStress =
-    moveEval.P_captured > 0.35 ? moveEval.P_captured * 0.3 : 0;
-  return {
-    P_captured: moveEval.P_captured,
-    P_lossIfStay: Math.min(1, pLossBase + captureStress),
-    P_lossIfLeave: Math.min(1, pLossBase + 0.5),
-  };
+  readonly determinismId: string;
 }
 
 function updatePiece(
@@ -82,15 +88,18 @@ function winScoreFor(board: LivingBoard, playerSide: Side): number {
   return board.turn() === playerSide ? 0 : 100;
 }
 
-export function runHeadlessMatch(
+export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
-): HeadlessMatchResult {
+): Promise<HeadlessMatchResult> {
   const board = LivingBoard.standard();
   let roster = config.initialRoster.map(normalizePieceState);
   const events: MatchEvent[] = [];
   let ply = 1;
   let rout = false;
   let refusedGoodMoves = 0;
+  const insight = createInsightRoundHandle();
+  let lastFriendlyCapturePly: number | undefined;
+  let abilityObservations = 0;
 
   while (ply <= config.maxPlies) {
     if (board.isGameOver()) break;
@@ -104,11 +113,19 @@ export function runHeadlessMatch(
       break;
     }
 
-    const choice = leader.chooseMove(board, side, config.random, ply);
+    const choice = await leader.chooseMove(board, side, config.random, ply);
     if (choice === undefined) break;
 
     if (side !== config.playerSide) {
+      const beforeIds = new Set(playerActiveIds);
       board.applySan(choice.san);
+      const afterIds = new Set(activePlayerPieceIds(board, config.playerSide));
+      for (const id of beforeIds) {
+        if (!afterIds.has(id)) {
+          lastFriendlyCapturePly = ply;
+          break;
+        }
+      }
       ply += 1;
       continue;
     }
@@ -119,10 +136,31 @@ export function runHeadlessMatch(
       continue;
     }
 
-    const desertionContext = desertionContextFor(actor, choice.moveEval);
+    const features = extractMoveFeatures(board, choice.intent);
+    const moverInsight = await resolveMoverInsight(
+      config.engine,
+      board,
+      choice.intent,
+      actor,
+      insight,
+    );
+    const moveEval =
+      choice.moveEval ?? insightToEvaluation(features, moverInsight, actor);
+    const auditScore = await resolveAuditMoveScore(
+      config.engine,
+      board,
+      choice.intent,
+      insight,
+    );
+    const bestAudit = Math.max(auditScore, moverInsight.scoreCp);
+    const objectivelyGood =
+      choice.objectivelyGood ??
+      isObjectivelyGoodMove(moverInsight.scoreCp, bestAudit);
+
+    const desertionContext = desertionContextFor(actor, moveEval);
     let outcome = evaluateMoveResponse(
       actor,
-      choice.moveEval,
+      moveEval,
       roster,
       desertionContext,
     );
@@ -153,7 +191,7 @@ export function runHeadlessMatch(
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
         });
-        if (choice.objectivelyGood) {
+        if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({
             ...piece,
@@ -166,20 +204,25 @@ export function runHeadlessMatch(
     }
 
     if (outcome.verdict === 'DESERTION_MUTINY') {
-      events.push({
-        t: 'DESERTION',
+      const cascade = applyDesertionWithCascade(
+        roster,
+        {
+          actor,
+          refusedMove: choice.san,
+          refusedMoveEval: moveEval,
+          uStay: 0,
+          uDesert: 0,
+        },
         ply,
-        pieceId: actor.id,
-        refusedMove: choice.san,
-        uStay: 0,
-        uDesert: 0,
-      });
-      board.withdrawPiece(actor.id);
-      roster = roster.filter((piece) => piece.id !== actor.id);
-      roster = raiseLossEstimatesAfterDesertion(roster, actor.id).map(
-        normalizePieceState,
       );
-      if (roster.length <= 1) {
+      events.push(...cascade.events);
+      for (const event of cascade.events) {
+        if (event.t === 'DESERTION') {
+          board.withdrawPiece(event.pieceId);
+        }
+      }
+      roster = cascade.roster;
+      if (cascade.rout) {
         rout = true;
         break;
       }
@@ -187,7 +230,7 @@ export function runHeadlessMatch(
       continue;
     }
 
-    board.applySan(choice.san);
+    const applied = board.applySan(choice.san);
     events.push({
       t: 'MOVE',
       ply,
@@ -195,10 +238,39 @@ export function runHeadlessMatch(
       pieceId: actor.id,
       verdict: outcome.verdict,
     });
-    roster = updatePiece(roster, actor.id, (piece) => ({
-      ...piece,
-      engagementFactor: outcome.engagementFactor,
-    }));
+    abilityObservations += 1;
+    roster = updatePiece(roster, actor.id, (piece) =>
+      applyPostMoveCredence(
+        { ...piece, engagementFactor: outcome.engagementFactor },
+        moveEval,
+        objectivelyGood,
+        abilityObservations,
+      ),
+    );
+
+    const attribution = attributeSacrifice(features, auditScore);
+    const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
+    const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
+    roster = sacrifice.roster;
+    events.push(...sacrifice.events);
+
+    const kinds: Array<
+      'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
+    > = [];
+    if (detectKingEndangermentCostlySignal(features)) {
+      kinds.push('king_endangerment');
+    }
+    if (
+      applied.capture !== undefined &&
+      isAvengedCapture(lastFriendlyCapturePly, ply)
+    ) {
+      kinds.push('avenged_capture');
+      lastFriendlyCapturePly = undefined;
+    }
+    const costly = applyCostlySignalsToRoster(roster, kinds, ply);
+    roster = costly.roster;
+    events.push(...costly.events);
+
     ply += 1;
   }
 
@@ -214,5 +286,6 @@ export function runHeadlessMatch(
     winScore,
     rout,
     refusedGoodMoves,
+    determinismId: config.engine.determinismId,
   };
 }

@@ -26,6 +26,12 @@ export {
 } from './credence';
 export { calculateEngineSearchDepth } from './depth';
 export {
+  applyDesertionWithCascade,
+  buildDesertionContexts,
+  desertionContextFor,
+} from './cascade';
+export type { CascadeResult, DesertionDeparture } from './cascade';
+export {
   calculateLambda,
   calculatePain,
   calculateUDesert,

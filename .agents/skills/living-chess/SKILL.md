@@ -18,16 +18,14 @@ reuses the same telemetry as a leadership-development simulation.
 
 ## Current status (check before assuming otherwise)
 
-Milestone 1. Landed: the Milestone 0 scaffolding (`src/core/` seeded PRNG and
-canonical encoder, `sim/` harness skeleton, CI, Sonar gate) and the chess
-substrate — `src/chess/` wraps chess.js with a square → `PieceId` map and emits
-threat features (`P_captured`, peer safety deltas, King safety, material), and
-`src/engine/`'s query barrier — `EnginePort`, `buildInsightRound`,
-`resolveInsightRound`, the `(determinismId, fen, depth, evalProfile)` cache, and
-the round digest (ADR 0034). Not yet written: the stockfish.wasm pool and the
-shared-search broker behind that port (Milestone 1.3/1.3b), `psychology/`,
-`orchestration/`, `ui/`, `persistence/`, `narrative/`. If a task asks to "fix"
-or "extend" a component, first verify it exists.
+Milestones 1–6 are substantially in tree: chess substrate; Stockfish 1.3 pool +
+shared-search broker (`src/engine/`); psychology + orchestration with live
+cascade/witness/sacrifice/costly-signal wiring; sim harness with sweeps;
+playable UI; single-player persistence/campaign; authored narration. **Not**
+done: Milestone 5b seminar/cohort tasks; supportive desertion calibration; open
+**D49** / **D50**. If a task asks to "fix" or "extend" a component, first
+verify current behaviour — stubs are rarer than the old Milestone-1 banner
+implied.
 
 ## Orientation order
 

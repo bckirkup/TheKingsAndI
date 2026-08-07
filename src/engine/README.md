@@ -4,10 +4,12 @@ Engine ports and workers live here. Nothing outside this layer may learn which
 engine exists (ADR 0020), and results leave it only through the per-ply query
 barrier (ADR 0034).
 
-Landed: the port, the barrier, the Lozza MIT adapter (`adapters/lozza.ts`),
-the UCI client, and the conformance corpus (Milestone 1.3b). Not yet written:
-the stockfish.wasm pool and the shared-search / private-scoring broker
-(Milestone 1.3).
+Landed (Milestone 1.3 / 1.3b / 1.3c):
+
+- `EnginePort`, the barrier, the evaluation cache, and the round digest
+- Lozza MIT adapter (`adapters/lozza.ts`) + conformance corpus
+- Stockfish.js 18 lite-single WASM pool (`adapters/stockfish.ts`)
+- Shared-search / private-scoring broker (`broker.ts`, ADR 0017)
 
 ```ts
 const requests = buildInsightRound({ fen, seats });        // pure, PieceId-ordered
@@ -16,6 +18,11 @@ const bundle = requireComplete(
 );
 // only now may psychology run — synchronously, iterating bundle.insights
 ```
+
+Pinned Stockfish build: npm `stockfish@18.0.8` (GPL-3.0), flavor
+`stockfish-18-lite-single`, `Hash=16`, `Threads=1`, shared search at
+`D_max=16`. Determinism id:
+`stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`.
 
 Rules this layer enforces rather than documents:
 
@@ -35,5 +42,7 @@ Rules this layer enforces rather than documents:
   state; consuming it as results arrive diverges even when every piece saw the
   right insight (ADR 0034 §7).
 
-The true `D_max` evaluation may be collected here for the audit path, and travels
-to `orchestration/` only — never into the bundle psychology reads (ADR 0013).
+The true `D_max` evaluation may be collected here for the audit path
+(`SharedSearchBroker.evaluateTrue`), and travels to `orchestration/` only —
+never into the bundle psychology reads (ADR 0013). It is not persisted into the
+event log while D50 remains open.

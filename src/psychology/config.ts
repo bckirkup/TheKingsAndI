@@ -57,6 +57,8 @@ export const ENGINE_CONFIG = {
   COSTLY_SIGNAL_DECLINED_SACRIFICE: 15,
   COSTLY_SIGNAL_RETAINED_PIECE: 5,
   COSTLY_SIGNAL_AVENGED_CAPTURE: 10,
+  /** Plies within which a recapture counts as avenged (calibration knob). */
+  AVENGED_CAPTURE_WINDOW_PLIES: 3,
   /** Witness desertion appraisal shifts (ADR 0018). */
   WITNESS_BRAVE_AFFINITY_GAIN: 20,
   WITNESS_BRAVE_TRUST_LOSS: 10,

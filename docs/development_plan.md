@@ -166,6 +166,29 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.10 | Career victory condition: realized position quality sustained above `V_own(player)` — the army exceeding the leader's ceiling |
 | 5.5 | Three terminal states with distinct epilogues (ADR 0021 §6.3): checkmate (outplayed, roster spent), **dismissal** (roster intact, they still want the win — the middle outcome, not the worst), rout (roster shattered). Mandate propagates through rumor; King's patience is a calibration knob shared with D26 |
 
+### Milestone 5 status (single-player spine vs seminar)
+
+The **single-player career spine** (5.1–5.7, 5.8o/m, 5.9–5.10, 5.5) is implemented.
+Seminar / cohort / multi-commander tasks below are **not** silently incomplete
+Milestone 5 — they are tracked as **Milestone 5b**.
+
+## Milestone 5b — Seminar, cohort & multi-commander (deferred)
+
+| Task | Deliverable |
+|---|---|
+| 5.8j | Local world host (seminar / LAN / friend) |
+| 5.8k | Facilitator audit tooling |
+| 5.8l | Curriculum-bounded world lifecycle |
+| 5.8r | Commendations / awards |
+| 5.8p | Counterfactual oracle re-runs |
+| 5.8q | Learning delta across acts |
+| 5.8n | Pool × curriculum scarcity sweep |
+| 5.8g / 5.8h | Cohort registry + facilitator dashboard |
+| 5.8i | Consumer pacing profile |
+| 5.8a / 5.8d | Enemy roster psychology + free-agent market |
+| 5.8b / 5.8c | Multi-act appointments + King's results channel |
+| 5.8e / 5.8f | Retirement + signed passports (**blocked on open D49 for keyed credence**) |
+
 ## Milestone 6 — Narration layer (≈1.5 weeks)
 
 | Task | Deliverable |

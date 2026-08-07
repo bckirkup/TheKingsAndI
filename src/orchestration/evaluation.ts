@@ -1,7 +1,39 @@
 import type { MoveFeatures } from '../chess';
-import type { CandidateMoveEvaluation } from '../psychology';
+import type { EngineEvaluation } from '../engine/types';
+import {
+  calculateLeaderImpliedValue,
+  type CandidateMoveEvaluation,
+  type PieceState,
+} from '../psychology';
 
-/** Map geometric board features to psychology evaluation inputs. */
+/**
+ * Map a piece's depth-D_i engine view (post-move, mover-side cp) plus geometric
+ * capture/peer features into psychology's CandidateMoveEvaluation (ADR 0013).
+ */
+export function insightToEvaluation(
+  features: MoveFeatures,
+  insight: EngineEvaluation,
+  actor: PieceState,
+): CandidateMoveEvaluation {
+  const deltaV_board = insight.scoreCp / 100;
+  const vLeaderImplied = calculateLeaderImpliedValue(
+    deltaV_board,
+    actor.credence.tauAbil,
+  );
+  return {
+    moveNotation: features.san,
+    deltaV_board,
+    vLeaderImplied,
+    deltaV_capture: features.deltaVCapture,
+    P_captured: features.pCaptured,
+    peerSafetyDeltas: features.peerSafetyDeltas,
+  };
+}
+
+/**
+ * @deprecated Geometric heuristic retained only for comparison fixtures.
+ * Play and sim must use insightToEvaluation.
+ */
 export function featuresToEvaluation(
   features: MoveFeatures,
   leaderImpliedBias = 0,
@@ -19,4 +51,13 @@ export function featuresToEvaluation(
     P_captured: features.pCaptured,
     peerSafetyDeltas: features.peerSafetyDeltas,
   };
+}
+
+/** True when the commanded move's mover-side cp is within tolerance of best. */
+export function isObjectivelyGoodMove(
+  moveScoreCp: number,
+  bestScoreCp: number,
+  toleranceCp = 30,
+): boolean {
+  return moveScoreCp >= bestScoreCp - toleranceCp;
 }

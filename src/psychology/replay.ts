@@ -1,6 +1,7 @@
 import { canonicalJson } from '../core/canonicalJson';
 import { createSeededRandom } from '../core/random';
-import { raiseLossEstimatesAfterDesertion, shouldDesert } from './desertion';
+import { applyDesertionWithCascade } from './cascade';
+import { shouldDesert } from './desertion';
 import { appendEvent } from './events';
 import { applyOverride } from './override';
 import { defaultCredence, defaultRumor, normalizePieceState } from './reducers';
@@ -12,7 +13,6 @@ import type {
   ReplayResult,
 } from './types';
 import { evaluateMoveResponse } from './verdict';
-import { appraiseDesertionWitness } from './witness';
 
 function findPiece(
   roster: readonly PieceState[],
@@ -78,33 +78,25 @@ function commitPly(
       replayPly.desertionContext === undefined
         ? undefined
         : shouldDesert(actor, replayPly.desertionContext, roster);
-    let nextEvents = appendEvent(events, {
-      t: 'DESERTION',
-      ply,
-      pieceId: actor.id,
-      refusedMove: replayPly.moveEval.moveNotation,
-      uStay: desertion?.uStay ?? 0,
-      uDesert: desertion?.uDesert ?? 0,
-    });
-    const witnesses = roster.filter(
-      (piece) => piece.id !== actor.id && piece.role !== 'King',
-    );
-    let nextRoster = roster;
-    for (const witness of witnesses) {
-      const appraisal = appraiseDesertionWitness(
-        witness,
+    const cascade = applyDesertionWithCascade(
+      roster,
+      {
         actor,
-        replayPly.moveEval,
-        ply,
-      );
-      nextRoster = nextRoster.map((piece) =>
-        piece.id === witness.id ? appraisal.witness : piece,
-      );
-      nextEvents = appendEvent(nextEvents, appraisal.event);
+        refusedMove: replayPly.moveEval.moveNotation,
+        refusedMoveEval: replayPly.moveEval,
+        uStay: desertion?.uStay ?? 0,
+        uDesert: desertion?.uDesert ?? 0,
+      },
+      ply,
+    );
+    let nextEvents = events;
+    for (const event of cascade.events) {
+      nextEvents = appendEvent(nextEvents, event);
     }
-    nextRoster = raiseLossEstimatesAfterDesertion(nextRoster, actor.id);
-    nextRoster = nextRoster.filter((piece) => piece.id !== actor.id);
-    return { roster: nextRoster.map(normalizePieceState), events: nextEvents };
+    return {
+      roster: cascade.roster.map(normalizePieceState),
+      events: nextEvents,
+    };
   }
 
   const nextEvents = appendEvent(events, {

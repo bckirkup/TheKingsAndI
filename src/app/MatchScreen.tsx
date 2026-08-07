@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { createFakeEnginePort } from '../engine/fake';
 import { lineFor } from '../narrative';
 import type { OpponentArchetype } from '../persistence';
 import {
@@ -37,6 +38,7 @@ function useMatchSession(
     () =>
       new MatchSession({
         seed,
+        engine: createFakeEnginePort('ui-fake/depth-fixed'),
         initialRoster: activeLineup(initialRoster),
         opponentArchetype,
         rosterPreamble,
@@ -148,9 +150,11 @@ export function MatchScreen({
                 ? 'Match over'
                 : phase === 'awaiting_player'
                   ? 'Awaiting your decision'
-                  : board.turn() === playerSide
-                    ? 'Your command'
-                    : 'Opponent moving…'}
+                  : phase === 'thinking'
+                    ? 'Consulting the pieces…'
+                    : board.turn() === playerSide
+                      ? 'Your command'
+                      : 'Opponent moving…'}
         </p>
       </header>
 
@@ -165,7 +169,9 @@ export function MatchScreen({
                 ? {}
                 : { lastMove: [snapshot.lastMove[0], snapshot.lastMove[1]] })}
               onMove={(intent) => {
-                session.submitPlayerIntent(intent);
+                void session.submitPlayerIntent(intent).then(() => {
+                  refresh();
+                });
                 refresh();
               }}
             />

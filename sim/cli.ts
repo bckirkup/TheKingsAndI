@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 
 import { runCampaign } from './campaign';
 import { assertSmokeBounds } from './degeneracy';
+import type { SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
 
 export const LEADERS = [
@@ -17,11 +18,14 @@ export const LEADERS = [
 
 export type Leader = (typeof LEADERS)[number];
 
+export const ENGINES = ['fake', 'lozza', 'stockfish'] as const;
+
 export interface SimulationOptions {
   readonly matches: number;
   readonly leader: Leader;
   readonly seed: number;
   readonly campaign: number;
+  readonly engine: SimEngineKind;
 }
 
 function parseArguments(
@@ -34,6 +38,7 @@ function parseArguments(
     'seed',
     'campaign',
     'out',
+    'engine',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -72,11 +77,16 @@ function parseArguments(
   if (values.has('out') && values.get('out') === '') {
     throw new Error('--out must not be empty.');
   }
+  const engineValue = values.get('engine') ?? 'fake';
+  if (!ENGINES.includes(engineValue as SimEngineKind)) {
+    throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
+  }
   return {
     matches,
     campaign,
     leader: leaderValue as Leader,
     seed,
+    engine: engineValue as SimEngineKind,
     out: values.get('out'),
   };
 }
@@ -86,10 +96,11 @@ export { runCampaign, runSimulation } from './campaign';
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
-  const result = runCampaign({
+  const result = await runCampaign({
     matches: options.campaign,
     leader: options.leader,
     seed: options.seed,
+    engineKind: options.engine,
   });
   const csv = renderCsv(result.metrics);
   if (options.out !== undefined) {
@@ -100,7 +111,7 @@ async function main(): Promise<void> {
     assertSmokeBounds(options.leader, result.summary);
   }
   console.log(
-    `Milestone 3 harness: ${result.metrics.length} matches for ${options.leader}.`,
+    `Milestone 3 harness: ${result.metrics.length} matches for ${options.leader} (${result.determinismId}).`,
   );
   console.log(
     `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
@@ -111,6 +122,13 @@ async function main(): Promise<void> {
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+const isMain =
+  process.argv[1] !== undefined &&
+  import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+
+if (isMain) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
 }

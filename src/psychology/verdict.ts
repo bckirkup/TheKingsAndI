@@ -99,29 +99,34 @@ export function evaluateMoveResponse(
   };
 }
 
+/**
+ * Re-evaluate desertion for every non-King after a departure (ADR 0011).
+ * Uses `shouldDesert` directly — never a fake commanded move.
+ */
 export function evaluateDesertionCascade(
   roster: readonly PieceState[],
   desertionContexts: Readonly<Record<string, DesertionContext>>,
 ): readonly {
   readonly pieceId: string;
-  readonly outcome: MoveDecisionOutcome;
+  readonly uStay: number;
+  readonly uDesert: number;
 }[] {
-  const results: { pieceId: string; outcome: MoveDecisionOutcome }[] = [];
+  const results: {
+    pieceId: string;
+    uStay: number;
+    uDesert: number;
+  }[] = [];
   const active = roster.filter((piece) => piece.role !== 'King');
-  const dummyMove: CandidateMoveEvaluation = {
-    moveNotation: '',
-    deltaV_board: 0,
-    vLeaderImplied: 0,
-    deltaV_capture: 0,
-    P_captured: 0,
-    peerSafetyDeltas: {},
-  };
   for (const piece of active) {
     const context = desertionContexts[piece.id];
     if (context === undefined) continue;
-    const outcome = evaluateMoveResponse(piece, dummyMove, roster, context);
-    if (outcome.verdict === 'DESERTION_MUTINY') {
-      results.push({ pieceId: piece.id, outcome });
+    const decision = shouldDesert(piece, context, roster);
+    if (decision.desert) {
+      results.push({
+        pieceId: piece.id,
+        uStay: decision.uStay,
+        uDesert: decision.uDesert,
+      });
     }
   }
   return results;

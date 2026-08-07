@@ -1,0 +1,160 @@
+import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
+import { EnginePool, type EnginePoolOptions } from './pool';
+import type { DepthLadder } from './uci';
+
+/** Shared-search depth ceiling (architecture §5, ADR 0017). */
+export const SHARED_SEARCH_D_MAX = 16;
+
+export interface SharedSearchBrokerOptions extends EnginePoolOptions {
+  readonly determinismId: string;
+  /** Override D_max for tests (must stay fixed in production). */
+  readonly dMax?: number;
+}
+
+export interface SharedSearchBroker extends EnginePort {
+  /**
+   * True evaluation at D_max for the orchestration audit path only.
+   * Must never reach psychology (ADR 0013). Ephemeral — not persisted (D50 open).
+   */
+  evaluateTrue(fen: string): Promise<EngineEvaluation>;
+  /** MultiPV lines at D_max from the shared tree (sacrifice / declined-sac facts). */
+  multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]>;
+  dispose(): Promise<void>;
+  readonly poolSize: number;
+}
+
+interface InflightShared {
+  readonly promise: Promise<DepthLadder>;
+}
+
+/**
+ * Apply opaque eval-profile private scoring (ADR 0017).
+ *
+ * Weight schema is still open (D43). Until psychology defines it, an empty
+ * profile is identity; non-empty profiles receive a deterministic integer bias
+ * from the sum of truncated numeric values so distinct profiles cannot silently
+ * collapse to the shared score when the barrier cache is cold.
+ */
+export function applyPrivateScoring(
+  base: EngineEvaluation,
+  evalProfile: EvalProfile,
+): EngineEvaluation {
+  let bias = 0;
+  for (const value of Object.values(evalProfile)) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      bias += Math.trunc(value);
+    }
+  }
+  if (bias === 0) {
+    return Object.freeze({
+      scoreCp: base.scoreCp,
+      pv: Object.freeze([...base.pv]),
+    });
+  }
+  return Object.freeze({
+    scoreCp: base.scoreCp + bias,
+    pv: Object.freeze([...base.pv]),
+  });
+}
+
+function freezeEval(result: {
+  readonly scoreCp: number;
+  readonly pv: readonly string[];
+}): EngineEvaluation {
+  return Object.freeze({
+    scoreCp: result.scoreCp,
+    pv: Object.freeze([...result.pv]),
+  });
+}
+
+function ladderAt(ladder: DepthLadder, depth: number): EngineEvaluation {
+  for (let d = depth; d >= 1; d -= 1) {
+    const hit = ladder.at.get(d);
+    if (hit !== undefined) return freezeEval(hit);
+  }
+  const fallback = ladder.multiPvAtMax.get(1);
+  if (fallback === undefined) {
+    throw new Error(`Shared search produced no score for depth ${depth}`);
+  }
+  return freezeEval(fallback);
+}
+
+/**
+ * Shared search + private per-piece scoring broker (ADR 0017).
+ *
+ * One canonical MultiPV search at D_max per FEN; seats at D_i receive a
+ * truncation of that tree, then private scoring under their eval profile.
+ */
+export async function createSharedSearchBroker(
+  options: SharedSearchBrokerOptions,
+): Promise<SharedSearchBroker> {
+  const dMax = options.dMax ?? SHARED_SEARCH_D_MAX;
+  if (!Number.isSafeInteger(dMax) || dMax < 1) {
+    throw new RangeError('dMax must be a positive integer.');
+  }
+  const pool = await EnginePool.create({
+    enginePath: options.enginePath,
+    hashMb: options.hashMb ?? 16,
+    threads: 1,
+    multiPv: options.multiPv ?? 3,
+    ...(options.size !== undefined ? { size: options.size } : {}),
+  });
+
+  const sharedByFen = new Map<string, DepthLadder>();
+  const inflight = new Map<string, InflightShared>();
+
+  async function ensureShared(fen: string): Promise<DepthLadder> {
+    const cached = sharedByFen.get(fen);
+    if (cached !== undefined) return cached;
+    const pending = inflight.get(fen);
+    if (pending !== undefined) return pending.promise;
+    const promise = pool.searchLadder(fen, dMax).then((ladder) => {
+      sharedByFen.set(fen, ladder);
+      inflight.delete(fen);
+      return ladder;
+    });
+    inflight.set(fen, { promise });
+    try {
+      return await promise;
+    } catch (cause) {
+      inflight.delete(fen);
+      throw cause;
+    }
+  }
+
+  return {
+    determinismId: options.determinismId,
+    poolSize: pool.size,
+    async evaluate(
+      fen: string,
+      depth: number,
+      evalProfile: EvalProfile = {},
+    ): Promise<EngineEvaluation> {
+      if (!Number.isSafeInteger(depth) || depth < 1) {
+        throw new RangeError('Depth must be a positive integer.');
+      }
+      const capped = Math.min(depth, dMax);
+      const ladder = await ensureShared(fen);
+      return applyPrivateScoring(ladderAt(ladder, capped), evalProfile);
+    },
+    async evaluateTrue(fen: string): Promise<EngineEvaluation> {
+      const ladder = await ensureShared(fen);
+      return ladderAt(ladder, dMax);
+    },
+    async multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]> {
+      const ladder = await ensureShared(fen);
+      const lines: EngineEvaluation[] = [];
+      const keys = [...ladder.multiPvAtMax.keys()].sort((a, b) => a - b);
+      for (const key of keys) {
+        const line = ladder.multiPvAtMax.get(key);
+        if (line !== undefined) lines.push(freezeEval(line));
+      }
+      return Object.freeze(lines);
+    },
+    async dispose(): Promise<void> {
+      sharedByFen.clear();
+      inflight.clear();
+      await pool.dispose();
+    },
+  };
+}

@@ -116,4 +116,52 @@ describe('schema migrations', () => {
       true,
     );
   });
+
+  it('loads a v1 fixture and runs declared migrations without drift', async () => {
+    const fixture = (
+      await import('./fixtures/persistence-v1-career.json', {
+        with: { type: 'json' },
+      })
+    ).default as {
+      schemaVersion: number;
+      career: { id: string; seed: number };
+      campaign: { id: string; targetMatches: number };
+      settings: readonly { key: string; value: string }[];
+    };
+
+    expect(fixture.schemaVersion).toBe(1);
+    const db = resetDatabaseForTests('migration-fixture-v1');
+    await db.open();
+    for (const step of MIGRATIONS) {
+      if (step.version <= fixture.schemaVersion) {
+        await step.upgrade(db);
+      }
+    }
+    await db.settings.put({
+      key: 'schemaVersion',
+      value: String(SCHEMA_VERSION),
+    });
+    await db.careers.put({
+      id: fixture.career.id,
+      seed: fixture.career.seed,
+      schemaVersion: SCHEMA_VERSION,
+      outcome: 'ongoing',
+      actIds: ['act_fixture_v1'],
+      createdAt: 1,
+    });
+    await db.campaigns.put({
+      id: fixture.campaign.id,
+      actId: 'act_fixture_v1',
+      matchIds: [],
+      targetMatches: fixture.campaign.targetMatches,
+      cultureDriftFoldVersion: 'v1',
+    });
+
+    const version = await assertSchemaVersion(db);
+    expect(version).toBe(SCHEMA_VERSION);
+    const career = await db.careers.get(fixture.career.id);
+    expect(career?.seed).toBe(42);
+    const campaign = await db.campaigns.get(fixture.campaign.id);
+    expect(campaign?.targetMatches).toBe(5);
+  });
 });

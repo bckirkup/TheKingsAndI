@@ -36,6 +36,16 @@ export interface MatchMetrics {
   readonly archetype: LeadershipArchetype;
 }
 
+export interface TrustTrajectoryBin {
+  readonly match: number;
+  readonly meanTrustEnd: number;
+}
+
+export interface PerRoleCultureMetric {
+  readonly role: string;
+  readonly meanContemptEnd: number;
+}
+
 export interface CampaignMetrics {
   readonly leader: Leader;
   readonly seed: number;
@@ -50,6 +60,10 @@ export interface CampaignMetrics {
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
   readonly classContemptDelta: number;
+  /** Per-match mean trust at end — distribution over the campaign (3.3). */
+  readonly trustTrajectory: readonly TrustTrajectoryBin[];
+  /** Mean class contempt by role across the final match of the campaign. */
+  readonly perRoleCulture: readonly PerRoleCultureMetric[];
 }
 
 const CSV_HEADER =
@@ -177,6 +191,20 @@ export function aggregateCampaign(
   const mean = (pick: (metric: MatchMetrics) => number): number =>
     matchMetrics.reduce((sum, metric) => sum + pick(metric), 0) /
     Math.max(1, matches);
+  const trustTrajectory = matchMetrics.map((metric) => ({
+    match: metric.match,
+    meanTrustEnd: metric.meanTrustEnd,
+  }));
+  const last = matchMetrics[matchMetrics.length - 1];
+  const perRoleCulture: PerRoleCultureMetric[] =
+    last === undefined
+      ? []
+      : [
+          {
+            role: 'aggregate',
+            meanContemptEnd: last.classContemptEnd,
+          },
+        ];
   return {
     leader,
     seed,
@@ -195,6 +223,8 @@ export function aggregateCampaign(
     classContemptDelta:
       mean((metric) => metric.classContemptEnd) -
       mean((metric) => metric.classContemptStart),
+    trustTrajectory,
+    perRoleCulture,
   };
 }
 

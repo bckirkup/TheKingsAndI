@@ -20,12 +20,12 @@ built. *(Internal codename: Living Chess.)*
 
 ## Status
 
-**Milestone 1 — building.** Milestone 0 landed the scaffolding: TypeScript
-strict, the seeded PRNG, the canonical encoder, and the headless harness
-skeleton. The chess substrate now sits on top of it — a chess.js wrapper that
-adds persistent piece identity, plus the threat features the psychology engine
-will consume. The engine broker (1.3) and the psychology reducers are next, so
-there is no game yet.
+**Milestones 1–6 substantially landed.** Chess substrate, Stockfish 1.3 pool +
+shared-search broker, psychology with live cascade/witness/sacrifice/costly-signal
+wiring, headless harness (including coefficient sweeps), playable UI slice,
+single-player campaign/persistence spine, and authored narration are in tree.
+Still open: supportive-desertion calibration, **Milestone 5b** (seminar/cohort),
+and architecture decisions **D49** / **D50**.
 
 ```bash
 pnpm install

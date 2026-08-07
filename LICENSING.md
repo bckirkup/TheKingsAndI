@@ -55,6 +55,12 @@ of Lozza and Blunder, so dependency scanners will flag them as unknown.
 Full analysis and open items D46/D47 in
 [`docs/engine_licensing.md`](docs/engine_licensing.md).
 
+**Pinned Stockfish build (re-verify license on bump):** npm package
+`stockfish@18.0.8` (nmrugg/stockfish.js, GPL-3.0), flavor
+`stockfish-18-lite-single`, deterministic settings `Hash=16` / `Threads=1` /
+shared search `D_max=16`. Determinism id recorded on every match:
+`stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`.
+
 ## Trademark
 
 *The King and I* is a well-known musical title. The software name pluralizes it

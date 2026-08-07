@@ -4,8 +4,12 @@
 *The Kings and I* (internal codename: Living Chess): chess where the pieces have
 persistent identities, memory, trust, class prejudice, and the ability to refuse
 orders or walk off the board. Doubles as a leadership-dynamics simulation.
-**Status: Milestone 1 — scaffolding and the chess substrate (`src/chess/`, piece
-identity + threat features) have landed; there is no game yet.**
+**Status: Milestones 1–6 substantially landed on `main`.** Chess substrate,
+Stockfish 1.3 pool + shared-search broker, psychology + live cascade/witness/
+sacrifice/costly-signal wiring, headless harness with sweeps, playable UI slice,
+single-player persistence/campaign spine, and authored narration are in tree.
+**Open:** Milestone 3 supportive-desertion calibration; **Milestone 5b** seminar /
+cohort / multi-commander tasks; architecture decisions **D49** and **D50**.
 
 ## Read This First
 | Doc | Purpose |
@@ -21,7 +25,8 @@ identity + threat features) have landed; there is no game yet.**
 | `LICENSING.md` | Dual-license terms and the Stockfish GPL constraint |
 | `docs/engine_licensing.md` | `EnginePort`, engine swap strategy, verified permissive candidates |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
-| `docs/development_plan.md` | Milestones 0–8 and their exit criteria |
+| `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
+| `docs/calibration/milestone-3-engine-wired.md` | Post-wiring calibration report |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
 | `docs/risks_and_open_questions.md` | Known hazards |
@@ -43,7 +48,8 @@ identity + threat features) have landed; there is no game yet.**
    layers below it (`app > ui > orchestration > psychology > chess > engine`).
    Importing *upward* is the lint error. `psychology/` is stricter still: it
    receives board features as plain data, so it may import `core/` and chess
-   *types*, never `chess/` values, `engine/`, or `ui/`.
+   *types*, never `chess/` values, `engine/`, or `ui/`. Orchestration and the
+   app composition root may import `engine/` (barrier + port construction).
 5. **Event log is the source of truth.** Audits, debriefs, and culture drift are
    folds over the log, never separately maintained counters.
 6. **Every config knob gets a golden test AND a sensitivity test.** See the
@@ -103,27 +109,28 @@ pre-commit install
 ## Validation Commands
 ```bash
 pre-commit run --all-files
-pnpm lint          # eslint + prettier check
-pnpm typecheck     # tsc --noEmit, strict
-pnpm test          # vitest run
+pnpm lint # eslint + prettier check
+pnpm typecheck # tsc --noEmit, strict
+pnpm test # vitest run
 pnpm test:coverage # lcov for the SonarQube gate (ADR 0033)
-pnpm sim --matches=20 --leader=tyrannical   # headless balance smoke
+pnpm sim --matches=20 --leader=tyrannical # headless balance smoke
+pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4
 ```
 See the `typescript-toolchain` and `sonarqube-quality-gate` skills.
 
 ## Planned Layout
 ```
-src/core/           seeded PRNG, canonical encoder, deterministic math — depends on nothing
-src/app/            React shell, routing, theme provider, onboarding tracks
-src/ui/             board, overlays, gauges, dashboards (no game logic)
-src/orchestration/  match loop; only place allowed to mutate match state
-src/psychology/     pure reducers: utility, verdicts, trust/affinity/class bias
-src/chess/          chess.js wrapper, piece-identity map, threat features
-src/engine/         stockfish.wasm pool + insight broker
-src/narrative/      template dialogue + optional LLM adapter
-src/persistence/    Dexie schema, migrations, roster export/import
-sim/                headless CLI harness, scripted AI leaders, metrics
-docs/               planning documents and ADRs
+src/core/ seeded PRNG, canonical encoder, deterministic math — depends on nothing
+src/app/ React shell, routing, theme provider, onboarding tracks
+src/ui/ board, overlays, gauges, dashboards (no game logic)
+src/orchestration/ match loop; only place allowed to mutate match state
+src/psychology/ pure reducers: utility, verdicts, trust/affinity/class bias
+src/chess/ chess.js wrapper, piece-identity map, threat features
+src/engine/ stockfish.wasm pool + insight broker
+src/narrative/ template dialogue + optional LLM adapter
+src/persistence/ Dexie schema, migrations, roster export/import
+sim/ headless CLI harness, scripted AI leaders, metrics
+docs/ planning documents and ADRs
 ```
 
 ## Licensing Hygiene

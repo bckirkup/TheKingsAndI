@@ -68,9 +68,11 @@ export default tseslint.config(
     },
   },
   {
+    // App is a composition root: it may construct an EnginePort (ADR 0020)
+    // and inject it into orchestration. UI still must not.
     name: 'app-layer-boundary',
     files: ['src/app/**'],
-    rules: boundaryRule(['**/engine/**']),
+    rules: boundaryRule([]),
   },
   {
     name: 'ui-layer-boundary',
@@ -78,9 +80,11 @@ export default tseslint.config(
     rules: boundaryRule([...higherLayers.ui, '**/engine/**']),
   },
   {
+    // Orchestration owns the barrier call site (ADR 0034) and may import
+    // engine types + barrier/cache/round. Adapters stay constructed at roots.
     name: 'orchestration-layer-boundary',
     files: ['src/orchestration/**'],
-    rules: boundaryRule([...higherLayers.orchestration, '**/engine/**']),
+    rules: boundaryRule(higherLayers.orchestration),
   },
   {
     name: 'psychology-layer-boundary',
