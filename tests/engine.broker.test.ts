@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import {
   applyPrivateScoring,
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
   createStockfishPort,
   disposeStockfishPort,
@@ -46,7 +48,17 @@ describe('shared-search broker (Stockfish)', () => {
     expect(stockfishDeterminismId(8)).toContain('dmax-8');
     expect(stockfishDeterminismId(8)).not.toBe(STOCKFISH_DETERMINISM_ID);
     expect(STOCKFISH_DETERMINISM_ID).toContain('multipv-8');
+    expect(STOCKFISH_DETERMINISM_ID).toContain(
+      `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}`,
+    );
+    expect(STOCKFISH_DETERMINISM_ID).toContain(
+      `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`,
+    );
     expect(stockfishDeterminismId(16, 4)).not.toBe(STOCKFISH_DETERMINISM_ID);
+    expect(stockfishDeterminismId(16, 8, 2)).not.toBe(STOCKFISH_DETERMINISM_ID);
+    expect(stockfishDeterminismId(16, 8, 1, 2)).not.toBe(
+      STOCKFISH_DETERMINISM_ID,
+    );
   });
 
   it('keeps engine transport profile-agnostic', () => {

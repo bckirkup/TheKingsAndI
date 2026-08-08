@@ -1,7 +1,11 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from '../broker';
+import {
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
+} from '../broker';
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
@@ -9,7 +13,9 @@ const LOZZA_BUILD = '11';
 const LOZZA_HASH_MB = 16;
 const LOZZA_DETERMINISM_ID =
   `lozza-${LOZZA_BUILD}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
-  `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}`;
+  `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
+  `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
+  `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`;
 
 const defaultEnginePath = join(
   dirname(fileURLToPath(import.meta.url)),

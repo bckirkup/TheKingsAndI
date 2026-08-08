@@ -19,6 +19,8 @@ export {
   resolveInsightRound,
 } from './barrier';
 export {
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
   SHARED_SEARCH_D_MAX,
   applyPrivateScoring,

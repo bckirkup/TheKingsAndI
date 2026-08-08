@@ -6,11 +6,19 @@ import type { DepthLadder } from './uci';
 export const SHARED_SEARCH_D_MAX = 16;
 /** Default private-attention width; calibrated against engine runtime budget. */
 export const DEFAULT_PRIVATE_MULTIPV_WIDTH = 8;
+/** Width of the player-visible preferred-line search. */
+export const DEFAULT_PREFERRED_MULTIPV_WIDTH = 1;
+/** One serialized worker is sufficient for the preferred-line search. */
+export const DEFAULT_PREFERRED_POOL_SIZE = 1;
 
 export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly determinismId: string;
   /** Override D_max for tests (must stay fixed in production). */
   readonly dMax?: number;
+  /** MultiPV width for the player-visible preferred-line search. */
+  readonly preferredMultiPv?: number;
+  /** Worker count for the player-visible preferred-line search. */
+  readonly preferredPoolSize?: number;
 }
 
 export interface SharedSearchBroker extends EnginePort {
@@ -97,8 +105,18 @@ export async function createSharedSearchBroker(
   options: SharedSearchBrokerOptions,
 ): Promise<SharedSearchBroker> {
   const dMax = options.dMax ?? SHARED_SEARCH_D_MAX;
+  const preferredMultiPv =
+    options.preferredMultiPv ?? DEFAULT_PREFERRED_MULTIPV_WIDTH;
+  const preferredPoolSize =
+    options.preferredPoolSize ?? DEFAULT_PREFERRED_POOL_SIZE;
   if (!Number.isSafeInteger(dMax) || dMax < 1) {
     throw new RangeError('dMax must be a positive integer.');
+  }
+  if (!Number.isSafeInteger(preferredMultiPv) || preferredMultiPv < 1) {
+    throw new RangeError('preferredMultiPv must be a positive integer.');
+  }
+  if (!Number.isSafeInteger(preferredPoolSize) || preferredPoolSize < 1) {
+    throw new RangeError('preferredPoolSize must be a positive integer.');
   }
   const pool = await EnginePool.create({
     enginePath: options.enginePath,
@@ -107,17 +125,24 @@ export async function createSharedSearchBroker(
     multiPv: options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH,
     ...(options.size !== undefined ? { size: options.size } : {}),
   });
-  const bestPool = await EnginePool.create({
-    enginePath: options.enginePath,
-    hashMb: options.hashMb ?? 16,
-    threads: 1,
-    multiPv: 1,
-    size: 1,
-  });
+  let bestPoolPromise: Promise<EnginePool> | undefined;
 
   const sharedByFen = new Map<string, DepthLadder>();
   const inflight = new Map<string, InflightShared>();
   const bestByFenDepth = new Map<string, EngineEvaluation>();
+
+  function ensureBestPool(): Promise<EnginePool> {
+    if (bestPoolPromise === undefined) {
+      bestPoolPromise = EnginePool.create({
+        enginePath: options.enginePath,
+        hashMb: options.hashMb ?? 16,
+        threads: 1,
+        multiPv: preferredMultiPv,
+        size: preferredPoolSize,
+      });
+    }
+    return bestPoolPromise;
+  }
 
   async function ensureShared(fen: string): Promise<DepthLadder> {
     const cached = sharedByFen.get(fen);
@@ -182,7 +207,7 @@ export async function createSharedSearchBroker(
       const key = `${fen}\u0000${capped}`;
       const cached = bestByFenDepth.get(key);
       if (cached !== undefined) return cached;
-      const result = await bestPool.evaluate(fen, capped);
+      const result = await (await ensureBestPool()).evaluate(fen, capped);
       const frozen = freezeEval(result);
       bestByFenDepth.set(key, frozen);
       return frozen;
@@ -192,7 +217,9 @@ export async function createSharedSearchBroker(
       inflight.clear();
       bestByFenDepth.clear();
       await pool.dispose();
-      await bestPool.dispose();
+      if (bestPoolPromise !== undefined) {
+        await (await bestPoolPromise).dispose();
+      }
     },
   };
 }
