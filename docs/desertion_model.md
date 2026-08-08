@@ -7,7 +7,8 @@ _Owner intent:_
 > taken, but increases the risk of loss. You can definitely push your entire
 > team to losing the game quickly in a cascade.**
 
-Governed by ADR 0003 and ADR 0011. Nothing here is implemented.
+Governed by ADR 0003 and ADR 0011. The expected-cost comparison below is
+implemented in `src/psychology/desertion.ts`.
 
 ---
 
@@ -18,8 +19,10 @@ trip-wire that fires on state rather than on reasoning. Owner intent replaces it
 with an expected-cost comparison the piece performs itself:
 
 ```
-U_stay(i)   = -P_capture(i)·pain_i  -  P_loss(team | i stays)  · λ_i
-U_desert(i) =            0          -  P_loss(team | i leaves) · λ_i · μ_i
+U_stay(i)   = -P_capture(i)·pain_i
+              - P_loss(team | i stays)  · λ_i · S_collective
+U_desert(i) =            0
+              - P_loss(team | i leaves) · λ_i · S_collective · μ_i
 
 desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 ```
@@ -30,6 +33,7 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `pain_i` | how much being taken costs it — rises with accumulated `B_i` (ADR 0009) |
 | `P_loss(team \| ·)` | probability the army loses, with and without it on the board |
 | `λ_i` | **how much this piece cares that the team loses** |
+| `S_collective` | team-loss stake, measured in the same pain units as `pain_i` (default `50`) |
 | `μ_i` | residual stake after walking away, `0 ≤ μ_i ≤ 1` |
 
 Deserting sets the piece's personal capture risk to zero and raises
@@ -48,6 +52,10 @@ deserts on a much smaller personal danger.
 
 This is the cleanest statement of the game's thesis anywhere in the design: **a
 leader's trust budget is literally the coefficient on collective interest.**
+The implementation keeps `λ_i` as a dimensionless commitment factor and gives
+the team's defeat an explicit pain-scale stake, `S_collective`, so that trust
+can outweigh private capture pain rather than being confined to a
+probability-sized addend.
 
 Consequences that fall out for free, none of which need special-case code:
 

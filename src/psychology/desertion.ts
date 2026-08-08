@@ -37,7 +37,9 @@ export function calculateUStay(
   lambda: number,
 ): number {
   const pain = calculatePain(piece);
-  const stayCost = -context.P_captured * pain - context.P_lossIfStay * lambda;
+  const collectiveStake =
+    context.P_lossIfStay * lambda * ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE;
+  const stayCost = -context.P_captured * pain - collectiveStake;
   return quantizeBoardValue(stayCost) / 1_000;
 }
 
@@ -46,7 +48,10 @@ export function calculateUDesert(
   lambda: number,
 ): number {
   const desertCost =
-    -context.P_lossIfLeave * lambda * ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
+    -context.P_lossIfLeave *
+    lambda *
+    ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
+    ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
   return quantizeBoardValue(desertCost) / 1_000;
 }
 

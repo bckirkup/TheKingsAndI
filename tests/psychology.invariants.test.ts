@@ -11,6 +11,8 @@ import {
   applyOverride,
   applyWitnessedSacrificeEvent,
   calculatePerceivedValue,
+  calculateUDesert,
+  calculateUStay,
   defaultCredence,
   defaultRumor,
   evaluateMoveResponse,
@@ -136,6 +138,40 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
 });
 
 describe('desertion cascade', () => {
+  it('uses the configured collective stake in pain units (golden)', () => {
+    const piece = makePiece({ T_i: 50, M_i: 80, B_i: 0 });
+    const context: DesertionContext = {
+      P_captured: 0.25,
+      P_lossIfStay: 0.1,
+      P_lossIfLeave: 0.6,
+    };
+    const lambda = 0.64;
+
+    expect(calculateUStay(piece, context, lambda)).toBe(-5.7);
+    expect(calculateUDesert(context, lambda)).toBe(-5.76);
+  });
+
+  it('changes the desertion decision when collective stake changes (sensitivity)', () => {
+    const piece = makePiece({ T_i: 50, M_i: 80, B_i: 0 });
+    const context: DesertionContext = {
+      P_captured: 0.25,
+      P_lossIfStay: 0.1,
+      P_lossIfLeave: 0.6,
+    };
+    const config = ENGINE_CONFIG as { DESERTION_COLLECTIVE_STAKE: number };
+    const baseline = shouldDesert(piece, context, [piece]);
+    const original = config.DESERTION_COLLECTIVE_STAKE;
+    try {
+      config.DESERTION_COLLECTIVE_STAKE = 0.3;
+      const lowStake = shouldDesert(piece, context, [piece]);
+      expect(lowStake.desert).not.toBe(baseline.desert);
+      expect(lowStake.uStay).not.toBe(baseline.uStay);
+      expect(lowStake.uDesert).not.toBe(baseline.uDesert);
+    } finally {
+      config.DESERTION_COLLECTIVE_STAKE = original;
+    }
+  });
+
   it('deserts when U_desert exceeds U_stay', () => {
     const piece = makePiece({ T_i: -80, M_i: 10, B_i: 60 });
     const context: DesertionContext = {
