@@ -35,6 +35,13 @@ export interface MoverInsights {
   readonly desertionMoveEvals: Readonly<
     Record<string, CandidateMoveEvaluation>
   >;
+  readonly declinedSacrificeOpportunity:
+    | {
+        readonly sacrificedPieceId: string;
+        readonly preferredMove: string;
+        readonly preferredScoreCp: number;
+      }
+    | undefined;
 }
 
 export function createInsightRoundHandle(
@@ -99,7 +106,12 @@ export async function resolveMoverInsights(
         peerSafetyDeltas: features.peerSafetyDeltas,
       };
     }
-    return { actor: insight, leader, desertionMoveEvals };
+    return {
+      actor: insight,
+      leader,
+      desertionMoveEvals,
+      declinedSacrificeOpportunity: undefined,
+    };
   }
   const fen = probe.fen();
   const orderedRoster = [...roster].sort((left, right) =>
@@ -115,14 +127,25 @@ export async function resolveMoverInsights(
       ),
     ),
   ].sort((left, right) => left - right);
+  const preferredLinesPromise =
+    port.multiPvAtMax?.(board.fen()) ?? Promise.resolve([]);
+  const attentionResultsPromise =
+    port.multiPvAt === undefined
+      ? Promise.resolve([])
+      : Promise.all(
+          depths.map(
+            (rung) => port.multiPvAt?.(fen, rung) ?? Promise.resolve([]),
+          ),
+        );
+  const [preferredLines, attentionResults] = await Promise.all([
+    preferredLinesPromise,
+    attentionResultsPromise,
+  ]);
   const attentionByDepth = new Map<number, readonly EngineEvaluation[]>();
   if (port.multiPvAt !== undefined) {
-    const attentionResults = await Promise.all(
-      depths.map((rung) => port.multiPvAt?.(fen, rung) ?? Promise.resolve([])),
-    );
     for (let index = 0; index < depths.length; index += 1) {
       const rung = depths[index];
-      const lines = attentionResults[index];
+      const lines = attentionResults[index] ?? [];
       if (rung !== undefined && lines !== undefined) {
         attentionByDepth.set(rung, lines);
       }
@@ -180,6 +203,22 @@ export async function resolveMoverInsights(
     );
     privateByPiece.set(piece.id, privateInsight);
   }
+  const declinedSacrificeOpportunity = preferredLines
+    .map((line) => {
+      const sacrificedPieceId = declinedSacrificePiece(
+        board,
+        line,
+        orderedRoster,
+      );
+      return sacrificedPieceId === undefined
+        ? undefined
+        : {
+            sacrificedPieceId,
+            preferredMove: line.pv[0] ?? '',
+            preferredScoreCp: line.scoreCp,
+          };
+    })
+    .find((opportunity) => opportunity !== undefined);
   const privateActor = privateByPiece.get(actor.id);
   if (privateActor === undefined) {
     throw new Error(`Missing private insight for ${actor.id}`);
@@ -215,7 +254,51 @@ export async function resolveMoverInsights(
       ...moverLeader,
     }),
     desertionMoveEvals,
+    declinedSacrificeOpportunity,
   };
+}
+
+function declinedSacrificePiece(
+  board: LivingBoard,
+  line: EngineEvaluation,
+  roster: readonly PieceState[],
+): string | undefined {
+  const first = line.pv[0];
+  if (first === undefined || first.length < 4) return undefined;
+  const endpoint = board.clone();
+  try {
+    const firstApplied = endpoint.applyMove({
+      from: first.slice(0, 2) as MoveIntent['from'],
+      to: first.slice(2, 4) as MoveIntent['to'],
+      ...(first.length > 4
+        ? {
+            promotion: first.slice(4, 5).toUpperCase() as 'Q' | 'R' | 'B' | 'N',
+          }
+        : {}),
+    });
+    const sacrificed = roster.find(
+      (piece) =>
+        piece.id === firstApplied.moverId &&
+        piece.E_i >= Math.max(...roster.map((candidate) => candidate.E_i)),
+    );
+    if (sacrificed === undefined) return undefined;
+    for (const lan of line.pv.slice(1)) {
+      if (lan.length < 4) return undefined;
+      const applied = endpoint.applyMove({
+        from: lan.slice(0, 2) as MoveIntent['from'],
+        to: lan.slice(2, 4) as MoveIntent['to'],
+        ...(lan.length > 4
+          ? {
+              promotion: lan.slice(4, 5).toUpperCase() as 'Q' | 'R' | 'B' | 'N',
+            }
+          : {}),
+      });
+      if (applied.capture?.pieceId === sacrificed.id) return sacrificed.id;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 /**

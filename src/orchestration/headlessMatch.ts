@@ -21,6 +21,7 @@ import {
 } from './insight';
 import {
   applyCostlySignalsToRoster,
+  applyDeclinedSacrificeSignal,
   applyDesertionWithCascade,
   applyPostMoveCredence,
   applySacrificeWitnesses,
@@ -204,15 +205,6 @@ export async function runHeadlessMatch(
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
         });
-        if (detectDeclinedSacrificeCostlySignal(features, auditScore)) {
-          const costly = applyCostlySignalsToRoster(
-            roster,
-            ['declined_sacrifice'],
-            ply,
-          );
-          roster = costly.roster;
-          events.push(...costly.events);
-        }
         if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({
@@ -276,6 +268,21 @@ export async function runHeadlessMatch(
     const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
     roster = sacrifice.roster;
     events.push(...sacrifice.events);
+    if (
+      detectDeclinedSacrificeCostlySignal(
+        moverInsights.declinedSacrificeOpportunity,
+        choice.san,
+        auditScore,
+      )
+    ) {
+      const costly = applyDeclinedSacrificeSignal(
+        roster,
+        moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
+        ply,
+      );
+      roster = costly.roster;
+      events.push(...costly.events);
+    }
 
     const kinds: Array<
       'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'

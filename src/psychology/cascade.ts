@@ -102,7 +102,7 @@ export function applyDesertionWithCascade(
       const appraisal = appraiseDesertionWitness(
         witness,
         actor,
-        next.refusedMoveEval,
+        next.moveEvalByPiece[witness.id] ?? next.refusedMoveEval,
         ply,
       );
       events.push(appraisal.event);

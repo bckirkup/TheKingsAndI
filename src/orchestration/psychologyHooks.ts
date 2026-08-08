@@ -1,10 +1,10 @@
 import type { MoveFeatures } from '../chess';
+import { isObjectivelyGoodMove } from './evaluation';
 import {
   applyAbilityObservation,
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
-  clampTrust,
   isWitnessedSacrifice,
   normalizePieceState,
   type CandidateMoveEvaluation,
@@ -44,14 +44,8 @@ export function applySacrificeWitnesses(
   for (const observer of roster) {
     if (observer.id === hero.id) continue;
     const witnessed = applyWitnessedSacrificeEvent(observer, hero);
-    const credited = {
-      ...witnessed,
-      T_i: clampTrust(
-        witnessed.T_i + ENGINE_CONFIG.COSTLY_SIGNAL_DECLINED_SACRIFICE,
-      ),
-    };
     next = next.map((piece) =>
-      piece.id === observer.id ? normalizePieceState(credited) : piece,
+      piece.id === observer.id ? normalizePieceState(witnessed) : piece,
     );
     events.push({
       t: 'SACRIFICE_WITNESSED',
@@ -73,10 +67,47 @@ export function detectKingEndangermentCostlySignal(
 }
 
 export function detectDeclinedSacrificeCostlySignal(
-  features: MoveFeatures,
+  opportunity:
+    | {
+        readonly sacrificedPieceId: string;
+        readonly preferredMove: string;
+        readonly preferredScoreCp: number;
+      }
+    | undefined,
+  playedMove: string,
   postMoveAuditCp: number,
 ): boolean {
-  return isWitnessedSacrifice(attributeSacrifice(features, postMoveAuditCp));
+  return (
+    opportunity !== undefined &&
+    opportunity.preferredMove !== playedMove &&
+    !isObjectivelyGoodMove(postMoveAuditCp, opportunity.preferredScoreCp)
+  );
+}
+
+export function applyDeclinedSacrificeSignal(
+  roster: readonly PieceState[],
+  sparedPieceId: string,
+  ply: number,
+): { readonly roster: PieceState[]; readonly events: MatchEvent[] } {
+  const spared = roster.find((piece) => piece.id === sparedPieceId);
+  if (spared === undefined) return { roster: [...roster], events: [] };
+  const beneficiaries = roster.filter(
+    (piece) =>
+      piece.id === sparedPieceId ||
+      (piece.dyadicAffinity[sparedPieceId] ?? 0) > 0,
+  );
+  const applied = applyCostlySignalsToRoster(
+    beneficiaries,
+    ['declined_sacrifice'],
+    ply,
+  );
+  return {
+    roster: roster.map(
+      (piece) =>
+        applied.roster.find((updated) => updated.id === piece.id) ?? piece,
+    ),
+    events: applied.events,
+  };
 }
 
 export function applyCostlySignalsToRoster(
