@@ -42,7 +42,7 @@ describe('simulation harness golden output', () => {
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
         '1,1000004,tyrannical,200,19,81,4,0,0,19,0.0950,0.0200,1.0000,0.4050,-10.00,-10.50,-20.00,17.08,50,0,tyrant',
-        '2,2000001,tyrannical,107,10,43,0,15,10,10,0.0935,0.0000,1.0000,0.4019,-10.38,-100.00,8.75,95.00,0,1,tyrant',
+        '2,2000001,tyrannical,200,14,89,0,11,9,14,0.0700,0.0000,1.0000,0.4450,-10.38,-97.33,8.75,50.00,50,0,tyrant',
         '',
       ].join('\n'),
     );

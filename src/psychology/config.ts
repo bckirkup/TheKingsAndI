@@ -42,7 +42,7 @@ export const ENGINE_CONFIG = {
   /** Team-loss stake in pain units, modulated by lambda. */
   DESERTION_COLLECTIVE_STAKE: 50,
   /** Standing lost by deserting, measured in pain units. */
-  DESERTION_STANDING_STAKE: 100,
+  DESERTION_STANDING_STAKE: 150,
   DESERTION_RESIDUAL_STAKE: 0.3,
   DESERTION_HYSTERESIS: 0.05,
   DESERTION_PAIN_BASE: 10,

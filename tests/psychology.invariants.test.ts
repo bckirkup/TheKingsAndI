@@ -163,7 +163,7 @@ describe('desertion cascade', () => {
       P_lossIfLeave: 0.6,
     };
 
-    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-30.76);
+    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-43.26);
   });
 
   it('changes the desertion decision when collective stake changes (sensitivity)', () => {
