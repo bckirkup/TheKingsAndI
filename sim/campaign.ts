@@ -52,6 +52,15 @@ export interface CampaignResult {
   readonly checkpoint: CampaignCheckpoint;
 }
 
+const MATCH_SEED_MULTIPLIER = 1_000_003;
+
+export function matchSeedForCampaign(
+  campaignSeed: number,
+  match: number,
+): number {
+  return campaignSeed ^ (match * MATCH_SEED_MULTIPLIER);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -160,7 +169,7 @@ export async function runCampaign(
   const firstMatch = checkpoint?.nextMatch ?? 1;
 
   for (let match = firstMatch; match <= options.matches; match += 1) {
-    const matchSeed = options.seed ^ (match * 1_000_003);
+    const matchSeed = matchSeedForCampaign(options.seed, match);
     roster = mergeCampaignRoster(
       board,
       'w',

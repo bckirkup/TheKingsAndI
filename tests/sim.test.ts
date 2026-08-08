@@ -210,6 +210,8 @@ describe('simulation harness argument parsing', () => {
     ).toEqual({
       matches: 20,
       campaign: 20,
+      campaigns: 1,
+      campaignLength: 20,
       leader: 'tyrannical',
       seed: 7,
       engine: 'lozza',
@@ -217,6 +219,9 @@ describe('simulation harness argument parsing', () => {
       out: 'metrics.csv',
       checkpointOut: undefined,
       resume: undefined,
+      artifactOut: 'metrics.csv.json',
+      shardIndex: 0,
+      shardCount: 1,
       enforceCalibration: false,
     });
   });
@@ -232,10 +237,10 @@ describe('simulation harness argument parsing', () => {
   });
 
   it('keys the smoke gate to executed campaign matches', () => {
-    const options = parseArguments(['--matches=1', '--campaign=21']);
-    expect(options.matches).toBe(1);
+    const options = parseArguments(['--matches=21', '--campaign=21']);
+    expect(options.matches).toBe(21);
     expect(options.campaign).toBe(21);
-    expect(shouldRunSmokeBounds(options.campaign)).toBe(false);
+    expect(shouldRunSmokeBounds(options.matches)).toBe(false);
     expect(shouldRunSmokeBounds(20)).toBe(true);
   });
 
