@@ -81,6 +81,12 @@ export interface MoveDecisionOutcome {
   engagementFactor: number;
 }
 
+export interface DesertionContext {
+  P_captured: number;
+  P_lossIfStay: number;
+  P_lossIfLeave: number;
+}
+
 // ============================================================================
 // 2. DEFAULT COEFFICIENTS & CONFIGURATION
 // ============================================================================
@@ -191,12 +197,28 @@ export function calculateRefusalThreshold(trustLevel: number): number {
 export function evaluateMoveResponse(
   actor: PieceState,
   moveEval: CandidateMoveEvaluation,
-  allActivePieces: PieceState[]
+  allActivePieces: PieceState[],
+  desertionContext?: DesertionContext
 ): MoveDecisionOutcome {
   const utilityScore = calculateMoveUtility(actor, moveEval, allActivePieces);
   const refusalThreshold = calculateRefusalThreshold(actor.T_i);
+  void desertionContext;
 
-  // 1. Check for Desertion / Mutiny State (Extreme Disillusionment)
+  /*
+   * ADR 0011 supersedes the historical hard gate below. Production evaluates
+   * expected-cost desertion at the actor's decision point:
+   *
+   *   U_stay   = -P_captured * pain_i - P_lossIfStay * lambda_i
+   *   U_desert = -P_lossIfLeave * lambda_i * residual_stake
+   *
+   * with desertion when U_desert > U_stay + hysteresis and the actor is not
+   * the King. This retained branch documents the pre-ADR reference only; it
+   * is not the production decision rule.
+   */
+  // The expected-cost reducer is implemented in src/psychology/desertion.ts;
+  // this reference keeps the context in the signature without duplicating it.
+
+  // HISTORICAL / SUPERSEDED: ADR 0011 replaced this hard gate.
   if (actor.T_i <= -75 && actor.M_i === 0) {
     return {
       verdict: 'DESERTION_MUTINY',

@@ -33,6 +33,7 @@ function leaderPort(
         moverId: mover.id,
         intent: choice.intent,
         san: choice.features.san,
+        leaderImpliedBias: choice.leaderImpliedBias,
       };
     },
     shouldOverride(random, ply) {

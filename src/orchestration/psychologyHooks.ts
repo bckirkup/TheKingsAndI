@@ -1,4 +1,5 @@
 import type { MoveFeatures } from '../chess';
+import { isObjectivelyGoodMove } from './evaluation';
 import {
   applyAbilityObservation,
   applyCostlySignal,
@@ -42,9 +43,9 @@ export function applySacrificeWitnesses(
   let next = [...roster];
   for (const observer of roster) {
     if (observer.id === hero.id) continue;
-    const updated = applyWitnessedSacrificeEvent(observer, hero);
+    const witnessed = applyWitnessedSacrificeEvent(observer, hero);
     next = next.map((piece) =>
-      piece.id === observer.id ? normalizePieceState(updated) : piece,
+      piece.id === observer.id ? normalizePieceState(witnessed) : piece,
     );
     events.push({
       t: 'SACRIFICE_WITNESSED',
@@ -63,6 +64,50 @@ export function detectKingEndangermentCostlySignal(
     (delta) => delta > 0.05,
   );
   return features.kingSafetyDelta < -0.2 && peerRelief;
+}
+
+export function detectDeclinedSacrificeCostlySignal(
+  opportunity:
+    | {
+        readonly sacrificedPieceId: string;
+        readonly preferredMove: string;
+        readonly preferredScoreCp: number;
+      }
+    | undefined,
+  playedMove: string,
+  postMoveAuditCp: number,
+): boolean {
+  return (
+    opportunity !== undefined &&
+    opportunity.preferredMove !== playedMove &&
+    !isObjectivelyGoodMove(postMoveAuditCp, opportunity.preferredScoreCp)
+  );
+}
+
+export function applyDeclinedSacrificeSignal(
+  roster: readonly PieceState[],
+  sparedPieceId: string,
+  ply: number,
+): { readonly roster: PieceState[]; readonly events: MatchEvent[] } {
+  const spared = roster.find((piece) => piece.id === sparedPieceId);
+  if (spared === undefined) return { roster: [...roster], events: [] };
+  const beneficiaries = roster.filter(
+    (piece) =>
+      piece.id === sparedPieceId ||
+      (piece.dyadicAffinity[sparedPieceId] ?? 0) > 0,
+  );
+  const applied = applyCostlySignalsToRoster(
+    beneficiaries,
+    ['declined_sacrifice'],
+    ply,
+  );
+  return {
+    roster: roster.map(
+      (piece) =>
+        applied.roster.find((updated) => updated.id === piece.id) ?? piece,
+    ),
+    events: applied.events,
+  };
 }
 
 export function applyCostlySignalsToRoster(

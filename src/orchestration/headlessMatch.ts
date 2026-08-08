@@ -7,6 +7,7 @@ import {
   applyNeglectSignal,
   evaluateMoveResponse,
   normalizePieceState,
+  shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
   type PieceState,
@@ -20,10 +21,12 @@ import {
 } from './insight';
 import {
   applyCostlySignalsToRoster,
+  applyDeclinedSacrificeSignal,
   applyDesertionWithCascade,
   applyPostMoveCredence,
   applySacrificeWitnesses,
   attributeSacrifice,
+  detectDeclinedSacrificeCostlySignal,
   desertionContextFor,
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
@@ -36,6 +39,7 @@ export interface HeadlessMoveChoice {
   readonly san: string;
   /** When omitted, orchestration resolves engine insight for the mover. */
   readonly moveEval?: CandidateMoveEvaluation;
+  readonly leaderImpliedBias?: number;
   readonly objectivelyGood?: boolean;
 }
 
@@ -139,10 +143,22 @@ export async function runHeadlessMatch(
       choice.intent,
       actor,
       insight,
+      roster,
+      features,
+      choice.leaderImpliedBias ?? 0,
     );
     const moveEval =
       choice.moveEval ??
-      insightToEvaluation(features, moverInsights.actor, moverInsights.leader);
+      insightToEvaluation(
+        features,
+        moverInsights.actor,
+        moverInsights.leader,
+        choice.leaderImpliedBias ?? 0,
+      );
+    const moveEvalByPiece = {
+      ...moverInsights.desertionMoveEvals,
+      [actor.id]: moveEval,
+    };
     const auditScore = await resolveAuditMoveScore(
       config.engine,
       board,
@@ -155,6 +171,7 @@ export async function runHeadlessMatch(
       isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
 
     const desertionContext = desertionContextFor(actor, moveEval);
+    const desertionDecision = shouldDesert(actor, desertionContext, roster);
     let outcome = evaluateMoveResponse(
       actor,
       moveEval,
@@ -207,8 +224,9 @@ export async function runHeadlessMatch(
           actor,
           refusedMove: choice.san,
           refusedMoveEval: moveEval,
-          uStay: 0,
-          uDesert: 0,
+          moveEvalByPiece,
+          uStay: desertionDecision.uStay,
+          uDesert: desertionDecision.uDesert,
         },
         ply,
       );
@@ -250,6 +268,21 @@ export async function runHeadlessMatch(
     const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
     roster = sacrifice.roster;
     events.push(...sacrifice.events);
+    if (
+      detectDeclinedSacrificeCostlySignal(
+        moverInsights.declinedSacrificeOpportunity,
+        choice.san,
+        auditScore,
+      )
+    ) {
+      const costly = applyDeclinedSacrificeSignal(
+        roster,
+        moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
+        ply,
+      );
+      roster = costly.roster;
+      events.push(...costly.events);
+    }
 
     const kinds: Array<
       'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'

@@ -1,7 +1,11 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from '../broker';
+import {
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
+} from '../broker';
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
@@ -9,7 +13,9 @@ const LOZZA_BUILD = '11';
 const LOZZA_HASH_MB = 16;
 const LOZZA_DETERMINISM_ID =
   `lozza-${LOZZA_BUILD}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
-  `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}`;
+  `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
+  `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
+  `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`;
 
 const defaultEnginePath = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -22,7 +28,9 @@ export interface LozzaPortOptions {
 }
 
 let sharedEngine: UciEngine | undefined;
+let bestEngine: UciEngine | undefined;
 let searchQueue: Promise<void> = Promise.resolve();
+let bestSearchQueue: Promise<void> = Promise.resolve();
 const ladderByFen = new Map<string, DepthLadder>();
 
 function getSharedEngine(enginePath: string): UciEngine {
@@ -35,6 +43,18 @@ function getSharedEngine(enginePath: string): UciEngine {
     });
   }
   return sharedEngine;
+}
+
+function getBestEngine(enginePath: string): UciEngine {
+  if (bestEngine === undefined) {
+    bestEngine = new UciEngine({
+      enginePath,
+      hashMb: LOZZA_HASH_MB,
+      threads: 1,
+      multiPv: 1,
+    });
+  }
+  return bestEngine;
 }
 
 /**
@@ -95,6 +115,24 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       }
       return Object.freeze([]);
     },
+    async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
+      const search = bestSearchQueue.then(() =>
+        getBestEngine(enginePath).searchLadder(fen, depth),
+      );
+      bestSearchQueue = search.then(
+        () => undefined,
+        () => undefined,
+      );
+      const ladder = await search;
+      const result = ladder.at.get(depth) ?? ladder.multiPvAtMax.get(1);
+      if (result === undefined) {
+        throw new Error(`Lozza produced no best line at depth ${depth}`);
+      }
+      return Object.freeze({
+        scoreCp: result.scoreCp,
+        pv: Object.freeze([...result.pv]),
+      });
+    },
   };
 }
 
@@ -124,7 +162,12 @@ export async function disposeLozzaPort(): Promise<void> {
   if (sharedEngine !== undefined) {
     await sharedEngine.dispose();
     sharedEngine = undefined;
-    searchQueue = Promise.resolve();
-    ladderByFen.clear();
   }
+  if (bestEngine !== undefined) {
+    await bestEngine.dispose();
+    bestEngine = undefined;
+  }
+  searchQueue = Promise.resolve();
+  bestSearchQueue = Promise.resolve();
+  ladderByFen.clear();
 }

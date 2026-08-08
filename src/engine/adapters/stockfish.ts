@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import {
   createSharedSearchBroker,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
   SHARED_SEARCH_D_MAX,
   type SharedSearchBroker,
 } from '../broker';
@@ -19,10 +21,13 @@ export const STOCKFISH_HASH_MB = 16;
 export function stockfishDeterminismId(
   dMax: number = SHARED_SEARCH_D_MAX,
   multiPv: number = DEFAULT_PRIVATE_MULTIPV_WIDTH,
+  preferredMultiPv: number = DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  preferredPoolSize: number = DEFAULT_PREFERRED_POOL_SIZE,
 ): string {
   return (
     `stockfish-js-${STOCKFISH_BUILD}-${STOCKFISH_FLAVOR}/` +
-    `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}/multipv-${multiPv}`
+    `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}/multipv-${multiPv}/` +
+    `preferred-multipv-${preferredMultiPv}/preferred-pool-${preferredPoolSize}`
   );
 }
 
@@ -37,6 +42,10 @@ export interface StockfishPortOptions {
   readonly dMax?: number;
   /** MultiPV width used by private-attention pruning. */
   readonly multiPv?: number;
+  /** MultiPV width used by the player-visible preferred-line search. */
+  readonly preferredMultiPv?: number;
+  /** Worker count used by the player-visible preferred-line search. */
+  readonly preferredPoolSize?: number;
 }
 
 function defaultStockfishPath(): string {
@@ -63,13 +72,24 @@ export async function createStockfishPort(
   }
   const dMax = options.dMax ?? SHARED_SEARCH_D_MAX;
   const multiPv = options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH;
+  const preferredMultiPv =
+    options.preferredMultiPv ?? DEFAULT_PREFERRED_MULTIPV_WIDTH;
+  const preferredPoolSize =
+    options.preferredPoolSize ?? DEFAULT_PREFERRED_POOL_SIZE;
   const broker = await createSharedSearchBroker({
     enginePath: options.enginePath ?? defaultStockfishPath(),
-    determinismId: stockfishDeterminismId(dMax, multiPv),
+    determinismId: stockfishDeterminismId(
+      dMax,
+      multiPv,
+      preferredMultiPv,
+      preferredPoolSize,
+    ),
     hashMb: STOCKFISH_HASH_MB,
     threads: 1,
     multiPv,
     ...(options.poolSize !== undefined ? { size: options.poolSize } : {}),
+    preferredMultiPv,
+    preferredPoolSize,
     dMax,
   });
   if (options.enginePath === undefined) {

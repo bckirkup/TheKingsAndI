@@ -13,6 +13,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   applyOverride,
+  shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
   type MoveDecisionOutcome,
@@ -35,9 +36,11 @@ import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
   applySacrificeWitnesses,
+  applyDeclinedSacrificeSignal,
   applyCostlySignalsToRoster,
   attributeSacrifice,
   desertionContextFor,
+  detectDeclinedSacrificeCostlySignal,
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
 } from './psychologyHooks';
@@ -60,6 +63,16 @@ export interface PendingVerdict {
   readonly orderQualityCp: number;
   readonly outcome: MoveDecisionOutcome;
   readonly verdict: 'MORAL_REFUSAL' | 'DESERTION_MUTINY';
+  readonly desertionMoveEvals: Readonly<
+    Record<string, CandidateMoveEvaluation>
+  >;
+  readonly declinedSacrificeOpportunity:
+    | {
+        readonly sacrificedPieceId: string;
+        readonly preferredMove: string;
+        readonly preferredScoreCp: number;
+      }
+    | undefined;
 }
 
 export interface DialogueCue {
@@ -220,12 +233,18 @@ export class MatchSession {
       intent,
       actor,
       this.insight,
+      this.roster,
+      features,
     );
     const moveEval = insightToEvaluation(
       features,
       insights.actor,
       insights.leader,
     );
+    const desertionMoveEvals = {
+      ...insights.desertionMoveEvals,
+      [actor.id]: moveEval,
+    };
     const orderQualityCp = await resolveAuditMoveScore(
       this.engine,
       this.board,
@@ -249,6 +268,8 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'MORAL_REFUSAL',
+        desertionMoveEvals,
+        declinedSacrificeOpportunity: insights.declinedSacrificeOpportunity,
       };
       this.phase = 'awaiting_player';
       this.dialogueCue = {
@@ -270,6 +291,8 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'DESERTION_MUTINY',
+        desertionMoveEvals,
+        declinedSacrificeOpportunity: insights.declinedSacrificeOpportunity,
       };
       this.phase = 'awaiting_player';
       this.dialogueCue = {
@@ -289,6 +312,7 @@ export class MatchSession {
       moveEval,
       orderQualityCp,
       features,
+      insights.declinedSacrificeOpportunity,
     );
     this.runOpponentTurn();
     this.maybeTriggerDismissal();
@@ -349,6 +373,7 @@ export class MatchSession {
       pending.moveEval,
       pending.orderQualityCp,
       pending.features,
+      pending.declinedSacrificeOpportunity,
     );
     this.pending = null;
     this.phase = 'playing';
@@ -366,14 +391,20 @@ export class MatchSession {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
 
+    const desertionDecision = shouldDesert(
+      pending.actor,
+      desertionContextFor(pending.actor, pending.moveEval),
+      this.roster,
+    );
     const cascade = applyDesertionWithCascade(
       this.roster,
       {
         actor: pending.actor,
         refusedMove: pending.san,
         refusedMoveEval: pending.moveEval,
-        uStay: 0,
-        uDesert: 0,
+        moveEvalByPiece: pending.desertionMoveEvals,
+        uStay: desertionDecision.uStay,
+        uDesert: desertionDecision.uDesert,
       },
       this.ply,
     );
@@ -505,6 +536,7 @@ export class MatchSession {
     moveEval: CandidateMoveEvaluation,
     orderQualityCp: number,
     features?: MoveFeatures,
+    declinedSacrificeOpportunity?: PendingVerdict['declinedSacrificeOpportunity'],
   ): void {
     const applied = this.board.applyMove(intent);
     this.lastMove = [applied.from, applied.to];
@@ -524,6 +556,8 @@ export class MatchSession {
       moveEval,
       moveFeatures,
       applied.capture !== undefined,
+      declinedSacrificeOpportunity,
+      orderQualityCp,
     );
 
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
@@ -566,6 +600,8 @@ export class MatchSession {
     moveEval: CandidateMoveEvaluation,
     features: MoveFeatures | undefined,
     captured: boolean,
+    declinedSacrificeOpportunity: PendingVerdict['declinedSacrificeOpportunity'],
+    orderQualityCp: number,
   ): void {
     this.abilityObservations += 1;
     const objectivelyGood = isObjectivelyGoodMove(
@@ -595,6 +631,21 @@ export class MatchSession {
       );
       this.roster = sacrifice.roster;
       this.events.push(...sacrifice.events);
+      if (
+        detectDeclinedSacrificeCostlySignal(
+          declinedSacrificeOpportunity,
+          features.san,
+          orderQualityCp,
+        )
+      ) {
+        const costly = applyDeclinedSacrificeSignal(
+          this.roster,
+          declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
+          this.ply,
+        );
+        this.roster = costly.roster;
+        this.events.push(...costly.events);
+      }
 
       const kinds: Array<
         'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'

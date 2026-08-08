@@ -57,10 +57,15 @@ export const ENGINE_CONFIG = {
   COSTLY_SIGNAL_DECLINED_SACRIFICE: 15,
   COSTLY_SIGNAL_RETAINED_PIECE: 5,
   COSTLY_SIGNAL_AVENGED_CAPTURE: 10,
+  /** Minimum incoming dyadic affinity for a high-`A` spared piece. */
+  DECLINED_SACRIFICE_MIN_INCOMING_AFFINITY: 100,
   /** Plies within which a recapture counts as avenged (calibration knob). */
   AVENGED_CAPTURE_WINDOW_PLIES: 3,
   /** Witness desertion appraisal shifts (ADR 0018). */
-  WITNESS_BRAVE_AFFINITY_GAIN: 20,
+  /*
+   * WITNESS_BRAVE_AFFINITY_GAIN was retired: the authored brake requires an
+   * affinity loss for every witness, including brave appraisals.
+   */
   WITNESS_BRAVE_TRUST_LOSS: 10,
   WITNESS_COWARD_AFFINITY_LOSS: 25,
   /** Egocentric attention decay per square (docs/belief_model.md §3). */

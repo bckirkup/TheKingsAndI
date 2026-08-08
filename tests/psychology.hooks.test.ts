@@ -3,18 +3,28 @@ import { describe, expect, it } from 'vitest';
 import type { MoveFeatures } from '../src/chess';
 import {
   applyDesertionWithCascade,
+  buildDesertionContexts,
+  desertionContextFor,
   evaluateDesertionCascade,
   ENGINE_CONFIG,
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  shouldDesert,
   type DesertionContext,
   type PieceState,
 } from '../src/psychology';
 import {
   attributeSacrifice,
+  applyDeclinedSacrificeSignal,
+  applySacrificeWitnesses,
+  detectDeclinedSacrificeCostlySignal,
   isAvengedCapture,
 } from '../src/orchestration/psychologyHooks';
+import { declinedSacrificePiece } from '../src/orchestration/insight';
+import { LivingBoard } from '../src/chess';
+import type { EngineEvaluation } from '../src/engine';
+import { appraiseDesertionWitness } from '../src/psychology/witness';
 
 const neutralTraits = {
   w_honor: 0.5,
@@ -66,6 +76,26 @@ function makeFeatures(overrides: Partial<MoveFeatures> = {}): MoveFeatures {
 }
 
 describe('desertion cascade (live path)', () => {
+  it('uses each piece snapshot for capture probability', () => {
+    const first = makePiece({ id: 'w:P:a2' });
+    const second = makePiece({ id: 'w:P:b2' });
+    const firstEval = {
+      moveNotation: 'a4',
+      deltaV_board: -2,
+      vLeaderImplied: 1,
+      deltaV_capture: 0,
+      P_captured: 0.1,
+      peerSafetyDeltas: {},
+    };
+    const secondEval = { ...firstEval, P_captured: 0.8 };
+    const contexts = buildDesertionContexts([first, second], {
+      [first.id]: firstEval,
+      [second.id]: secondEval,
+    });
+    expect(contexts[first.id]?.P_captured).toBe(0.1);
+    expect(contexts[second.id]?.P_captured).toBe(0.8);
+  });
+
   it('can cascade to a second piece after loss estimates rise', () => {
     const first = makePiece({ id: 'w:P:a2', T_i: -90, M_i: 5, B_i: 80 });
     const second = makePiece({
@@ -84,14 +114,24 @@ describe('desertion cascade (live path)', () => {
       P_captured: 0.9,
       peerSafetyDeltas: {},
     };
+    const decision = shouldDesert(first, desertionContextFor(first, moveEval), [
+      first,
+      second,
+      king,
+    ]);
     const cascade = applyDesertionWithCascade(
       [first, second, king],
       {
         actor: first,
         refusedMove: 'a4',
         refusedMoveEval: moveEval,
-        uStay: -1,
-        uDesert: 0,
+        moveEvalByPiece: {
+          [first.id]: moveEval,
+          [second.id]: moveEval,
+          [king.id]: moveEval,
+        },
+        uStay: decision.uStay,
+        uDesert: decision.uDesert,
       },
       4,
     );
@@ -101,6 +141,65 @@ describe('desertion cascade (live path)', () => {
     ).toBe(true);
     expect(cascade.cascadeLength).toBeGreaterThanOrEqual(1);
     expect(cascade.roster.some((piece) => piece.id === first.id)).toBe(false);
+    const departure = cascade.events.find((event) => event.t === 'DESERTION');
+    expect(departure).toMatchObject({
+      uStay: decision.uStay,
+      uDesert: decision.uDesert,
+    });
+  });
+
+  it('uses each witness private move evaluation for departure appraisal', () => {
+    const actor = makePiece({
+      id: 'w:P:a2',
+      T_i: -90,
+      M_i: 5,
+      B_i: 80,
+    });
+    const witness = makePiece({
+      id: 'w:B:f1',
+      T_i: 100,
+      M_i: 100,
+      B_i: 0,
+      dyadicAffinity: { 'w:P:a2': 40 },
+    });
+    const actorEval = {
+      moveNotation: 'a4',
+      deltaV_board: -2,
+      vLeaderImplied: 1,
+      deltaV_capture: 0,
+      P_captured: 0.9,
+      peerSafetyDeltas: {},
+    };
+    const witnessEval = { ...actorEval, deltaV_board: 2 };
+    const decision = shouldDesert(
+      actor,
+      desertionContextFor(actor, actorEval),
+      [actor, witness],
+    );
+    const cascade = applyDesertionWithCascade(
+      [actor, witness],
+      {
+        actor,
+        refusedMove: 'a4',
+        refusedMoveEval: actorEval,
+        moveEvalByPiece: {
+          [actor.id]: actorEval,
+          [witness.id]: witnessEval,
+        },
+        uStay: decision.uStay,
+        uDesert: decision.uDesert,
+      },
+      4,
+    );
+    expect(cascade.events).toContainEqual({
+      t: 'DESERTION_WITNESS',
+      ply: 4,
+      witnessId: witness.id,
+      deserterId: actor.id,
+      appraisal: 'coward',
+      witnessOwnValue: 2,
+    });
+    expect(cascade.roster[0]?.dyadicAffinity[actor.id]).toBe(15);
   });
 
   it('evaluateDesertionCascade uses shouldDesert without a dummy move', () => {
@@ -116,6 +215,99 @@ describe('desertion cascade (live path)', () => {
   });
 });
 
+describe('departure witnessing and positive signals', () => {
+  it('appraises a departure as a departure and lowers affinity', () => {
+    const witness = makePiece({
+      id: 'w:B:f1',
+      dyadicAffinity: { 'w:P:a2': 40 },
+    });
+    const result = appraiseDesertionWitness(
+      witness,
+      makePiece({ id: 'w:P:a2' }),
+      {
+        moveNotation: 'a4',
+        deltaV_board: -2,
+        vLeaderImplied: 1,
+        deltaV_capture: 0,
+        P_captured: 0.5,
+        peerSafetyDeltas: {},
+      },
+      4,
+    );
+    expect(result.event).toMatchObject({
+      t: 'DESERTION_WITNESS',
+      appraisal: 'brave',
+    });
+    expect(result.witness.dyadicAffinity['w:P:a2']).toBe(15);
+    expect(result.witness.T_i).toBe(-80);
+    expect(result.witness.rumor.pLossTeam).toBe(180);
+  });
+
+  it('appraises a departure as cowardly without brave effects', () => {
+    const witness = makePiece({
+      id: 'w:B:f1',
+      dyadicAffinity: { 'w:P:a2': 40 },
+    });
+    const result = appraiseDesertionWitness(
+      witness,
+      makePiece({ id: 'w:P:a2' }),
+      {
+        moveNotation: 'a4',
+        deltaV_board: 2,
+        vLeaderImplied: 1,
+        deltaV_capture: 0,
+        P_captured: 0.5,
+        peerSafetyDeltas: {},
+      },
+      4,
+    );
+    expect(result.event).toMatchObject({
+      t: 'DESERTION_WITNESS',
+      appraisal: 'coward',
+    });
+    expect(result.witness.dyadicAffinity['w:P:a2']).toBe(15);
+    expect(result.witness.T_i).toBe(-70);
+    expect(result.witness.rumor.pLossTeam).toBe(100);
+  });
+
+  it('does not credit trust when a sacrifice is witnessed', () => {
+    const hero = makePiece({ id: 'w:P:a2' });
+    const witness = makePiece({ id: 'w:B:f1', T_i: 10 });
+    const result = applySacrificeWitnesses(
+      [hero, witness],
+      hero,
+      { removedThreatToPeer: true, enabledForcedWin: false },
+      4,
+    );
+    expect(result.roster.find((piece) => piece.id === witness.id)?.T_i).toBe(
+      10,
+    );
+  });
+
+  it('credits only the spared piece and its affinity friends', () => {
+    const spared = makePiece({ id: 'w:Q:d1', T_i: 10 });
+    const friend = makePiece({
+      id: 'w:B:f1',
+      T_i: 20,
+      dyadicAffinity: { [spared.id]: 30 },
+    });
+    const stranger = makePiece({ id: 'w:P:a2', T_i: 30 });
+    const result = applyDeclinedSacrificeSignal(
+      [spared, friend, stranger],
+      spared.id,
+      4,
+    );
+    expect(result.roster.map((piece) => piece.T_i)).toEqual([25, 35, 30]);
+    expect(result.events).toHaveLength(2);
+    expect(result.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ pieceId: spared.id }),
+        expect.objectContaining({ pieceId: friend.id }),
+      ]),
+    );
+  });
+});
+
 describe('sacrifice attribution + avenged window', () => {
   it('attributes sacrifice from peer-safety or forced-win facts', () => {
     expect(
@@ -124,6 +316,28 @@ describe('sacrifice attribution + avenged window', () => {
         100,
       ).removedThreatToPeer,
     ).toBe(true);
+    expect(
+      detectDeclinedSacrificeCostlySignal(
+        {
+          sacrificedPieceId: 'w:Q:d1',
+          preferredMove: 'd1d8',
+          preferredScoreCp: 500,
+        },
+        'a2a4',
+        100,
+      ),
+    ).toBe(true);
+    expect(
+      detectDeclinedSacrificeCostlySignal(
+        {
+          sacrificedPieceId: 'w:Q:d1',
+          preferredMove: 'd1d8',
+          preferredScoreCp: 500,
+        },
+        'd1d8',
+        100,
+      ),
+    ).toBe(false);
     expect(
       attributeSacrifice(makeFeatures({ san: 'Qh5' }), 25_000).enabledForcedWin,
     ).toBe(true);
@@ -138,5 +352,42 @@ describe('sacrifice attribution + avenged window', () => {
   it('sensitivity: changing the window changes avenged detection', () => {
     expect(isAvengedCapture(1, 5, 3)).toBe(false);
     expect(isAvengedCapture(1, 5, 4)).toBe(true);
+  });
+
+  it('detects a high-affinity sacrificed piece rather than the highest-ability piece', () => {
+    expect(ENGINE_CONFIG.DECLINED_SACRIFICE_MIN_INCOMING_AFFINITY).toBe(100);
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/3Q4/4K3 w - - 0 1');
+    const spared = makePiece({ id: 'w:Q:d2', E_i: 10 });
+    const stronger = makePiece({ id: 'w:K:e1', role: 'King', E_i: 90 });
+    const friend = makePiece({
+      id: 'w:P:a2',
+      dyadicAffinity: { [spared.id]: 120 },
+    });
+    const line: EngineEvaluation = {
+      scoreCp: 500,
+      pv: ['d2d7', 'e8d7'],
+    };
+    expect(
+      declinedSacrificePiece(board, line, [spared, stronger, friend]),
+    ).toBe(spared.id);
+  });
+
+  it('sensitivity: the high-affinity threshold controls declined-sacrifice detection', () => {
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/3Q4/4K3 w - - 0 1');
+    const spared = makePiece({ id: 'w:Q:d2', E_i: 10 });
+    const friend = makePiece({
+      id: 'w:P:a2',
+      dyadicAffinity: { [spared.id]: 120 },
+    });
+    const line: EngineEvaluation = {
+      scoreCp: 500,
+      pv: ['d2d7', 'e8d7'],
+    };
+    expect(declinedSacrificePiece(board, line, [spared, friend], 100)).toBe(
+      spared.id,
+    );
+    expect(declinedSacrificePiece(board, line, [spared, friend], 121)).toBe(
+      undefined,
+    );
   });
 });

@@ -51,6 +51,12 @@ export interface DesertionDeparture {
   readonly actor: PieceState;
   readonly refusedMove: string;
   readonly refusedMoveEval: CandidateMoveEvaluation;
+  /**
+   * Private evaluations captured before the move's psychology round. The
+   * cascade may update collective-loss estimates, but it never asks the
+   * engine for a dependent query.
+   */
+  readonly moveEvalByPiece: Readonly<Record<string, CandidateMoveEvaluation>>;
   readonly uStay: number;
   readonly uDesert: number;
 }
@@ -96,7 +102,7 @@ export function applyDesertionWithCascade(
       const appraisal = appraiseDesertionWitness(
         witness,
         actor,
-        next.refusedMoveEval,
+        next.moveEvalByPiece[witness.id] ?? next.refusedMoveEval,
         ply,
       );
       events.push(appraisal.event);
@@ -118,31 +124,19 @@ export function applyDesertionWithCascade(
       return { roster, events, rout: true, cascadeLength };
     }
 
-    const refreshed = buildDesertionContexts(
-      roster,
-      Object.fromEntries(
-        roster.map((piece) => [
-          piece.id,
-          {
-            moveNotation: next.refusedMove,
-            deltaV_board: next.refusedMoveEval.deltaV_board,
-            vLeaderImplied: next.refusedMoveEval.vLeaderImplied,
-            deltaV_capture: 0,
-            P_captured: piece.rumor.pLossTeam / 1000,
-            peerSafetyDeltas: {},
-          } satisfies CandidateMoveEvaluation,
-        ]),
-      ),
-    );
+    const refreshed = buildDesertionContexts(roster, next.moveEvalByPiece);
     const further = evaluateDesertionCascade(roster, refreshed);
     for (const candidate of further) {
       const piece = roster.find((entry) => entry.id === candidate.pieceId);
       if (piece === undefined) continue;
       if (queue.some((queued) => queued.actor.id === piece.id)) continue;
+      const candidateMoveEval =
+        next.moveEvalByPiece[piece.id] ?? next.refusedMoveEval;
       queue.push({
         actor: piece,
         refusedMove: next.refusedMove,
-        refusedMoveEval: next.refusedMoveEval,
+        refusedMoveEval: candidateMoveEval,
+        moveEvalByPiece: next.moveEvalByPiece,
         uStay: candidate.uStay,
         uDesert: candidate.uDesert,
       });

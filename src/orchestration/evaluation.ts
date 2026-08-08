@@ -10,9 +10,10 @@ export function insightToEvaluation(
   features: MoveFeatures,
   insight: EngineEvaluation,
   leaderInsight: EngineEvaluation,
+  leaderImpliedBias = 0,
 ): CandidateMoveEvaluation {
   const deltaV_board = insight.scoreCp / 100;
-  const vLeaderImplied = leaderInsight.scoreCp / 100;
+  const vLeaderImplied = leaderInsight.scoreCp / 100 + leaderImpliedBias;
   return {
     moveNotation: features.san,
     deltaV_board,
