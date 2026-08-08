@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { canonicalJson } from '../src/core/canonicalJson';
-import { createSeededRandom } from '../src/core/random';
+import {
+  createSeededRandom,
+  createSeededRandomFromState,
+} from '../src/core/random';
 
 describe('seeded PRNG golden values', () => {
   it('produces the xoshiro128** sequence expanded by splitmix32', () => {
@@ -35,6 +38,24 @@ describe('seeded PRNG golden values', () => {
     random.nextUint32();
     random.restore(snapshot);
     expect([random.nextUint32(), random.nextUint32()]).toEqual(tail);
+  });
+
+  it('constructs a generator from a captured state', () => {
+    const random = createSeededRandom(42);
+    random.nextUint32();
+    const state = random.snapshot();
+    const expected = [random.nextUint32(), random.nextUint32()];
+    const restored = createSeededRandomFromState(state);
+    expect([restored.nextUint32(), restored.nextUint32()]).toEqual(expected);
+  });
+
+  it('validates state when constructing from a snapshot', () => {
+    expect(() =>
+      createSeededRandomFromState({ s0: 0, s1: 0, s2: 0, s3: 0 }),
+    ).toThrow('must not contain four zero words');
+    expect(() =>
+      createSeededRandomFromState({ s0: -1, s1: 0, s2: 0, s3: 1 }),
+    ).toThrow('must contain four uint32 words');
   });
 });
 
