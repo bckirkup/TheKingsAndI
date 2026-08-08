@@ -149,7 +149,7 @@ stable identity-seeded disposition prior. `B_i` remains global damage rather
 than part of a relationship account. The disposition is not player-facing as a
 number; facilitator exposure remains a separate open question.
 
-### D50 ⚠ Does the true evaluation get persisted in the event log?
+### D50 ✅ Does the true evaluation get persisted in the event log? (ADR 0036)
 The audit needs it (ADR 0018) and the trust-farming detector needs it
 (ADR 0019), but persisting truth beside belief inflates the payload and places
 the forbidden number inside the save file, where a future loader may read it into
@@ -160,8 +160,11 @@ loader has no code path to read. This makes ADR 0013's epistemic boundary
 enforceable at rest rather than only at runtime, and it lets the audit stream be
 dropped from a shipping save without breaking play.
 
-**Status (2026-08-07):** Still **open**. `SharedSearchBroker.evaluateTrue` is
-ephemeral / orchestration-only; true eval is **not** written to the event log.
+**Resolution (ADR 0036):** **Resolved yes, outside the event log.** True
+evaluations are persisted in a separate, droppable audit stream with no code
+path from the psychology loader. Every audit score carries provenance,
+including `determinismId` and depth for true engine values or an explicit
+authored/placeholder marker for non-measured values.
 
 ### D51 ✅ Does the King have psychology? — yes, as a mandate (ADR 0021, proposed)
 Resolved by the owner's own observation that *"the king is involved in every
@@ -642,8 +645,8 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D50, D52** — before persistence and before any dialogue is authored.
-   D49 is resolved by ADR 0035; D48 is resolved by ADR 0034: it was the one
+1. **D52** — before persistence and before any dialogue is authored. D49 is
+   resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had
    to land before `engine/`.
 1b. **King's patience and recall rate** (D54/D56 residue) — with the harness,

@@ -104,7 +104,8 @@ Rules 1 and 3 are **decided** (ADR 0009); rule 2 remains as specified.
 
 ## 2b. Structural decisions (D49–D51)
 
-Two schema questions remain unresolved and expensive to retrofit:
+These schema decisions are expensive to retrofit and are recorded here for
+orientation:
 
 - **D49 is resolved by ADR 0035.** Credence is trust in *someone*: with
   symmetric psychology (D5) and persistent rosters, the relationship account is
@@ -112,11 +113,11 @@ Two schema questions remain unresolved and expensive to retrofit:
   `credence: Record<LeaderId, { benev: number; abil: number }>`. Each piece
   also has an identity-seeded disposition prior, while `B_i` remains global
   damage.
-- **D50 — where the true evaluation lives.** The audit (ADR 0018) and the
-  trust-farming detector (ADR 0019) need it, but it must never be loadable into
-  psychology (ADR 0013). Recommended: a **separate audit stream** with no code
-  path from the psychology loader, so the boundary holds at rest as well as at
-  runtime, and so the stream can be dropped from a shipping save.
+- **D50 is resolved by ADR 0036.** The audit (ADR 0018) and the trust-farming
+  detector (ADR 0019) persist true evaluations in a **separate audit stream**
+  with no code path from the psychology loader. The stream is droppable, so the
+  boundary holds at rest as well as at runtime without making it required for
+  play.
 - **D51 is resolved (ADR 0021):** `PieceState` stays **uniform** — the King
   carries the same fields. What differs is his attention mask (unpruned, because
   he appears at the tips of every line), his evaluation profile (own safety *is*
@@ -185,6 +186,7 @@ PieceIdentity {
 }
 CaptureRecord { pieceId, byLeaderId, byPieceId, servingLeaderId, matchId }
 MatchRecord   { ..., seed, determinismId }   // replay-verifiable (ADR 0026 §6)
+AuditStream   { ..., provenance, determinismId, depth } // separate, droppable; never loaded by psychology (ADR 0036)
 ```
 
 Capture is never permanent (ADR 0006); **retirement** is, and it is a world event

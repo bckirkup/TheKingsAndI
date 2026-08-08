@@ -9,7 +9,7 @@ Stockfish 1.3 pool + shared-search broker, psychology + live cascade/witness/
 sacrifice/costly-signal wiring, headless harness with sweeps, playable UI slice,
 single-player persistence/campaign spine, and authored narration are in tree.
 **Open:** Milestone 3 supportive-desertion calibration; **Milestone 5b** seminar /
-cohort / multi-commander tasks; architecture decisions **D49** and **D50**.
+cohort / multi-commander tasks. D49 and D50 are resolved by ADRs 0035 and 0036.
 
 ## Read This First
 | Doc | Purpose |
@@ -72,10 +72,9 @@ cohort / multi-commander tasks; architecture decisions **D49** and **D50**.
    code.** Ask, or implement behind a config flag with both branches tested.
    D19 and D9 are settled (ADR 0015, ADR 0017); D36–D39 and D41 by ADR 0019;
    D51 by ADR 0021; D48 by ADR 0034. Remaining calibration decisions
-   (D35, D40, D42–D44) belong to the harness in Milestone 3. **Two architecture
-   decisions are open and must not be resolved silently in code:** D49 (is
-   credence keyed by leader identity?) and D50 (is the true evaluation
-   persisted, and where). (D54 is resolved by ADR 0021; D52/D53 by ADR 0023.)
+   (D35, D40, D42–D44) belong to the harness in Milestone 3. **Open architecture
+   decisions must not be resolved silently in code.** D49 and D50 are resolved
+   by ADRs 0035 and 0036. (D54 is resolved by ADR 0021; D52/D53 by ADR 0023.)
    Engine results reach psychology only through a per-ply barrier: issued and
    collected in `PieceId` order, frozen, with the seeded PRNG drawn only after
    it closes — `Promise.race`/`Promise.any`/wall-clock timeouts are banned in
