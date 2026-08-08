@@ -19,6 +19,19 @@ describe('terminal post-move evaluation', () => {
 });
 
 describe('UCI score failures', () => {
+  it('retains MultiPV lines at each iterative-deepening rung', async () => {
+    const engine = new UciEngine({
+      enginePath: fileURLToPath(
+        new URL('./fixtures/uci-multipv-ladder.mjs', import.meta.url),
+      ),
+      multiPv: 2,
+    });
+    const ladder = await engine.searchLadder('8/8/8/8/8/8/8/7K w - - 0 1', 2);
+    expect(ladder.multiPvAt.get(1)?.size).toBe(2);
+    expect(ladder.multiPvAt.get(2)?.size).toBe(2);
+    await engine.dispose();
+  });
+
   it('rejects a bestmove with no score', async () => {
     const engine = new UciEngine({
       enginePath: fileURLToPath(

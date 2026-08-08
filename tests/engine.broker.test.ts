@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import {
   applyPrivateScoring,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   createStockfishPort,
   disposeStockfishPort,
   resolveInsightRound,
@@ -40,17 +41,20 @@ describe('shared-search broker (Stockfish)', () => {
   }, 60_000);
 
   it('derives the Stockfish determinism ID from the configured ceiling', () => {
+    expect(DEFAULT_PRIVATE_MULTIPV_WIDTH).toBe(8);
     expect(STOCKFISH_DETERMINISM_ID).toContain('dmax-16');
     expect(stockfishDeterminismId(8)).toContain('dmax-8');
     expect(stockfishDeterminismId(8)).not.toBe(STOCKFISH_DETERMINISM_ID);
+    expect(STOCKFISH_DETERMINISM_ID).toContain('multipv-8');
+    expect(stockfishDeterminismId(16, 4)).not.toBe(STOCKFISH_DETERMINISM_ID);
   });
 
-  it('private scoring biases non-empty opaque profiles deterministically', () => {
+  it('keeps engine transport profile-agnostic', () => {
     const base = { scoreCp: 40, pv: ['e2e4'] as const };
     const plain = applyPrivateScoring(base, {});
     const biased = applyPrivateScoring(base, { safety: 2, material: -1 });
     expect(plain.scoreCp).toBe(40);
-    expect(biased.scoreCp).toBe(41);
+    expect(biased.scoreCp).toBe(40);
   });
 
   it('serves a barrier round from one shared search', async () => {

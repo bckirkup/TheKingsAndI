@@ -2,11 +2,30 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import {
   CONFORMANCE_CORPUS,
+  createFakeEnginePort,
   createLozzaPort,
   createStockfishPort,
   disposeLozzaPort,
   disposeStockfishPort,
 } from '../src/engine';
+import type { EnginePort } from '../src/engine/types';
+
+async function expectMultiPvContract(
+  port: EnginePort,
+  testCase: (typeof CONFORMANCE_CORPUS)[number],
+): Promise<void> {
+  if (port.multiPvAt === undefined) {
+    throw new Error('engine does not expose per-rung MultiPV');
+  }
+  const first = await port.multiPvAt(testCase.fen, testCase.depth);
+  const second = await port.multiPvAt(testCase.fen, testCase.depth);
+  expect(first.length).toBeGreaterThan(0);
+  expect(second).toEqual(first);
+  expect(new Set(first.map((line) => line.pv.join(' '))).size).toBe(
+    first.length,
+  );
+  expect(first.every((line) => Number.isSafeInteger(line.scoreCp))).toBe(true);
+}
 
 describe('engine conformance corpus (Lozza)', () => {
   const port = createLozzaPort();
@@ -42,6 +61,12 @@ describe('engine conformance corpus (Lozza)', () => {
     const deep = await port.evaluate(testCase.fen, testCase.depth);
     expect(shallow.scoreCp).not.toBe(deep.scoreCp);
   });
+
+  it('provides deterministic per-rung MultiPV lines', async () => {
+    const testCase = CONFORMANCE_CORPUS[0];
+    if (testCase === undefined) throw new Error('missing corpus case');
+    await expectMultiPvContract(port, testCase);
+  });
 });
 
 describe('engine conformance corpus (Stockfish)', () => {
@@ -68,4 +93,19 @@ describe('engine conformance corpus (Stockfish)', () => {
     const deep = await port.evaluate(testCase.fen, 6, {});
     expect(deep.pv.length).toBeGreaterThanOrEqual(shallow.pv.length);
   }, 60_000);
+
+  it('provides deterministic per-rung MultiPV lines', async () => {
+    const port = await createStockfishPort({ poolSize: 1, dMax: 8 });
+    const testCase = CONFORMANCE_CORPUS[0];
+    if (testCase === undefined) throw new Error('missing corpus case');
+    await expectMultiPvContract(port, testCase);
+  }, 120_000);
+});
+
+describe('engine conformance corpus (fake)', () => {
+  it('provides deterministic per-rung MultiPV lines', async () => {
+    const testCase = CONFORMANCE_CORPUS[0];
+    if (testCase === undefined) throw new Error('missing corpus case');
+    await expectMultiPvContract(createFakeEnginePort(), testCase);
+  });
 });

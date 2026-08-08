@@ -23,6 +23,13 @@ export function capEngineDepth(
     determinismId: `${engine.determinismId}/depth-cap-${depthCap}`,
     evaluate: (fen, depth, evalProfile) =>
       engine.evaluate(fen, Math.min(depth, depthCap), evalProfile),
+    ...(engine.multiPvAt === undefined
+      ? {}
+      : {
+          multiPvAt: (fen: string, depth: number) =>
+            engine.multiPvAt?.(fen, Math.min(depth, depthCap)) ??
+            Promise.resolve([]),
+        }),
   };
 }
 

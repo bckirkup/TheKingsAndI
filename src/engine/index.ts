@@ -19,6 +19,7 @@ export {
   resolveInsightRound,
 } from './barrier';
 export {
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   SHARED_SEARCH_D_MAX,
   applyPrivateScoring,
   createSharedSearchBroker,

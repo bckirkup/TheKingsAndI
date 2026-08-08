@@ -26,15 +26,23 @@ export interface EngineEvaluation {
 /** The narrow port of ADR 0020. `depth` is fixed; no wall clock, ever. */
 export interface EnginePort {
   /**
-   * Evaluate `fen` at fixed depth. Optional `evalProfile` enables private
-   * scoring under the shared-search broker (ADR 0017); adapters that ignore
-   * it must still accept the argument so the barrier can pass seat weights.
+   * Evaluate `fen` at fixed depth. The optional profile is canonical transport
+   * identity only; private scoring belongs to orchestration (ADR 0037).
    */
   evaluate(
     fen: string,
     depth: number,
     evalProfile?: EvalProfile,
   ): Promise<EngineEvaluation>;
+  /**
+   * Optional profile-agnostic MultiPV transport for orchestration attention
+   * pruning (ADR 0037). The engine still returns only shared evaluations.
+   */
+  readonly multiPvAtMax?: (fen: string) => Promise<readonly EngineEvaluation[]>;
+  readonly multiPvAt?: (
+    fen: string,
+    depth: number,
+  ) => Promise<readonly EngineEvaluation[]>;
   /** Engine + version + settings. Goes into every `MatchRecord`. */
   readonly determinismId: string;
 }
