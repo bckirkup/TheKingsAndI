@@ -8,6 +8,8 @@ import {
   buildInsightRound,
   requireComplete,
   SHARED_SEARCH_D_MAX,
+  STOCKFISH_DETERMINISM_ID,
+  stockfishDeterminismId,
 } from '../src/engine';
 import type { PieceId } from '../src/core/ids';
 
@@ -36,6 +38,12 @@ describe('shared-search broker (Stockfish)', () => {
     expect(pieceView.pv.length).toBeGreaterThan(0);
     expect(SHARED_SEARCH_D_MAX).toBe(16);
   }, 60_000);
+
+  it('derives the Stockfish determinism ID from the configured ceiling', () => {
+    expect(STOCKFISH_DETERMINISM_ID).toContain('dmax-16');
+    expect(stockfishDeterminismId(8)).toContain('dmax-8');
+    expect(stockfishDeterminismId(8)).not.toBe(STOCKFISH_DETERMINISM_ID);
+  });
 
   it('private scoring biases non-empty opaque profiles deterministically', () => {
     const base = { scoreCp: 40, pv: ['e2e4'] as const };

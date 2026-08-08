@@ -29,6 +29,10 @@ export interface SimulationOptions {
   readonly depthCap: number | undefined;
 }
 
+export function shouldRunSmokeBounds(executedMatches: number): boolean {
+  return executedMatches <= 20;
+}
+
 function parseArguments(
   argumentsList: readonly string[],
 ): SimulationOptions & { out: string | undefined } {
@@ -128,7 +132,7 @@ async function main(): Promise<void> {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
   }
-  if (options.matches <= 20) {
+  if (shouldRunSmokeBounds(result.metrics.length)) {
     assertSmokeBounds(options.leader, result.summary);
   }
   console.log(

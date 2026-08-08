@@ -9,6 +9,7 @@ export {
   STOCKFISH_NPM_VERSION,
   createStockfishPort,
   disposeStockfishPort,
+  stockfishDeterminismId,
 } from './adapters/stockfish';
 export type { StockfishPortOptions } from './adapters/stockfish';
 export {

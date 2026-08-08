@@ -56,7 +56,7 @@ export async function createSimEngine(
     case 'lozza':
       return createLozzaPort();
     case 'stockfish':
-      return createStockfishPort({ poolSize: 2, dMax: 8 });
+      return createStockfishPort({ poolSize: 2 });
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown sim engine: ${_exhaustive}`);

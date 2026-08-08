@@ -7,6 +7,7 @@ import {
   renderCsv,
   runCampaign,
   runSimulation,
+  shouldRunSmokeBounds,
 } from '../sim/cli';
 import { detectDegeneracy } from '../sim/degeneracy';
 import { aggregateCampaign } from '../sim/metrics';
@@ -137,6 +138,14 @@ describe('simulation harness argument parsing', () => {
       depthCap: 4,
       out: 'metrics.csv',
     });
+  });
+
+  it('keys the smoke gate to executed campaign matches', () => {
+    const options = parseArguments(['--matches=1', '--campaign=21']);
+    expect(options.matches).toBe(1);
+    expect(options.campaign).toBe(21);
+    expect(shouldRunSmokeBounds(options.campaign)).toBe(false);
+    expect(shouldRunSmokeBounds(20)).toBe(true);
   });
 
   it.each([

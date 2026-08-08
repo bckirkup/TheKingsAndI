@@ -15,9 +15,16 @@ export const STOCKFISH_BUILD = '18';
 export const STOCKFISH_FLAVOR = 'lite-single';
 export const STOCKFISH_HASH_MB = 16;
 
-export const STOCKFISH_DETERMINISM_ID =
-  `stockfish-js-${STOCKFISH_BUILD}-${STOCKFISH_FLAVOR}/` +
-  `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${SHARED_SEARCH_D_MAX}`;
+export function stockfishDeterminismId(
+  dMax: number = SHARED_SEARCH_D_MAX,
+): string {
+  return (
+    `stockfish-js-${STOCKFISH_BUILD}-${STOCKFISH_FLAVOR}/` +
+    `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}`
+  );
+}
+
+export const STOCKFISH_DETERMINISM_ID = stockfishDeterminismId();
 
 export interface StockfishPortOptions {
   /** Override engine script path (tests only). */
@@ -50,14 +57,15 @@ export async function createStockfishPort(
   if (sharedBroker !== undefined && options.enginePath === undefined) {
     return sharedBroker;
   }
+  const dMax = options.dMax ?? SHARED_SEARCH_D_MAX;
   const broker = await createSharedSearchBroker({
     enginePath: options.enginePath ?? defaultStockfishPath(),
-    determinismId: STOCKFISH_DETERMINISM_ID,
+    determinismId: stockfishDeterminismId(dMax),
     hashMb: STOCKFISH_HASH_MB,
     threads: 1,
     multiPv: 3,
     ...(options.poolSize !== undefined ? { size: options.poolSize } : {}),
-    ...(options.dMax !== undefined ? { dMax: options.dMax } : {}),
+    dMax,
   });
   if (options.enginePath === undefined) {
     sharedBroker = broker;
