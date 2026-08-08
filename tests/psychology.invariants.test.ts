@@ -148,7 +148,22 @@ describe('desertion cascade', () => {
     const lambda = 0.64;
 
     expect(calculateUStay(piece, context, lambda)).toBe(-5.7);
-    expect(calculateUDesert(context, lambda)).toBe(-5.76);
+    expect(calculateUDesert(piece, context, lambda, [piece])).toBe(-5.76);
+  });
+
+  it('charges anticipated standing loss in the desertion utility (golden)', () => {
+    const piece = makePiece({ T_i: 50, M_i: 80, B_i: 0 });
+    const peer = makePiece({
+      id: 'w:R:h1',
+      dyadicAffinity: { [piece.id]: 100 },
+    });
+    const context: DesertionContext = {
+      P_captured: 0.25,
+      P_lossIfStay: 0.1,
+      P_lossIfLeave: 0.6,
+    };
+
+    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-30.76);
   });
 
   it('changes the desertion decision when collective stake changes (sensitivity)', () => {
@@ -169,6 +184,34 @@ describe('desertion cascade', () => {
       expect(lowStake.uDesert).not.toBe(baseline.uDesert);
     } finally {
       config.DESERTION_COLLECTIVE_STAKE = original;
+    }
+  });
+
+  it('changes desertion utility when standing stake changes (sensitivity)', () => {
+    const piece = makePiece();
+    const peer = makePiece({
+      id: 'w:R:h1',
+      dyadicAffinity: { [piece.id]: 100 },
+    });
+    const context: DesertionContext = {
+      P_captured: 0.25,
+      P_lossIfStay: 0.1,
+      P_lossIfLeave: 0.6,
+    };
+    const config = ENGINE_CONFIG as {
+      DESERTION_STANDING_STAKE: number;
+    };
+    const original = config.DESERTION_STANDING_STAKE;
+    try {
+      const baseline = calculateUDesert(piece, context, 0.64, [piece, peer]);
+      config.DESERTION_STANDING_STAKE = 0;
+      const withoutStanding = calculateUDesert(piece, context, 0.64, [
+        piece,
+        peer,
+      ]);
+      expect(withoutStanding).not.toBe(baseline);
+    } finally {
+      config.DESERTION_STANDING_STAKE = original;
     }
   });
 

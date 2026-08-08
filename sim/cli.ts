@@ -249,7 +249,7 @@ async function main(): Promise<void> {
     `Milestone 3 harness: ${result.summary.matches} matches across ${result.campaigns.length} campaigns for ${options.leader} (${result.manifest.determinismId}).`,
   );
   console.log(
-    `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
+    `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} winning_position_desertion=${result.summary.winningPositionDesertionRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
   );
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,

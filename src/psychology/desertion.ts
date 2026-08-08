@@ -44,15 +44,32 @@ export function calculateUStay(
 }
 
 export function calculateUDesert(
+  piece: PieceState,
   context: DesertionContext,
   lambda: number,
+  activePeers: readonly PieceState[],
 ): number {
-  const desertCost =
+  let standing = 0;
+  let peers = 0;
+  for (const peer of activePeers) {
+    if (peer.id === piece.id) continue;
+    peers += 1;
+    const affinity = peer.dyadicAffinity[piece.id] ?? 0;
+    const prestige = peer.classPrestige[piece.role] ?? 0;
+    standing += Math.max(0, (affinity + prestige) / 200);
+  }
+  const meanStanding = standing / Math.max(1, peers);
+  const gloryWeight = (piece.traits.w_ambition + piece.traits.w_prestige) / 2;
+  const anticipatedStandingCost =
+    meanStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
+  const residualCost =
     -context.P_lossIfLeave *
     lambda *
     ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
     ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
-  return quantizeBoardValue(desertCost) / 1_000;
+  const quantizedResidualCost = quantizeBoardValue(residualCost);
+  const quantizedStandingCost = quantizeBoardValue(-anticipatedStandingCost);
+  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
 }
 
 export function shouldDesert(
@@ -66,7 +83,7 @@ export function shouldDesert(
 } {
   const lambda = calculateLambda(piece, activePeers);
   const uStay = calculateUStay(piece, context, lambda);
-  const uDesert = calculateUDesert(context, lambda);
+  const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const desert =
     uDesert > uStay + ENGINE_CONFIG.DESERTION_HYSTERESIS &&
     piece.role !== 'King';

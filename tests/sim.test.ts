@@ -339,6 +339,7 @@ function handCheckMetric(match: number): MatchMetrics {
     overrides: 0,
     quietQuitMoves: 0,
     desertions: match % 2,
+    winningPositionDesertions: 0,
     cascadeLength: match % 2,
     refusedGoodMoves: 1,
     refusalRate: match / 100,

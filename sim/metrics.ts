@@ -26,6 +26,7 @@ export interface MatchMetrics {
   readonly overrides: number;
   readonly quietQuitMoves: number;
   readonly desertions: number;
+  readonly winningPositionDesertions: number;
   readonly cascadeLength: number;
   readonly refusedGoodMoves: number;
   readonly refusalRate: number;
@@ -75,6 +76,7 @@ export interface CampaignMetrics {
   readonly matches: number;
   readonly matchMetrics: readonly MatchMetrics[];
   readonly desertionCampaignRate: number;
+  readonly winningPositionDesertionRate: number;
   readonly routCampaignRate: number;
   readonly meanRefusalRate: number;
   readonly meanQuietQuitRate: number;
@@ -184,6 +186,7 @@ export function metricsFromMatch(
     overrides: counts.overrides,
     quietQuitMoves: counts.quietQuitMoves,
     desertions: counts.desertions,
+    winningPositionDesertions: result.winningPositionDesertions,
     cascadeLength: cascadeLength(result.events),
     refusedGoodMoves,
     refusalRate,
@@ -259,6 +262,15 @@ export function aggregateCampaign(
   const desertionCampaignRate =
     matchMetrics.filter((metric) => metric.desertions > 0).length /
     Math.max(1, matches);
+  const totalDesertions = matchMetrics.reduce(
+    (sum, metric) => sum + metric.desertions,
+    0,
+  );
+  const winningPositionDesertionRate =
+    matchMetrics.reduce(
+      (sum, metric) => sum + metric.winningPositionDesertions,
+      0,
+    ) / Math.max(1, totalDesertions);
   const routCampaignRate =
     matchMetrics.filter((metric) => metric.rout).length / Math.max(1, matches);
   const mean = (pick: (metric: MatchMetrics) => number): number =>
@@ -284,6 +296,7 @@ export function aggregateCampaign(
     matches,
     matchMetrics,
     desertionCampaignRate,
+    winningPositionDesertionRate,
     routCampaignRate,
     meanRefusalRate: mean((metric) => metric.refusalRate),
     meanQuietQuitRate: mean((metric) => metric.quietQuitRate),
