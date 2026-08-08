@@ -349,12 +349,10 @@ export function averageCampaignTrajectoryBands(
       Math.max(1, selected.length);
     return {
       quartile,
-      startMatch: Math.min(
-        ...selected
-          .filter((band) => band.startMatch > 0)
-          .map((band) => band.startMatch),
-        0,
-      ),
+      startMatch:
+        selected.length === 0
+          ? 0
+          : Math.min(...selected.map((band) => band.startMatch)),
       endMatch: Math.max(...selected.map((band) => band.endMatch), 0),
       matches: Math.round(
         selected.reduce((sum, band) => sum + band.matches, 0) /

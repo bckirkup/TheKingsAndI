@@ -46,7 +46,8 @@ Required goldens at Milestone 3:
 - Clamping: affinity and prestige saturate at ±100 after repeated `+50` / `+20`
   sacrifice events.
 - Full 40-ply match event-log fingerprint per scripted leader style.
-- Campaign debrief archetype classification for 4 hand-built 10-match campaigns.
+- Campaign debrief archetype classification for 4 hand-built 10-match legacy
+  regression examples.
 
 ## 3. Sensitivity probes (anti-dead-wiring)
 
@@ -250,9 +251,9 @@ means the model has collapsed:
 49. **Cohort collapse.** In a simulated cohort, cross-student piece flow does not
     measurably transmit consequences between students — the seminar's central
     claim is decorative (ADR 0027 §1).
-50. **Diagnostic overrun.** The trap needs more played matches to close than fit
-    in an intensive week (~16–20), so the four-day format cannot deliver its
-    diagnostic (ADR 0027, D26).
+50. **Diagnostic overrun.** The first-campaign collapse target of 8–12 matches
+    (D26) must fit within the settled 16-match intensive format; otherwise the
+    format cannot deliver its diagnostic (ADR 0027).
 
 51. **Unaccountable host.** The facilitator audit cannot distinguish a well-run
     cohort from a badly-run one on any measure that survives seed variation —

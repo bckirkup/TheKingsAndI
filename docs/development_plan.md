@@ -97,7 +97,7 @@ determinism test passes 100 random matches.
 | Task | Deliverable |
 |---|---|
 | 3.1 | Scripted AI leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`, plus the two ADR-0007 oracles `pure_tactician` and `redeemer` |
-| 3.2 | `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` — 1,000 total matches across 50 independent 20-match campaigns |
+| 3.2 | Calibration run: `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` (1,000 total matches across 50 independent 20-match campaigns) |
 | 3.3 | Metrics: quiet-quit rate, refusal rate, **refused-good-move rate**, desertion incidence, cascade length, trust trajectory, culture drift, win rate, archetype classification |
 | 3.4 | Calibration pass on the trait weights, `Θ_refusal` slope/intercept, benching penalties, and sacrifice class/affinity shifts — plus resolution of D19 (trust-term scale) |
 | 3.5 | Commit calibrated config + calibration report with the plots that justified it |
@@ -107,10 +107,10 @@ determinism test passes 100 random matches.
 | Metric | Tyrannical leader | Supportive leader |
 |---|---|---|
 | Refusal rate (per match) | 8–20% of plies | <2% |
-| Desertion rate (per 20-match campaign) | 40–70% see ≥1 | <5% |
+| Desertion rate (per 20-match calibration campaign) | 40–70% see ≥1 | <5% |
 | Campaigns ending in a full rout | common — a tyrant whose roster never routs is a bug (ADR 0011) | rare |
 | Win rate delta vs. plain chess | −5 to −20% | −0 to −8% |
-| Culture drift after 20 matches | class contempt worsens | contempt largely dissolved |
+| Culture drift after 20 calibration matches | class contempt worsens | contempt largely dissolved |
 
 If tyranny is *not* punished, the model is wrong — stop and re-tune before
 building UI on it. Note the *upper* bound is deliberately absent for the tyrant:
@@ -139,7 +139,7 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 |---|---|
 | 5.1 | Dexie schema v1 + migration harness + fixture-based migration tests |
 | 5.2 | Roster screen: bench/fire flows with explicit consequence preview |
-| 5.3 | Campaign loop (5–20 matches), culture drift computed as a fold |
+| 5.3 | Product campaign loop (5–20 matches), culture drift computed as a fold |
 | 5.4 | Deterministic single-match audit + campaign debrief (numbers and charts, no prose yet) |
 | 5.6 | Succession coda (ADR 0022): King takes field command as an ordinary `LeaderId` with empty history, player spectates, remainder of match played out plus optional fast-forward of remaining matches; `D_king < D_player_effective` asserted in config tests; reinstatement evaluated only at the start of the next match |
 | 5.7 | Debrief scores **board quality** and **execution fidelity** as separate columns — the gap is the player's diagnosis |

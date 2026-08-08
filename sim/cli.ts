@@ -234,17 +234,16 @@ async function main(): Promise<void> {
       'utf8',
     );
   }
-  if (options.enforceCalibration) {
-    assertCalibrationBounds(options.leader, result.summary);
-  } else if (shouldRunSmokeBounds(result.summary.matches)) {
-    assertSmokeBounds(options.leader, result.summary);
-  }
-  for (const finding of detectDegeneracy(
+  const findings = detectDegeneracy(
     options.leader,
     result.summary.matchMetrics,
     result.summary,
-  )) {
-    console.log(`degeneracy=${finding.code} ${finding.message}`);
+  );
+  if (
+    !options.enforceCalibration &&
+    shouldRunSmokeBounds(result.summary.matches)
+  ) {
+    assertSmokeBounds(options.leader, result.summary);
   }
   console.log(
     `Milestone 3 harness: ${result.summary.matches} matches across ${result.campaigns.length} campaigns for ${options.leader} (${result.manifest.determinismId}).`,
@@ -255,6 +254,17 @@ async function main(): Promise<void> {
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
+  for (const band of result.trajectoryBands) {
+    console.log(
+      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} refusal=${band.meanRefusalRate.toFixed(3)} desertion=${band.desertionRate.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+    );
+  }
+  for (const finding of findings) {
+    console.log(`degeneracy=${finding.code} ${finding.message}`);
+  }
+  if (options.enforceCalibration) {
+    assertCalibrationBounds(options.leader, result.summary);
+  }
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
   if (options.artifactOut !== undefined) {
     await mkdir(dirname(options.artifactOut), { recursive: true });
