@@ -37,21 +37,7 @@ function validateState(state: RandomState): void {
   }
 }
 
-export function createSeededRandom(seed: number): SeededRandom {
-  if (!Number.isSafeInteger(seed)) {
-    throw new RangeError('Seed must be a safe integer.');
-  }
-  const seedWord = seed >>> 0;
-  let state: [number, number, number, number] = [
-    splitmix32(seedWord),
-    splitmix32(seedWord + 1),
-    splitmix32(seedWord + 2),
-    splitmix32(seedWord + 3),
-  ];
-  if (state.every((word) => word === 0)) {
-    state = [0x6d2b79f5, 0x1b873593, 0x9e3779b9, 0x243f6a88];
-  }
-
+function createRandom(state: [number, number, number, number]): SeededRandom {
   return {
     nextUint32(): number {
       const result = Math.imul(rotateLeft(Math.imul(state[1], 5), 7), 9) >>> 0;
@@ -81,4 +67,31 @@ export function createSeededRandom(seed: number): SeededRandom {
       state = [snapshot.s0, snapshot.s1, snapshot.s2, snapshot.s3];
     },
   };
+}
+
+export function createSeededRandom(seed: number): SeededRandom {
+  if (!Number.isSafeInteger(seed)) {
+    throw new RangeError('Seed must be a safe integer.');
+  }
+  const seedWord = seed >>> 0;
+  const state: [number, number, number, number] = [
+    splitmix32(seedWord),
+    splitmix32(seedWord + 1),
+    splitmix32(seedWord + 2),
+    splitmix32(seedWord + 3),
+  ];
+  if (state.every((word) => word === 0)) {
+    state[0] = 0x6d2b79f5;
+    state[1] = 0x1b873593;
+    state[2] = 0x9e3779b9;
+    state[3] = 0x243f6a88;
+  }
+  return createRandom(state);
+}
+
+export function createSeededRandomFromState(
+  snapshot: RandomState,
+): SeededRandom {
+  validateState(snapshot);
+  return createRandom([snapshot.s0, snapshot.s1, snapshot.s2, snapshot.s3]);
 }

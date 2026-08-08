@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
+import { canonicalJson } from '../src/core/canonicalJson';
 import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
 import {
   parseArguments,
@@ -8,6 +9,7 @@ import {
   runCampaign,
   runSimulation,
 } from '../sim/cli';
+import { parseCampaignCheckpoint } from '../sim/campaign';
 import { detectDegeneracy } from '../sim/degeneracy';
 import { aggregateCampaign } from '../sim/metrics';
 
@@ -41,6 +43,65 @@ describe('simulation harness golden output', () => {
     expect(renderCsv(await runSimulation(options))).toBe(
       renderCsv(await runSimulation(options)),
     );
+  });
+
+  it('resumes a campaign boundary with byte-identical metrics and roster', async () => {
+    const options = {
+      leader: 'supportive' as const,
+      seed: 12,
+      engineKind: 'fake' as const,
+    };
+    const straight = await runCampaign({ ...options, matches: 6 });
+    const firstSegment = await runCampaign({ ...options, matches: 3 });
+    const checkpoint = parseCampaignCheckpoint(
+      JSON.parse(canonicalJson(firstSegment.checkpoint)) as unknown,
+    );
+    const resumed = await runCampaign({
+      ...options,
+      matches: 6,
+      checkpoint,
+    });
+
+    expect(resumed.metrics).toEqual(straight.metrics);
+    expect(resumed.finalRoster).toEqual(straight.finalRoster);
+    expect(resumed.summary).toEqual(straight.summary);
+  });
+
+  it.each([
+    ['schemaVersion', 'schemaVersion mismatch'],
+    ['psychConfigVersion', 'psychConfigVersion mismatch'],
+    ['determinismId', 'determinismId mismatch'],
+    ['leader', 'leader mismatch'],
+  ] as const)('rejects a checkpoint %s mismatch', async (field, message) => {
+    const checkpoint = (
+      await runCampaign({
+        matches: 1,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).checkpoint;
+    const mismatched = {
+      ...checkpoint,
+      [field]:
+        field === 'schemaVersion'
+          ? checkpoint.schemaVersion + 1
+          : field === 'psychConfigVersion'
+            ? 'different-psych-config'
+            : field === 'determinismId'
+              ? 'different-engine'
+              : 'tyrannical',
+    };
+
+    await expect(
+      runCampaign({
+        matches: 1,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+        checkpoint: mismatched,
+      }),
+    ).rejects.toThrow(message);
   });
 });
 
@@ -136,7 +197,41 @@ describe('simulation harness argument parsing', () => {
       engine: 'lozza',
       depthCap: 4,
       out: 'metrics.csv',
+      checkpointOut: undefined,
+      resume: undefined,
     });
+  });
+
+  it('accepts checkpoint emit and resume flags', () => {
+    expect(
+      parseArguments([
+        '--campaign=6',
+        '--checkpoint-out=checkpoint.json',
+        '--resume=prior.json',
+      ]),
+    ).toMatchObject({
+      campaign: 6,
+      checkpointOut: 'checkpoint.json',
+      resume: 'prior.json',
+    });
+  });
+
+  it('rejects a malformed checkpoint roster with its index', async () => {
+    const checkpoint = (
+      await runCampaign({
+        matches: 1,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).checkpoint;
+
+    expect(() =>
+      parseCampaignCheckpoint({
+        ...checkpoint,
+        roster: [...checkpoint.roster.slice(0, 1), { id: 'broken' }],
+      }),
+    ).toThrow('roster[1]');
   });
 
   it.each([

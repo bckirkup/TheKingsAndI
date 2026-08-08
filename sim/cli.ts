@@ -1,10 +1,15 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-import { runCampaign } from './campaign';
+import {
+  parseCampaignCheckpoint,
+  runCampaign,
+  type CampaignCheckpoint,
+} from './campaign';
 import { assertSmokeBounds } from './degeneracy';
 import { disposeSimEngine, type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
+import { canonicalJson } from '../src/core/canonicalJson';
 
 export const LEADERS = [
   'tyrannical',
@@ -27,6 +32,8 @@ export interface SimulationOptions {
   readonly campaign: number;
   readonly engine: SimEngineKind;
   readonly depthCap: number | undefined;
+  readonly checkpointOut: string | undefined;
+  readonly resume: string | undefined;
 }
 
 function parseArguments(
@@ -41,6 +48,8 @@ function parseArguments(
     'out',
     'engine',
     'depth-cap',
+    'checkpoint-out',
+    'resume',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -79,6 +88,12 @@ function parseArguments(
   if (values.has('out') && values.get('out') === '') {
     throw new Error('--out must not be empty.');
   }
+  if (values.has('checkpoint-out') && values.get('checkpoint-out') === '') {
+    throw new Error('--checkpoint-out must not be empty.');
+  }
+  if (values.has('resume') && values.get('resume') === '') {
+    throw new Error('--resume must not be empty.');
+  }
   const engineValue = values.get('engine') ?? 'lozza';
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
@@ -103,14 +118,26 @@ function parseArguments(
     engine: engineValue as SimEngineKind,
     depthCap: depthCapValue,
     out: values.get('out'),
+    checkpointOut: values.get('checkpoint-out'),
+    resume: values.get('resume'),
   };
 }
 
 export { parseArguments, renderCsv };
-export { runCampaign, runSimulation } from './campaign';
+export {
+  parseCampaignCheckpoint,
+  runCampaign,
+  runSimulation,
+} from './campaign';
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
+  let checkpoint: CampaignCheckpoint | undefined;
+  if (options.resume !== undefined) {
+    checkpoint = parseCampaignCheckpoint(
+      JSON.parse(await readFile(options.resume, 'utf8')) as unknown,
+    );
+  }
   let result;
   try {
     result = await runCampaign({
@@ -119,6 +146,7 @@ async function main(): Promise<void> {
       seed: options.seed,
       engineKind: options.engine,
       depthCap: options.depthCap,
+      ...(checkpoint === undefined ? {} : { checkpoint }),
     });
   } finally {
     await disposeSimEngine(options.engine);
@@ -127,6 +155,14 @@ async function main(): Promise<void> {
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
+  }
+  if (options.checkpointOut !== undefined) {
+    await mkdir(dirname(options.checkpointOut), { recursive: true });
+    await writeFile(
+      options.checkpointOut,
+      `${canonicalJson(result.checkpoint)}\n`,
+      'utf8',
+    );
   }
   if (options.matches <= 20) {
     assertSmokeBounds(options.leader, result.summary);
@@ -141,6 +177,8 @@ async function main(): Promise<void> {
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
+  if (options.checkpointOut !== undefined)
+    console.log(`Checkpoint written to ${options.checkpointOut}`);
 }
 
 const isMain =
