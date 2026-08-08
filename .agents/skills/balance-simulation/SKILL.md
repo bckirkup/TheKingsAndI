@@ -57,6 +57,10 @@ chess and must not be quoted as calibration results.
 - For status questions, read the committed numbers in
   `docs/calibration/` first. Do not re-run the harness merely to repeat a
   previously recorded result.
+- Prefer GitHub Actions over Cursor agent sessions for routine harness runs
+  (`docs/testing_strategy.md` §7): PR CI uses `--engine=fake`; nightly Lozza
+  calibration lives in `.github/workflows/nightly.yml`. Agents interpret
+  artifacts and triage failures — they are not the scheduled runner.
 
 ## Metrics to collect
 

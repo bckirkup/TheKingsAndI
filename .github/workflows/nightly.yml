@@ -1,0 +1,150 @@
+# Agent-free heavy calibration. PR CI stays on fake-engine smoke; this workflow
+# carries Lozza N~100 metrics (and optional on-demand Stockfish) without burning
+# Cursor agent time. See docs/testing_strategy.md §7.
+name: Nightly calibration
+
+on:
+  schedule:
+    # 06:15 UTC — offset from the hour to reduce shared-runner contention.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+    inputs:
+      engine:
+        description: >
+          Engine for this run. Cron always uses Lozza. Choose stockfish only with
+          an explicit match budget (production depth is >251 s per match).
+        type: choice
+        options:
+          - lozza
+          - stockfish
+        default: lozza
+      matches:
+        description: Matches per Lozza leader run (ignored when engine=stockfish).
+        type: string
+        default: '100'
+      stockfish_matches:
+        description: Matches when engine=stockfish (keep small; explicit budget).
+        type: string
+        default: '1'
+      run_sweep:
+        description: Run a one-knob Lozza coefficient sweep (skipped for stockfish).
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  lozza-calibration:
+    name: Lozza calibration + sweep
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.engine == 'lozza')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Resolve run configuration
+        id: cfg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MATCHES: ${{ inputs.matches }}
+          INPUT_RUN_SWEEP: ${{ inputs.run_sweep }}
+        run: |
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$INPUT_MATCHES" ]; then
+            MATCHES="$INPUT_MATCHES"
+          else
+            MATCHES='100'
+          fi
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$INPUT_RUN_SWEEP" ]; then
+            RUN_SWEEP="$INPUT_RUN_SWEEP"
+          else
+            RUN_SWEEP='true'
+          fi
+          echo "matches=${MATCHES}" >> "$GITHUB_OUTPUT"
+          echo "run_sweep=${RUN_SWEEP}" >> "$GITHUB_OUTPUT"
+
+      - name: Tyrannical Lozza campaign
+        run: |
+          mkdir -p artifacts/nightly
+          pnpm --silent sim \
+            --matches=${{ steps.cfg.outputs.matches }} \
+            --leader=tyrannical \
+            --engine=lozza \
+            --depth-cap=4 \
+            --seed=1 \
+            --out=artifacts/nightly/tyrannical.csv
+
+      - name: Supportive Lozza campaign
+        run: |
+          pnpm --silent sim \
+            --matches=${{ steps.cfg.outputs.matches }} \
+            --leader=supportive \
+            --engine=lozza \
+            --depth-cap=4 \
+            --seed=1 \
+            --out=artifacts/nightly/supportive.csv
+
+      - name: Coefficient sweep (OUTCOME_TRUST_LOSS_SCALE)
+        if: steps.cfg.outputs.run_sweep == 'true'
+        run: |
+          pnpm --silent sim:sweep \
+            --knob=OUTCOME_TRUST_LOSS_SCALE \
+            --values=6,12,18 \
+            --matches=4 \
+            --seed=7 \
+            --engine=lozza \
+            --depth-cap=4 \
+            --leader=tyrannical \
+            | tee artifacts/nightly/sweep-outcome-trust-loss.csv
+
+      - name: Upload metrics artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-lozza-metrics
+          path: artifacts/nightly/
+          if-no-files-found: error
+          retention-days: 30
+
+  stockfish-spot:
+    name: Stockfish spot check (dispatch only)
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.engine == 'stockfish'
+    runs-on: ubuntu-latest
+    # Production-depth Stockfish was measured at >251 s per match.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Stockfish budgeted run
+        run: |
+          MATCHES='${{ inputs.stockfish_matches }}'
+          mkdir -p artifacts/nightly
+          echo "Stockfish budget: ${MATCHES} match(es) at uncapped production depth."
+          pnpm --silent sim \
+            --matches="${MATCHES}" \
+            --leader=tyrannical \
+            --engine=stockfish \
+            --seed=1 \
+            --out=artifacts/nightly/stockfish-tyrannical.csv
+
+      - name: Upload Stockfish metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-stockfish-metrics
+          path: artifacts/nightly/
+          if-no-files-found: error
+          retention-days: 30
