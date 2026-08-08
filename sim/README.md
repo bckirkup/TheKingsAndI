@@ -10,6 +10,8 @@ pnpm sim --matches=20 --leader=tyrannical --seed=7
 pnpm sim --matches=20 --leader=tyrannical --engine=lozza
 pnpm sim --matches=20 --leader=tyrannical --engine=lozza --depth-cap=4
 pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --seed=1 --out=metrics.csv
+pnpm sim --matches=3 --campaign=3 --leader=tyrannical --seed=1 --engine=fake --checkpoint-out=checkpoint.json
+pnpm sim --matches=6 --campaign=6 --leader=tyrannical --seed=1 --engine=fake --resume=checkpoint.json
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
 ```
 
@@ -27,6 +29,14 @@ calibration. Pass `--depth-cap` explicitly (or use Stockfish without a cap)
 when measuring engine fidelity.
 
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
+
+Campaign checkpoints are emitted with `--checkpoint-out=path` and resumed with
+`--resume=path`. Use `--campaign` with those flags to set the total campaign
+length: a checkpoint plus `--campaign` is what makes a campaign segment
+resumable. Checkpoints resume only at a completed-match boundary, before the
+next match's roster merge; there is no mid-match resume. Resuming requires the
+same engine determinism ID, psychology configuration, leader, and seed, and
+throws a mismatch error instead of silently producing incomparable numbers.
 
 Scheduled Lozza calibration (N≈100, tyrannical + supportive, plus a one-knob
 sweep) runs in GitHub Actions via `.github/workflows/nightly.yml` so balance

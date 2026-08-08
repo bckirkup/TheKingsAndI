@@ -56,6 +56,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    isRecord(value) &&
+    (Object.getPrototypeOf(value) === Object.prototype ||
+      Object.getPrototypeOf(value) === null)
+  );
+}
+
 export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
   if (!isRecord(value)) {
     throw new Error('Campaign checkpoint must be a JSON object.');
@@ -90,6 +98,17 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
       'Campaign checkpoint roster and completedMetrics must be arrays.',
     );
   }
+  value.roster.forEach((piece, index) => {
+    if (
+      !isPlainRecord(piece) ||
+      typeof piece.id !== 'string' ||
+      typeof piece.role !== 'string'
+    ) {
+      throw new Error(
+        `Campaign checkpoint roster[${index}] must be a plain object with string id and role.`,
+      );
+    }
+  });
   return value as unknown as CampaignCheckpoint;
 }
 

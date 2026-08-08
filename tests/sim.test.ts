@@ -216,6 +216,24 @@ describe('simulation harness argument parsing', () => {
     });
   });
 
+  it('rejects a malformed checkpoint roster with its index', async () => {
+    const checkpoint = (
+      await runCampaign({
+        matches: 1,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).checkpoint;
+
+    expect(() =>
+      parseCampaignCheckpoint({
+        ...checkpoint,
+        roster: [...checkpoint.roster.slice(0, 1), { id: 'broken' }],
+      }),
+    ).toThrow('roster[1]');
+  });
+
   it.each([
     ['--unknown=value', 'Unrecognised flag'],
     ['--matches', 'Expected --flag=value form'],
