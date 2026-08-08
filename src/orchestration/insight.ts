@@ -9,6 +9,7 @@ import { buildInsightRound } from '../engine/round';
 import type { EngineEvaluation, EnginePort, Insight } from '../engine/types';
 import {
   calculateEngineSearchDepth,
+  ENGINE_CONFIG,
   type CandidateMoveEvaluation,
   type PieceState,
 } from '../psychology';
@@ -258,10 +259,11 @@ export async function resolveMoverInsights(
   };
 }
 
-function declinedSacrificePiece(
+export function declinedSacrificePiece(
   board: LivingBoard,
   line: EngineEvaluation,
   roster: readonly PieceState[],
+  minimumIncomingAffinity: number = ENGINE_CONFIG.DECLINED_SACRIFICE_MIN_INCOMING_AFFINITY,
 ): string | undefined {
   const first = line.pv[0];
   if (first === undefined || first.length < 4) return undefined;
@@ -276,11 +278,14 @@ function declinedSacrificePiece(
           }
         : {}),
     });
-    const sacrificed = roster.find(
-      (piece) =>
-        piece.id === firstApplied.moverId &&
-        piece.E_i >= Math.max(...roster.map((candidate) => candidate.E_i)),
-    );
+    const sacrificed = roster.find((piece) => {
+      if (piece.id !== firstApplied.moverId) return false;
+      const incomingAffinity = roster.reduce(
+        (sum, witness) => sum + (witness.dyadicAffinity[piece.id] ?? 0),
+        0,
+      );
+      return incomingAffinity >= minimumIncomingAffinity;
+    });
     if (sacrificed === undefined) return undefined;
     for (const lan of line.pv.slice(1)) {
       if (lan.length < 4) return undefined;

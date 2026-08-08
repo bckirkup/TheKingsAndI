@@ -77,6 +77,10 @@ Therefore:
   its comrades loses standing with them (`A_{j,i}` drops for every witness `j`).
   Early deserters are punished by the ones who stay. This is a consequence of
   the existing witnessed-event machinery, not a balance patch.
+- The costly signal for declining a sacrifice applies when the preferred line
+  would sacrifice a piece whose incoming dyadic affinity `Σ_j A_{j,i}` is at
+  least `100`; this identifies a well-liked, high-`A` piece without requiring
+  it to be the roster's highest-ability piece.
 - **Hysteresis is permitted but must be tiny** — enough to stop a piece
   oscillating between decisions on identical inputs within one turn, not enough
   to prevent a rout.

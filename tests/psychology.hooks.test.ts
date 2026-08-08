@@ -21,6 +21,9 @@ import {
   detectDeclinedSacrificeCostlySignal,
   isAvengedCapture,
 } from '../src/orchestration/psychologyHooks';
+import { declinedSacrificePiece } from '../src/orchestration/insight';
+import { LivingBoard } from '../src/chess';
+import type { EngineEvaluation } from '../src/engine';
 import { appraiseDesertionWitness } from '../src/psychology/witness';
 
 const neutralTraits = {
@@ -349,5 +352,42 @@ describe('sacrifice attribution + avenged window', () => {
   it('sensitivity: changing the window changes avenged detection', () => {
     expect(isAvengedCapture(1, 5, 3)).toBe(false);
     expect(isAvengedCapture(1, 5, 4)).toBe(true);
+  });
+
+  it('detects a high-affinity sacrificed piece rather than the highest-ability piece', () => {
+    expect(ENGINE_CONFIG.DECLINED_SACRIFICE_MIN_INCOMING_AFFINITY).toBe(100);
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/3Q4/4K3 w - - 0 1');
+    const spared = makePiece({ id: 'w:Q:d2', E_i: 10 });
+    const stronger = makePiece({ id: 'w:K:e1', role: 'King', E_i: 90 });
+    const friend = makePiece({
+      id: 'w:P:a2',
+      dyadicAffinity: { [spared.id]: 120 },
+    });
+    const line: EngineEvaluation = {
+      scoreCp: 500,
+      pv: ['d2d7', 'e8d7'],
+    };
+    expect(
+      declinedSacrificePiece(board, line, [spared, stronger, friend]),
+    ).toBe(spared.id);
+  });
+
+  it('sensitivity: the high-affinity threshold controls declined-sacrifice detection', () => {
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/3Q4/4K3 w - - 0 1');
+    const spared = makePiece({ id: 'w:Q:d2', E_i: 10 });
+    const friend = makePiece({
+      id: 'w:P:a2',
+      dyadicAffinity: { [spared.id]: 120 },
+    });
+    const line: EngineEvaluation = {
+      scoreCp: 500,
+      pv: ['d2d7', 'e8d7'],
+    };
+    expect(declinedSacrificePiece(board, line, [spared, friend], 100)).toBe(
+      spared.id,
+    );
+    expect(declinedSacrificePiece(board, line, [spared, friend], 121)).toBe(
+      undefined,
+    );
   });
 });
