@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "sim": "tsx sim/cli.ts",
+    "sim:aggregate": "tsx sim/aggregate.ts",
     "sim:sweep": "tsx sim/sweep.ts",
     "dialogue:distill": "tsx scripts/distill-dialogue.ts",
     "dialogue:check": "tsx scripts/distill-dialogue.ts --check"

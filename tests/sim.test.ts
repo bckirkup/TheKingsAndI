@@ -11,7 +11,11 @@ import {
   shouldRunSmokeBounds,
 } from '../sim/cli';
 import { parseCampaignCheckpoint } from '../sim/campaign';
-import { detectDegeneracy } from '../sim/degeneracy';
+import {
+  assertCalibrationBounds,
+  assertSmokeBounds,
+  detectDegeneracy,
+} from '../sim/degeneracy';
 import { aggregateCampaign } from '../sim/metrics';
 
 describe('simulation harness golden output', () => {
@@ -24,13 +28,18 @@ describe('simulation harness golden output', () => {
         engineKind: 'fake',
       }),
     );
-    expect(csv).toBe(
+    const lines = csv.trimEnd().split('\n');
+    expect(
+      lines.map((line) => line.split(',').slice(0, 21).join(',')).join('\n'),
+    ).toBe(
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
         '1,1000004,tyrannical,42,0,18,2,13,13,0,0.0000,0.0476,0.0000,0.4286,-10.00,-41.00,-20.00,15.00,0,1,tyrant',
         '2,2000001,tyrannical,40,4,18,0,15,15,4,0.1000,0.0000,1.0000,0.4500,-11.94,-98.00,-18.75,15.00,0,1,tyrant',
-        '',
       ].join('\n'),
+    );
+    expect(lines[0]).toContain(
+      ',mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size',
     );
   });
 
@@ -193,6 +202,8 @@ describe('simulation harness argument parsing', () => {
     ).toEqual({
       matches: 20,
       campaign: 20,
+      campaigns: 1,
+      campaignLength: 20,
       leader: 'tyrannical',
       seed: 7,
       engine: 'lozza',
@@ -200,14 +211,18 @@ describe('simulation harness argument parsing', () => {
       out: 'metrics.csv',
       checkpointOut: undefined,
       resume: undefined,
+      artifactOut: 'metrics.csv.json',
+      shardIndex: 0,
+      shardCount: 1,
+      enforceCalibration: false,
     });
   });
 
   it('keys the smoke gate to executed campaign matches', () => {
-    const options = parseArguments(['--matches=1', '--campaign=21']);
-    expect(options.matches).toBe(1);
+    const options = parseArguments(['--matches=21', '--campaign=21']);
+    expect(options.matches).toBe(21);
     expect(options.campaign).toBe(21);
-    expect(shouldRunSmokeBounds(options.campaign)).toBe(false);
+    expect(shouldRunSmokeBounds(options.matches)).toBe(false);
     expect(shouldRunSmokeBounds(20)).toBe(true);
   });
 
@@ -275,5 +290,26 @@ describe('degeneracy detectors', () => {
       meanRefusalRate: 0.1,
     });
     expect(findings.some((finding) => finding.code === 'no-rout')).toBe(true);
+  });
+
+  it('reports early saturation by default and enforces it only for calibration', async () => {
+    const metrics = await runSimulation({
+      matches: 4,
+      leader: 'tyrannical',
+      seed: 7,
+      engineKind: 'fake',
+    });
+    const summary = aggregateCampaign('tyrannical', 7, metrics);
+    expect(
+      detectDegeneracy('tyrannical', metrics, summary).some(
+        (finding) => finding.code === 'early-saturation',
+      ),
+    ).toBe(true);
+    expect(() => assertSmokeBounds('tyrannical', summary)).not.toThrow(
+      /early-saturation/,
+    );
+    expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
+      /Calibration exit criteria failed/,
+    );
   });
 });

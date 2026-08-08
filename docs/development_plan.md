@@ -97,7 +97,7 @@ determinism test passes 100 random matches.
 | Task | Deliverable |
 |---|---|
 | 3.1 | Scripted AI leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`, plus the two ADR-0007 oracles `pure_tactician` and `redeemer` |
-| 3.2 | `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` |
+| 3.2 | `pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --out=metrics.csv` — 1,000 total matches across 50 independent 20-match campaigns |
 | 3.3 | Metrics: quiet-quit rate, refusal rate, **refused-good-move rate**, desertion incidence, cascade length, trust trajectory, culture drift, win rate, archetype classification |
 | 3.4 | Calibration pass on the trait weights, `Θ_refusal` slope/intercept, benching penalties, and sacrifice class/affinity shifts — plus resolution of D19 (trust-term scale) |
 | 3.5 | Commit calibrated config + calibration report with the plots that justified it |

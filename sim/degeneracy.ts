@@ -1,5 +1,8 @@
 import type { CampaignMetrics, MatchMetrics } from './metrics';
 
+export const EARLY_QUARTILE_COUNT = 2;
+export const EARLY_SATURATION_RATE = 0.8;
+
 export interface DegeneracyFinding {
   readonly code: string;
   readonly message: string;
@@ -75,6 +78,19 @@ export function detectDegeneracy(
     });
   }
 
+  for (const band of summary.trajectoryBands.slice(0, EARLY_QUARTILE_COUNT)) {
+    if (
+      band.matches > 0 &&
+      band.desertionRate >= EARLY_SATURATION_RATE &&
+      band.routRate >= EARLY_SATURATION_RATE
+    ) {
+      findings.push({
+        code: 'early-saturation',
+        message: `Quartile ${band.quartile} desertion and rout rates are both at least ${EARLY_SATURATION_RATE * 100}% — the campaign collapses too early.`,
+      });
+    }
+  }
+
   return findings;
 }
 
@@ -89,6 +105,20 @@ export function assertSmokeBounds(
   if (hardFailures.length > 0) {
     throw new Error(
       `Degeneracy detected for ${leader}: ${hardFailures.map((finding) => finding.message).join(' ')}`,
+    );
+  }
+}
+
+export function assertCalibrationBounds(
+  leader: CampaignMetrics['leader'],
+  summary: CampaignMetrics,
+): void {
+  const findings = detectDegeneracy(leader, summary.matchMetrics, summary);
+  if (findings.length > 0) {
+    throw new Error(
+      `Calibration exit criteria failed for ${leader}: ${findings
+        .map((finding) => finding.message)
+        .join(' ')}`,
     );
   }
 }

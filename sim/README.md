@@ -15,6 +15,54 @@ pnpm sim --matches=6 --campaign=6 --leader=tyrannical --seed=1 --engine=fake --r
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
 ```
 
+`--campaign-length=N` is the number of sequential matches in one campaign;
+`--campaign=N` remains an alias. `--matches=T` is the total number of matches
+across the run, and `--campaigns=M` is the number of independent campaigns.
+The total must divide evenly by the campaign length. For compatibility,
+`--matches=20` by itself still means one 20-match campaign. Thus the
+development-plan command above means 1,000 total matches in 50 independent
+20-match campaigns.
+
+Campaigns are the unit of parallelism: matches within a campaign carry roster
+state forward and must remain sequential. A local sharded run can use the
+same command line with only the shard index changed:
+
+```bash
+mkdir -p metrics
+seq 0 3 | xargs -P 4 -I{} pnpm sim \
+  --matches=1000 --campaign-length=20 --campaigns=50 \
+  --leader=tyrannical --seed=1 --engine=fake \
+  --shard-index={} --shard-count=4 \
+  --out=metrics/shard-{}.csv
+pnpm sim:aggregate \
+  --inputs=metrics/shard-0.csv.json,metrics/shard-1.csv.json,metrics/shard-2.csv.json,metrics/shard-3.csv.json \
+  --out=metrics/run.json
+```
+
+Each `--out` CSV has an adjacent `.json` shard artifact containing its run
+manifest, campaign assignments, and metrics. CSV metric columns are append-only:
+the ability/benevolence trust start/end channels and surviving roster size follow
+the historical columns, and the trajectory-band section follows the metric
+rows. The aggregator rejects mismatched
+manifests, duplicate or missing campaigns, and incomplete runs rather than
+silently producing a partial report. Use `--enforce-calibration=true` on the
+simulation or aggregation command when an exit-criterion failure should be
+fatal; the default smoke path still reports findings without making them hard
+failures.
+
+The harness does not yet model a seminar. Seminar participants share a roster
+pool and trauma pool, so a cohort is a fold across participants rather than a
+set of independent participant jobs. One shard is not one student: sharding is
+only across independent campaigns.
+
+Campaign master seeds use a deterministic 32-bit mixing function over the run
+master seed and zero-based campaign index. The mix is independent of shard
+count; the existing per-match seed rule is then applied inside each campaign.
+The manifest records the run master seed and campaign indices. If
+`GIT_COMMIT_SHA` is supplied by the runner it is recorded; otherwise the
+optional commit field is left unavailable rather than discovered by a fragile
+shell command.
+
 Leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`,
 `pure_tactician`, `redeemer`.
 

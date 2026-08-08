@@ -1,14 +1,15 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
+import { parseCampaignCheckpoint, type CampaignCheckpoint } from './campaign';
 import {
-  parseCampaignCheckpoint,
-  runCampaign,
-  type CampaignCheckpoint,
-} from './campaign';
-import { assertSmokeBounds } from './degeneracy';
-import { disposeSimEngine, type SimEngineKind } from './engine';
+  assertCalibrationBounds,
+  assertSmokeBounds,
+  detectDegeneracy,
+} from './degeneracy';
+import { type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
+import { resolveRunPlan, runShard, writeShardArtifact } from './parallel';
 import { canonicalJson } from '../src/core/canonicalJson';
 
 export const LEADERS = [
@@ -30,10 +31,16 @@ export interface SimulationOptions {
   readonly leader: Leader;
   readonly seed: number;
   readonly campaign: number;
+  readonly campaigns: number;
+  readonly campaignLength: number;
   readonly engine: SimEngineKind;
   readonly depthCap: number | undefined;
   readonly checkpointOut: string | undefined;
   readonly resume: string | undefined;
+  readonly artifactOut: string | undefined;
+  readonly shardIndex: number;
+  readonly shardCount: number;
+  readonly enforceCalibration: boolean;
 }
 
 export function shouldRunSmokeBounds(executedMatches: number): boolean {
@@ -49,11 +56,17 @@ function parseArguments(
     'leader',
     'seed',
     'campaign',
+    'campaign-length',
+    'campaigns',
     'out',
     'engine',
     'depth-cap',
     'checkpoint-out',
     'resume',
+    'artifact-out',
+    'shard-index',
+    'shard-count',
+    'enforce-calibration',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -73,15 +86,29 @@ function parseArguments(
     }
     values.set(key, value);
   }
-  const matches = Number(values.get('matches') ?? 1);
-  const campaign = Number(values.get('campaign') ?? matches);
+  if (values.has('campaign') && values.has('campaign-length')) {
+    throw new Error(
+      'Use only one of --campaign and --campaign-length; they are aliases.',
+    );
+  }
+  const matchesValue =
+    values.get('matches') === undefined
+      ? undefined
+      : Number(values.get('matches'));
+  const campaignLengthValue =
+    values.get('campaign-length') ?? values.get('campaign');
+  const campaignLength =
+    campaignLengthValue === undefined ? undefined : Number(campaignLengthValue);
+  const campaigns =
+    values.get('campaigns') === undefined
+      ? undefined
+      : Number(values.get('campaigns'));
+  const plan = resolveRunPlan({
+    matches: matchesValue,
+    campaignLength,
+    campaigns,
+  });
   const leaderValue = values.get('leader') ?? 'random';
-  if (!Number.isSafeInteger(matches) || matches < 1) {
-    throw new Error('--matches must be a positive integer.');
-  }
-  if (!Number.isSafeInteger(campaign) || campaign < 1) {
-    throw new Error('--campaign must be a positive integer.');
-  }
   if (!LEADERS.includes(leaderValue as Leader)) {
     throw new Error(`--leader must be one of: ${LEADERS.join(', ')}.`);
   }
@@ -97,6 +124,9 @@ function parseArguments(
   }
   if (values.has('resume') && values.get('resume') === '') {
     throw new Error('--resume must not be empty.');
+  }
+  if (values.has('artifact-out') && values.get('artifact-out') === '') {
+    throw new Error('--artifact-out must not be empty.');
   }
   const engineValue = values.get('engine') ?? 'lozza';
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
@@ -114,9 +144,34 @@ function parseArguments(
   ) {
     throw new Error('--depth-cap must be a positive integer.');
   }
+  const shardIndex = Number(values.get('shard-index') ?? 0);
+  const shardCount = Number(values.get('shard-count') ?? 1);
+  const enforceCalibrationValue = values.get('enforce-calibration') ?? 'false';
+  if (
+    enforceCalibrationValue !== 'true' &&
+    enforceCalibrationValue !== 'false'
+  ) {
+    throw new Error('--enforce-calibration must be true or false.');
+  }
+  if (!Number.isSafeInteger(shardIndex) || shardIndex < 0) {
+    throw new Error('--shard-index must be a non-negative integer.');
+  }
+  if (!Number.isSafeInteger(shardCount) || shardCount < 1) {
+    throw new Error('--shard-count must be a positive integer.');
+  }
+  if (shardIndex >= shardCount) {
+    throw new Error('--shard-index must be less than --shard-count.');
+  }
+  const artifactOut =
+    values.get('artifact-out') ??
+    (values.get('out') === undefined
+      ? undefined
+      : `${values.get('out') as string}.json`);
   return {
-    matches,
-    campaign,
+    matches: plan.totalMatches,
+    campaign: plan.campaignLength,
+    campaigns: plan.campaigns,
+    campaignLength: plan.campaignLength,
     leader: leaderValue as Leader,
     seed,
     engine: engineValue as SimEngineKind,
@@ -124,6 +179,10 @@ function parseArguments(
     out: values.get('out'),
     checkpointOut: values.get('checkpoint-out'),
     resume: values.get('resume'),
+    artifactOut,
+    shardIndex,
+    shardCount,
+    enforceCalibration: enforceCalibrationValue === 'true',
   };
 }
 
@@ -142,20 +201,27 @@ async function main(): Promise<void> {
       JSON.parse(await readFile(options.resume, 'utf8')) as unknown,
     );
   }
-  let result;
-  try {
-    result = await runCampaign({
-      matches: options.campaign,
-      leader: options.leader,
-      seed: options.seed,
-      engineKind: options.engine,
-      depthCap: options.depthCap,
-      ...(checkpoint === undefined ? {} : { checkpoint }),
-    });
-  } finally {
-    await disposeSimEngine(options.engine);
+  if (checkpoint !== undefined && options.campaigns !== 1) {
+    throw new Error('Checkpoint resume requires a single campaign run.');
   }
-  const csv = renderCsv(result.metrics);
+  const result = await runShard({
+    plan: {
+      totalMatches: options.matches,
+      campaignLength: options.campaignLength,
+      campaigns: options.campaigns,
+    },
+    leader: options.leader,
+    masterSeed: options.seed,
+    engineKind: options.engine,
+    depthCap: options.depthCap,
+    shardIndex: options.shardIndex,
+    shardCount: options.shardCount,
+    ...(checkpoint === undefined ? {} : { checkpoint }),
+  });
+  const csv = renderCsv(
+    result.campaigns.flatMap((campaign) => campaign.result.metrics),
+    result.trajectoryBands,
+  );
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
@@ -164,15 +230,24 @@ async function main(): Promise<void> {
     await mkdir(dirname(options.checkpointOut), { recursive: true });
     await writeFile(
       options.checkpointOut,
-      `${canonicalJson(result.checkpoint)}\n`,
+      `${canonicalJson(result.campaigns[0]?.result.checkpoint)}\n`,
       'utf8',
     );
   }
-  if (shouldRunSmokeBounds(result.metrics.length)) {
+  if (options.enforceCalibration) {
+    assertCalibrationBounds(options.leader, result.summary);
+  } else if (shouldRunSmokeBounds(result.summary.matches)) {
     assertSmokeBounds(options.leader, result.summary);
   }
+  for (const finding of detectDegeneracy(
+    options.leader,
+    result.summary.matchMetrics,
+    result.summary,
+  )) {
+    console.log(`degeneracy=${finding.code} ${finding.message}`);
+  }
   console.log(
-    `Milestone 3 harness: ${result.metrics.length} matches for ${options.leader} (${result.determinismId}).`,
+    `Milestone 3 harness: ${result.summary.matches} matches across ${result.campaigns.length} campaigns for ${options.leader} (${result.manifest.determinismId}).`,
   );
   console.log(
     `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
@@ -181,6 +256,11 @@ async function main(): Promise<void> {
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
+  if (options.artifactOut !== undefined) {
+    await mkdir(dirname(options.artifactOut), { recursive: true });
+    await writeShardArtifact(options.artifactOut, result);
+    console.log(`Shard artifact written to ${options.artifactOut}`);
+  }
   if (options.checkpointOut !== undefined)
     console.log(`Checkpoint written to ${options.checkpointOut}`);
 }
