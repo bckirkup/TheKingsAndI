@@ -2,7 +2,12 @@ import type { MatchEvent } from '../src/psychology';
 import type { HeadlessMatchResult } from '../src/orchestration';
 
 import type { Leader } from './cli';
-import { meanClassContempt, meanTrust } from './roster';
+import {
+  meanClassContempt,
+  meanTauAbil,
+  meanTauBenev,
+  meanTrust,
+} from './roster';
 
 export type LeadershipArchetype =
   | 'tyrant'
@@ -29,8 +34,13 @@ export interface MatchMetrics {
   readonly overrideRate: number;
   readonly meanTrustStart: number;
   readonly meanTrustEnd: number;
+  readonly meanTauAbilStart: number;
+  readonly meanTauAbilEnd: number;
+  readonly meanTauBenevStart: number;
+  readonly meanTauBenevEnd: number;
   readonly classContemptStart: number;
   readonly classContemptEnd: number;
+  readonly survivingRosterSize: number;
   readonly winScore: number;
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
@@ -39,6 +49,19 @@ export interface MatchMetrics {
 export interface TrustTrajectoryBin {
   readonly match: number;
   readonly meanTrustEnd: number;
+}
+
+export interface CampaignTrajectoryBand {
+  readonly quartile: 1 | 2 | 3 | 4;
+  readonly startMatch: number;
+  readonly endMatch: number;
+  readonly matches: number;
+  readonly meanTauAbil: number;
+  readonly meanTauBenev: number;
+  readonly meanRefusalRate: number;
+  readonly desertionRate: number;
+  readonly routRate: number;
+  readonly meanSurvivingRosterSize: number;
 }
 
 export interface PerRoleCultureMetric {
@@ -64,10 +87,11 @@ export interface CampaignMetrics {
   readonly trustTrajectory: readonly TrustTrajectoryBin[];
   /** Mean class contempt by role across the final match of the campaign. */
   readonly perRoleCulture: readonly PerRoleCultureMetric[];
+  readonly trajectoryBands: readonly CampaignTrajectoryBand[];
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype';
+  'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
 
 function countEvents(events: readonly MatchEvent[]): {
   refusals: number;
@@ -145,6 +169,10 @@ export function metricsFromMatch(
   const overrideRate = counts.overrides / plies;
   const meanTrustStart = meanTrust(rosterStart);
   const meanTrustEnd = meanTrust(result.roster);
+  const meanTauAbilStart = meanTauAbil(rosterStart);
+  const meanTauAbilEnd = meanTauAbil(result.roster);
+  const meanTauBenevStart = meanTauBenev(rosterStart);
+  const meanTauBenevEnd = meanTauBenev(result.roster);
   const classContemptStart = meanClassContempt(rosterStart);
   const classContemptEnd = meanClassContempt(result.roster);
   return {
@@ -164,8 +192,13 @@ export function metricsFromMatch(
     overrideRate,
     meanTrustStart,
     meanTrustEnd,
+    meanTauAbilStart,
+    meanTauAbilEnd,
+    meanTauBenevStart,
+    meanTauBenevEnd,
     classContemptStart,
     classContemptEnd,
+    survivingRosterSize: result.roster.length,
     winScore: result.winScore,
     rout: result.rout,
     archetype: classifyArchetype(
@@ -175,6 +208,46 @@ export function metricsFromMatch(
       counts.desertions,
     ),
   };
+}
+
+function quartileForMatch(match: number, matches: number): 1 | 2 | 3 | 4 {
+  return Math.min(4, Math.floor(((match - 1) * 4) / matches) + 1) as
+    | 1
+    | 2
+    | 3
+    | 4;
+}
+
+export function buildTrajectoryBands(
+  matchMetrics: readonly MatchMetrics[],
+): readonly CampaignTrajectoryBand[] {
+  const matches = matchMetrics.length;
+  return ([1, 2, 3, 4] as const).map((quartile) => {
+    const metrics = matchMetrics.filter(
+      (metric) => quartileForMatch(metric.match, matches) === quartile,
+    );
+    const first = metrics[0];
+    const last = metrics[metrics.length - 1];
+    const mean = (pick: (metric: MatchMetrics) => number): number =>
+      metrics.reduce((sum, metric) => sum + pick(metric), 0) /
+      Math.max(1, metrics.length);
+    return {
+      quartile,
+      startMatch: first?.match ?? 0,
+      endMatch: last?.match ?? 0,
+      matches: metrics.length,
+      meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
+      meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
+      meanRefusalRate: mean((metric) => metric.refusalRate),
+      desertionRate:
+        metrics.filter((metric) => metric.desertions > 0).length /
+        Math.max(1, metrics.length),
+      routRate:
+        metrics.filter((metric) => metric.rout).length /
+        Math.max(1, metrics.length),
+      meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
+    };
+  });
 }
 
 export function aggregateCampaign(
@@ -225,10 +298,14 @@ export function aggregateCampaign(
       mean((metric) => metric.classContemptStart),
     trustTrajectory,
     perRoleCulture,
+    trajectoryBands: buildTrajectoryBands(matchMetrics),
   };
 }
 
-export function renderCsv(metrics: readonly MatchMetrics[]): string {
+export function renderCsv(
+  metrics: readonly MatchMetrics[],
+  trajectoryBands?: readonly CampaignTrajectoryBand[],
+): string {
   const rows = metrics.map((metric) =>
     [
       metric.match,
@@ -252,7 +329,33 @@ export function renderCsv(metrics: readonly MatchMetrics[]): string {
       metric.winScore,
       metric.rout ? 1 : 0,
       metric.archetype,
+      metric.meanTauAbilStart.toFixed(2),
+      metric.meanTauAbilEnd.toFixed(2),
+      metric.meanTauBenevStart.toFixed(2),
+      metric.meanTauBenevEnd.toFixed(2),
+      metric.survivingRosterSize,
     ].join(','),
   );
-  return `${[CSV_HEADER, ...rows].join('\n')}\n`;
+  const output = [CSV_HEADER, ...rows];
+  if (trajectoryBands !== undefined) {
+    output.push(
+      '',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_rate,rout_rate,mean_surviving_roster_size',
+      ...trajectoryBands.map((band) =>
+        [
+          band.quartile,
+          band.startMatch,
+          band.endMatch,
+          band.matches,
+          band.meanTauAbil.toFixed(2),
+          band.meanTauBenev.toFixed(2),
+          band.meanRefusalRate.toFixed(4),
+          band.desertionRate.toFixed(4),
+          band.routRate.toFixed(4),
+          band.meanSurvivingRosterSize.toFixed(2),
+        ].join(','),
+      ),
+    );
+  }
+  return `${output.join('\n')}\n`;
 }

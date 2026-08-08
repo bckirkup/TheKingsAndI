@@ -89,11 +89,108 @@ refused_good=0.950 override=0.446 win=0.0 trust_delta=-77.58
 WALL_SECONDS=4.597
 ```
 
-This is a tractability proxy, not full-fidelity calibration. Full-fidelity
-Stockfish calibration requires an explicit runtime-budget decision; the prior
-uncapped real-engine probe exceeded 251 seconds for one match. That measurement
-was taken before the sim's Stockfish ceiling was corrected to the documented
-depth-16 ladder, so it is not a full-fidelity runtime estimate.
+## Early trajectory saturation
+
+The new quartile detector was run against the fake engine using the current
+coefficients:
+
+```text
+pnpm sim --matches=16 --campaign=16 --leader=tyrannical --seed=7 --engine=fake
+engine=sim-fake/depth-fixed
+quartile=1 matches=1-4 tau_abil=50.00 tau_benev=50.00 refusal=0.077 desertion=1.000 rout=1.000 roster=1.00
+quartile=2 matches=5-8 tau_abil=55.55 tau_benev=52.34 refusal=0.046 desertion=0.750 rout=0.750 roster=4.75
+quartile=3 matches=9-12 tau_abil=65.00 tau_benev=56.00 refusal=0.053 desertion=1.000 rout=1.000 roster=1.00
+quartile=4 matches=13-16 tau_abil=65.00 tau_benev=56.00 refusal=0.101 desertion=1.000 rout=1.000 roster=1.00
+```
+
+The fake-engine run is explicitly labelled because it is the deterministic CI
+substrate rather than a real-engine fidelity measurement. Its first quartile
+already has 100% desertion and 100% rout incidence. The intensive's 16-match
+diagnostic therefore collapses well before the end of the second quartile,
+which is the approximately 2.5-day point the seminar needs. Today's
+coefficients do not meet Milestone 3's exit criteria. No coefficient tuning was
+performed.
+
+## Engine timing and memory probe
+
+The corrected Stockfish ceiling was measured on one pinned vCPU with seed 1:
+
+| Engine | Run | Wall time | Plies | Mean per ply |
+|---|---|---:|---:|---:|
+| fake | pinned single match, seed 1 | 0.886545 s | 20 | 0.044327 s |
+| Lozza depth 4 | pinned single match, seed 1 | 1.202602 s | 20 | 0.060130 s |
+| Stockfish depth 16 | pinned single match, seed 1 | 6.226720 s | 20 | **0.311336 s** |
+
+The Stockfish determinism ID was
+`stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`. All three samples
+ended in a natural 20-ply rout rather than at `MAX_PLIES=200`; the Stockfish
+measurement is therefore n=1 and is not by itself a campaign-average sample.
+
+The comparable pinned campaign means were:
+
+| Engine | 16 matches | 52 matches |
+|---|---:|---:|
+| fake | 0.214776 s/match | 0.182405 s/match |
+| Lozza depth 4 | 0.319153 s/match | 0.235001 s/match |
+
+Those campaign means came from 16- and 52-match runs with the same harness
+configuration and show that a short rout is not representative of a typical
+campaign match.
+
+Peak RSS, including the Node process itself, was measured on pinned
+single-match runs:
+
+| Engine | Node RSS | Engine child RSS | Total peak RSS |
+|---|---:|---:|---:|
+| fake | 96.754 MiB | 138.473 MiB | 235.227 MiB |
+| Lozza depth 4 | 97.055 MiB | 211.953 MiB | 309.008 MiB |
+| Stockfish depth 16 | 96.762 MiB | 470.652 MiB | **567.414 MiB** |
+
+The Stockfish result establishes that a 2 GiB worker has substantial memory
+headroom for this single-world workload.
+
+### Single-vCPU seminar projection
+
+The current harness has no cohort concept. The honest approximation used here
+is one shared-world seminar costing `participants × matches-per-participant`
+single-participant campaign matches. It does not model cohort-specific
+cross-student circulation, but it does not split a shared world across cores.
+
+Fake and Lozza use their measured pinned campaign means:
+
+| Participants | Format | Matches | Fake | Lozza depth 4 |
+|---:|---|---:|---:|---:|
+| 12 | Intensive, 16/person | 192 | 41.237 s / 0.0115 h | 61.277 s / 0.0170 h |
+| 24 | Intensive, 16/person | 384 | 82.474 s / 0.0229 h | 122.555 s / 0.0340 h |
+| 12 | Nibelungen, 52/person | 624 | 113.821 s / 0.0316 h | 146.641 s / 0.0407 h |
+| 24 | Nibelungen, 52/person | 1248 | 227.642 s / 0.0632 h | 293.281 s / 0.0815 h |
+
+The Stockfish single-match sample was a 20-ply rout, so using its raw
+6.226720-second match cost would understate the expected campaign cost. Its
+ply-normalized rate of 0.311336 s/ply was applied to the measured campaign
+mean of approximately 36–38 plies (37 plies for the midpoint estimates below):
+
+| Participants | Format | Matches | Stockfish depth 16, normalized |
+|---:|---|---:|---:|
+| 12 | Intensive, 16/person | 192 | ~2212 s / **0.61 h** (0.60–0.63 h) |
+| 24 | Intensive, 16/person | 384 | ~4423 s / **1.23 h** (1.20–1.26 h) |
+| 12 | Nibelungen, 52/person | 624 | ~7188 s / **2.00 h** (1.94–2.05 h) |
+| 24 | Nibelungen, 52/person | 1248 | ~14376 s / **3.99 h** (3.89–4.09 h) |
+
+For the pessimistic `MAX_PLIES=200` bound, the same Stockfish ply rate gives
+approximately 62.27 seconds per match:
+
+| Participants | Format | Matches | Stockfish at 200 plies |
+|---:|---|---:|---:|
+| 12 | Intensive, 16/person | 192 | ~3.32 h |
+| 24 | Intensive, 16/person | 384 | ~6.64 h |
+| 12 | Nibelungen, 52/person | 624 | ~10.80 h |
+| 24 | Nibelungen, 52/person | 1248 | ~21.60 h |
+
+The earlier statement that a match took more than 251 seconds is withdrawn.
+It was a single aborted observation taken before the `dMax: 8` truncation was
+removed, so it is not comparable to the corrected depth-16 measurement and
+must not be used for projections.
 
 Both corrected reduced checks have the intended negative win delta, but
 desertion/rout remain saturated and refusal is below the tyrant target band.

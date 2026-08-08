@@ -11,8 +11,16 @@ import {
   shouldRunSmokeBounds,
 } from '../sim/cli';
 import { parseCampaignCheckpoint } from '../sim/campaign';
-import { detectDegeneracy } from '../sim/degeneracy';
-import { aggregateCampaign } from '../sim/metrics';
+import {
+  assertCalibrationBounds,
+  assertSmokeBounds,
+  detectDegeneracy,
+} from '../sim/degeneracy';
+import {
+  aggregateCampaign,
+  buildTrajectoryBands,
+  type MatchMetrics,
+} from '../sim/metrics';
 
 describe('simulation harness golden output', () => {
   it('renders a fixed CSV for a fixed configuration', async () => {
@@ -24,13 +32,22 @@ describe('simulation harness golden output', () => {
         engineKind: 'fake',
       }),
     );
-    expect(csv).toBe(
+    const legacyCsv = csv
+      .split('\n')
+      .map((line) =>
+        line.includes(',') ? line.split(',').slice(0, 21).join(',') : line,
+      )
+      .join('\n');
+    expect(legacyCsv).toBe(
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
         '1,1000004,tyrannical,42,0,18,2,13,13,0,0.0000,0.0476,0.0000,0.4286,-10.00,-41.00,-20.00,15.00,0,1,tyrant',
         '2,2000001,tyrannical,40,4,18,0,15,15,4,0.1000,0.0000,1.0000,0.4500,-11.94,-98.00,-18.75,15.00,0,1,tyrant',
         '',
       ].join('\n'),
+    );
+    expect(csv).toContain(
+      ',mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size',
     );
   });
 
@@ -200,7 +217,18 @@ describe('simulation harness argument parsing', () => {
       out: 'metrics.csv',
       checkpointOut: undefined,
       resume: undefined,
+      enforceCalibration: false,
     });
+  });
+
+  it('accepts explicit calibration enforcement', () => {
+    expect(
+      parseArguments([
+        '--leader=tyrannical',
+        '--engine=fake',
+        '--enforce-calibration=true',
+      ]).enforceCalibration,
+    ).toBe(true);
   });
 
   it('keys the smoke gate to executed campaign matches', () => {
@@ -275,5 +303,104 @@ describe('degeneracy detectors', () => {
       meanRefusalRate: 0.1,
     });
     expect(findings.some((finding) => finding.code === 'no-rout')).toBe(true);
+  });
+
+  it('flags early quartile saturation', async () => {
+    const metrics = await runSimulation({
+      matches: 4,
+      leader: 'tyrannical',
+      seed: 7,
+      engineKind: 'fake',
+    });
+    const summary = aggregateCampaign('tyrannical', 7, metrics);
+    const findings = detectDegeneracy('tyrannical', metrics, summary);
+    expect(
+      findings.some((finding) => finding.code === 'early-saturation'),
+    ).toBe(true);
+    expect(() => assertSmokeBounds('tyrannical', summary)).not.toThrow();
+    expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
+      'early',
+    );
+  });
+});
+
+function handCheckMetric(match: number): MatchMetrics {
+  return {
+    match,
+    seed: match,
+    leader: 'supportive',
+    plies: 10,
+    refusals: 1,
+    overrides: 0,
+    quietQuitMoves: 0,
+    desertions: match % 2,
+    cascadeLength: match % 2,
+    refusedGoodMoves: 1,
+    refusalRate: match / 100,
+    quietQuitRate: 0,
+    refusedGoodMoveRate: 1,
+    overrideRate: 0,
+    meanTrustStart: 10,
+    meanTrustEnd: 10,
+    meanTauAbilStart: match * 10,
+    meanTauAbilEnd: match * 10 + 1,
+    meanTauBenevStart: match * 20,
+    meanTauBenevEnd: match * 20 + 2,
+    classContemptStart: 0,
+    classContemptEnd: 0,
+    survivingRosterSize: match,
+    winScore: 50,
+    rout: match % 2 === 1,
+    archetype: 'caretaker',
+  };
+}
+
+describe('campaign trajectory bands', () => {
+  it('uses four equal quartiles for 16 and 52 matches', async () => {
+    const intensive = (
+      await runCampaign({
+        matches: 16,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).summary.trajectoryBands;
+    const nibelungen = (
+      await runCampaign({
+        matches: 52,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).summary.trajectoryBands;
+
+    expect(intensive.map((band) => [band.startMatch, band.endMatch])).toEqual([
+      [1, 4],
+      [5, 8],
+      [9, 12],
+      [13, 16],
+    ]);
+    expect(nibelungen.map((band) => [band.startMatch, band.endMatch])).toEqual([
+      [1, 13],
+      [14, 26],
+      [27, 39],
+      [40, 52],
+    ]);
+  });
+
+  it('assigns remainder matches to earlier quartiles', () => {
+    const bands = buildTrajectoryBands([1, 2, 3, 4, 5].map(handCheckMetric));
+
+    expect(bands.map((band) => [band.startMatch, band.endMatch])).toEqual([
+      [1, 2],
+      [3, 3],
+      [4, 4],
+      [5, 5],
+    ]);
+    expect(bands[0]?.meanTauAbil).toBe(16);
+    expect(bands[0]?.meanTauBenev).toBe(32);
+    expect(bands[0]?.meanSurvivingRosterSize).toBe(1.5);
+    expect(bands[0]?.desertionRate).toBe(0.5);
+    expect(bands[0]?.routRate).toBe(0.5);
   });
 });

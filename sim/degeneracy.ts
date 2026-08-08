@@ -1,8 +1,15 @@
 import type { CampaignMetrics, MatchMetrics } from './metrics';
 
+export const EARLY_QUARTILE_COUNT = 2;
+export const EARLY_SATURATION_RATE = 0.8;
+
 export interface DegeneracyFinding {
   readonly code: string;
   readonly message: string;
+}
+
+export interface DegeneracyAssertionOptions {
+  readonly enforceEarlySaturation?: boolean;
 }
 
 export function detectDegeneracy(
@@ -75,20 +82,45 @@ export function detectDegeneracy(
     });
   }
 
+  for (const band of summary.trajectoryBands.slice(0, EARLY_QUARTILE_COUNT)) {
+    if (
+      band.matches > 0 &&
+      band.desertionRate >= EARLY_SATURATION_RATE &&
+      band.routRate >= EARLY_SATURATION_RATE
+    ) {
+      findings.push({
+        code: 'early-saturation',
+        message: `Quartile ${band.quartile} desertion and rout rates are both at least ${EARLY_SATURATION_RATE * 100}% — the campaign collapses too early.`,
+      });
+    }
+  }
+
   return findings;
 }
 
 export function assertSmokeBounds(
   leader: CampaignMetrics['leader'],
   summary: CampaignMetrics,
+  options: DegeneracyAssertionOptions = {},
 ): void {
   const findings = detectDegeneracy(leader, summary.matchMetrics, summary);
+  const hardFailureCodes = ['no-rout', 'refusal-dead', 'toothless-refusal'];
+  if (options.enforceEarlySaturation) {
+    hardFailureCodes.push('early-saturation');
+  }
   const hardFailures = findings.filter((finding) =>
-    ['no-rout', 'refusal-dead', 'toothless-refusal'].includes(finding.code),
+    hardFailureCodes.includes(finding.code),
   );
   if (hardFailures.length > 0) {
     throw new Error(
       `Degeneracy detected for ${leader}: ${hardFailures.map((finding) => finding.message).join(' ')}`,
     );
   }
+}
+
+export function assertCalibrationBounds(
+  leader: CampaignMetrics['leader'],
+  summary: CampaignMetrics,
+): void {
+  assertSmokeBounds(leader, summary, { enforceEarlySaturation: true });
 }

@@ -175,8 +175,9 @@ absorbing state the player cannot leave even after learning the lesson.
 - **D25:** Which costly signals ship in MVP? King-endangerment and
   declined-sacrifice are the strongest and the hardest to detect correctly.
 - **D26:** How many matches should phase 2 last before collapse? Too fast and
-  the player never forms a hypothesis; too slow and they quit. Hypothesis: the
-  first campaign should be losable in 8–12 matches.
+  the player never forms a hypothesis; too slow and they quit. The first
+  campaign's collapse target is 8–12 matches, distinct from the 16-match
+  intensive seminar format.
 - **D27:** Cross-campaign memory — fresh roster, remembered roster, or fresh
   roster with a reputation modifier (recommended).
 - **D28:** Onboarding disclosure — discovery by default, with grievances always

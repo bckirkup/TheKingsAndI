@@ -6,7 +6,11 @@ import {
   runCampaign,
   type CampaignCheckpoint,
 } from './campaign';
-import { assertSmokeBounds } from './degeneracy';
+import {
+  assertCalibrationBounds,
+  assertSmokeBounds,
+  detectDegeneracy,
+} from './degeneracy';
 import { disposeSimEngine, type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
 import { canonicalJson } from '../src/core/canonicalJson';
@@ -34,6 +38,7 @@ export interface SimulationOptions {
   readonly depthCap: number | undefined;
   readonly checkpointOut: string | undefined;
   readonly resume: string | undefined;
+  readonly enforceCalibration: boolean;
 }
 
 export function shouldRunSmokeBounds(executedMatches: number): boolean {
@@ -54,6 +59,7 @@ function parseArguments(
     'depth-cap',
     'checkpoint-out',
     'resume',
+    'enforce-calibration',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -98,6 +104,13 @@ function parseArguments(
   if (values.has('resume') && values.get('resume') === '') {
     throw new Error('--resume must not be empty.');
   }
+  const enforceCalibrationValue = values.get('enforce-calibration') ?? 'false';
+  if (
+    enforceCalibrationValue !== 'true' &&
+    enforceCalibrationValue !== 'false'
+  ) {
+    throw new Error('--enforce-calibration must be true or false.');
+  }
   const engineValue = values.get('engine') ?? 'lozza';
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
@@ -124,6 +137,7 @@ function parseArguments(
     out: values.get('out'),
     checkpointOut: values.get('checkpoint-out'),
     resume: values.get('resume'),
+    enforceCalibration: enforceCalibrationValue === 'true',
   };
 }
 
@@ -155,7 +169,7 @@ async function main(): Promise<void> {
   } finally {
     await disposeSimEngine(options.engine);
   }
-  const csv = renderCsv(result.metrics);
+  const csv = renderCsv(result.metrics, result.summary.trajectoryBands);
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
@@ -168,6 +182,11 @@ async function main(): Promise<void> {
       'utf8',
     );
   }
+  const findings = detectDegeneracy(
+    options.leader,
+    result.metrics,
+    result.summary,
+  );
   if (shouldRunSmokeBounds(result.metrics.length)) {
     assertSmokeBounds(options.leader, result.summary);
   }
@@ -180,6 +199,17 @@ async function main(): Promise<void> {
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
+  for (const band of result.summary.trajectoryBands) {
+    console.log(
+      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} refusal=${band.meanRefusalRate.toFixed(3)} desertion=${band.desertionRate.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+    );
+  }
+  for (const finding of findings) {
+    console.log(`degeneracy=${finding.code} ${finding.message}`);
+  }
+  if (options.enforceCalibration) {
+    assertCalibrationBounds(options.leader, result.summary);
+  }
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
   if (options.checkpointOut !== undefined)
     console.log(`Checkpoint written to ${options.checkpointOut}`);

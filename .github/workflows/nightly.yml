@@ -80,6 +80,7 @@ jobs:
             --engine=lozza \
             --depth-cap=4 \
             --seed=1 \
+            --enforce-calibration=true \
             --out=artifacts/nightly/tyrannical.csv
 
       - name: Supportive Lozza campaign
@@ -90,6 +91,7 @@ jobs:
             --engine=lozza \
             --depth-cap=4 \
             --seed=1 \
+            --enforce-calibration=true \
             --out=artifacts/nightly/supportive.csv
 
       - name: Coefficient sweep (OUTCOME_TRUST_LOSS_SCALE)
