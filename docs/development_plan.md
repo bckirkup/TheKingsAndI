@@ -155,7 +155,7 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 | 5.8g | Cohort registry (ADR 0027 §1): facilitator-hosted tier-2 service for a closed 12–24 seat cohort — enrollment as identity, shared piece pool, cross-student circulation. Consumer stays on tier-1 passports |
 | 5.8h | Facilitator tooling: cohort dashboard, per-student audit export, roster-circulation view; plenary debrief supports ~24, individual ~12 |
 | 5.8i | Consumer pacing profile (ADR 0027 §4): something legible about the leadership mechanic inside the first ninety minutes, against Steam's refund window |
-| 5.8e | World-scale piece identity (ADR 0026): provenance, cross-commander trauma, retirement state, credence keyed by `LeaderId` including commanders never served — serializable and portable whether or not a registry ships |
+| 5.8e | World-scale piece identity (ADR 0026, ADR 0035): provenance, identity-seeded disposition, cross-commander relationship accounts, global trauma, retirement state, credence keyed by `LeaderId` including commanders never served — serializable and portable whether or not a registry ships |
 | 5.8f | Piece **passports** (tier 1): signed export/import so identities travel between players offline; `determinismId` + seed in every `MatchRecord` so a future registry can replay-verify rather than trust |
 | 5.8a | Opposing commander (ADR 0025): AI leader archetype driving the enemy roster's full psychology; difficulty selects the archetype, never engine depth; enemy state exposed to the player only as behaviour |
 | 5.8d | Free-agent market between careers — deserted identities may join other commanders' rosters, credence intact (ADR 0025 §5) |
@@ -187,7 +187,7 @@ Milestone 5 — they are tracked as **Milestone 5b**.
 | 5.8i | Consumer pacing profile |
 | 5.8a / 5.8d | Enemy roster psychology + free-agent market |
 | 5.8b / 5.8c | Multi-act appointments + King's results channel |
-| 5.8e / 5.8f | Retirement + signed passports (**blocked on open D49 for keyed credence**) |
+| 5.8e / 5.8f | Retirement + signed passports (keyed credence resolved by ADR 0035; implementation still requires identity and passport work) |
 
 ## Milestone 6 — Narration layer (≈1.5 weeks)
 
