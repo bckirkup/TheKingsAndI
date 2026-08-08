@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { LivingBoard } from '../src/chess';
+import { LivingBoard, type MoveFeatures } from '../src/chess';
 import {
   applyPrivateEvaluation,
   evalProfileFor,
 } from '../src/orchestration/privateEvaluation';
+import { insightToEvaluation } from '../src/orchestration/evaluation';
 import { ENGINE_CONFIG, type PieceState } from '../src/psychology';
 
 const BOARD = LivingBoard.fromFen('4k3/8/8/8/8/3p4/4P3/4K3 w - - 0 1');
@@ -41,6 +42,27 @@ const ACTOR: PieceState = {
 };
 
 describe('private evaluation profile', () => {
+  it('preserves leader-implied bias in the psychology evaluation', () => {
+    const features: MoveFeatures = {
+      moverId: 'w:P:e2',
+      san: 'e4',
+      deltaVCapture: 0,
+      materialDelta: 0,
+      pCaptured: 0.1,
+      pCapturedDelta: 0,
+      captureRiskByPiece: {},
+      peerSafetyDeltas: {},
+      kingSafetyDelta: 0,
+    };
+    const result = insightToEvaluation(
+      features,
+      { scoreCp: 20, pv: [] },
+      { scoreCp: 30, pv: [] },
+      1.25,
+    );
+    expect(result.vLeaderImplied).toBe(1.55);
+  });
+
   it('produces deterministic integer-quantized profile data', () => {
     const first = evalProfileFor(ACTOR, POST_MOVE, { traumaDrift: false });
     const second = evalProfileFor(ACTOR, POST_MOVE, { traumaDrift: false });

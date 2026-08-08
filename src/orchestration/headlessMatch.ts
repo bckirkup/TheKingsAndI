@@ -7,6 +7,7 @@ import {
   applyNeglectSignal,
   evaluateMoveResponse,
   normalizePieceState,
+  shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
   type PieceState,
@@ -24,6 +25,7 @@ import {
   applyPostMoveCredence,
   applySacrificeWitnesses,
   attributeSacrifice,
+  detectDeclinedSacrificeCostlySignal,
   desertionContextFor,
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
@@ -36,6 +38,7 @@ export interface HeadlessMoveChoice {
   readonly san: string;
   /** When omitted, orchestration resolves engine insight for the mover. */
   readonly moveEval?: CandidateMoveEvaluation;
+  readonly leaderImpliedBias?: number;
   readonly objectivelyGood?: boolean;
 }
 
@@ -139,10 +142,22 @@ export async function runHeadlessMatch(
       choice.intent,
       actor,
       insight,
+      roster,
+      features,
+      choice.leaderImpliedBias ?? 0,
     );
     const moveEval =
       choice.moveEval ??
-      insightToEvaluation(features, moverInsights.actor, moverInsights.leader);
+      insightToEvaluation(
+        features,
+        moverInsights.actor,
+        moverInsights.leader,
+        choice.leaderImpliedBias ?? 0,
+      );
+    const moveEvalByPiece = {
+      ...moverInsights.desertionMoveEvals,
+      [actor.id]: moveEval,
+    };
     const auditScore = await resolveAuditMoveScore(
       config.engine,
       board,
@@ -155,6 +170,7 @@ export async function runHeadlessMatch(
       isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
 
     const desertionContext = desertionContextFor(actor, moveEval);
+    const desertionDecision = shouldDesert(actor, desertionContext, roster);
     let outcome = evaluateMoveResponse(
       actor,
       moveEval,
@@ -188,6 +204,15 @@ export async function runHeadlessMatch(
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
         });
+        if (detectDeclinedSacrificeCostlySignal(features, auditScore)) {
+          const costly = applyCostlySignalsToRoster(
+            roster,
+            ['declined_sacrifice'],
+            ply,
+          );
+          roster = costly.roster;
+          events.push(...costly.events);
+        }
         if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({
@@ -207,8 +232,9 @@ export async function runHeadlessMatch(
           actor,
           refusedMove: choice.san,
           refusedMoveEval: moveEval,
-          uStay: 0,
-          uDesert: 0,
+          moveEvalByPiece,
+          uStay: desertionDecision.uStay,
+          uDesert: desertionDecision.uDesert,
         },
         ply,
       );

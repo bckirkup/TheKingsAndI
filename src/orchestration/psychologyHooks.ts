@@ -4,6 +4,7 @@ import {
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  clampTrust,
   isWitnessedSacrifice,
   normalizePieceState,
   type CandidateMoveEvaluation,
@@ -42,9 +43,15 @@ export function applySacrificeWitnesses(
   let next = [...roster];
   for (const observer of roster) {
     if (observer.id === hero.id) continue;
-    const updated = applyWitnessedSacrificeEvent(observer, hero);
+    const witnessed = applyWitnessedSacrificeEvent(observer, hero);
+    const credited = {
+      ...witnessed,
+      T_i: clampTrust(
+        witnessed.T_i + ENGINE_CONFIG.COSTLY_SIGNAL_DECLINED_SACRIFICE,
+      ),
+    };
     next = next.map((piece) =>
-      piece.id === observer.id ? normalizePieceState(updated) : piece,
+      piece.id === observer.id ? normalizePieceState(credited) : piece,
     );
     events.push({
       t: 'SACRIFICE_WITNESSED',
@@ -63,6 +70,13 @@ export function detectKingEndangermentCostlySignal(
     (delta) => delta > 0.05,
   );
   return features.kingSafetyDelta < -0.2 && peerRelief;
+}
+
+export function detectDeclinedSacrificeCostlySignal(
+  features: MoveFeatures,
+  postMoveAuditCp: number,
+): boolean {
+  return isWitnessedSacrifice(attributeSacrifice(features, postMoveAuditCp));
 }
 
 export function applyCostlySignalsToRoster(

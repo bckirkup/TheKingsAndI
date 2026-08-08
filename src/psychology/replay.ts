@@ -84,6 +84,7 @@ function commitPly(
         actor,
         refusedMove: replayPly.moveEval.moveNotation,
         refusedMoveEval: replayPly.moveEval,
+        moveEvalByPiece: { [actor.id]: replayPly.moveEval },
         uStay: desertion?.uStay ?? 0,
         uDesert: desertion?.uDesert ?? 0,
       },

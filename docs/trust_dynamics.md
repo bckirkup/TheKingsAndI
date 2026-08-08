@@ -8,18 +8,27 @@ _Design intent, owner-stated:_
 > requires realizing this isn't exactly chess, and that takes multiple games.**
 
 This document specifies that feedback loop. It resolves D24 and constrains D19.
-Nothing here is implemented; it is the target model.
+The outcome-to-trust edge and costly-signal reducers are implemented in
+`src/psychology/trust.ts` and wired by `src/orchestration/headlessMatch.ts` and
+`src/orchestration/matchSession.ts`; this document remains the authored model
+and calibration target.
 
 ---
 
-## 1. The loop the spec is missing
+## 1. The loop and its implementation
 
-The reference spec has **no** outcome→trust edge. Trust gates behavior (depth,
-refusal, desertion) but nothing writes it back from match results, so the loop
-cannot occur:
+The historical reference spec had **no** outcome→trust edge. The implemented
+engine now applies the edge at match end:
+
+```text
+ΔT_match = -trunc(OUTCOME_TRUST_LOSS_SCALE · (1 - WinScore / 100))
+```
+
+Trust still gates behavior (depth, refusal, desertion), and match results now
+write it back, so the loop can occur:
 
 ```
-                     (missing today)
+                     outcome trust edge
         ┌──────────────────────────────────────────┐
         │                                          ▼
    low T_i ──► low η_i ──► shallow D_i ──► worse play ──► loss

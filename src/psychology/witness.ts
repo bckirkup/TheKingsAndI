@@ -6,7 +6,7 @@ import type {
   PieceState,
   SacrificeAttribution,
 } from './types';
-import { clampAffinity, clampTrust } from './clamp';
+import { clampAffinity } from './clamp';
 
 export function isWitnessedSacrifice(
   attribution: SacrificeAttribution,
@@ -21,36 +21,17 @@ export function appraiseDesertionWitness(
   ply: number,
 ): { readonly witness: PieceState; readonly event: MatchEvent } {
   const witnessOwn = refusedMoveEval.deltaV_board;
-  const appraisal: 'brave' | 'coward' = witnessOwn < 0 ? 'brave' : 'coward';
-  let updated = { ...witness };
-  if (appraisal === 'brave') {
-    updated = {
-      ...updated,
-      dyadicAffinity: {
-        ...updated.dyadicAffinity,
-        [deserter.id]: clampAffinity(
-          (updated.dyadicAffinity[deserter.id] ?? 0) +
-            ENGINE_CONFIG.WITNESS_BRAVE_AFFINITY_GAIN,
-        ),
-      },
-      T_i: clampTrust(updated.T_i - ENGINE_CONFIG.WITNESS_BRAVE_TRUST_LOSS),
-      rumor: {
-        ...updated.rumor,
-        pLossTeam: Math.min(1_000, updated.rumor.pLossTeam + 80),
-      },
-    };
-  } else {
-    updated = {
-      ...updated,
-      dyadicAffinity: {
-        ...updated.dyadicAffinity,
-        [deserter.id]: clampAffinity(
-          (updated.dyadicAffinity[deserter.id] ?? 0) -
-            ENGINE_CONFIG.WITNESS_COWARD_AFFINITY_LOSS,
-        ),
-      },
-    };
-  }
+  const appraisal = 'coward' as const;
+  const updated = {
+    ...witness,
+    dyadicAffinity: {
+      ...witness.dyadicAffinity,
+      [deserter.id]: clampAffinity(
+        (witness.dyadicAffinity[deserter.id] ?? 0) -
+          ENGINE_CONFIG.WITNESS_COWARD_AFFINITY_LOSS,
+      ),
+    },
+  };
   const event: MatchEvent = {
     t: 'DESERTION_WITNESS',
     ply,

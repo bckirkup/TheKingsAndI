@@ -13,6 +13,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   applyOverride,
+  shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
   type MoveDecisionOutcome,
@@ -38,6 +39,7 @@ import {
   applyCostlySignalsToRoster,
   attributeSacrifice,
   desertionContextFor,
+  detectDeclinedSacrificeCostlySignal,
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
 } from './psychologyHooks';
@@ -60,6 +62,9 @@ export interface PendingVerdict {
   readonly orderQualityCp: number;
   readonly outcome: MoveDecisionOutcome;
   readonly verdict: 'MORAL_REFUSAL' | 'DESERTION_MUTINY';
+  readonly desertionMoveEvals: Readonly<
+    Record<string, CandidateMoveEvaluation>
+  >;
 }
 
 export interface DialogueCue {
@@ -220,12 +225,18 @@ export class MatchSession {
       intent,
       actor,
       this.insight,
+      this.roster,
+      features,
     );
     const moveEval = insightToEvaluation(
       features,
       insights.actor,
       insights.leader,
     );
+    const desertionMoveEvals = {
+      ...insights.desertionMoveEvals,
+      [actor.id]: moveEval,
+    };
     const orderQualityCp = await resolveAuditMoveScore(
       this.engine,
       this.board,
@@ -249,6 +260,7 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'MORAL_REFUSAL',
+        desertionMoveEvals,
       };
       this.phase = 'awaiting_player';
       this.dialogueCue = {
@@ -270,6 +282,7 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'DESERTION_MUTINY',
+        desertionMoveEvals,
       };
       this.phase = 'awaiting_player';
       this.dialogueCue = {
@@ -310,6 +323,20 @@ export class MatchSession {
       threshold: pending.outcome.refusalThreshold,
       perceivedValue: pending.outcome.perceivedValue,
     });
+    if (
+      detectDeclinedSacrificeCostlySignal(
+        pending.features,
+        pending.orderQualityCp,
+      )
+    ) {
+      const costly = applyCostlySignalsToRoster(
+        this.roster,
+        ['declined_sacrifice'],
+        this.ply,
+      );
+      this.roster = costly.roster;
+      this.events.push(...costly.events);
+    }
     this.roster = updatePiece(this.roster, pending.actor.id, (piece) => ({
       ...piece,
       credence: applyNeglectSignal(piece.credence),
@@ -366,14 +393,20 @@ export class MatchSession {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
 
+    const desertionDecision = shouldDesert(
+      pending.actor,
+      desertionContextFor(pending.actor, pending.moveEval),
+      this.roster,
+    );
     const cascade = applyDesertionWithCascade(
       this.roster,
       {
         actor: pending.actor,
         refusedMove: pending.san,
         refusedMoveEval: pending.moveEval,
-        uStay: 0,
-        uDesert: 0,
+        moveEvalByPiece: pending.desertionMoveEvals,
+        uStay: desertionDecision.uStay,
+        uDesert: desertionDecision.uDesert,
       },
       this.ply,
     );
