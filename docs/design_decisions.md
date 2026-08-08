@@ -619,6 +619,12 @@ giving `B_i` a perceptual job as well as an affective one? **D44** can a piece
 believe the room about the position but not about the leader?
 See `docs/belief_model.md` §7.
 
+**D43 schema resolution (ADR 0037):** The private per-piece evaluation profile
+schema is settled as bounded distortion of the shared score with geometric
+attention pruning. D43 itself remains **open**: whether egocentric weights drift
+with `B_i` is a calibration choice owned by the user. If drift is implemented,
+it ships behind a configuration flag with both branches tested.
+
 ### D25–D29 ⚠ Trust-loop follow-ons
 Which costly signals ship (D25), how long the trap runs before collapse (D26),
 cross-campaign roster memory (D27), disclosure vs. discovery (D28), and the
@@ -655,7 +661,8 @@ before any exec-lab use. Not yet considered by the owner.
 2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
    partly answered in substance: an override is the canonical benevolence cliff
    (ADR 0019), so its price falls out of that channel's calibration rather than
-   being an independent constant.
+   being an independent constant. D43's profile schema is settled by ADR 0037;
+   its trauma-drift branch remains open.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
