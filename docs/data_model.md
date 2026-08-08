@@ -102,15 +102,16 @@ Rules 1 and 3 are **decided** (ADR 0009); rule 2 remains as specified.
    preferences — they like winning, hate losing, and really hate being taken —
    and those preferences are the primary between-match writers of `T_i`.
 
-## 2b. Open structural decisions (D49–D51)
+## 2b. Structural decisions (D49–D51)
 
-Three schema questions are unresolved and expensive to retrofit:
+Two schema questions remain unresolved and expensive to retrofit:
 
-- **D49 — credence is trust in *someone*.** With symmetric psychology (D5) and
-  persistent rosters, `τ_benev`/`τ_abil` should be keyed by leader:
-  `credence: Record<LeaderId, { benev: number; abil: number }>`. Flattening it to
-  scalars forecloses a second commander, an AI-led army with its own relational
-  history, and a piece that trusted a predecessor.
+- **D49 is resolved by ADR 0035.** Credence is trust in *someone*: with
+  symmetric psychology (D5) and persistent rosters, the relationship account is
+  keyed by leader:
+  `credence: Record<LeaderId, { benev: number; abil: number }>`. Each piece
+  also has an identity-seeded disposition prior, while `B_i` remains global
+  damage.
 - **D50 — where the true evaluation lives.** The audit (ADR 0018) and the
   trust-farming detector (ADR 0019) need it, but it must never be loadable into
   psychology (ADR 0013). Recommended: a **separate audit stream** with no code
@@ -177,9 +178,10 @@ whether or not a registry ever ships (D72).
 ```ts
 PieceIdentity {
   id, name, provenance: LeaderId[],   // everyone it has ever served
-  trauma,                             // accumulates across ALL commanders
+  disposition,                        // identity-seeded stable prior
+  trauma,                             // global damage across ALL commanders
   retired: boolean,                   // permanent; the only permanent loss
-  credence: Map<LeaderId, {benev, abil}>   // incl. commanders never served
+  credence: Map<LeaderId, {benev, abil}>   // relationship accounts
 }
 CaptureRecord { pieceId, byLeaderId, byPieceId, servingLeaderId, matchId }
 MatchRecord   { ..., seed, determinismId }   // replay-verifiable (ADR 0026 §6)

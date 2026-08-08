@@ -132,7 +132,7 @@ Enforced by the shuffled-resolution-order replay test, a per-round `digest` in
 the `MatchRecord`, and an ESLint ban on `Promise.race`/`Promise.any`/wall-clock
 timeouts in `engine/` and `orchestration/`.
 
-### D49 ⛔ Is credence indexed by leader identity?
+### D49 ✅ Is credence indexed by leader identity? (ADR 0035)
 D5 makes psychology symmetric and campaigns persist rosters, so `τ_benev` and
 `τ_abil` are trust *in someone* rather than scalars on a piece. If credence is
 not keyed by leader from the first schema, the project can never have a second
@@ -143,10 +143,11 @@ that trusted a predecessor.
 free now; a migration and a psychology rewrite later. Interacts with D27
 (cross-campaign roster memory).
 
-**Status (2026-08-07):** Still **open**. The engine-wiring / cascade backfill
-deliberately left credence as a single `{tauBenev, tauAbil}` pair. Do not resolve
-in code until an explicit decision; Milestone 5b (enemy roster / free-agent
-market) depends on it.
+**Resolution (ADR 0035):** **Resolved yes.** Credence is a per-commander
+relationship account, `Record<LeaderId, {benev, abil}>`, initialized from a
+stable identity-seeded disposition prior. `B_i` remains global damage rather
+than part of a relationship account. The disposition is not player-facing as a
+number; facilitator exposure remains a separate open question.
 
 ### D50 ⚠ Does the true evaluation get persisted in the event log?
 The audit needs it (ADR 0018) and the trust-farming detector needs it
@@ -641,13 +642,13 @@ before any exec-lab use. Not yet considered by the owner.
 
 ## Suggested decision order
 
-1. **D49** — before the first schema. Cheap now, structural later. (D48 is
-   resolved by ADR 0034: it was the one whose absence would have presented as a
-   mysterious psychology bug, and it had to land before `engine/`.)
+1. **D50, D52** — before persistence and before any dialogue is authored.
+   D49 is resolved by ADR 0035; D48 is resolved by ADR 0034: it was the one
+   whose absence would have presented as a mysterious psychology bug, and it had
+   to land before `engine/`.
 1b. **King's patience and recall rate** (D54/D56 residue) — with the harness,
    alongside D26. (D51 and D54 are resolved by ADR 0021; D55 and D56 by
    ADR 0022.)
-1c. **D50, D52** — before persistence and before any dialogue is authored.
 2. **D35, D40, D42–D43** — with the harness, alongside credence tuning. D35 is
    partly answered in substance: an override is the canonical benevolence cliff
    (ADR 0019), so its price falls out of that channel's calibration rather than
