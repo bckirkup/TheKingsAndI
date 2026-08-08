@@ -79,6 +79,13 @@ describe('parallel campaign planning', () => {
     expect(() =>
       resolveRunPlan({ matches: 1000, campaignLength: 20, campaigns: 49 }),
     ).toThrow(/matches=1000.*campaign-length=20.*campaigns=49/);
+    expect(() =>
+      resolveRunPlan({
+        matches: undefined,
+        campaignLength: undefined,
+        campaigns: 50,
+      }),
+    ).toThrow(/--campaigns requires --campaign-length/);
   });
 
   it('mixes at least one thousand campaign seeds without match collisions', () => {
@@ -157,6 +164,29 @@ describe('parallel campaign sharding', () => {
     const merged = aggregateShardArtifacts(shards.map(artifactFromShard));
     expect(merged.campaigns).toEqual(artifactFromShard(unsharded).campaigns);
     expect(merged.summary).toEqual(unsharded.summary);
+  });
+
+  it('reproduces a campaign through its derived-seed shard', async () => {
+    const options = {
+      plan: { totalMatches: 9, campaignLength: 3, campaigns: 3 },
+      leader: 'supportive' as const,
+      masterSeed: 9,
+      engineKind: 'fake' as const,
+      depthCap: undefined,
+    };
+    const unsharded = await runShard({
+      ...options,
+      shardIndex: 0,
+      shardCount: 1,
+    });
+    const reproduced = await runShard({
+      ...options,
+      shardIndex: 1,
+      shardCount: 3,
+    });
+    expect(reproduced.campaigns).toEqual(
+      unsharded.campaigns.filter((campaign) => campaign.campaignIndex === 1),
+    );
   });
 
   it('rejects incomplete, duplicate, and identity-mismatched shard sets', async () => {

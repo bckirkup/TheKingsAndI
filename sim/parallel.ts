@@ -103,12 +103,9 @@ export function resolveRunPlan(values: RunFlagValues): CampaignRunPlan {
     };
   }
   if (explicitCampaigns !== undefined) {
-    const totalMatches = explicitMatches ?? explicitCampaigns;
-    return {
-      totalMatches,
-      campaignLength: totalMatches / explicitCampaigns,
-      campaigns: explicitCampaigns,
-    };
+    throw new Error(
+      '--campaigns requires --campaign-length (or --matches to derive it).',
+    );
   }
   return {
     totalMatches: explicitMatches ?? 1,

@@ -51,6 +51,26 @@ simulation or aggregation command when an exit-criterion failure should be
 fatal; the default smoke path still reports findings without making them hard
 failures.
 
+For a multi-campaign run, do not reproduce one campaign with
+`--campaigns=1`: the legacy single-campaign path deliberately uses the master
+seed directly to preserve historical byte identity, while multi-campaign runs
+derive each campaign seed from the master seed and its zero-based index. Thus
+campaign 0 of a 50-campaign run is not the same campaign as a one-campaign run
+with the same master seed. To reproduce campaign `i`, keep the multi-campaign
+plan and select that campaign's shard:
+
+```bash
+pnpm sim \
+  --matches=1000 --campaign-length=20 --campaigns=50 \
+  --leader=tyrannical --seed=1 --engine=fake \
+  --shard-index=17 --shard-count=50 \
+  --out=metrics/campaign-17.csv
+```
+
+This runs exactly campaign 17 using its derived seed. The shard artifact's
+`campaignSeed` is the authoritative record of the seed actually used for each
+campaign.
+
 The harness does not yet model a seminar. Seminar participants share a roster
 pool and trauma pool, so a cohort is a fold across participants rather than a
 set of independent participant jobs. One shard is not one student: sharding is
