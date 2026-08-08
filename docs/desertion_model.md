@@ -35,7 +35,7 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `P_loss(team \| ·)` | probability the army loses, with and without it on the board |
 | `λ_i` | **how much this piece cares that the team loses** |
 | `S_collective` | team-loss stake, measured in the same pain units as `pain_i` (default `50`) |
-| `standing_i` | mean bond the remaining pieces hold toward `i`; zero peers means zero standing |
+| `standing_i` | audience bond at stake: the sum of remaining pieces' non-negative bonds toward `i`, normalized by the standard fifteen-peer roster scale; it falls as the audience leaves and is zero with no peers |
 | `glory_i` | `(w_ambition_i + w_prestige_i) / 2`, the piece's stake in reputation |
 | `S_standing` | anticipated standing-loss stake in pain units (default `100`) |
 | `μ_i` | residual stake after walking away, `0 ≤ μ_i ≤ 1` |
@@ -61,11 +61,14 @@ the team's defeat an explicit pain-scale stake, `S_collective`, so that trust
 can outweigh private capture pain rather than being confined to a
 probability-sized addend.
 Desertion also charges the deserter for the standing it expects to lose in
-front of its remaining comrades. This is the mean of each remaining observer's
-non-negative affinity-plus-class-prestige bond toward the deserter, weighted by
-the deserter's ambition and prestige traits. The cost falls as comrades leave
-and is exactly zero when no comrades remain, so it is an anticipated witness
-cost rather than a damping floor.
+front of its remaining comrades. This is the sum of each remaining observer's
+non-negative affinity-plus-class-prestige bond toward the deserter, normalized
+by the standard fifteen-peer roster scale, then weighted by the deserter's
+ambition and prestige traits. Unlike a peer average, the audience stake falls
+as comrades leave: the first deserter faces the full roster audience, while a
+late-cascade piece with only one witness pays only one fifteenth as much. It is
+exactly zero when no comrades remain, so it is an anticipated witness cost
+rather than a damping floor.
 
 Consequences that fall out for free, none of which need special-case code:
 

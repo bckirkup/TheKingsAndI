@@ -163,7 +163,35 @@ describe('desertion cascade', () => {
       P_lossIfLeave: 0.6,
     };
 
-    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-43.26);
+    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-8.26);
+  });
+
+  it('makes anticipated standing loss fall with the audience', () => {
+    const piece = makePiece();
+    const peers = Array.from({ length: 15 }, (_, index) =>
+      makePiece({
+        id: `w:R:h${index + 1}`,
+        dyadicAffinity: { [piece.id]: 100 },
+      }),
+    );
+    const context: DesertionContext = {
+      P_captured: 0.25,
+      P_lossIfStay: 0.1,
+      P_lossIfLeave: 0.6,
+    };
+
+    const firstDeserter = calculateUDesert(piece, context, 0.64, [
+      piece,
+      ...peers,
+    ]);
+    const lateDeserter = calculateUDesert(piece, context, 0.64, [
+      piece,
+      ...peers.slice(0, 1),
+    ]);
+
+    expect(firstDeserter).toBe(-43.26);
+    expect(lateDeserter).toBe(-8.26);
+    expect(lateDeserter).toBeGreaterThan(firstDeserter);
   });
 
   it('changes the desertion decision when collective stake changes (sensitivity)', () => {

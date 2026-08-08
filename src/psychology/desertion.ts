@@ -3,6 +3,8 @@ import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import type { DesertionContext, PieceState } from './types';
 
+const STANDARD_ROSTER_SIZE = 16;
+
 export function calculatePain(piece: PieceState): number {
   return (
     ENGINE_CONFIG.DESERTION_PAIN_BASE +
@@ -50,18 +52,16 @@ export function calculateUDesert(
   activePeers: readonly PieceState[],
 ): number {
   let standing = 0;
-  let peers = 0;
   for (const peer of activePeers) {
     if (peer.id === piece.id) continue;
-    peers += 1;
     const affinity = peer.dyadicAffinity[piece.id] ?? 0;
     const prestige = peer.classPrestige[piece.role] ?? 0;
     standing += Math.max(0, (affinity + prestige) / 200);
   }
-  const meanStanding = standing / Math.max(1, peers);
+  const audienceStanding = standing / Math.max(1, STANDARD_ROSTER_SIZE - 1);
   const gloryWeight = (piece.traits.w_ambition + piece.traits.w_prestige) / 2;
   const anticipatedStandingCost =
-    meanStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
+    audienceStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
   const residualCost =
     -context.P_lossIfLeave *
     lambda *
