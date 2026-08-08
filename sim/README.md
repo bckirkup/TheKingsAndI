@@ -10,6 +10,7 @@ pnpm sim --matches=20 --leader=tyrannical --seed=7
 pnpm sim --matches=20 --leader=tyrannical --engine=lozza
 pnpm sim --matches=20 --leader=tyrannical --engine=lozza --depth-cap=4
 pnpm sim --matches=1000 --leader=tyrannical --campaign=20 --seed=1 --out=metrics.csv
+pnpm sim --matches=20 --leader=tyrannical --engine=fake --enforce-calibration=true
 pnpm sim --matches=3 --campaign=3 --leader=tyrannical --seed=1 --engine=fake --checkpoint-out=checkpoint.json
 pnpm sim --matches=6 --campaign=6 --leader=tyrannical --seed=1 --engine=fake --resume=checkpoint.json
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
@@ -38,9 +39,12 @@ the earlier quartiles. The CSV appends the channel metrics and roster size to
 each existing match row, then appends a trajectory-band section.
 
 The first two quartiles are the early-frustration check: desertion and rout
-rates of 80% or more in either early quartile are a hard smoke failure. This
-threshold is intentionally above the existing 50% supportive bound and marks
-near-total early collapse rather than ordinary variation.
+rates of 80% or more in either early quartile produce an `early-saturation`
+finding. The default smoke reports that finding without failing, because
+pre-existing balance defects must not block unrelated CI. Pass
+`--enforce-calibration=true` to make it a calibration failure. This threshold
+is intentionally above the existing 50% supportive bound and marks near-total
+early collapse rather than ordinary variation.
 
 Campaign checkpoints are emitted with `--checkpoint-out=path` and resumed with
 `--resume=path`. Use `--campaign` with those flags to set the total campaign

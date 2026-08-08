@@ -8,6 +8,10 @@ export interface DegeneracyFinding {
   readonly message: string;
 }
 
+export interface DegeneracyAssertionOptions {
+  readonly enforceEarlySaturation?: boolean;
+}
+
 export function detectDegeneracy(
   leader: CampaignMetrics['leader'],
   metrics: readonly MatchMetrics[],
@@ -97,19 +101,26 @@ export function detectDegeneracy(
 export function assertSmokeBounds(
   leader: CampaignMetrics['leader'],
   summary: CampaignMetrics,
+  options: DegeneracyAssertionOptions = {},
 ): void {
   const findings = detectDegeneracy(leader, summary.matchMetrics, summary);
+  const hardFailureCodes = ['no-rout', 'refusal-dead', 'toothless-refusal'];
+  if (options.enforceEarlySaturation) {
+    hardFailureCodes.push('early-saturation');
+  }
   const hardFailures = findings.filter((finding) =>
-    [
-      'no-rout',
-      'refusal-dead',
-      'toothless-refusal',
-      'early-saturation',
-    ].includes(finding.code),
+    hardFailureCodes.includes(finding.code),
   );
   if (hardFailures.length > 0) {
     throw new Error(
       `Degeneracy detected for ${leader}: ${hardFailures.map((finding) => finding.message).join(' ')}`,
     );
   }
+}
+
+export function assertCalibrationBounds(
+  leader: CampaignMetrics['leader'],
+  summary: CampaignMetrics,
+): void {
+  assertSmokeBounds(leader, summary, { enforceEarlySaturation: true });
 }

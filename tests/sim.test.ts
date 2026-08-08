@@ -11,7 +11,11 @@ import {
   shouldRunSmokeBounds,
 } from '../sim/cli';
 import { parseCampaignCheckpoint } from '../sim/campaign';
-import { assertSmokeBounds, detectDegeneracy } from '../sim/degeneracy';
+import {
+  assertCalibrationBounds,
+  assertSmokeBounds,
+  detectDegeneracy,
+} from '../sim/degeneracy';
 import {
   aggregateCampaign,
   buildTrajectoryBands,
@@ -213,7 +217,18 @@ describe('simulation harness argument parsing', () => {
       out: 'metrics.csv',
       checkpointOut: undefined,
       resume: undefined,
+      enforceCalibration: false,
     });
+  });
+
+  it('accepts explicit calibration enforcement', () => {
+    expect(
+      parseArguments([
+        '--leader=tyrannical',
+        '--engine=fake',
+        '--enforce-calibration=true',
+      ]).enforceCalibration,
+    ).toBe(true);
   });
 
   it('keys the smoke gate to executed campaign matches', () => {
@@ -298,7 +313,14 @@ describe('degeneracy detectors', () => {
       engineKind: 'fake',
     });
     const summary = aggregateCampaign('tyrannical', 7, metrics);
-    expect(() => assertSmokeBounds('tyrannical', summary)).toThrow('early');
+    const findings = detectDegeneracy('tyrannical', metrics, summary);
+    expect(
+      findings.some((finding) => finding.code === 'early-saturation'),
+    ).toBe(true);
+    expect(() => assertSmokeBounds('tyrannical', summary)).not.toThrow();
+    expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
+      'early',
+    );
   });
 });
 

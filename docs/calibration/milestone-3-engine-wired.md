@@ -89,6 +89,28 @@ refused_good=0.950 override=0.446 win=0.0 trust_delta=-77.58
 WALL_SECONDS=4.597
 ```
 
+## Early trajectory saturation
+
+The new quartile detector was run against the fake engine using the current
+coefficients:
+
+```text
+pnpm sim --matches=16 --campaign=16 --leader=tyrannical --seed=7 --engine=fake
+engine=sim-fake/depth-fixed
+quartile=1 matches=1-4 tau_abil=50.00 tau_benev=50.00 refusal=0.077 desertion=1.000 rout=1.000 roster=1.00
+quartile=2 matches=5-8 tau_abil=55.55 tau_benev=52.34 refusal=0.046 desertion=0.750 rout=0.750 roster=4.75
+quartile=3 matches=9-12 tau_abil=65.00 tau_benev=56.00 refusal=0.053 desertion=1.000 rout=1.000 roster=1.00
+quartile=4 matches=13-16 tau_abil=65.00 tau_benev=56.00 refusal=0.101 desertion=1.000 rout=1.000 roster=1.00
+```
+
+The fake-engine run is explicitly labelled because it is the deterministic CI
+substrate rather than a real-engine fidelity measurement. Its first quartile
+already has 100% desertion and 100% rout incidence. The intensive's 16-match
+diagnostic therefore collapses well before the end of the second quartile,
+which is the approximately 2.5-day point the seminar needs. Today's
+coefficients do not meet Milestone 3's exit criteria. No coefficient tuning was
+performed.
+
 This is a tractability proxy, not full-fidelity calibration. Full-fidelity
 Stockfish calibration requires an explicit runtime-budget decision; the prior
 uncapped real-engine probe exceeded 251 seconds for one match. That measurement

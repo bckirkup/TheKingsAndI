@@ -14,8 +14,8 @@
 
 > **"What gets built and tested first... what Steam does for us, and how this
 > works in a leadership seminar vs a recreational mode... a campaign in a week
-> with three full days and two half days of play... alternatively a 13-week
-> cycle with three-four games per week, a grueling 52-game Nibelungen cycle."**
+> with six games a day for four days... alternatively a 13-week cycle with
+> three-four games per week, a grueling 52-game Nibelungen cycle."**
 
 ADR 0026 left D72 open: which infrastructure tier hosts the community. The
 seminar answers it.
