@@ -26,6 +26,8 @@ export interface UciEngineOptions {
 export interface DepthLadder {
   readonly maxDepth: number;
   readonly at: ReadonlyMap<number, UciSearchResult>;
+  /** MultiPV lines retained at each emitted depth (depth → multipv → result). */
+  readonly multiPvAt: ReadonlyMap<number, ReadonlyMap<number, UciSearchResult>>;
   /** MultiPV lines at `maxDepth` (1-indexed multipv → result). */
   readonly multiPvAtMax: ReadonlyMap<number, UciSearchResult>;
 }
@@ -88,6 +90,7 @@ export class UciEngine {
   private searchReject: ((cause: unknown) => void) | undefined;
   private targetDepth = 0;
   private depthBest = new Map<number, UciSearchResult>();
+  private multiPvByDepth = new Map<number, Map<number, UciSearchResult>>();
   private multiPvAtMax = new Map<number, UciSearchResult>();
   private lineWaiters: Array<(line: string) => boolean> = [];
   private busy = false;
@@ -167,6 +170,15 @@ export class UciEngine {
             this.multiPvAtMax.set(multipv, result);
           }
         }
+        let atDepth = this.multiPvByDepth.get(depth);
+        if (atDepth === undefined) {
+          atDepth = new Map();
+          this.multiPvByDepth.set(depth, atDepth);
+        }
+        const prior = atDepth.get(multipv);
+        if (prior === undefined || !isBound) {
+          atDepth.set(multipv, result);
+        }
       } catch {
         // Ignore malformed info lines.
       }
@@ -180,10 +192,17 @@ export class UciEngine {
           new Error(`Engine returned ${line} without a score`),
         );
       } else {
+        const multiPvAt = new Map(
+          [...this.multiPvByDepth.entries()].map(([depth, lines]) => [
+            depth,
+            new Map(lines),
+          ]),
+        );
         this.searchResolve?.(
           Object.freeze({
             maxDepth: this.targetDepth,
             at,
+            multiPvAt,
             multiPvAtMax,
           }),
         );
@@ -191,6 +210,7 @@ export class UciEngine {
       this.searchResolve = undefined;
       this.searchReject = undefined;
       this.depthBest = new Map();
+      this.multiPvByDepth = new Map();
       this.multiPvAtMax = new Map();
       this.busy = false;
     }
@@ -244,6 +264,7 @@ export class UciEngine {
     await this.ready;
     this.targetDepth = depth;
     this.depthBest = new Map();
+    this.multiPvByDepth = new Map();
     this.multiPvAtMax = new Map();
     const result = new Promise<DepthLadder>((resolve, reject) => {
       this.searchResolve = resolve;

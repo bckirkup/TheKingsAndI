@@ -80,23 +80,43 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
     },
     async multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]> {
       const ladder = await ladderFor(fen, 16);
-      const lines: EngineEvaluation[] = [];
-      for (const key of [...ladder.multiPvAtMax.keys()].sort(
-        (left, right) => left - right,
-      )) {
-        const line = ladder.multiPvAtMax.get(key);
-        if (line !== undefined) {
-          lines.push(
-            Object.freeze({
-              scoreCp: line.scoreCp,
-              pv: Object.freeze([...line.pv]),
-            }),
-          );
+      return linesAt(ladder, ladder.maxDepth);
+    },
+    async multiPvAt(
+      fen: string,
+      depth: number,
+    ): Promise<readonly EngineEvaluation[]> {
+      const ladder = await ladderFor(fen, depth);
+      for (let rung = Math.min(depth, ladder.maxDepth); rung >= 1; rung -= 1) {
+        const lines = ladder.multiPvAt.get(rung);
+        if (lines !== undefined && lines.size > 0) {
+          return linesAt(ladder, rung);
         }
       }
-      return Object.freeze(lines);
+      return Object.freeze([]);
     },
   };
+}
+
+function linesAt(
+  ladder: DepthLadder,
+  depth: number,
+): readonly EngineEvaluation[] {
+  const lines = ladder.multiPvAt.get(depth);
+  if (lines === undefined) return Object.freeze([]);
+  const evaluations: EngineEvaluation[] = [];
+  for (const key of [...lines.keys()].sort((left, right) => left - right)) {
+    const line = lines.get(key);
+    if (line !== undefined) {
+      evaluations.push(
+        Object.freeze({
+          scoreCp: line.scoreCp,
+          pv: Object.freeze([...line.pv]),
+        }),
+      );
+    }
+  }
+  return Object.freeze(evaluations);
 }
 
 /** Tear down the shared process (test cleanup). */

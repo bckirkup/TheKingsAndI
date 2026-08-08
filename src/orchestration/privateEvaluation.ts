@@ -87,21 +87,16 @@ function positionScore(
   profile: EvalProfile,
 ): number {
   const side = board.pieceOf(actor.id)?.side;
-  if (side === undefined) return -PROFILE_SCALE;
+  if (side === undefined) return -1;
   const threatMap = extractThreatMap(board, side);
   const actorThreat = threatMap.pieces[actor.id];
+  const actorSquare = board.squareOf(actor.id);
   const ownSafety =
     actorThreat === undefined ? -1 : 1 - actorThreat.captureRisk;
   const ownMobility =
-    actorThreat === undefined
+    actorSquare === undefined || side === undefined
       ? 0
-      : Math.min(
-          1,
-          board.legalMoves().filter((move) => {
-            const piece = board.pieceAt(move.from);
-            return piece?.id === actor.id;
-          }).length / 8,
-        );
+      : mobilityFor(board, side, actorSquare);
   const ownClass = Object.values(threatMap.pieces)
     .filter(
       (piece) =>
@@ -142,6 +137,21 @@ function positionScore(
   }
   if (totalWeight === 0) return 0;
   return weighted / totalWeight;
+}
+
+function mobilityFor(
+  board: LivingBoard,
+  side: 'w' | 'b',
+  square: Square,
+): number {
+  const fields = board.fen().split(' ');
+  fields[1] = side;
+  fields[3] = '-';
+  const sideToMove = LivingBoard.fromFen(fields.join(' '));
+  return Math.min(
+    1,
+    sideToMove.legalMoves().filter((move) => move.from === square).length / 8,
+  );
 }
 
 function endpointFor(
@@ -292,8 +302,9 @@ export function applyPrivateEvaluation(
         Math.min(
           distortionBoundCp,
           Math.trunc(
-            (positionScore(endpoint.board, actor, profile) - baseline) *
-              distortionBoundCp,
+            ((positionScore(endpoint.board, actor, profile) - baseline) *
+              distortionBoundCp) /
+              2,
           ),
         ),
       );

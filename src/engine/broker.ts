@@ -21,6 +21,8 @@ export interface SharedSearchBroker extends EnginePort {
   evaluateTrue(fen: string): Promise<EngineEvaluation>;
   /** MultiPV lines at D_max from the shared tree (sacrifice / declined-sac facts). */
   multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]>;
+  /** MultiPV lines at a seat's rung, falling back to the nearest lower rung. */
+  multiPvAt(fen: string, depth: number): Promise<readonly EngineEvaluation[]>;
   dispose(): Promise<void>;
   readonly poolSize: number;
 }
@@ -61,6 +63,26 @@ function ladderAt(ladder: DepthLadder, depth: number): EngineEvaluation {
     throw new Error(`Shared search produced no score for depth ${depth}`);
   }
   return freezeEval(fallback);
+}
+
+function multiPvAt(
+  ladder: DepthLadder,
+  depth: number,
+): readonly EngineEvaluation[] {
+  for (let d = depth; d >= 1; d -= 1) {
+    const lines = ladder.multiPvAt.get(d);
+    if (lines !== undefined && lines.size > 0) {
+      return Object.freeze(
+        [...lines.keys()]
+          .sort((left, right) => left - right)
+          .flatMap((key) => {
+            const line = lines.get(key);
+            return line === undefined ? [] : [freezeEval(line)];
+          }),
+      );
+    }
+  }
+  return Object.freeze([]);
 }
 
 /**
@@ -134,6 +156,13 @@ export async function createSharedSearchBroker(
         if (line !== undefined) lines.push(freezeEval(line));
       }
       return Object.freeze(lines);
+    },
+    async multiPvAt(
+      fen: string,
+      depth: number,
+    ): Promise<readonly EngineEvaluation[]> {
+      const ladder = await ensureShared(fen);
+      return multiPvAt(ladder, Math.min(depth, dMax));
     },
     async dispose(): Promise<void> {
       sharedByFen.clear();

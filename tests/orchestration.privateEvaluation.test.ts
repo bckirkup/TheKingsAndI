@@ -55,6 +55,8 @@ describe('private evaluation profile', () => {
       traumaDrift: false,
     });
     const withDrift = evalProfileFor(ACTOR, POST_MOVE, { traumaDrift: true });
+    expect(withoutDrift['weight:ownSafety']).toBe(870);
+    expect(withDrift['weight:ownSafety']).toBe(1_000);
     expect(withDrift['weight:ownSafety']).not.toBe(
       withoutDrift['weight:ownSafety'],
     );
@@ -80,6 +82,28 @@ describe('private evaluation profile', () => {
     );
   });
 
+  it('gives ordinary attended lines distinct graded distortions', () => {
+    const profile = evalProfileFor(ACTOR, POST_MOVE);
+    const base = { scoreCp: 80, pv: ['e8e7'] as const };
+    const first = applyPrivateEvaluation(
+      base,
+      POST_MOVE,
+      ACTOR,
+      profile,
+      [{ scoreCp: 80, pv: ['e8e7', 'e4e5'] }],
+      30,
+    );
+    const second = applyPrivateEvaluation(
+      base,
+      POST_MOVE,
+      ACTOR,
+      profile,
+      [{ scoreCp: 80, pv: ['d3d2', 'e4e5'] }],
+      30,
+    );
+    expect(first.scoreCp).not.toBe(second.scoreCp);
+  });
+
   it('falls back to a defined distorted shared view when no line survives', () => {
     const profile = evalProfileFor(ACTOR, POST_MOVE);
     const base = { scoreCp: 80, pv: ['e8e7'] as const };
@@ -91,8 +115,18 @@ describe('private evaluation profile', () => {
   });
 
   it('passes mate scores through without distortion', () => {
-    const base = { scoreCp: 29_999, pv: ['e2e4'] as const };
-    expect(applyPrivateEvaluation(base, BOARD, ACTOR, {}, [], 1)).toEqual(base);
+    const profile = evalProfileFor(ACTOR, POST_MOVE);
+    const base = { scoreCp: 29_999, pv: ['e8e7'] as const };
+    expect(
+      applyPrivateEvaluation(
+        base,
+        POST_MOVE,
+        ACTOR,
+        profile,
+        [{ scoreCp: 80, pv: ['e8e7', 'e4e5'] }],
+        1,
+      ),
+    ).toEqual(base);
   });
 
   it('changes output when the distortion bound changes', () => {
@@ -107,6 +141,8 @@ describe('private evaluation profile', () => {
       [],
       200,
     );
+    expect(low.scoreCp).toBe(84);
+    expect(high.scoreCp).toBe(177);
     expect(high.scoreCp).not.toBe(low.scoreCp);
   });
 });

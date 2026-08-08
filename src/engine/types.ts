@@ -39,6 +39,10 @@ export interface EnginePort {
    * pruning (ADR 0037). The engine still returns only shared evaluations.
    */
   readonly multiPvAtMax?: (fen: string) => Promise<readonly EngineEvaluation[]>;
+  readonly multiPvAt?: (
+    fen: string,
+    depth: number,
+  ) => Promise<readonly EngineEvaluation[]>;
   /** Engine + version + settings. Goes into every `MatchRecord`. */
   readonly determinismId: string;
 }

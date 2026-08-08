@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import {
   applyPrivateScoring,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   createStockfishPort,
   disposeStockfishPort,
   resolveInsightRound,
@@ -40,6 +41,7 @@ describe('shared-search broker (Stockfish)', () => {
   }, 60_000);
 
   it('derives the Stockfish determinism ID from the configured ceiling', () => {
+    expect(DEFAULT_PRIVATE_MULTIPV_WIDTH).toBe(8);
     expect(STOCKFISH_DETERMINISM_ID).toContain('dmax-16');
     expect(stockfishDeterminismId(8)).toContain('dmax-8');
     expect(stockfishDeterminismId(8)).not.toBe(STOCKFISH_DETERMINISM_ID);
