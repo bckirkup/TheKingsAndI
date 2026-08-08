@@ -8,6 +8,7 @@ import {
   renderCsv,
   runCampaign,
   runSimulation,
+  shouldRunSmokeBounds,
 } from '../sim/cli';
 import { parseCampaignCheckpoint } from '../sim/campaign';
 import { detectDegeneracy } from '../sim/degeneracy';
@@ -200,6 +201,14 @@ describe('simulation harness argument parsing', () => {
       checkpointOut: undefined,
       resume: undefined,
     });
+  });
+
+  it('keys the smoke gate to executed campaign matches', () => {
+    const options = parseArguments(['--matches=1', '--campaign=21']);
+    expect(options.matches).toBe(1);
+    expect(options.campaign).toBe(21);
+    expect(shouldRunSmokeBounds(options.campaign)).toBe(false);
+    expect(shouldRunSmokeBounds(20)).toBe(true);
   });
 
   it('accepts checkpoint emit and resume flags', () => {

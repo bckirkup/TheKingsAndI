@@ -91,7 +91,9 @@ WALL_SECONDS=4.597
 
 This is a tractability proxy, not full-fidelity calibration. Full-fidelity
 Stockfish calibration requires an explicit runtime-budget decision; the prior
-Stockfish probe exceeded 251 seconds for one production-depth match.
+uncapped real-engine probe exceeded 251 seconds for one match. That measurement
+was taken before the sim's Stockfish ceiling was corrected to the documented
+depth-16 ladder, so it is not a full-fidelity runtime estimate.
 
 Both corrected reduced checks have the intended negative win delta, but
 desertion/rout remain saturated and refusal is below the tyrant target band.

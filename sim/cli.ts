@@ -36,6 +36,10 @@ export interface SimulationOptions {
   readonly resume: string | undefined;
 }
 
+export function shouldRunSmokeBounds(executedMatches: number): boolean {
+  return executedMatches <= 20;
+}
+
 function parseArguments(
   argumentsList: readonly string[],
 ): SimulationOptions & { out: string | undefined } {
@@ -164,7 +168,7 @@ async function main(): Promise<void> {
       'utf8',
     );
   }
-  if (options.matches <= 20) {
+  if (shouldRunSmokeBounds(result.metrics.length)) {
     assertSmokeBounds(options.leader, result.summary);
   }
   console.log(
