@@ -65,6 +65,10 @@ export const ENGINE_CONFIG = {
   WITNESS_COWARD_AFFINITY_LOSS: 25,
   /** Egocentric attention decay per square (docs/belief_model.md §3). */
   ATTENTION_DISTANCE_DECAY: 0.15,
+  /** Maximum private evaluation displacement from the shared score (ADR 0037). */
+  PRIVATE_EVAL_DISTORTION_BOUND_CP: 30,
+  /** D43 trauma drift remains an explicit calibration branch, off by default. */
+  PRIVATE_EVAL_TRAUMA_DRIFT: false,
 } as const;
 
 export type EngineConfig = typeof ENGINE_CONFIG;

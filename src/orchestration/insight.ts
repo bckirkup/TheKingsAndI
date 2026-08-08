@@ -6,9 +6,12 @@ import {
 } from '../engine/barrier';
 import { createEvaluationCache, type EvaluationCache } from '../engine/cache';
 import { buildInsightRound } from '../engine/round';
-import type { EnginePort, EvalProfile, Insight } from '../engine/types';
+import type { EnginePort, Insight } from '../engine/types';
 import { calculateEngineSearchDepth, type PieceState } from '../psychology';
 import { CAMPAIGN_CONFIG } from './campaignConfig';
+import { applyPrivateEvaluation, evalProfileFor } from './privateEvaluation';
+
+export { evalProfileFor } from './privateEvaluation';
 
 export const LEADER_INSIGHT_SEAT_ID = '\u0000leader';
 
@@ -21,12 +24,6 @@ export function createInsightRoundHandle(
   cache: EvaluationCache = createEvaluationCache(),
 ): InsightRoundHandle {
   return { cache, round: 0 };
-}
-
-/** Opaque profile placeholder until D43 settles weight schema. */
-export function evalProfileFor(piece: PieceState): EvalProfile {
-  void piece;
-  return {};
 }
 
 /**
@@ -77,13 +74,16 @@ export async function resolveMoverInsights(
     return { actor: insight, leader };
   }
   const fen = probe.fen();
+  const profile = evalProfileFor(actor, probe);
+  const attentionLines =
+    port.multiPvAtMax === undefined ? [] : await port.multiPvAtMax(fen);
   const requests = buildInsightRound({
     fen,
     seats: [
       {
         pieceId: actor.id,
         depth,
-        evalProfile: evalProfileFor(actor),
+        evalProfile: profile,
       },
       {
         pieceId: LEADER_INSIGHT_SEAT_ID,
@@ -107,11 +107,23 @@ export async function resolveMoverInsights(
   if (leaderInsight === undefined) {
     throw new Error(`Missing leader insight for ${LEADER_INSIGHT_SEAT_ID}`);
   }
-  // Post-move FEN is opponent-to-move; flip to mover's perspective.
-  return {
-    actor: Object.freeze({
+  const privateActor = applyPrivateEvaluation(
+    {
       ...actorInsight,
       scoreCp: -actorInsight.scoreCp,
+    },
+    probe,
+    actor,
+    profile,
+    attentionLines,
+  );
+  // Post-move FEN is opponent-to-move; private scoring is already applied from
+  // the mover's perspective while the line itself remains the engine PV.
+  return {
+    actor: Object.freeze({
+      ...privateActor,
+      pieceId: actorInsight.pieceId,
+      depth: actorInsight.depth,
     }),
     leader: Object.freeze({
       ...leaderInsight,

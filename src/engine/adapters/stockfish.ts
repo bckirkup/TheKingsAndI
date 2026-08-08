@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 
 import {
   createSharedSearchBroker,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   SHARED_SEARCH_D_MAX,
   type SharedSearchBroker,
 } from '../broker';
@@ -17,10 +18,11 @@ export const STOCKFISH_HASH_MB = 16;
 
 export function stockfishDeterminismId(
   dMax: number = SHARED_SEARCH_D_MAX,
+  multiPv: number = DEFAULT_PRIVATE_MULTIPV_WIDTH,
 ): string {
   return (
     `stockfish-js-${STOCKFISH_BUILD}-${STOCKFISH_FLAVOR}/` +
-    `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}`
+    `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}/multipv-${multiPv}`
   );
 }
 
@@ -33,6 +35,8 @@ export interface StockfishPortOptions {
   readonly poolSize?: number;
   /** Override D_max for tests. */
   readonly dMax?: number;
+  /** MultiPV width used by private-attention pruning. */
+  readonly multiPv?: number;
 }
 
 function defaultStockfishPath(): string {
@@ -58,12 +62,13 @@ export async function createStockfishPort(
     return sharedBroker;
   }
   const dMax = options.dMax ?? SHARED_SEARCH_D_MAX;
+  const multiPv = options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH;
   const broker = await createSharedSearchBroker({
     enginePath: options.enginePath ?? defaultStockfishPath(),
-    determinismId: stockfishDeterminismId(dMax),
+    determinismId: stockfishDeterminismId(dMax, multiPv),
     hashMb: STOCKFISH_HASH_MB,
     threads: 1,
-    multiPv: 3,
+    multiPv,
     ...(options.poolSize !== undefined ? { size: options.poolSize } : {}),
     dMax,
   });

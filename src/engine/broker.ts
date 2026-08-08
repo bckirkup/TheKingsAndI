@@ -4,6 +4,8 @@ import type { DepthLadder } from './uci';
 
 /** Shared-search depth ceiling (architecture §5, ADR 0017). */
 export const SHARED_SEARCH_D_MAX = 16;
+/** Default private-attention width; calibrated against engine runtime budget. */
+export const DEFAULT_PRIVATE_MULTIPV_WIDTH = 8;
 
 export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly determinismId: string;
@@ -27,32 +29,14 @@ interface InflightShared {
   readonly promise: Promise<DepthLadder>;
 }
 
-/**
- * Apply opaque eval-profile private scoring (ADR 0017).
- *
- * Weight schema is still open (D43). Until psychology defines it, an empty
- * profile is identity; non-empty profiles receive a deterministic integer bias
- * from the sum of truncated numeric values so distinct profiles cannot silently
- * collapse to the shared score when the barrier cache is cold.
- */
+/** Engine transport is profile-agnostic; private scoring belongs to orchestration. */
 export function applyPrivateScoring(
   base: EngineEvaluation,
   evalProfile: EvalProfile,
 ): EngineEvaluation {
-  let bias = 0;
-  for (const value of Object.values(evalProfile)) {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      bias += Math.trunc(value);
-    }
-  }
-  if (bias === 0) {
-    return Object.freeze({
-      scoreCp: base.scoreCp,
-      pv: Object.freeze([...base.pv]),
-    });
-  }
+  void evalProfile;
   return Object.freeze({
-    scoreCp: base.scoreCp + bias,
+    scoreCp: base.scoreCp,
     pv: Object.freeze([...base.pv]),
   });
 }
@@ -83,7 +67,7 @@ function ladderAt(ladder: DepthLadder, depth: number): EngineEvaluation {
  * Shared search + private per-piece scoring broker (ADR 0017).
  *
  * One canonical MultiPV search at D_max per FEN; seats at D_i receive a
- * truncation of that tree, then private scoring under their eval profile.
+ * truncation of that tree. Private scoring is applied in orchestration.
  */
 export async function createSharedSearchBroker(
   options: SharedSearchBrokerOptions,
@@ -96,7 +80,7 @@ export async function createSharedSearchBroker(
     enginePath: options.enginePath,
     hashMb: options.hashMb ?? 16,
     threads: 1,
-    multiPv: options.multiPv ?? 3,
+    multiPv: options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH,
     ...(options.size !== undefined ? { size: options.size } : {}),
   });
 

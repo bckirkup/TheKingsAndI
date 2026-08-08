@@ -26,12 +26,8 @@ export function createFakeEnginePort(
       const errorDirection = fenHash % 2 === 0 ? 1 : -1;
       const depthError =
         errorDirection * Math.max(0, 16 - Math.min(depth, 16)) * 4;
-      let scoreCp = deepLimitScore + depthError;
-      for (const value of Object.values(evalProfile)) {
-        if (typeof value === 'number' && Number.isFinite(value)) {
-          scoreCp += Math.trunc(value);
-        }
-      }
+      const scoreCp = deepLimitScore + depthError;
+      void evalProfile;
       const pvHash = (fenHash + depth * 1_000_003) | 0;
       const file = 7 - (Math.abs(pvHash) % 8);
       const rank = 1 + (Math.abs(pvHash >> 3) % 2);
