@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { createFakeEnginePort } from '../src/engine/fake';
 import { LivingBoard, type MoveFeatures } from '../src/chess';
 import {
   applyPrivateEvaluation,
   evalProfileFor,
 } from '../src/orchestration/privateEvaluation';
 import { insightToEvaluation } from '../src/orchestration/evaluation';
+import {
+  createInsightRoundHandle,
+  resolveMoverInsights,
+} from '../src/orchestration/insight';
 import { ENGINE_CONFIG, type PieceState } from '../src/psychology';
 
 const BOARD = LivingBoard.fromFen('4k3/8/8/8/8/3p4/4P3/4K3 w - - 0 1');
@@ -166,5 +171,40 @@ describe('private evaluation profile', () => {
     expect(low.scoreCp).toBe(82);
     expect(high.scoreCp).toBe(128);
     expect(high.scoreCp).not.toBe(low.scoreCp);
+  });
+
+  it('collects the pre-move best-line seat in the same barrier round', async () => {
+    const handle = createInsightRoundHandle();
+    const baseEngine = createFakeEnginePort();
+    let bestLineCalls = 0;
+    const engine = {
+      ...baseEngine,
+      async bestAt(fen: string, depth: number) {
+        bestLineCalls += 1;
+        return baseEngine.bestAt?.(fen, depth) ?? { scoreCp: 0, pv: [] };
+      },
+    };
+    const features: MoveFeatures = {
+      moverId: ACTOR.id,
+      san: 'e4',
+      deltaVCapture: 0,
+      materialDelta: 0,
+      pCaptured: 0.1,
+      pCapturedDelta: 0,
+      captureRiskByPiece: {},
+      peerSafetyDeltas: {},
+      kingSafetyDelta: 0,
+    };
+    await resolveMoverInsights(
+      engine,
+      BOARD,
+      { from: 'e2', to: 'e4' },
+      ACTOR,
+      handle,
+      [ACTOR],
+      features,
+    );
+    expect(bestLineCalls).toBe(1);
+    expect(handle.round).toBe(1);
   });
 });

@@ -22,7 +22,9 @@ export interface LozzaPortOptions {
 }
 
 let sharedEngine: UciEngine | undefined;
+let bestEngine: UciEngine | undefined;
 let searchQueue: Promise<void> = Promise.resolve();
+let bestSearchQueue: Promise<void> = Promise.resolve();
 const ladderByFen = new Map<string, DepthLadder>();
 
 function getSharedEngine(enginePath: string): UciEngine {
@@ -35,6 +37,18 @@ function getSharedEngine(enginePath: string): UciEngine {
     });
   }
   return sharedEngine;
+}
+
+function getBestEngine(enginePath: string): UciEngine {
+  if (bestEngine === undefined) {
+    bestEngine = new UciEngine({
+      enginePath,
+      hashMb: LOZZA_HASH_MB,
+      threads: 1,
+      multiPv: 1,
+    });
+  }
+  return bestEngine;
 }
 
 /**
@@ -95,6 +109,24 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       }
       return Object.freeze([]);
     },
+    async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
+      const search = bestSearchQueue.then(() =>
+        getBestEngine(enginePath).searchLadder(fen, depth),
+      );
+      bestSearchQueue = search.then(
+        () => undefined,
+        () => undefined,
+      );
+      const ladder = await search;
+      const result = ladder.at.get(depth) ?? ladder.multiPvAtMax.get(1);
+      if (result === undefined) {
+        throw new Error(`Lozza produced no best line at depth ${depth}`);
+      }
+      return Object.freeze({
+        scoreCp: result.scoreCp,
+        pv: Object.freeze([...result.pv]),
+      });
+    },
   };
 }
 
@@ -124,7 +156,12 @@ export async function disposeLozzaPort(): Promise<void> {
   if (sharedEngine !== undefined) {
     await sharedEngine.dispose();
     sharedEngine = undefined;
-    searchQueue = Promise.resolve();
-    ladderByFen.clear();
   }
+  if (bestEngine !== undefined) {
+    await bestEngine.dispose();
+    bestEngine = undefined;
+  }
+  searchQueue = Promise.resolve();
+  bestSearchQueue = Promise.resolve();
+  ladderByFen.clear();
 }

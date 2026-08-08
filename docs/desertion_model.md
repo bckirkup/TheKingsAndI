@@ -81,6 +81,11 @@ Therefore:
   would sacrifice a piece whose incoming dyadic affinity `Σ_j A_{j,i}` is at
   least `100`; this identifies a well-liked, high-`A` piece without requiring
   it to be the roster's highest-ability piece.
+- Declined-sacrifice detection uses a width-1 pre-move best-line seat at
+  `CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH`. This is the leader's available
+  view, not ground-truth ceiling analysis: a sacrifice the player could not
+  see is not treated as a costly decline. The seat is collected concurrently
+  with the ordinary insight barrier; it must not open a dependent round.
 - **Hysteresis is permitted but must be tiny** — enough to stop a piece
   oscillating between decisions on identical inputs within one turn, not enough
   to prevent a rout.

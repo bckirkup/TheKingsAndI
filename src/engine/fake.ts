@@ -260,5 +260,10 @@ export function createFakeEnginePort(
     async multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]> {
       return fakeLines(fen, 16);
     },
+    async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
+      const line = (await fakeLines(fen, depth))[0];
+      if (line === undefined) throw new Error('Fake engine produced no line');
+      return line;
+    },
   };
 }

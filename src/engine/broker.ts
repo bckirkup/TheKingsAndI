@@ -23,6 +23,8 @@ export interface SharedSearchBroker extends EnginePort {
   multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]>;
   /** MultiPV lines at a seat's rung, falling back to the nearest lower rung. */
   multiPvAt(fen: string, depth: number): Promise<readonly EngineEvaluation[]>;
+  /** Width-1 top line at a seat's rung for pre-move opportunity signals. */
+  bestAt(fen: string, depth: number): Promise<EngineEvaluation>;
   dispose(): Promise<void>;
   readonly poolSize: number;
 }
@@ -105,9 +107,17 @@ export async function createSharedSearchBroker(
     multiPv: options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH,
     ...(options.size !== undefined ? { size: options.size } : {}),
   });
+  const bestPool = await EnginePool.create({
+    enginePath: options.enginePath,
+    hashMb: options.hashMb ?? 16,
+    threads: 1,
+    multiPv: 1,
+    size: 1,
+  });
 
   const sharedByFen = new Map<string, DepthLadder>();
   const inflight = new Map<string, InflightShared>();
+  const bestByFenDepth = new Map<string, EngineEvaluation>();
 
   async function ensureShared(fen: string): Promise<DepthLadder> {
     const cached = sharedByFen.get(fen);
@@ -164,10 +174,25 @@ export async function createSharedSearchBroker(
       const ladder = await ensureShared(fen);
       return multiPvAt(ladder, Math.min(depth, dMax));
     },
+    async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
+      if (!Number.isSafeInteger(depth) || depth < 1) {
+        throw new RangeError('Depth must be a positive integer.');
+      }
+      const capped = Math.min(depth, dMax);
+      const key = `${fen}\u0000${capped}`;
+      const cached = bestByFenDepth.get(key);
+      if (cached !== undefined) return cached;
+      const result = await bestPool.evaluate(fen, capped);
+      const frozen = freezeEval(result);
+      bestByFenDepth.set(key, frozen);
+      return frozen;
+    },
     async dispose(): Promise<void> {
       sharedByFen.clear();
       inflight.clear();
+      bestByFenDepth.clear();
       await pool.dispose();
+      await bestPool.dispose();
     },
   };
 }

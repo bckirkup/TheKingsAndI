@@ -128,8 +128,9 @@ export async function resolveMoverInsights(
       ),
     ),
   ].sort((left, right) => left - right);
-  const preferredLinesPromise =
-    port.multiPvAtMax?.(board.fen()) ?? Promise.resolve([]);
+  const preferredLinePromise =
+    port.bestAt?.(board.fen(), CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH) ??
+    Promise.resolve(undefined);
   const attentionResultsPromise =
     port.multiPvAt === undefined
       ? Promise.resolve([])
@@ -138,20 +139,6 @@ export async function resolveMoverInsights(
             (rung) => port.multiPvAt?.(fen, rung) ?? Promise.resolve([]),
           ),
         );
-  const [preferredLines, attentionResults] = await Promise.all([
-    preferredLinesPromise,
-    attentionResultsPromise,
-  ]);
-  const attentionByDepth = new Map<number, readonly EngineEvaluation[]>();
-  if (port.multiPvAt !== undefined) {
-    for (let index = 0; index < depths.length; index += 1) {
-      const rung = depths[index];
-      const lines = attentionResults[index] ?? [];
-      if (rung !== undefined && lines !== undefined) {
-        attentionByDepth.set(rung, lines);
-      }
-    }
-  }
   const requests = buildInsightRound({
     fen,
     seats: [
@@ -167,12 +154,26 @@ export async function resolveMoverInsights(
       },
     ],
   });
-  const bundle = requireComplete(
-    await resolveInsightRound(port, requests, {
-      round: handle.round,
-      cache: handle.cache,
-    }),
-  );
+  const bundlePromise = resolveInsightRound(port, requests, {
+    round: handle.round,
+    cache: handle.cache,
+  });
+  const [preferredLine, attentionResults, rawBundle] = await Promise.all([
+    preferredLinePromise,
+    attentionResultsPromise,
+    bundlePromise,
+  ]);
+  const bundle = requireComplete(rawBundle);
+  const attentionByDepth = new Map<number, readonly EngineEvaluation[]>();
+  if (port.multiPvAt !== undefined) {
+    for (let index = 0; index < depths.length; index += 1) {
+      const rung = depths[index];
+      const lines = attentionResults[index] ?? [];
+      if (rung !== undefined && lines !== undefined) {
+        attentionByDepth.set(rung, lines);
+      }
+    }
+  }
   handle.round += 1;
   const actorInsight = insightOf(bundle, actor.id);
   const leaderInsight = insightOf(bundle, LEADER_INSIGHT_SEAT_ID);
@@ -204,22 +205,18 @@ export async function resolveMoverInsights(
     );
     privateByPiece.set(piece.id, privateInsight);
   }
-  const declinedSacrificeOpportunity = preferredLines
-    .map((line) => {
-      const sacrificedPieceId = declinedSacrificePiece(
-        board,
-        line,
-        orderedRoster,
-      );
-      return sacrificedPieceId === undefined
-        ? undefined
-        : {
-            sacrificedPieceId,
-            preferredMove: line.pv[0] ?? '',
-            preferredScoreCp: line.scoreCp,
-          };
-    })
-    .find((opportunity) => opportunity !== undefined);
+  const sacrificedPieceId =
+    preferredLine === undefined
+      ? undefined
+      : declinedSacrificePiece(board, preferredLine, orderedRoster);
+  const declinedSacrificeOpportunity =
+    sacrificedPieceId === undefined || preferredLine === undefined
+      ? undefined
+      : {
+          sacrificedPieceId,
+          preferredMove: preferredLine.pv[0] ?? '',
+          preferredScoreCp: preferredLine.scoreCp,
+        };
   const privateActor = privateByPiece.get(actor.id);
   if (privateActor === undefined) {
     throw new Error(`Missing private insight for ${actor.id}`);
@@ -313,7 +310,10 @@ export function declinedSacrificePiece(
  */
 export async function resolveAuditMoveScore(
   port: EnginePort & {
-    evaluateTrue?: (fen: string) => Promise<{ scoreCp: number }>;
+    evaluateTrue?: (fen: string) => Promise<{
+      scoreCp: number;
+      pv?: readonly string[];
+    }>;
   },
   board: LivingBoard,
   intent: MoveIntent,

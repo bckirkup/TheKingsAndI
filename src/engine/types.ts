@@ -43,6 +43,8 @@ export interface EnginePort {
     fen: string,
     depth: number,
   ) => Promise<readonly EngineEvaluation[]>;
+  /** Cheapest top-line query for authored pre-move opportunity signals. */
+  readonly bestAt?: (fen: string, depth: number) => Promise<EngineEvaluation>;
   /** Engine + version + settings. Goes into every `MatchRecord`. */
   readonly determinismId: string;
 }
