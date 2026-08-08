@@ -30,6 +30,18 @@ when measuring engine fidelity.
 
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 
+Campaign output includes four match-index quartile trajectory bands. Each band
+reports mean ability trust, mean benevolence trust, refusal rate, desertion
+rate, rout rate, and mean surviving roster size. Match indices are assigned by
+`floor(((match - 1) * 4) / campaignMatches) + 1`; any remainder matches go to
+the earlier quartiles. The CSV appends the channel metrics and roster size to
+each existing match row, then appends a trajectory-band section.
+
+The first two quartiles are the early-frustration check: desertion and rout
+rates of 80% or more in either early quartile are a hard smoke failure. This
+threshold is intentionally above the existing 50% supportive bound and marks
+near-total early collapse rather than ordinary variation.
+
 Campaign checkpoints are emitted with `--checkpoint-out=path` and resumed with
 `--resume=path`. Use `--campaign` with those flags to set the total campaign
 length: a checkpoint plus `--campaign` is what makes a campaign segment
@@ -57,7 +69,7 @@ See `docs/testing_strategy.md` §7.
 | `eval.ts` | Legacy geometric mapper (play path uses engine insights) |
 | `baseline.ts` | Plain-chess win-rate baseline (no psychology) |
 | `sweep.ts` | Coefficient sweep runner (M3.4) |
-| `metrics.ts` | Per-match and campaign aggregates + trust trajectory |
+| `metrics.ts` | Per-match and campaign aggregates + trust trajectory bands |
 | `degeneracy.ts` | Non-degeneracy smoke detectors |
 
 Depth-`D_i` insights feed psychology through the ADR 0034 barrier. Psychology

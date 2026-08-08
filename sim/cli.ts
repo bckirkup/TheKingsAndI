@@ -155,7 +155,7 @@ async function main(): Promise<void> {
   } finally {
     await disposeSimEngine(options.engine);
   }
-  const csv = renderCsv(result.metrics);
+  const csv = renderCsv(result.metrics, result.summary.trajectoryBands);
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
     await writeFile(options.out, csv, 'utf8');
@@ -180,6 +180,11 @@ async function main(): Promise<void> {
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
+  for (const band of result.summary.trajectoryBands) {
+    console.log(
+      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} refusal=${band.meanRefusalRate.toFixed(3)} desertion=${band.desertionRate.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+    );
+  }
   if (options.out !== undefined) console.log(`CSV written to ${options.out}`);
   if (options.checkpointOut !== undefined)
     console.log(`Checkpoint written to ${options.checkpointOut}`);

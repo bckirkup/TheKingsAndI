@@ -1,6 +1,8 @@
 # ADR 0027 — The cohort is the first community: seminar formats, Steam's actual job, and what gets built first
 
 - **Status:** accepted
+- **Owner correction:** The intensive is three full days plus two half days of
+  play, for 16 matches; this replaces the earlier schedule and estimate below.
 - **Resolves:** **D75** (the registry ships for the seminar before consumer),
   **D76** (two seminar formats and their pacing), **D77** (facilitator ratio),
   **D78** (what Steam is for, and the refund-window constraint), **D79** (build
@@ -12,8 +14,8 @@
 
 > **"What gets built and tested first... what Steam does for us, and how this
 > works in a leadership seminar vs a recreational mode... a campaign in a week
-> with six games a day for four days... alternatively a 13-week cycle with
-> three-four games per week, a grueling 52-game Nibelungen cycle."**
+> with three full days and two half days of play... alternatively a 13-week
+> cycle with three-four games per week, a grueling 52-game Nibelungen cycle."**
 
 ADR 0026 left D72 open: which infrastructure tier hosts the community. The
 seminar answers it.
@@ -49,7 +51,7 @@ The organizational lesson is delivered by the mechanic rather than by a slide.
 
 | Format | Matches | Covers | Sold as |
 |---|---|---|---|
-| **Intensive** — 4 days + half-day indoc + half-day debrief | ~24 | roughly **one act**: learn it is not chess, be dismissed or nearly so, be debriefed | a **diagnostic** |
+| **Intensive** — 3 full days × 4 + 2 half days × 2 of play | 16 | roughly **one act**: learn it is not chess, be dismissed or nearly so, be debriefed | a **diagnostic** |
 | **Nibelungen** — 13 weeks × 3–4 | ~52 | the full three-king career: failure, diminished second command, rebuild | the **behaviour-change** product |
 
 The intensive cannot teach recovery, because recovery requires a second
@@ -58,8 +60,9 @@ statement, not a defect.
 
 **Pacing: four matches a day plus a structured midday debrief beats six.** Six
 games is 4–6 hours of play and leaves nothing for reflection, and the spiral
-needs *between-match* thinking to land. Campaign length survives the cut because
-the trap wants roughly 8–12 matches to close (D26), not 24.
+needs *between-match* thinking to land. The intensive's 16-match length is its
+seminar-format duration; the first campaign's collapse target remains roughly
+8–12 matches (D26), which is a calibration target rather than the format length.
 
 ### 3. Facilitator ratio is bounded by debrief, not supervision (D77)
 Play is deterministic and fully audited (ADR 0018), so nobody needs to be watched
@@ -112,8 +115,8 @@ students, the seminar's central claim is decorative (D75).
 polish item: cohort dashboard, per-student audit export, roster circulation view.
 
 **D26 gains a constraint.** Whatever number of matches the trap needs, it must
-fit inside ~16–20 played matches of an intensive week, or the intensive format
-cannot deliver its diagnostic.
+fit inside the intensive capacity of ~16–20 played matches; the settled
+intensive schedule is 16, or the format cannot deliver its diagnostic.
 
 ## Alternatives considered
 - **Consumer registry first.** Rejected: moderation, privacy, and cold start are

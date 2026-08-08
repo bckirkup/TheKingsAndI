@@ -106,8 +106,23 @@ export function rosterForSide(
 }
 
 export function meanTrust(roster: readonly PieceState[]): number {
+  return meanRosterValue(roster, (piece) => piece.T_i);
+}
+
+export function meanTauAbil(roster: readonly PieceState[]): number {
+  return meanRosterValue(roster, (piece) => piece.credence.tauAbil);
+}
+
+export function meanTauBenev(roster: readonly PieceState[]): number {
+  return meanRosterValue(roster, (piece) => piece.credence.tauBenev);
+}
+
+export function meanRosterValue(
+  roster: readonly PieceState[],
+  pick: (piece: PieceState) => number,
+): number {
   if (roster.length === 0) return 0;
-  const total = roster.reduce((sum, piece) => sum + piece.T_i, 0);
+  const total = roster.reduce((sum, piece) => sum + pick(piece), 0);
   return total / roster.length;
 }
 

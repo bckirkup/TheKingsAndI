@@ -311,7 +311,8 @@ on the same positions with the same rosters.
 Act one diagnoses; act two — diminished command, reputation attached — is where a
 *change in policy* can be measured: override rate, concession quality, whether the
 second roster's benevolence channel recovers. This is why the thirteen-week format
-is the behaviour-change product and the four-day format a diagnostic.
+is the behaviour-change product and the three-full-day/two-half-day format a
+diagnostic.
 
 ### D90 ✅ Behaviour in simulation, never traits (ADR 0030 §5)
 Defensible: *"Overrode 34% of refusals; 71% of those came after a loss."* Not
@@ -389,13 +390,14 @@ pieces circulate, and the trauma pool is shared: *the pieces you burned Monday
 are the ones your colleague inherits Wednesday.*
 
 ### D76 ✅ Two seminar formats, teaching different halves (ADR 0027 §2)
-**Intensive** (4 days + half-day indoc + half-day debrief, ~24 matches) is
+**Intensive** (3 full days × 4 + 2 half days × 2 of play, 16 matches) is
 roughly one act — learn it is not chess, be dismissed, be debriefed — and sells
 as a **diagnostic**; it cannot teach recovery, which needs a second appointment
 with a reputation attached. **Nibelungen** (13 weeks × 3–4, ~52) is the full
 three-king career and is the behaviour-change product. Pacing: **four matches a
 day plus a structured midday debrief beats six** — the spiral needs between-match
-thinking, and the trap wants 8–12 matches (D26), not 24.
+thinking. The first campaign's collapse target is 8–12 matches (D26), distinct
+from the 16-match intensive format length.
 
 ### D77 ✅ Facilitator ratio is bounded by debrief, not supervision (ADR 0027 §3)
 Play is deterministic and audited, so nobody needs watching: ~12 students with
