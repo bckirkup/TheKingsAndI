@@ -33,4 +33,15 @@ describe('coherent fake engine', () => {
 
     expect(second).toEqual(first);
   });
+
+  it('provides deterministic per-rung MultiPV lines', async () => {
+    const port = createFakeEnginePort();
+    const shallow = await port.multiPvAt?.(START, 2);
+    const deep = await port.multiPvAt?.(START, 6);
+
+    expect(shallow?.length).toBeGreaterThan(1);
+    expect(shallow).toEqual(await port.multiPvAt?.(START, 2));
+    expect(shallow?.every((line) => line.pv.length <= 2)).toBe(true);
+    expect(deep?.every((line) => line.pv.length <= 4)).toBe(true);
+  });
 });

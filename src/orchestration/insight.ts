@@ -76,11 +76,7 @@ export async function resolveMoverInsights(
   const fen = probe.fen();
   const profile = evalProfileFor(actor, probe);
   const attentionLines =
-    port.multiPvAt === undefined
-      ? port.multiPvAtMax === undefined
-        ? []
-        : await port.multiPvAtMax(fen)
-      : await port.multiPvAt(fen, depth);
+    port.multiPvAt === undefined ? [] : await port.multiPvAt(fen, depth);
   const requests = buildInsightRound({
     fen,
     seats: [

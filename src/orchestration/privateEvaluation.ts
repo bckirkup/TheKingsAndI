@@ -330,7 +330,9 @@ export function applyPrivateEvaluation(
       -distortionBoundCp,
       Math.min(
         distortionBoundCp,
-        Math.trunc(positionScore(board, actor, profile) * distortionBoundCp),
+        Math.trunc(
+          (positionScore(board, actor, profile) * distortionBoundCp) / 2,
+        ),
       ),
     );
     return Object.freeze({

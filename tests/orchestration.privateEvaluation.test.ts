@@ -141,8 +141,8 @@ describe('private evaluation profile', () => {
       [],
       200,
     );
-    expect(low.scoreCp).toBe(84);
-    expect(high.scoreCp).toBe(177);
+    expect(low.scoreCp).toBe(82);
+    expect(high.scoreCp).toBe(128);
     expect(high.scoreCp).not.toBe(low.scoreCp);
   });
 });
