@@ -26,6 +26,7 @@ jq -n \
   --arg git_commit "$GIT_COMMIT_SHA" \
   --arg image_digest "$IMAGE_DIGEST" \
   --arg s3_bucket "$S3_BUCKET" \
+  --arg aws_region "$AWS_REGION" \
   '{
     environment: [
       {name: "RUN_ID", value: $run_id},
@@ -37,7 +38,8 @@ jq -n \
       {name: "DEPTH_CAP", value: $depth_cap},
       {name: "GIT_COMMIT_SHA", value: $git_commit},
       {name: "IMAGE_DIGEST", value: $image_digest},
-      {name: "S3_BUCKET", value: $s3_bucket}
+      {name: "S3_BUCKET", value: $s3_bucket},
+      {name: "AWS_REGION", value: $aws_region}
     ]
   }' >/tmp/kingsandi-container-overrides.json
 

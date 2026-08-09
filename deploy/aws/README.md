@@ -131,5 +131,8 @@ Use the immutable `repository@sha256:...` reference printed by that command as
 Fargate Spot compute environment and queue if absent, then registers a job
 definition with one vCPU, 2048 MiB, public-IP networking, CloudWatch logs, and
 the retry policy for interruption exit code `1` and terminal configuration
-exit code `2`. `submit-proof.sh` requires `DEPTH_CAP`, `GIT_COMMIT_SHA`, and
-`IMAGE_DIGEST` explicitly; none has a job-definition default.
+exit code `2`. `MAX_VCPUS` controls the environment-wide concurrency ceiling
+and defaults to `50`; provisioning updates that ceiling on existing
+environments as well as new ones. `submit-proof.sh` requires `DEPTH_CAP`,
+`GIT_COMMIT_SHA`, and `IMAGE_DIGEST` explicitly; none has a job-definition
+default.

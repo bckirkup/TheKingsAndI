@@ -13,6 +13,14 @@ set -eu
 compute_environment="${COMPUTE_ENVIRONMENT:-kingsandi-campaign-spot-ce}"
 job_queue="${JOB_QUEUE:-kingsandi-campaign-spot-queue}"
 job_definition="${JOB_DEFINITION:-kingsandi-campaign-spot}"
+max_vcpus="${MAX_VCPUS:-50}"
+
+case "$max_vcpus" in
+  ''|*[!0-9]*|0)
+    echo 'MAX_VCPUS must be a positive integer.' >&2
+    exit 2
+    ;;
+esac
 
 if ! aws batch describe-compute-environments \
   --compute-environments "$compute_environment" \
@@ -23,8 +31,12 @@ if ! aws batch describe-compute-environments \
     --type MANAGED \
     --state ENABLED \
     --service-role "$BATCH_SERVICE_ROLE_ARN" \
-    --compute-resources "type=FARGATE_SPOT,maxvCpus=1,subnets=$SUBNETS,securityGroupIds=$SECURITY_GROUP_IDS"
+    --compute-resources "type=FARGATE_SPOT,maxvCpus=$max_vcpus,subnets=$SUBNETS,securityGroupIds=$SECURITY_GROUP_IDS"
 fi
+
+aws batch update-compute-environment \
+  --compute-environment "$compute_environment" \
+  --compute-resources "maxvCpus=$max_vcpus,subnets=$SUBNETS,securityGroupIds=$SECURITY_GROUP_IDS"
 
 if ! aws batch describe-job-queues \
   --job-queues "$job_queue" \
