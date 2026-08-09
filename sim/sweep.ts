@@ -12,7 +12,7 @@ import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
 import { ENGINES, type Leader } from './cli';
-import { matchedSkillMeanWinScore, plainChessMeanWinScore } from './baseline';
+import { plainChessMeanWinScore } from './baseline';
 import { disposeSimEngine, type SimEngineKind } from './engine';
 
 export interface SweepPoint {
@@ -24,7 +24,6 @@ export interface SweepPoint {
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
   readonly plainChessWinDelta: number;
-  readonly matchedSkillWinDelta: number;
 }
 
 const MUTABLE_CONFIG = ENGINE_CONFIG as unknown as Record<string, number>;
@@ -58,11 +57,6 @@ export async function runCoefficientSweep(options: {
     seed: options.seed,
     whiteLeader: options.leader,
   });
-  const matchedSkillWin = matchedSkillMeanWinScore({
-    matches: options.matches,
-    seed: options.seed,
-    whiteLeader: options.leader,
-  });
   const points: SweepPoint[] = [];
   try {
     for (const value of options.values) {
@@ -85,7 +79,6 @@ export async function runCoefficientSweep(options: {
         meanWinScore: campaign.summary.meanWinScore,
         meanTrustDelta: campaign.summary.meanTrustDelta,
         plainChessWinDelta: campaign.summary.meanWinScore - plainWin,
-        matchedSkillWinDelta: campaign.summary.meanWinScore - matchedSkillWin,
       });
     }
   } finally {
@@ -147,7 +140,7 @@ async function main(): Promise<void> {
     engineKind: options.engine,
   });
   console.log(
-    'knob,value,refusal,desertion_campaign,override,win,trust_delta,plain_chess_win_delta,matched_skill_win_delta',
+    'knob,value,refusal,desertion_campaign,override,win,trust_delta,plain_chess_win_delta',
   );
   for (const point of points) {
     console.log(
@@ -160,7 +153,6 @@ async function main(): Promise<void> {
         point.meanWinScore.toFixed(1),
         point.meanTrustDelta.toFixed(2),
         point.plainChessWinDelta.toFixed(1),
-        point.matchedSkillWinDelta.toFixed(1),
       ].join(','),
     );
   }

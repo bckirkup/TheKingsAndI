@@ -7,8 +7,8 @@ import type { Leader } from './cli';
 
 const MAX_PLIES = 200;
 
-/** Matched-skill control: same leader policy and strength, no psychology. */
-export function runMatchedSkillMatch(options: {
+/** Plain-chess control: same move picker as a scripted leader, no psychology. */
+export function runPlainChessMatch(options: {
   readonly seed: number;
   readonly whiteLeader: Leader;
   readonly blackLeader?: Leader;
@@ -41,7 +41,7 @@ export function runMatchedSkillMatch(options: {
   return { plies, winScore };
 }
 
-export function matchedSkillMeanWinScore(options: {
+export function plainChessMeanWinScore(options: {
   readonly matches: number;
   readonly seed: number;
   readonly whiteLeader: Leader;
@@ -49,13 +49,10 @@ export function matchedSkillMeanWinScore(options: {
   let total = 0;
   for (let match = 1; match <= options.matches; match += 1) {
     const matchSeed = options.seed ^ (match * 1_000_003);
-    total += runMatchedSkillMatch({
+    total += runPlainChessMatch({
       seed: matchSeed,
       whiteLeader: options.whiteLeader,
     }).winScore;
   }
   return total / options.matches;
 }
-
-/** Legacy detector-6 name retained for before/after attribution reports. */
-export const plainChessMeanWinScore = matchedSkillMeanWinScore;

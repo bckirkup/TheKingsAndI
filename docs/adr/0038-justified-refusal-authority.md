@@ -44,11 +44,13 @@ An unjustified refusal has zero authority loss. The commander is not charged
 when the piece's private objection is contradicted by the audit. ADR 0002 still
 applies: no refusal costs a turn, and an override avoids this correction signal.
 
-Detector 6 now uses a matched-skill psychology-disabled commander: the same
-scripted leader policy, effective strength, opponent policy, seeds, and match
-configuration, with the psychology fold disabled. The former strong
-plain-chess comparison is retained only as an attribution baseline in reports;
-it is not the detector-6 counterfactual.
+The existing plain-chess control already is a matched-skill,
+psychology-disabled commander: it uses the same scripted leader policy,
+effective strength, opponent policy, seeds, and match configuration, with the
+psychology fold absent. The control redesign therefore changes detector-6's
+interpretation and reporting, not the chess computation. Reports retain the
+legacy label and add the matched-skill label for the identical value so the
+attribution is explicit; no stronger-engine counterfactual is used.
 
 ## Consequences
 

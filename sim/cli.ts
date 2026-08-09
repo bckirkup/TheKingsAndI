@@ -10,7 +10,7 @@ import {
 import { type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
 import { resolveRunPlan, runShard, writeShardArtifact } from './parallel';
-import { matchedSkillMeanWinScore } from './baseline';
+import { plainChessMeanWinScore } from './baseline';
 import { canonicalJson } from '../src/core/canonicalJson';
 
 export const LEADERS = [
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
     result.summary.matchMetrics,
     result.summary,
     {
-      matchedSkillWinScore: matchedSkillMeanWinScore({
+      matchedSkillWinScore: plainChessMeanWinScore({
         matches: result.summary.matches,
         seed: options.seed,
         whiteLeader: options.leader,
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     shouldRunSmokeBounds(result.summary.matches)
   ) {
     assertSmokeBounds(options.leader, result.summary, {
-      matchedSkillWinScore: matchedSkillMeanWinScore({
+      matchedSkillWinScore: plainChessMeanWinScore({
         matches: result.summary.matches,
         seed: options.seed,
         whiteLeader: options.leader,

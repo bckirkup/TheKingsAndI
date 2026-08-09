@@ -105,8 +105,9 @@ means the model has collapsed:
    not the detector-6 counterfactual.
 
 Every detector-6 report records both deltas for the same seeds and match count:
-the legacy plain-chess comparison and the matched-skill control comparison.
-Only the latter decides the detector.
+the legacy plain-chess label and the matched-skill control label. In this
+implementation they are the same computation and must be numerically equal;
+only the matched-skill interpretation decides the detector.
 7. Verdict is predictable from `T_i` alone (i.e. a classifier on trust reproduces
    >95% of verdicts) → the move terms are inert; this is the D19 detector.
 8. **Absorbing state:** >5% of campaigns reach a state from which even the oracle
