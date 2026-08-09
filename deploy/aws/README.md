@@ -133,6 +133,9 @@ definition with one vCPU, 2048 MiB, public-IP networking, CloudWatch logs, and
 the retry policy for interruption exit code `1` and terminal configuration
 exit code `2`. `MAX_VCPUS` controls the environment-wide concurrency ceiling
 and defaults to `50`; provisioning updates that ceiling on existing
-environments as well as new ones. `submit-proof.sh` requires `DEPTH_CAP`,
+environments as well as new ones. `CAPACITY_TYPE` selects `FARGATE` or
+`FARGATE_SPOT` when creating an environment and defaults to `FARGATE`;
+compute-environment type cannot be changed after creation. `submit-proof.sh`
+requires `DEPTH_CAP`,
 `GIT_COMMIT_SHA`, and `IMAGE_DIGEST` explicitly; none has a job-definition
 default.
