@@ -29,6 +29,9 @@ export interface CampaignOptions {
   /** Harness-only tractability cap; does not alter psychology depth allocation. */
   readonly depthCap?: number | undefined;
   readonly checkpoint?: CampaignCheckpoint;
+  readonly onCheckpoint?: (
+    checkpoint: CampaignCheckpoint,
+  ) => void | Promise<void>;
 }
 
 export interface CampaignCheckpoint {
@@ -204,6 +207,19 @@ export async function runCampaign(
     justifiedRefusalPrivateViewLosses.push(
       ...result.justifiedRefusalPrivateViewLosses,
     );
+    const checkpointAtBoundary: CampaignCheckpoint = {
+      schemaVersion: SCHEMA_VERSION,
+      psychConfigVersion: PSYCH_CONFIG_VERSION,
+      determinismId: engine.determinismId,
+      seed: options.seed,
+      leader: options.leader,
+      initialTrust,
+      nextMatch: match + 1,
+      randomState: random.snapshot(),
+      roster: [...roster],
+      completedMetrics: [...metrics],
+    };
+    await options.onCheckpoint?.(checkpointAtBoundary);
   }
 
   const resultCheckpoint: CampaignCheckpoint = {

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 import { parseCampaignCheckpoint, type CampaignCheckpoint } from './campaign';
@@ -12,6 +12,20 @@ import { renderCsv } from './metrics';
 import { resolveRunPlan, runShard, writeShardArtifact } from './parallel';
 import { plainChessMeanWinScore } from './baseline';
 import { canonicalJson } from '../src/core/canonicalJson';
+
+export async function writeAtomicCheckpoint(
+  path: string,
+  checkpoint: CampaignCheckpoint,
+): Promise<void> {
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporaryPath, `${canonicalJson(checkpoint)}\n`, 'utf8');
+    await rename(temporaryPath, path);
+  } catch (error) {
+    await unlink(temporaryPath).catch(() => undefined);
+    throw error;
+  }
+}
 
 export const LEADERS = [
   'tyrannical',
@@ -198,6 +212,43 @@ export {
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
+  let latestCheckpoint: CampaignCheckpoint | undefined;
+  let checkpointWrite: Promise<void> = Promise.resolve();
+  let signalHandled = false;
+  const checkpointCallback =
+    options.checkpointOut === undefined
+      ? undefined
+      : (checkpoint: CampaignCheckpoint): Promise<void> => {
+          latestCheckpoint = checkpoint;
+          checkpointWrite = writeAtomicCheckpoint(
+            options.checkpointOut as string,
+            checkpoint,
+          );
+          return checkpointWrite;
+        };
+  const handleSignal = (signal: NodeJS.Signals): void => {
+    if (signalHandled) return;
+    signalHandled = true;
+    void (async () => {
+      await checkpointWrite;
+      if (
+        latestCheckpoint !== undefined &&
+        options.checkpointOut !== undefined
+      ) {
+        await writeAtomicCheckpoint(options.checkpointOut, latestCheckpoint);
+      }
+      console.error(`Received ${signal}; exiting for retry.`);
+      process.exit(1);
+    })().catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    });
+  };
+  process.once('SIGTERM', handleSignal);
+  process.once('SIGINT', handleSignal);
+  if (options.checkpointOut !== undefined) {
+    await mkdir(dirname(options.checkpointOut), { recursive: true });
+  }
   let checkpoint: CampaignCheckpoint | undefined;
   if (options.resume !== undefined) {
     checkpoint = parseCampaignCheckpoint(
@@ -219,6 +270,9 @@ async function main(): Promise<void> {
     depthCap: options.depthCap,
     shardIndex: options.shardIndex,
     shardCount: options.shardCount,
+    ...(checkpointCallback === undefined
+      ? {}
+      : { onCheckpoint: checkpointCallback }),
     ...(checkpoint === undefined ? {} : { checkpoint }),
   });
   const csv = renderCsv(
@@ -231,10 +285,9 @@ async function main(): Promise<void> {
   }
   if (options.checkpointOut !== undefined) {
     await mkdir(dirname(options.checkpointOut), { recursive: true });
-    await writeFile(
+    await writeAtomicCheckpoint(
       options.checkpointOut,
-      `${canonicalJson(result.campaigns[0]?.result.checkpoint)}\n`,
-      'utf8',
+      result.campaigns[0]?.result.checkpoint as CampaignCheckpoint,
     );
   }
   const findings = detectDegeneracy(

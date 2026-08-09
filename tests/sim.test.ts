@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFile, unlink, writeFile } from 'node:fs/promises';
 
 import { LivingBoard } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
@@ -9,8 +10,12 @@ import {
   runCampaign,
   runSimulation,
   shouldRunSmokeBounds,
+  writeAtomicCheckpoint,
 } from '../sim/cli';
-import { parseCampaignCheckpoint } from '../sim/campaign';
+import {
+  parseCampaignCheckpoint,
+  type CampaignCheckpoint,
+} from '../sim/campaign';
 import {
   assertCalibrationBounds,
   assertSmokeBounds,
@@ -32,26 +37,70 @@ describe('simulation harness determinism', () => {
     );
   });
 
-  it('resumes a campaign boundary with byte-identical metrics and roster', async () => {
+  it('resumes each emitted campaign boundary identically', async () => {
     const options = {
       leader: 'supportive' as const,
       seed: 12,
       engineKind: 'fake' as const,
     };
-    const straight = await runCampaign({ ...options, matches: 2 });
-    const firstSegment = await runCampaign({ ...options, matches: 1 });
-    const checkpoint = parseCampaignCheckpoint(
-      JSON.parse(canonicalJson(firstSegment.checkpoint)) as unknown,
-    );
-    const resumed = await runCampaign({
+    const straight = await runCampaign({ ...options, matches: 4 });
+    const emitted: Record<
+      number,
+      Awaited<ReturnType<typeof runCampaign>>['checkpoint']
+    > = {};
+    await runCampaign({
       ...options,
-      matches: 2,
-      checkpoint,
+      matches: 3,
+      onCheckpoint: (checkpoint) => {
+        emitted[checkpoint.nextMatch - 1] = checkpoint;
+      },
     });
+    expect(emitted[2]?.nextMatch).toBe(3);
+    expect(emitted[3]?.nextMatch).toBe(4);
+    for (const completedMatches of [2, 3]) {
+      const checkpoint = parseCampaignCheckpoint(
+        JSON.parse(canonicalJson(emitted[completedMatches])) as unknown,
+      );
+      const resumed = await runCampaign({
+        ...options,
+        matches: 4,
+        checkpoint,
+      });
+      expect(resumed.metrics).toEqual(straight.metrics);
+      expect(resumed.finalRoster).toEqual(straight.finalRoster);
+      expect(resumed.summary).toEqual(straight.summary);
+    }
+  });
 
-    expect(resumed.metrics).toEqual(straight.metrics);
-    expect(resumed.finalRoster).toEqual(straight.finalRoster);
-    expect(resumed.summary).toEqual(straight.summary);
+  it('preserves the last checkpoint when a sibling write is truncated', async () => {
+    const checkpoint: CampaignCheckpoint = {
+      schemaVersion: 1,
+      psychConfigVersion: 'psychology-v1',
+      determinismId: 'sim-fake/depth-fixed',
+      seed: 12,
+      leader: 'supportive',
+      initialTrust: 40,
+      nextMatch: 2,
+      randomState: { s0: 1, s1: 2, s2: 3, s3: 4 },
+      roster: [],
+      completedMetrics: [],
+    };
+    const path = `${process.cwd()}/.tmp-checkpoint-${process.pid}.json`;
+    const temporaryPath = `${path}.${process.pid}.tmp`;
+    try {
+      await writeAtomicCheckpoint(path, checkpoint);
+      await writeFile(temporaryPath, '{"truncated"', 'utf8');
+      expect(
+        parseCampaignCheckpoint(
+          JSON.parse(await readFile(path, 'utf8')) as unknown,
+        ).nextMatch,
+      ).toBe(2);
+    } finally {
+      await Promise.all([
+        unlink(path).catch(() => undefined),
+        unlink(temporaryPath).catch(() => undefined),
+      ]);
+    }
   });
 
   it.each([
