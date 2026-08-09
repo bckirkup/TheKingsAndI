@@ -4,14 +4,13 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
+import { CONFORMANCE_CORPUS, createFakeEnginePort } from '../src/engine';
 import {
-  CONFORMANCE_CORPUS,
-  createFakeEnginePort,
   createLozzaPort,
   createStockfishPort,
   disposeLozzaPort,
   disposeStockfishPort,
-} from '../src/engine';
+} from '../src/engine/node';
 import type { EnginePort } from '../src/engine/types';
 
 async function expectMultiPvContract(

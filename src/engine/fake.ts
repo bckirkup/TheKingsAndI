@@ -1,4 +1,4 @@
-import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from './broker';
+import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from './search';
 import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
 
 interface FakePiece {

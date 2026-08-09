@@ -5,15 +5,17 @@ import {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
-  createStockfishPort,
-  disposeStockfishPort,
   resolveInsightRound,
   buildInsightRound,
   requireComplete,
   SHARED_SEARCH_D_MAX,
+} from '../src/engine';
+import {
+  createStockfishPort,
+  disposeStockfishPort,
   STOCKFISH_DETERMINISM_ID,
   stockfishDeterminismId,
-} from '../src/engine';
+} from '../src/engine/node';
 import type { PieceId } from '../src/core/ids';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';

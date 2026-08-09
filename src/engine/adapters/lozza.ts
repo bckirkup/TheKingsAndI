@@ -7,7 +7,7 @@ import {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
-} from '../broker';
+} from '../search';
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 

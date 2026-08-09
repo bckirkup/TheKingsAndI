@@ -1,14 +1,13 @@
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
+import { createSharedSearchBroker, type SharedSearchBroker } from '../broker';
 import {
-  createSharedSearchBroker,
-  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
   DEFAULT_PREFERRED_POOL_SIZE,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
   SHARED_SEARCH_D_MAX,
-  type SharedSearchBroker,
-} from '../broker';
+} from '../search';
 
 const require = createRequire(import.meta.url);
 
