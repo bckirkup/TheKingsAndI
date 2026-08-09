@@ -29,6 +29,9 @@ export interface CampaignOptions {
   /** Harness-only tractability cap; does not alter psychology depth allocation. */
   readonly depthCap?: number | undefined;
   readonly checkpoint?: CampaignCheckpoint;
+  readonly onCheckpoint?: (
+    checkpoint: CampaignCheckpoint,
+  ) => void | Promise<void>;
 }
 
 export interface CampaignCheckpoint {
@@ -141,6 +144,30 @@ function leaderTrustBias(leader: Leader): number {
   }
 }
 
+function createCampaignCheckpoint(options: {
+  readonly determinismId: string;
+  readonly seed: number;
+  readonly leader: Leader;
+  readonly initialTrust: number;
+  readonly nextMatch: number;
+  readonly randomState: RandomState;
+  readonly roster: readonly PieceState[];
+  readonly completedMetrics: readonly MatchMetrics[];
+}): CampaignCheckpoint {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    psychConfigVersion: PSYCH_CONFIG_VERSION,
+    determinismId: options.determinismId,
+    seed: options.seed,
+    leader: options.leader,
+    initialTrust: options.initialTrust,
+    nextMatch: options.nextMatch,
+    randomState: options.randomState,
+    roster: [...options.roster],
+    completedMetrics: [...options.completedMetrics],
+  };
+}
+
 export async function runCampaign(
   options: CampaignOptions,
 ): Promise<CampaignResult> {
@@ -204,20 +231,29 @@ export async function runCampaign(
     justifiedRefusalPrivateViewLosses.push(
       ...result.justifiedRefusalPrivateViewLosses,
     );
+    const checkpointAtBoundary = createCampaignCheckpoint({
+      determinismId: engine.determinismId,
+      seed: options.seed,
+      leader: options.leader,
+      initialTrust,
+      nextMatch: match + 1,
+      randomState: random.snapshot(),
+      roster,
+      completedMetrics: metrics,
+    });
+    await options.onCheckpoint?.(checkpointAtBoundary);
   }
 
-  const resultCheckpoint: CampaignCheckpoint = {
-    schemaVersion: SCHEMA_VERSION,
-    psychConfigVersion: PSYCH_CONFIG_VERSION,
+  const resultCheckpoint = createCampaignCheckpoint({
     determinismId: engine.determinismId,
     seed: options.seed,
     leader: options.leader,
     initialTrust,
     nextMatch: options.matches + 1,
     randomState: random.snapshot(),
-    roster: [...roster],
-    completedMetrics: [...metrics],
-  };
+    roster,
+    completedMetrics: metrics,
+  });
   return {
     metrics,
     summary: aggregateCampaign(options.leader, options.seed, metrics),

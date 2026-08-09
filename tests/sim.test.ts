@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import { LivingBoard } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
@@ -9,8 +13,12 @@ import {
   runCampaign,
   runSimulation,
   shouldRunSmokeBounds,
+  writeAtomicCheckpoint,
 } from '../sim/cli';
-import { parseCampaignCheckpoint } from '../sim/campaign';
+import {
+  parseCampaignCheckpoint,
+  type CampaignCheckpoint,
+} from '../sim/campaign';
 import {
   assertCalibrationBounds,
   assertSmokeBounds,
@@ -32,27 +40,118 @@ describe('simulation harness determinism', () => {
     );
   });
 
-  it('resumes a campaign boundary with byte-identical metrics and roster', async () => {
+  it('resumes each emitted campaign boundary identically', async () => {
     const options = {
       leader: 'supportive' as const,
       seed: 12,
       engineKind: 'fake' as const,
     };
-    const straight = await runCampaign({ ...options, matches: 2 });
-    const firstSegment = await runCampaign({ ...options, matches: 1 });
-    const checkpoint = parseCampaignCheckpoint(
-      JSON.parse(canonicalJson(firstSegment.checkpoint)) as unknown,
-    );
-    const resumed = await runCampaign({
+    const straight = await runCampaign({ ...options, matches: 4 });
+    const emitted: Record<
+      number,
+      Awaited<ReturnType<typeof runCampaign>>['checkpoint']
+    > = {};
+    await runCampaign({
       ...options,
-      matches: 2,
-      checkpoint,
+      matches: 3,
+      onCheckpoint: (checkpoint) => {
+        emitted[checkpoint.nextMatch - 1] = checkpoint;
+      },
     });
-
-    expect(resumed.metrics).toEqual(straight.metrics);
-    expect(resumed.finalRoster).toEqual(straight.finalRoster);
-    expect(resumed.summary).toEqual(straight.summary);
+    expect(emitted[2]?.nextMatch).toBe(3);
+    expect(emitted[3]?.nextMatch).toBe(4);
+    for (const completedMatches of [2, 3]) {
+      const checkpoint = parseCampaignCheckpoint(
+        JSON.parse(canonicalJson(emitted[completedMatches])) as unknown,
+      );
+      const resumed = await runCampaign({
+        ...options,
+        matches: 4,
+        checkpoint,
+      });
+      expect(resumed.metrics).toEqual(straight.metrics);
+      expect(resumed.finalRoster).toEqual(straight.finalRoster);
+      expect(resumed.summary).toEqual(straight.summary);
+    }
   });
+
+  it('preserves the last checkpoint when a sibling write is truncated', async () => {
+    const checkpoint: CampaignCheckpoint = {
+      schemaVersion: 1,
+      psychConfigVersion: 'psychology-v1',
+      determinismId: 'sim-fake/depth-fixed',
+      seed: 12,
+      leader: 'supportive',
+      initialTrust: 40,
+      nextMatch: 2,
+      randomState: { s0: 1, s1: 2, s2: 3, s3: 4 },
+      roster: [],
+      completedMetrics: [],
+    };
+    const path = `${process.cwd()}/.tmp-checkpoint-${process.pid}.json`;
+    const temporaryPath = `${path}.${process.pid}.tmp`;
+    try {
+      await writeAtomicCheckpoint(path, checkpoint);
+      await writeFile(temporaryPath, '{"truncated"', 'utf8');
+      expect(
+        parseCampaignCheckpoint(
+          JSON.parse(await readFile(path, 'utf8')) as unknown,
+        ).nextMatch,
+      ).toBe(2);
+    } finally {
+      await Promise.all([
+        unlink(path).catch(() => undefined),
+        unlink(temporaryPath).catch(() => undefined),
+      ]);
+    }
+  });
+
+  it('flushes a completed-match checkpoint before exiting on SIGTERM', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-'));
+    const checkpointPath = join(directory, 'checkpoint.json');
+    const child = spawn(
+      process.execPath,
+      [
+        resolve('node_modules/tsx/dist/cli.mjs'),
+        'sim/cli.ts',
+        '--matches=3',
+        '--leader=supportive',
+        '--seed=5',
+        '--engine=fake',
+        `--checkpoint-out=${checkpointPath}`,
+      ],
+      { cwd: process.cwd(), stdio: 'ignore' },
+    );
+    try {
+      let checkpoint: CampaignCheckpoint | undefined;
+      const deadline = Date.now() + 120_000;
+      while (checkpoint === undefined && Date.now() < deadline) {
+        try {
+          checkpoint = parseCampaignCheckpoint(
+            JSON.parse(await readFile(checkpointPath, 'utf8')) as unknown,
+          );
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      }
+      expect(checkpoint).toBeDefined();
+      child.kill('SIGTERM');
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', (code) => resolve(code ?? -1));
+      });
+      expect(exitCode).not.toBe(0);
+
+      const finalCheckpoint = parseCampaignCheckpoint(
+        JSON.parse(await readFile(checkpointPath, 'utf8')) as unknown,
+      );
+      expect(finalCheckpoint.nextMatch).toBeGreaterThan(1);
+      expect(finalCheckpoint.nextMatch).toBeLessThan(3);
+    } finally {
+      child.kill('SIGKILL');
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 130_000);
 
   it.each([
     ['schemaVersion', 'schemaVersion mismatch'],

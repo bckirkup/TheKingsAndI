@@ -124,6 +124,7 @@ export interface ShardOptions {
   readonly shardIndex: number;
   readonly shardCount: number;
   readonly checkpoint?: CampaignCheckpoint;
+  readonly onCheckpoint?: CampaignOptions['onCheckpoint'];
   readonly campaignRunner?: CampaignRunner;
   readonly campaignRunnerDeterminismId?: string;
 }
@@ -256,6 +257,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
         ...(options.checkpoint === undefined
           ? {}
           : { checkpoint: options.checkpoint }),
+        ...(options.onCheckpoint === undefined || campaignIndex !== indices[0]
+          ? {}
+          : { onCheckpoint: options.onCheckpoint }),
       });
       campaigns.push({ campaignIndex, campaignSeed, result });
     }
