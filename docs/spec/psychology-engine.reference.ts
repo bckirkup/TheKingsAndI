@@ -99,6 +99,7 @@ export const ENGINE_CONFIG = {
   DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE: 20,
   DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE: 50,
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
+  REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   LEADERSHIP_WEIGHTS: {
     alpha: 0.4, // Final Trust weight
     beta: 0.3,  // Win Score weight
@@ -185,10 +186,13 @@ export function calculateMoveUtility(
 /**
  * Section 4.3 / 4.4: Refusal Threshold Theta_refusal
  * Calculates the utility threshold below which a move will be rejected.
- * * Equation: Theta_refusal = -50 + (100 - T_i) * 0.5
+ * * Equation: Theta_refusal = -3 + (100 - T_i) * REFUSAL_THRESHOLD_TRUST_SCALE
  */
 export function calculateRefusalThreshold(trustLevel: number): number {
-  return -50 + (100 - trustLevel) * 0.5;
+  return (
+    -3 +
+    (100 - trustLevel) * ENGINE_CONFIG.REFUSAL_THRESHOLD_TRUST_SCALE
+  );
 }
 
 /**

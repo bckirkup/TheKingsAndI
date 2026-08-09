@@ -41,8 +41,8 @@ describe('simulation harness golden output', () => {
     expect(legacyCsv).toBe(
       [
         'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
-        '1,1000004,tyrannical,200,19,81,4,0,0,19,0.0950,0.0200,1.0000,0.4050,-10.00,-10.50,-20.00,17.08,50,0,tyrant',
-        '2,2000001,tyrannical,51,4,20,0,15,14,4,0.0784,0.0000,1.0000,0.3922,-10.38,-53.00,8.75,95.00,0,1,tyrant',
+        '1,1000004,tyrannical,27,0,8,5,15,13,0,0.0000,0.1852,0.0000,0.2963,-10.00,-67.00,-20.00,15.00,0,1,tyrant',
+        '2,2000001,tyrannical,144,10,46,20,14,12,10,0.0694,0.1389,1.0000,0.3194,-13.56,-100.00,-18.75,35.00,0,1,tyrant',
         '',
       ].join('\n'),
     );

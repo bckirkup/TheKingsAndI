@@ -53,8 +53,11 @@ ADR 0017. The section below is retained for the reasoning that produced them.)*
 
 ### D19 ✅ resolved as credence (ADR 0015) — original analysis
 `w_loyalty · T_i` spans ±100 while `ΔV_board` is ±10, `ΔV_capture` is 0..9, the
-risk term is 0..1, and `Φ` contributes at most `w_empathy` per peer. Since
-`Θ_refusal` spans only ±50, trust alone decides nearly every verdict.
+risk term is 0..1, and `Φ` contributes at most `w_empathy` per peer. The
+historical `Θ_refusal` spanned ±50, which put it outside the perceived
+board-value range and made trust alone decide nearly every verdict. ADR 0015
+now uses credence-weighted perception, and the reconciled threshold is in the
+same board-value units.
 
 Owner: *"we will need to figure it out, but trust is critical here — the lesson
 is how important trust can be relative to technical skill in a leader."*

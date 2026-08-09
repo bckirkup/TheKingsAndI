@@ -1,4 +1,5 @@
 import type { CandidateMoveEvaluation, PieceState } from './types';
+import { ENGINE_CONFIG } from './config';
 
 /**
  * Φ(P_i, P_j, m) = w_empathy · ((A_{i,j} + w_prestige·C_{i,role(j)}) / 200) · ΔSafety_j(m)
@@ -49,8 +50,8 @@ export function calculateMoveUtility(
 }
 
 /**
- * Θ_refusal(T_i) = -50 + (100 - T_i) · 0.5 (docs/psychology_engine.md §5).
+ * Θ_refusal(T_i) = -3 + (100 - T_i) · REFUSAL_THRESHOLD_TRUST_SCALE.
  */
 export function calculateRefusalThreshold(trustLevel: number): number {
-  return -50 + (100 - trustLevel) * 0.5;
+  return -3 + (100 - trustLevel) * ENGINE_CONFIG.REFUSAL_THRESHOLD_TRUST_SCALE;
 }

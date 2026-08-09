@@ -82,18 +82,19 @@ do, not merely the quality of its advice.
 ## 5. Refusal threshold
 
 ```
-Θ_refusal(T_i) = -50 + (100 - T_i) · 0.5
+Θ_refusal(T_i) = -3 + (100 - T_i) · REFUSAL_THRESHOLD_TRUST_SCALE
 ```
 
 | `T_i` | `Θ_refusal` | Reading |
 |---|---|---|
-| `+100` | `-50` | a loyal piece tolerates a move it dislikes |
+| `+100` | `-3` | a loyal piece tolerates a move it dislikes |
 | `0` | `0` | neutral piece refuses anything net-negative |
-| `-100` | `+50` | a hostile piece refuses even good moves |
+| `-100` | `+3` | a hostile piece refuses even good moves |
 
 Refusal is available at *every* trust level — a devoted piece will still refuse
-a catastrophic order. This is a meaningful improvement over a fixed
-trust-band ladder and should be preserved.
+a catastrophic order. The threshold now shares the board-value units of
+`V_perceived`, while the trust slope remains an explicit configuration
+coefficient.
 
 ## 6. Verdict state machine
 
@@ -211,28 +212,24 @@ Each is a decision, not a bug I should silently "fix".
 > judgement* supersedes the arithmetic fixes below. See ADR 0015 and
 > `docs/credence_model.md`: trust becomes a mixing weight in `[0,1]`, not a term
 > on the same axis as board value, and the scale contest disappears.
-`w_loyalty · T_i` spans `±100`. Every other term is small: `ΔV_board` is `±10`,
-`ΔV_capture` is `0..9`, the risk term is `0..1`, and `Φ` contributes at most
-`w_empathy` per peer. Meanwhile `Θ_refusal` moves only `±50`. Net effect:
+The historical `w_loyalty · T_i` term spans `±100`. Under ADR 0015, trust is
+instead a dimensionless credence weight, but the refusal threshold retained its
+old utility-scale values. The board-value perception is roughly `±3`, while
+the old threshold moved `±50`. Net effect:
 
 ```
-T_i = +80, w_loyalty = 0.6  →  U ≈ 48 + (at most ~15 of everything else)
-                               Θ_refusal = -40   → refusal is unreachable
-T_i = -80, w_loyalty = 0.6  →  U ≈ -48 + …
-                               Θ_refusal = +40   → refusal is near-certain
+T_i = +80  → old Θ_refusal = -40 (out of board-value scale)
+             new Θ_refusal = -2.4 (within perceived range)
+T_i = -80  → old Θ_refusal = +40 (out of board-value scale)
+             new Θ_refusal = +2.4 (within perceived range)
 ```
 
-The move being evaluated barely matters; trust alone decides the verdict, and
-`w_loyalty` becomes the only trait that does anything. Options:
-
-- **A.** Normalize trust: `w_loyalty · (T_i / 100)` and put all terms on a
-  comparable `[-10, +10]` scale (recommended).
-- **B.** Scale board terms up ~10× instead.
-- **C.** Keep as-is and treat trust as intentionally decisive — but then the
-  psychology is a mood filter, not a decision model, and the "protect my friend"
-  mechanic will essentially never fire.
-
-This is the single highest-impact calibration decision in the model.
+This was a reconciliation defect: ADR 0015 moved trust into credence-weighted
+perception, but §5's threshold constant remained in the superseded utility
+scale. The resolution is to express the boundary in board-value units:
+`Θ_refusal = -3 + (100 - T_i) · REFUSAL_THRESHOLD_TRUST_SCALE`. The new slope
+is an explicit coefficient with golden and sensitivity coverage. Desertion
+utility and the authority signal are unchanged.
 
 ### 10.2 `w_prestige` is declared but never used
 The trait exists in `PieceTraits` and is documented as "sensitivity to rank and
