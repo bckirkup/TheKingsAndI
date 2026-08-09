@@ -389,12 +389,7 @@ export async function runHeadlessMatch(
     ply += 1;
   }
 
-  const winScore = scoreMatchOutcome(
-    board,
-    config.playerSide,
-    rout,
-    enemyRout,
-  );
+  const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);

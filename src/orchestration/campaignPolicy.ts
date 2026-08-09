@@ -164,7 +164,9 @@ export function selectSuccessorLeader(input: {
 }
 
 /** Thin the available roster for a diminished appointment (ADR 0024 §4). */
-export function thinRosterForDiminishedAppointment<T extends { readonly T_i: number }>(
+export function thinRosterForDiminishedAppointment<
+  T extends { readonly T_i: number },
+>(
   roster: readonly T[],
   cap: number = CAMPAIGN_CONFIG.DIMINISHED_ROSTER_CAP,
 ): T[] {

@@ -138,7 +138,9 @@ function nobodyDrownedScore(matches: readonly MatchRecord[]): number {
 
 function overcomingScore(matches: readonly MatchRecord[]): number {
   const start = initialRoster(matches);
-  const endById = new Map(finalRoster(matches).map((piece) => [piece.id, piece]));
+  const endById = new Map(
+    finalRoster(matches).map((piece) => [piece.id, piece]),
+  );
   let best = 0;
   for (const piece of start) {
     if (piece.B_i < COMMENDATION_CONFIG.OVERCOMING_TRAUMA_FLOOR) continue;
@@ -284,12 +286,7 @@ export function foldPlayerCommendations(
       learningDelta !== null &&
         improvement >= COMMENDATION_CONFIG.OVERALL_IMPROVEMENT_DELTA_MIN,
     ),
-    award(
-      'honest_sacrifice',
-      sacrifice,
-      0.5,
-      sacrifice >= 0.5,
-    ),
+    award('honest_sacrifice', sacrifice, 0.5, sacrifice >= 0.5),
     award(
       'repaired_breach',
       breach,

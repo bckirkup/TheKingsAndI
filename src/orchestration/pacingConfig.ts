@@ -35,7 +35,8 @@ export function consumerLeadershipBeats(): readonly LeadershipBeat[] {
     {
       id: 'first_refusal_or_override',
       byMatchIndex: PACING_CONFIG.FIRST_LEADERSHIP_BEAT_MATCH,
-      description: 'A refusal or override occurs — leadership is not pure chess.',
+      description:
+        'A refusal or override occurs — leadership is not pure chess.',
     },
     {
       id: 'trust_or_desertion_signal',
@@ -84,13 +85,10 @@ export function evaluateConsumerPacing(
   }[],
 ): PacingProfileResult {
   const windowMatches = matchesInsideConsumerWindow();
-  const inWindow = matches.filter(
-    (match) => match.matchIndex <= windowMatches,
-  );
+  const inWindow = matches.filter((match) => match.matchIndex <= windowMatches);
 
   const firstSignal = inWindow.find(
-    (match) =>
-      match.audit.refusalCount > 0 || match.audit.overrideCount > 0,
+    (match) => match.audit.refusalCount > 0 || match.audit.overrideCount > 0,
   );
   const trustSignal = inWindow.find(
     (match) =>
@@ -110,8 +108,7 @@ export function evaluateConsumerPacing(
           : beat.id === 'trust_or_desertion_signal'
             ? (trustSignal?.matchIndex ?? null)
             : (gapSignal?.matchIndex ?? null);
-      const satisfied =
-        observed !== null && observed <= beat.byMatchIndex;
+      const satisfied = observed !== null && observed <= beat.byMatchIndex;
       return {
         id: beat.id,
         requiredByMatch: beat.byMatchIndex,

@@ -636,6 +636,14 @@ export class MatchSession {
         san,
         verdict: outcome.verdict,
       };
+    } else if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+      // Full effort with no faith — presented as compliance, cost is off-move.
+      this.dialogueCue = {
+        eventKind: 'compliant',
+        pieceId: actor.id,
+        san,
+        verdict: outcome.verdict,
+      };
     } else if (outcome.verdict === 'HEROIC_EXECUTION') {
       this.dialogueCue = {
         eventKind: 'heroic',

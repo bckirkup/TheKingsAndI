@@ -23,10 +23,7 @@ import {
   resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
-import {
-  chooseOpponentMove,
-  type OpponentArchetype,
-} from './leaderPolicy';
+import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
@@ -258,7 +255,7 @@ export function applyEnemyTurnSync(input: {
   readonly overrideRefusals?: boolean;
   readonly abilityObservations?: number;
 }): EnemyTurnResult {
-  let enemyRoster = syncSideRoster(
+  const enemyRoster = syncSideRoster(
     input.board,
     trackEnemyIdentities(input.enemyRoster),
     input.enemySide,
@@ -344,7 +341,7 @@ export async function applyEnemyTurn(input: {
   readonly overrideRefusals?: boolean;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
-  let enemyRoster = syncSideRoster(
+  const enemyRoster = syncSideRoster(
     input.board,
     trackEnemyIdentities(input.enemyRoster),
     input.enemySide,

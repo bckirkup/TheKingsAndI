@@ -146,6 +146,6 @@ See `docs/testing_strategy.md` §7.
 | `parallel.ts` | Campaign planning, sharding, manifests, and run aggregation |
 | `aggregate.ts` | Shard-artifact aggregation CLI |
 
-Depth-`D_i` insights feed psychology through the ADR 0034 barrier. Psychology
-runs for the player side; the opponent plays chess without verdicts unless a
-future Milestone 5b enemy-roster path lands.
+Depth-`D_i` insights feed psychology through the ADR 0034 barrier. Both
+player and opposing tracked identities run the verdict ladder (Milestone 5b /
+ADR 0025); enemy private gauges stay off player-facing surfaces.

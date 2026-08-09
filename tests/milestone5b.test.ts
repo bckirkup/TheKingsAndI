@@ -107,14 +107,10 @@ describe('FATALISTIC_COMPLIANCE (ADR 0024)', () => {
   it('costs witnesses and future willingness, not the move', () => {
     const actor = makePiece({ id: 'actor' });
     const witness = makePiece({ id: 'witness', T_i: 40 });
-    const result = applyFatalisticComplianceCosts(
-      [actor, witness],
-      'actor',
-      3,
-    );
-    expect(result.events.some((event) => event.t === 'FATALISTIC_WITNESS')).toBe(
-      true,
-    );
+    const result = applyFatalisticComplianceCosts([actor, witness], 'actor', 3);
+    expect(
+      result.events.some((event) => event.t === 'FATALISTIC_WITNESS'),
+    ).toBe(true);
     const nextActor = result.roster.find((piece) => piece.id === 'actor');
     const nextWitness = result.roster.find((piece) => piece.id === 'witness');
     expect(nextActor?.engagementFactor).toBeLessThan(1);
@@ -209,8 +205,8 @@ describe('enemy psychology helpers (ADR 0025)', () => {
     expect(() =>
       assertDifficultyIsLeaderPolicy({ easy: 8, hard: 8 }),
     ).not.toThrow();
-    expect(() =>
-      assertDifficultyIsLeaderPolicy({ easy: 4, hard: 12 }),
-    ).toThrow(/difficulty-by-depth/);
+    expect(() => assertDifficultyIsLeaderPolicy({ easy: 4, hard: 12 })).toThrow(
+      /difficulty-by-depth/,
+    );
   });
 });
