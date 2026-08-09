@@ -7,7 +7,7 @@ import type { Leader } from './cli';
 
 const MAX_PLIES = 200;
 
-/** Plain-chess baseline: same move picker as a scripted leader, no psychology. */
+/** Plain-chess control: same move picker as a scripted leader, no psychology. */
 export function runPlainChessMatch(options: {
   readonly seed: number;
   readonly whiteLeader: Leader;

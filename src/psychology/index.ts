@@ -11,12 +11,15 @@ export {
   clampTrust,
 } from './clamp';
 export {
+  applyAuthorityLoss,
   applyAbilityObservation,
   applyBetrayalSignal,
   applyHeardSignal,
   applyNeglectSignal,
   calculateFaithGap,
   calculatePerceivedValue,
+  justifiedRefusalObviousness,
+  justifiedRefusalAuthorityLoss,
   isExpendableRefusal,
 } from './credence';
 export { calculateEngineSearchDepth } from './depth';

@@ -177,8 +177,17 @@ describe('private evaluation profile', () => {
     const handle = createInsightRoundHandle();
     const baseEngine = createFakeEnginePort();
     let bestLineCalls = 0;
+    const evaluatedFens: string[] = [];
     const engine = {
       ...baseEngine,
+      async evaluate(
+        fen: string,
+        depth: number,
+        evalProfile?: Readonly<Record<string, number>>,
+      ) {
+        evaluatedFens.push(fen);
+        return baseEngine.evaluate(fen, depth, evalProfile);
+      },
       async bestAt(fen: string, depth: number) {
         bestLineCalls += 1;
         return baseEngine.bestAt?.(fen, depth) ?? { scoreCp: 0, pv: [] };
@@ -205,6 +214,8 @@ describe('private evaluation profile', () => {
       features,
     );
     expect(bestLineCalls).toBe(1);
+    expect(evaluatedFens).toContain(BOARD.fen());
+    expect(evaluatedFens).toContain(POST_MOVE.fen());
     expect(handle.round).toBe(1);
   });
 });

@@ -77,9 +77,22 @@ describe('search depth golden values', () => {
 
 describe('refusal threshold golden values', () => {
   it('matches docs/psychology_engine.md §5', () => {
-    expect(calculateRefusalThreshold(100)).toBe(-50);
+    expect(calculateRefusalThreshold(100)).toBe(-3);
     expect(calculateRefusalThreshold(0)).toBe(0);
-    expect(calculateRefusalThreshold(-100)).toBe(50);
+    expect(calculateRefusalThreshold(-100)).toBe(3);
+  });
+
+  it('is sensitive to its trust-scale coefficient', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.REFUSAL_THRESHOLD_TRUST_SCALE ?? 0.03;
+    try {
+      config.REFUSAL_THRESHOLD_TRUST_SCALE = 0;
+      expect(calculateRefusalThreshold(-100)).toBe(-3);
+      config.REFUSAL_THRESHOLD_TRUST_SCALE = 0.06;
+      expect(calculateRefusalThreshold(-100)).toBe(9);
+    } finally {
+      config.REFUSAL_THRESHOLD_TRUST_SCALE = original;
+    }
   });
 });
 

@@ -10,12 +10,14 @@ export interface DegeneracyFinding {
 
 export interface DegeneracyAssertionOptions {
   readonly enforceEarlySaturation?: boolean;
+  readonly matchedSkillWinScore?: number;
 }
 
 export function detectDegeneracy(
   leader: CampaignMetrics['leader'],
   metrics: readonly MatchMetrics[],
   summary: CampaignMetrics,
+  options: DegeneracyAssertionOptions = {},
 ): DegeneracyFinding[] {
   const findings: DegeneracyFinding[] = [];
 
@@ -74,7 +76,8 @@ export function detectDegeneracy(
     });
   }
 
-  if (leader === 'supportive' && summary.meanWinScore >= 95) {
+  const matchedSkillWinScore = options.matchedSkillWinScore ?? 95;
+  if (leader === 'supportive' && summary.meanWinScore >= matchedSkillWinScore) {
     findings.push({
       code: 'no-dilemma',
       message:
@@ -103,7 +106,12 @@ export function assertSmokeBounds(
   summary: CampaignMetrics,
   options: DegeneracyAssertionOptions = {},
 ): void {
-  const findings = detectDegeneracy(leader, summary.matchMetrics, summary);
+  const findings = detectDegeneracy(
+    leader,
+    summary.matchMetrics,
+    summary,
+    options,
+  );
   const hardFailureCodes = ['no-rout', 'refusal-dead', 'toothless-refusal'];
   if (options.enforceEarlySaturation) {
     hardFailureCodes.push('early-saturation');

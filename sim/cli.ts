@@ -10,6 +10,7 @@ import {
 import { type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
 import { resolveRunPlan, runShard, writeShardArtifact } from './parallel';
+import { plainChessMeanWinScore } from './baseline';
 import { canonicalJson } from '../src/core/canonicalJson';
 
 export const LEADERS = [
@@ -238,12 +239,25 @@ async function main(): Promise<void> {
     options.leader,
     result.summary.matchMetrics,
     result.summary,
+    {
+      matchedSkillWinScore: plainChessMeanWinScore({
+        matches: result.summary.matches,
+        seed: options.seed,
+        whiteLeader: options.leader,
+      }),
+    },
   );
   if (
     !options.enforceCalibration &&
     shouldRunSmokeBounds(result.summary.matches)
   ) {
-    assertSmokeBounds(options.leader, result.summary);
+    assertSmokeBounds(options.leader, result.summary, {
+      matchedSkillWinScore: plainChessMeanWinScore({
+        matches: result.summary.matches,
+        seed: options.seed,
+        whiteLeader: options.leader,
+      }),
+    });
   }
   console.log(
     `Milestone 3 harness: ${result.summary.matches} matches across ${result.campaigns.length} campaigns for ${options.leader} (${result.manifest.determinismId}).`,

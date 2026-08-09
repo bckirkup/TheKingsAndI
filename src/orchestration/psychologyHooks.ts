@@ -2,9 +2,11 @@ import type { MoveFeatures } from '../chess';
 import { isObjectivelyGoodMove } from './evaluation';
 import {
   applyAbilityObservation,
+  applyAuthorityLoss,
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  justifiedRefusalAuthorityLoss,
   isWitnessedSacrifice,
   normalizePieceState,
   type CandidateMoveEvaluation,
@@ -149,6 +151,29 @@ export function applyPostMoveCredence(
     observationCount,
   );
   return normalizePieceState({ ...actor, credence });
+}
+
+export function applyRefusalAuthorityCost(
+  roster: readonly PieceState[],
+  actorId: string,
+  actorView: number,
+  justified: boolean,
+): { readonly roster: PieceState[]; readonly authorityLoss: number } {
+  const authorityLoss = justifiedRefusalAuthorityLoss(actorView, justified);
+  if (authorityLoss === 0) {
+    return { roster: [...roster], authorityLoss };
+  }
+  return {
+    roster: roster.map((piece) =>
+      piece.id === actorId
+        ? piece
+        : normalizePieceState({
+            ...piece,
+            credence: applyAuthorityLoss(piece.credence, authorityLoss),
+          }),
+    ),
+    authorityLoss,
+  };
 }
 
 export function isAvengedCapture(

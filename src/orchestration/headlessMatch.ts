@@ -6,6 +6,7 @@ import {
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   evaluateMoveResponse,
+  justifiedRefusalObviousness,
   normalizePieceState,
   shouldDesert,
   type CandidateMoveEvaluation,
@@ -24,6 +25,7 @@ import {
   applyDeclinedSacrificeSignal,
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   attributeSacrifice,
   detectDeclinedSacrificeCostlySignal,
@@ -73,6 +75,10 @@ export interface HeadlessMatchResult {
   readonly refusedGoodMoves: number;
   /** Initial desertions whose true post-move audit score was materially winning. */
   readonly winningPositionDesertions: number;
+  /** Private-view obviousness values for accepted justified refusals. */
+  readonly justifiedRefusalObviousness: readonly number[];
+  /** Raw absolute private-view losses for accepted justified refusals. */
+  readonly justifiedRefusalPrivateViewLosses: readonly number[];
   readonly determinismId: string;
 }
 
@@ -100,6 +106,8 @@ export async function runHeadlessMatch(
   let rout = false;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
+  const justifiedRefusalObviousnessValues: number[] = [];
+  const justifiedRefusalPrivateViewLosses: number[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
   let abilityObservations = 0;
@@ -172,6 +180,7 @@ export async function runHeadlessMatch(
     const objectivelyGood =
       choice.objectivelyGood ??
       isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
+    const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
     const desertionContext = desertionContextFor(actor, moveEval);
     const desertionDecision = shouldDesert(actor, desertionContext, roster);
@@ -200,14 +209,40 @@ export async function runHeadlessMatch(
         }));
         outcome = { ...outcome, verdict: 'COMPLIANT_EXECUTION' };
       } else {
-        events.push({
+        const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
           t: 'REFUSAL',
           ply,
           pieceId: actor.id,
           utility: outcome.utilityScore,
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
-        });
+          privateViewLoss: justifiedRefusal ? -moveEval.deltaV_board : 0,
+          obviousness: justifiedRefusal
+            ? justifiedRefusalObviousness(moveEval.deltaV_board, true)
+            : 0,
+          authorityLoss: 0,
+          justified: justifiedRefusal,
+        };
+        if (justifiedRefusal) {
+          justifiedRefusalObviousnessValues.push(
+            justifiedRefusalObviousness(moveEval.deltaV_board, true),
+          );
+          justifiedRefusalPrivateViewLosses.push(-moveEval.deltaV_board);
+        }
+        events.push(refusalEvent);
+        const authority = applyRefusalAuthorityCost(
+          roster,
+          actor.id,
+          moveEval.deltaV_board,
+          justifiedRefusal,
+        );
+        roster = authority.roster;
+        if (authority.authorityLoss > 0) {
+          events[events.length - 1] = {
+            ...refusalEvent,
+            authorityLoss: authority.authorityLoss,
+          };
+        }
         if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({
@@ -321,6 +356,12 @@ export async function runHeadlessMatch(
     rout,
     refusedGoodMoves,
     winningPositionDesertions,
+    justifiedRefusalObviousness: Object.freeze(
+      justifiedRefusalObviousnessValues,
+    ),
+    justifiedRefusalPrivateViewLosses: Object.freeze(
+      justifiedRefusalPrivateViewLosses,
+    ),
     determinismId: config.engine.determinismId,
   };
 }

@@ -1,3 +1,14 @@
+## Public authority after justified refusal
+
+Refusal is free to re-plan, but an accepted refusal that corrects a bad order
+is public evidence about commander competence. The separate audit stream gates
+whether the refusal was justified; the refusing piece's own private
+`deltaV_board` supplies the visible obviousness signal. Witnesses never receive
+the audit score. Each other active piece loses
+`trunc(clamp(-deltaV_board, 0, 1) * REFUSAL_AUTHORITY_LOSS_SCALE)` from
+`tau_abil`, while `tau_benev` is unchanged. A refusal contradicted by the audit
+costs the commander no authority.
+
 # Trust Dynamics — The Competence Trap
 
 _Design intent, owner-stated:_

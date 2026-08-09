@@ -13,6 +13,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   applyOverride,
+  justifiedRefusalObviousness,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
@@ -35,6 +36,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   applyDeclinedSacrificeSignal,
   applyCostlySignalsToRoster,
@@ -326,14 +328,34 @@ export class MatchSession {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'MORAL_REFUSAL') return;
 
-    this.events.push({
+    const justified =
+      pending.moveEval.deltaV_board < 0 && pending.orderQualityCp < 0;
+    const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
       t: 'REFUSAL',
       ply: this.ply,
       pieceId: pending.actor.id,
       utility: pending.outcome.utilityScore,
       threshold: pending.outcome.refusalThreshold,
       perceivedValue: pending.outcome.perceivedValue,
-    });
+      privateViewLoss: justified ? -pending.moveEval.deltaV_board : 0,
+      obviousness: justified
+        ? justifiedRefusalObviousness(pending.moveEval.deltaV_board, true)
+        : 0,
+      authorityLoss: 0,
+      justified,
+    };
+    this.events.push(refusalEvent);
+    const authority = applyRefusalAuthorityCost(
+      this.roster,
+      pending.actor.id,
+      pending.moveEval.deltaV_board,
+      justified,
+    );
+    this.events[this.events.length - 1] = {
+      ...refusalEvent,
+      authorityLoss: authority.authorityLoss,
+    };
+    this.roster = authority.roster;
     this.roster = updatePiece(this.roster, pending.actor.id, (piece) => ({
       ...piece,
       credence: applyNeglectSignal(piece.credence),

@@ -3,16 +3,17 @@ import type { EngineEvaluation } from '../engine/types';
 import type { CandidateMoveEvaluation } from '../psychology';
 
 /**
- * Map a piece's depth-D_i engine view (post-move, mover-side cp) plus geometric
- * capture/peer features into psychology's CandidateMoveEvaluation (ADR 0013).
+ * Map a piece's depth-D_i private order delta (after minus before, in
+ * mover-side cp) plus geometric capture/peer features into psychology's
+ * CandidateMoveEvaluation (ADR 0013).
  */
 export function insightToEvaluation(
   features: MoveFeatures,
-  insight: EngineEvaluation,
+  privateDeltaInsight: EngineEvaluation,
   leaderInsight: EngineEvaluation,
   leaderImpliedBias = 0,
 ): CandidateMoveEvaluation {
-  const deltaV_board = insight.scoreCp / 100;
+  const deltaV_board = privateDeltaInsight.scoreCp / 100;
   const vLeaderImplied = leaderInsight.scoreCp / 100 + leaderImpliedBias;
   return {
     moveNotation: features.san,

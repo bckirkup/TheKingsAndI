@@ -38,6 +38,10 @@ export const ENGINE_CONFIG = {
   OVERRIDE_PIECE_TRAUMA_GAIN: 20,
   OVERRIDE_WITNESS_TRUST_PENALTY: -8,
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
+  /** Ability-channel authority loss when a justified refusal is accepted. */
+  REFUSAL_AUTHORITY_LOSS_SCALE: 20,
+  /** Trust-to-refusal threshold slope in board-value units. */
+  REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */
   /** Team-loss stake in pain units, modulated by lambda. */
   DESERTION_COLLECTIVE_STAKE: 50,
