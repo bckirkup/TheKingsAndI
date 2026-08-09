@@ -98,8 +98,15 @@ means the model has collapsed:
 3. Refusal rate ≈ 0 or ≈ 1 across all styles (thresholds mis-scaled).
 4. Trust monotonic for every piece regardless of play (dead wiring).
 5. Class-bias variance ≈ 0 after 20 matches (relationship layer inert).
-6. Supportive leader win rate ≥ plain chess (no tension between morale and
-   tactics → the game has no dilemma).
+6. Supportive leader win rate ≥ the matched-skill psychology-disabled control
+   (same leader policy and effective strength, psychology fold disabled; no
+   tension between morale and tactics → the game has no dilemma). The former
+   strong plain-chess comparison remains an attribution baseline in reports,
+   not the detector-6 counterfactual.
+
+Every detector-6 report records both deltas for the same seeds and match count:
+the legacy plain-chess comparison and the matched-skill control comparison.
+Only the latter decides the detector.
 7. Verdict is predictable from `T_i` alone (i.e. a classifier on trust reproduces
    >95% of verdicts) → the move terms are inert; this is the D19 detector.
 8. **Absorbing state:** >5% of campaigns reach a state from which even the oracle

@@ -24,6 +24,7 @@ import {
   applyDeclinedSacrificeSignal,
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   attributeSacrifice,
   detectDeclinedSacrificeCostlySignal,
@@ -172,6 +173,7 @@ export async function runHeadlessMatch(
     const objectivelyGood =
       choice.objectivelyGood ??
       isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
+    const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
     const desertionContext = desertionContextFor(actor, moveEval);
     const desertionDecision = shouldDesert(actor, desertionContext, roster);
@@ -200,14 +202,30 @@ export async function runHeadlessMatch(
         }));
         outcome = { ...outcome, verdict: 'COMPLIANT_EXECUTION' };
       } else {
-        events.push({
+        const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
           t: 'REFUSAL',
           ply,
           pieceId: actor.id,
           utility: outcome.utilityScore,
           threshold: outcome.refusalThreshold,
           perceivedValue: outcome.perceivedValue,
-        });
+          authorityLoss: 0,
+          justified: justifiedRefusal,
+        };
+        events.push(refusalEvent);
+        const authority = applyRefusalAuthorityCost(
+          roster,
+          actor.id,
+          moveEval.deltaV_board,
+          justifiedRefusal,
+        );
+        roster = authority.roster;
+        if (authority.authorityLoss > 0) {
+          events[events.length - 1] = {
+            ...refusalEvent,
+            authorityLoss: authority.authorityLoss,
+          };
+        }
         if (objectivelyGood) {
           refusedGoodMoves += 1;
           roster = updatePiece(roster, actor.id, (piece) => ({

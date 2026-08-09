@@ -149,6 +149,23 @@ enabled a forced winning line — attribute via engine evaluation, never via
 proximity heuristics, or gratitude becomes nonsense and the narrative loses
 credibility.
 
+## 7b. Public authority after justified refusal
+
+An accepted refusal is a public competence signal, not a benevolence signal.
+The orchestration layer uses the separate audit stream to classify a refusal as
+justified, but true audit values never cross into `psychology/`. The witnesses'
+reaction is derived only from the refusing piece's own private view:
+
+```text
+o_i = clamp(-deltaV_board_i, 0, 1)
+loss_i = trunc(o_i · REFUSAL_AUTHORITY_LOSS_SCALE)
+```
+
+For a justified refusal, `loss_i` is subtracted from every other active piece's
+`tau_abil`. `tau_benev` is unchanged. An unjustified refusal has `loss_i = 0`.
+Overrides do not produce this signal because the commander did not accept the
+correction. The default authority-loss scale is 20 credence points.
+
 ## 8. Benching / roster reassignment
 
 ```

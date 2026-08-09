@@ -7,7 +7,10 @@ import {
   ENGINE_CONFIG,
   normalizePieceState,
 } from '../src/psychology';
-import { plainChessMeanWinScore } from '../sim/baseline';
+import {
+  matchedSkillMeanWinScore,
+  plainChessMeanWinScore,
+} from '../sim/baseline';
 import { runCoefficientSweep } from '../sim/sweep';
 
 const samplePiece = normalizePieceState({
@@ -53,6 +56,20 @@ describe('plain-chess baseline', () => {
     });
     expect(a).toBe(b);
   });
+
+  it('matched-skill control is deterministic and preserves the legacy comparison', () => {
+    const matched = matchedSkillMeanWinScore({
+      matches: 3,
+      seed: 7,
+      whiteLeader: 'supportive',
+    });
+    const legacy = plainChessMeanWinScore({
+      matches: 3,
+      seed: 7,
+      whiteLeader: 'supportive',
+    });
+    expect(matched).toBe(legacy);
+  });
 });
 
 describe('coefficient sweep', () => {
@@ -87,5 +104,6 @@ describe('coefficient sweep', () => {
     expect(points).toHaveLength(2);
     expect(points[0]?.knob).toBe('OUTCOME_TRUST_LOSS_SCALE');
     expect(typeof points[0]?.plainChessWinDelta).toBe('number');
+    expect(typeof points[0]?.matchedSkillWinDelta).toBe('number');
   }, 60_000);
 });

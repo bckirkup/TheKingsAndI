@@ -128,6 +128,10 @@ export type MatchEvent =
       readonly utility: number;
       readonly threshold: number;
       readonly perceivedValue: number;
+      /** Ability-channel authority loss applied to the other roster members. */
+      readonly authorityLoss?: number;
+      /** True only when the command was bad in the audit view. */
+      readonly justified?: boolean;
     }
   | {
       readonly t: 'OVERRIDE';

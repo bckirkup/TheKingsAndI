@@ -5,6 +5,7 @@ import { createSeededRandom } from '../src/core/random';
 import {
   ENGINE_CONFIG,
   applyBetrayalSignal,
+  applyAuthorityLoss,
   applyCostlySignal,
   applyHeardSignal,
   applyMatchOutcomeTrust,
@@ -18,6 +19,7 @@ import {
   evaluateMoveResponse,
   isKingExempt,
   isWitnessedSacrifice,
+  justifiedRefusalAuthorityLoss,
   normalizePieceState,
   replayDigest,
   replayMatch,
@@ -27,6 +29,7 @@ import {
   type PieceState,
   type ReplayManifest,
 } from '../src/psychology';
+import { applyRefusalAuthorityCost } from '../src/orchestration/psychologyHooks';
 
 const neutralTraits = {
   w_honor: 0.5,
@@ -77,6 +80,55 @@ function makeMove(
 }
 
 describe('psychology invariants (docs/psychology_engine.md §11)', () => {
+  it('charges justified refusal authority by the refusing piece view (golden)', () => {
+    expect(justifiedRefusalAuthorityLoss(-0.5, true)).toBe(10);
+    expect(justifiedRefusalAuthorityLoss(-2, true)).toBe(20);
+    expect(justifiedRefusalAuthorityLoss(-0.5, false)).toBe(0);
+    expect(justifiedRefusalAuthorityLoss(0.5, true)).toBe(0);
+  });
+
+  it('keeps refusal authority loss sensitive to its coefficient', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.REFUSAL_AUTHORITY_LOSS_SCALE ?? 20;
+    try {
+      config.REFUSAL_AUTHORITY_LOSS_SCALE = 0;
+      expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(0);
+      config.REFUSAL_AUTHORITY_LOSS_SCALE = 40;
+      expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(40);
+    } finally {
+      config.REFUSAL_AUTHORITY_LOSS_SCALE = original;
+    }
+  });
+
+  it('updates witnesses ability only for a justified refusal', () => {
+    const actor = makePiece({ id: 'w:N:g1' });
+    const witness = makePiece({
+      id: 'w:B:f1',
+      credence: { tauBenev: 61, tauAbil: 63 },
+    });
+    const accepted = applyRefusalAuthorityCost(
+      [actor, witness],
+      actor.id,
+      -1,
+      true,
+    );
+    expect(accepted.authorityLoss).toBe(20);
+    expect(accepted.roster[0]?.credence).toEqual(actor.credence);
+    expect(accepted.roster[1]?.credence).toEqual({
+      tauBenev: 61,
+      tauAbil: 43,
+    });
+    const rejected = applyRefusalAuthorityCost(
+      [actor, witness],
+      actor.id,
+      -1,
+      false,
+    );
+    expect(rejected.authorityLoss).toBe(0);
+    expect(rejected.roster[1]?.credence).toEqual(witness.credence);
+    expect(applyAuthorityLoss(witness.credence, 0)).toEqual(witness.credence);
+  });
+
   it('clamps state fields after normalization', () => {
     const piece = makePiece({ T_i: 500, M_i: -5, B_i: 200 });
     expect(piece.T_i).toBe(100);

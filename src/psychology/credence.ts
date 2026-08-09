@@ -53,6 +53,25 @@ export function applyNeglectSignal(credence: CredenceState): CredenceState {
   };
 }
 
+export function justifiedRefusalAuthorityLoss(
+  actorView: number,
+  justified: boolean,
+): number {
+  if (!justified || actorView >= 0) return 0;
+  const obviousness = Math.min(1, -actorView);
+  return Math.trunc(obviousness * ENGINE_CONFIG.REFUSAL_AUTHORITY_LOSS_SCALE);
+}
+
+export function applyAuthorityLoss(
+  credence: CredenceState,
+  loss: number,
+): CredenceState {
+  return {
+    ...credence,
+    tauAbil: clampCredence(credence.tauAbil - Math.max(0, Math.trunc(loss))),
+  };
+}
+
 export function applyAbilityObservation(
   credence: CredenceState,
   vindicated: boolean,
