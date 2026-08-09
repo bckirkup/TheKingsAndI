@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -9,13 +11,9 @@ import {
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
-const LOZZA_BUILD = '11';
 const LOZZA_HASH_MB = 16;
-const LOZZA_DETERMINISM_ID =
-  `lozza-${LOZZA_BUILD}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
-  `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
-  `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
-  `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`;
+const LOZZA_BUILD_PATTERN = /\bconst BUILD = ['"]([^'"]+)['"];/;
+const LOZZA_ARTIFACT_HASH_PREFIX_LENGTH = 12;
 
 const defaultEnginePath = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -57,6 +55,28 @@ function getBestEngine(enginePath: string): UciEngine {
   return bestEngine;
 }
 
+function lozzaDeterminismId(enginePath: string): string {
+  const artifact = readFileSync(enginePath);
+  const source = artifact.toString('utf8');
+  const build = LOZZA_BUILD_PATTERN.exec(source)?.[1];
+  if (build === undefined) {
+    throw new Error(
+      `Lozza artifact does not declare a readable BUILD label: ${enginePath}`,
+    );
+  }
+  const artifactHash = createHash('sha256')
+    .update(artifact)
+    .digest('hex')
+    .slice(0, LOZZA_ARTIFACT_HASH_PREFIX_LENGTH);
+  // The short hash is an equality token, not a security boundary.
+  return (
+    `lozza-${build}/artifact-${artifactHash}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
+    `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
+    `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
+    `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`
+  );
+}
+
 /**
  * Permissive MIT adapter proving `EnginePort` is real (ADR 0020 §4).
  * A single shared UCI process serialises searches; the evaluation cache
@@ -64,6 +84,7 @@ function getBestEngine(enginePath: string): UciEngine {
  */
 export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   const enginePath = options.enginePath ?? defaultEnginePath;
+  const determinismId = lozzaDeterminismId(enginePath);
   const engine = getSharedEngine(enginePath);
   const ladderFor = async (
     fen: string,
@@ -81,7 +102,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
     return ladder;
   };
   return {
-    determinismId: LOZZA_DETERMINISM_ID,
+    determinismId,
     async evaluate(
       fen: string,
       depth: number,

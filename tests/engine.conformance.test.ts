@@ -1,4 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 import {
   CONFORMANCE_CORPUS,
@@ -66,6 +70,26 @@ describe('engine conformance corpus (Lozza)', () => {
     const testCase = CONFORMANCE_CORPUS[0];
     if (testCase === undefined) throw new Error('missing corpus case');
     await expectMultiPvContract(port, testCase);
+  });
+
+  it('includes the vendored artifact contents in its determinism ID', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-lozza-'));
+    const artifactPath = join(directory, 'lozza.cjs');
+    try {
+      const artifact = Buffer.from(
+        await readFile(
+          fileURLToPath(new URL('../vendor/lozza/lozza.cjs', import.meta.url)),
+        ),
+      );
+      const lastByte = artifact[artifact.length - 1];
+      if (lastByte === undefined) throw new Error('Lozza artifact is empty.');
+      artifact[artifact.length - 1] = lastByte ^ 1;
+      await writeFile(artifactPath, artifact);
+      const mutated = createLozzaPort({ enginePath: artifactPath });
+      expect(mutated.determinismId).not.toBe(port.determinismId);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
 
