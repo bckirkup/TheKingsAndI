@@ -126,6 +126,7 @@ export type MatchEvent =
       readonly t: 'REFUSAL';
       readonly ply: number;
       readonly pieceId: PieceId;
+      readonly san?: string;
       readonly utility: number;
       readonly threshold: number;
       readonly perceivedValue: number;
@@ -145,6 +146,8 @@ export type MatchEvent =
       readonly san: string;
       readonly pieceTrustDelta: number;
       readonly traumaGain: number;
+      /** True when the commander had no unrefused candidate remaining. */
+      readonly implicit?: boolean;
     }
   | {
       readonly t: 'DESERTION';

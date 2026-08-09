@@ -6,6 +6,7 @@ import {
   applyFatalisticComplianceCosts,
   applyMatchOutcomeTrust,
   applyNeglectSignal,
+  applyOverride,
   evaluateMoveResponse,
   justifiedRefusalObviousness,
   normalizePieceState,
@@ -56,6 +57,7 @@ export interface HeadlessLeaderPort {
     side: Side,
     random: SeededRandom,
     ply: number,
+    refusedSans?: ReadonlySet<string>,
   ): HeadlessMoveChoice | undefined | Promise<HeadlessMoveChoice | undefined>;
   shouldOverride(random: SeededRandom, ply: number): boolean;
   onMatchEnd?(roster: readonly PieceState[], winScore: number): PieceState[];
@@ -101,6 +103,38 @@ function updatePiece(
   return roster.map((piece) =>
     piece.id === pieceId ? normalizePieceState(updater(piece)) : piece,
   );
+}
+
+function applyPlayerOverride(
+  roster: readonly PieceState[],
+  actor: PieceState,
+  ply: number,
+  san: string,
+  implicit: boolean,
+): {
+  readonly roster: PieceState[];
+  readonly events: readonly MatchEvent[];
+} {
+  const witnesses = roster.filter((piece) => piece.id !== actor.id);
+  const override = applyOverride(actor, witnesses, ply, san);
+  return {
+    roster: roster.map((piece) => {
+      if (piece.id === override.overriddenPiece.id) {
+        return normalizePieceState(override.overriddenPiece);
+      }
+      const witness = override.witnesses.find(
+        (candidate) => candidate.id === piece.id,
+      );
+      return witness === undefined ? piece : normalizePieceState(witness);
+    }),
+    events: [
+      {
+        ...override.event,
+        ...(implicit ? { implicit: true } : {}),
+      },
+      ...override.witnessEvents,
+    ],
+  };
 }
 
 function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
@@ -178,215 +212,268 @@ export async function runHeadlessMatch(
       continue;
     }
 
-    const choice = await leader.chooseMove(board, side, config.random, ply);
-    if (choice === undefined) break;
-
-    const actor = roster.find((piece) => piece.id === choice.moverId);
-    if (actor === undefined) {
-      ply += 1;
-      continue;
-    }
-
-    const features = extractMoveFeatures(board, choice.intent);
-    const moverInsights = await resolveMoverInsights(
-      config.engine,
-      board,
-      choice.intent,
-      actor,
-      insight,
-      roster,
-      features,
-      choice.leaderImpliedBias ?? 0,
-    );
-    const moveEval =
-      choice.moveEval ??
-      insightToEvaluation(
-        features,
-        moverInsights.actor,
-        moverInsights.leader,
-        choice.leaderImpliedBias ?? 0,
+    const refusedSans = new Set<string>();
+    const maxCandidates = board.legalMoves().length;
+    let lastRefused:
+      | {
+          readonly actor: PieceState;
+          readonly san: string;
+          readonly moveEval: CandidateMoveEvaluation;
+        }
+      | undefined;
+    let turnCompleted = false;
+    for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
+      const choice = await leader.chooseMove(
+        board,
+        side,
+        config.random,
+        ply,
+        refusedSans,
       );
-    const moveEvalByPiece = {
-      ...moverInsights.desertionMoveEvals,
-      [actor.id]: moveEval,
-    };
-    const auditScore = await resolveAuditMoveScore(
-      config.engine,
-      board,
-      choice.intent,
-      insight,
-    );
-    const bestAudit = Math.max(auditScore, moverInsights.actor.scoreCp);
-    const objectivelyGood =
-      choice.objectivelyGood ??
-      isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
-    const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
+      if (choice === undefined) break;
 
-    const desertionContext = desertionContextFor(actor, moveEval);
-    const desertionDecision = shouldDesert(actor, desertionContext, roster);
-    let outcome = evaluateMoveResponse(
-      actor,
-      moveEval,
-      roster,
-      desertionContext,
-    );
-
-    if (outcome.verdict === 'MORAL_REFUSAL') {
-      if (leader.shouldOverride(config.random, ply)) {
-        events.push({
-          t: 'OVERRIDE',
-          ply,
-          pieceId: actor.id,
-          san: choice.san,
-          pieceTrustDelta: -35,
-          traumaGain: 20,
-        });
-        roster = updatePiece(roster, actor.id, (piece) => ({
-          ...piece,
-          T_i: piece.T_i - 35,
-          B_i: Math.min(100, piece.B_i + 20),
-          credence: applyNeglectSignal(piece.credence),
-        }));
-        outcome = { ...outcome, verdict: 'COMPLIANT_EXECUTION' };
-      } else {
-        const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
-          t: 'REFUSAL',
-          ply,
-          pieceId: actor.id,
-          utility: outcome.utilityScore,
-          threshold: outcome.refusalThreshold,
-          perceivedValue: outcome.perceivedValue,
-          privateViewLoss: justifiedRefusal ? -moveEval.deltaV_board : 0,
-          obviousness: justifiedRefusal
-            ? justifiedRefusalObviousness(moveEval.deltaV_board, true)
-            : 0,
-          authorityLoss: 0,
-          justified: justifiedRefusal,
-        };
-        if (justifiedRefusal) {
-          justifiedRefusalObviousnessValues.push(
-            justifiedRefusalObviousness(moveEval.deltaV_board, true),
-          );
-          justifiedRefusalPrivateViewLosses.push(-moveEval.deltaV_board);
-        }
-        events.push(refusalEvent);
-        const authority = applyRefusalAuthorityCost(
-          roster,
-          actor.id,
-          moveEval.deltaV_board,
-          justifiedRefusal,
-        );
-        roster = authority.roster;
-        if (authority.authorityLoss > 0) {
-          events[events.length - 1] = {
-            ...refusalEvent,
-            authorityLoss: authority.authorityLoss,
-          };
-        }
-        if (objectivelyGood) {
-          refusedGoodMoves += 1;
-          roster = updatePiece(roster, actor.id, (piece) => ({
-            ...piece,
-            credence: applyNeglectSignal(piece.credence),
-          }));
-        }
-        ply += 1;
+      const actor = roster.find((piece) => piece.id === choice.moverId);
+      if (actor === undefined) {
+        refusedSans.add(choice.san);
         continue;
       }
-    }
 
-    if (outcome.verdict === 'DESERTION_MUTINY') {
-      if (auditScore >= 100) winningPositionDesertions += 1;
-      const cascade = applyDesertionWithCascade(
+      const features = extractMoveFeatures(board, choice.intent);
+      const moverInsights = await resolveMoverInsights(
+        config.engine,
+        board,
+        choice.intent,
+        actor,
+        insight,
         roster,
-        {
-          actor,
-          refusedMove: choice.san,
-          refusedMoveEval: moveEval,
-          moveEvalByPiece,
-          uStay: desertionDecision.uStay,
-          uDesert: desertionDecision.uDesert,
-        },
-        ply,
+        features,
+        choice.leaderImpliedBias ?? 0,
       );
-      events.push(...cascade.events);
-      for (const event of cascade.events) {
-        if (event.t === 'DESERTION') {
-          board.withdrawPiece(event.pieceId);
+      const moveEval =
+        choice.moveEval ??
+        insightToEvaluation(
+          features,
+          moverInsights.actor,
+          moverInsights.leader,
+          choice.leaderImpliedBias ?? 0,
+        );
+      const moveEvalByPiece = {
+        ...moverInsights.desertionMoveEvals,
+        [actor.id]: moveEval,
+      };
+      const auditScore = await resolveAuditMoveScore(
+        config.engine,
+        board,
+        choice.intent,
+        insight,
+      );
+      const bestAudit = Math.max(auditScore, moverInsights.actor.scoreCp);
+      const objectivelyGood =
+        choice.objectivelyGood ??
+        isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
+      const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
+
+      const desertionContext = desertionContextFor(actor, moveEval);
+      const desertionDecision = shouldDesert(actor, desertionContext, roster);
+      let outcome = evaluateMoveResponse(
+        actor,
+        moveEval,
+        roster,
+        desertionContext,
+      );
+
+      if (outcome.verdict === 'MORAL_REFUSAL') {
+        if (leader.shouldOverride(config.random, ply)) {
+          const override = applyPlayerOverride(
+            roster,
+            actor,
+            ply,
+            choice.san,
+            false,
+          );
+          events.push(...override.events);
+          roster = override.roster;
+          outcome = { ...outcome, verdict: 'COMPLIANT_EXECUTION' };
+        } else {
+          const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
+            t: 'REFUSAL',
+            ply,
+            pieceId: actor.id,
+            san: choice.san,
+            utility: outcome.utilityScore,
+            threshold: outcome.refusalThreshold,
+            perceivedValue: outcome.perceivedValue,
+            privateViewLoss: justifiedRefusal ? -moveEval.deltaV_board : 0,
+            obviousness: justifiedRefusal
+              ? justifiedRefusalObviousness(moveEval.deltaV_board, true)
+              : 0,
+            authorityLoss: 0,
+            justified: justifiedRefusal,
+          };
+          if (justifiedRefusal) {
+            justifiedRefusalObviousnessValues.push(
+              justifiedRefusalObviousness(moveEval.deltaV_board, true),
+            );
+            justifiedRefusalPrivateViewLosses.push(-moveEval.deltaV_board);
+          }
+          events.push(refusalEvent);
+          const authority = applyRefusalAuthorityCost(
+            roster,
+            actor.id,
+            moveEval.deltaV_board,
+            justifiedRefusal,
+          );
+          roster = authority.roster;
+          if (authority.authorityLoss > 0) {
+            events[events.length - 1] = {
+              ...refusalEvent,
+              authorityLoss: authority.authorityLoss,
+            };
+          }
+          if (objectivelyGood) {
+            refusedGoodMoves += 1;
+            roster = updatePiece(roster, actor.id, (piece) => ({
+              ...piece,
+              credence: applyNeglectSignal(piece.credence),
+            }));
+          }
+          lastRefused = { actor, san: choice.san, moveEval };
+          refusedSans.add(choice.san);
+          continue;
         }
       }
-      roster = cascade.roster;
-      if (cascade.rout) {
-        rout = true;
+
+      if (outcome.verdict === 'DESERTION_MUTINY') {
+        if (auditScore >= 100) winningPositionDesertions += 1;
+        const cascade = applyDesertionWithCascade(
+          roster,
+          {
+            actor,
+            refusedMove: choice.san,
+            refusedMoveEval: moveEval,
+            moveEvalByPiece,
+            uStay: desertionDecision.uStay,
+            uDesert: desertionDecision.uDesert,
+          },
+          ply,
+        );
+        events.push(...cascade.events);
+        for (const event of cascade.events) {
+          if (event.t === 'DESERTION') {
+            board.withdrawPiece(event.pieceId);
+          }
+        }
+        roster = cascade.roster;
+        if (cascade.rout) {
+          rout = true;
+          break;
+        }
+        ply += 1;
+        turnCompleted = true;
         break;
       }
+
+      const applied = board.applySan(choice.san);
+      events.push({
+        t: 'MOVE',
+        ply,
+        san: choice.san,
+        pieceId: actor.id,
+        verdict: outcome.verdict,
+      });
+      abilityObservations += 1;
+      roster = updatePiece(roster, actor.id, (piece) =>
+        applyPostMoveCredence(
+          { ...piece, engagementFactor: outcome.engagementFactor },
+          moveEval,
+          objectivelyGood,
+          abilityObservations,
+        ),
+      );
+
+      if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+        const fatalistic = applyFatalisticComplianceCosts(
+          roster,
+          actor.id,
+          ply,
+        );
+        roster = fatalistic.roster;
+        events.push(...fatalistic.events);
+      }
+
+      const attribution = attributeSacrifice(features, auditScore);
+      const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
+      const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
+      roster = sacrifice.roster;
+      events.push(...sacrifice.events);
+      if (
+        detectDeclinedSacrificeCostlySignal(
+          moverInsights.declinedSacrificeOpportunity,
+          choice.san,
+          auditScore,
+        )
+      ) {
+        const costly = applyDeclinedSacrificeSignal(
+          roster,
+          moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
+          ply,
+        );
+        roster = costly.roster;
+        events.push(...costly.events);
+      }
+
+      const kinds: Array<
+        'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
+      > = [];
+      if (detectKingEndangermentCostlySignal(features)) {
+        kinds.push('king_endangerment');
+      }
+      if (
+        applied.capture !== undefined &&
+        isAvengedCapture(lastFriendlyCapturePly, ply)
+      ) {
+        kinds.push('avenged_capture');
+        lastFriendlyCapturePly = undefined;
+      }
+      const costly = applyCostlySignalsToRoster(roster, kinds, ply);
+      roster = costly.roster;
+      events.push(...costly.events);
+
+      ply += 1;
+      turnCompleted = true;
+      break;
+    }
+
+    if (!turnCompleted && lastRefused !== undefined) {
+      const currentActor = roster.find(
+        (piece) => piece.id === lastRefused?.actor.id,
+      );
+      if (currentActor === undefined) {
+        throw new Error(
+          'Refused candidate disappeared before implicit override.',
+        );
+      }
+      const override = applyPlayerOverride(
+        roster,
+        currentActor,
+        ply,
+        lastRefused.san,
+        true,
+      );
+      events.push(...override.events);
+      roster = override.roster;
+      const applied = board.applySan(lastRefused.san);
+      events.push({
+        t: 'MOVE',
+        ply,
+        san: lastRefused.san,
+        pieceId: applied.moverId,
+        verdict: 'COMPLIANT_EXECUTION',
+      });
       ply += 1;
       continue;
     }
-
-    const applied = board.applySan(choice.san);
-    events.push({
-      t: 'MOVE',
-      ply,
-      san: choice.san,
-      pieceId: actor.id,
-      verdict: outcome.verdict,
-    });
-    abilityObservations += 1;
-    roster = updatePiece(roster, actor.id, (piece) =>
-      applyPostMoveCredence(
-        { ...piece, engagementFactor: outcome.engagementFactor },
-        moveEval,
-        objectivelyGood,
-        abilityObservations,
-      ),
-    );
-
-    if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
-      const fatalistic = applyFatalisticComplianceCosts(roster, actor.id, ply);
-      roster = fatalistic.roster;
-      events.push(...fatalistic.events);
-    }
-
-    const attribution = attributeSacrifice(features, auditScore);
-    const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
-    const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
-    roster = sacrifice.roster;
-    events.push(...sacrifice.events);
-    if (
-      detectDeclinedSacrificeCostlySignal(
-        moverInsights.declinedSacrificeOpportunity,
-        choice.san,
-        auditScore,
-      )
-    ) {
-      const costly = applyDeclinedSacrificeSignal(
-        roster,
-        moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
-        ply,
-      );
-      roster = costly.roster;
-      events.push(...costly.events);
-    }
-
-    const kinds: Array<
-      'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
-    > = [];
-    if (detectKingEndangermentCostlySignal(features)) {
-      kinds.push('king_endangerment');
-    }
-    if (
-      applied.capture !== undefined &&
-      isAvengedCapture(lastFriendlyCapturePly, ply)
-    ) {
-      kinds.push('avenged_capture');
-      lastFriendlyCapturePly = undefined;
-    }
-    const costly = applyCostlySignalsToRoster(roster, kinds, ply);
-    roster = costly.roster;
-    events.push(...costly.events);
-
-    ply += 1;
+    if (!turnCompleted) break;
   }
 
   const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);
