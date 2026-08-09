@@ -13,6 +13,7 @@ set -eu
 : "${DEPTH_CAP:?DEPTH_CAP is required}"
 : "${GIT_COMMIT_SHA:?GIT_COMMIT_SHA is required}"
 : "${IMAGE_DIGEST:?IMAGE_DIGEST is required}"
+: "${S3_BUCKET:?S3_BUCKET is required}"
 
 jq -n \
   --arg run_id "$RUN_ID" \
@@ -24,6 +25,7 @@ jq -n \
   --arg depth_cap "$DEPTH_CAP" \
   --arg git_commit "$GIT_COMMIT_SHA" \
   --arg image_digest "$IMAGE_DIGEST" \
+  --arg s3_bucket "$S3_BUCKET" \
   '{
     environment: [
       {name: "RUN_ID", value: $run_id},
@@ -34,7 +36,8 @@ jq -n \
       {name: "SEED", value: $seed},
       {name: "DEPTH_CAP", value: $depth_cap},
       {name: "GIT_COMMIT_SHA", value: $git_commit},
-      {name: "IMAGE_DIGEST", value: $image_digest}
+      {name: "IMAGE_DIGEST", value: $image_digest},
+      {name: "S3_BUCKET", value: $s3_bucket}
     ]
   }' >/tmp/kingsandi-container-overrides.json
 
