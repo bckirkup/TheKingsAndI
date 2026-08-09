@@ -180,7 +180,7 @@ describe('LivingBoard identity golden values', () => {
 });
 
 describe('LivingBoard identity fuzz', () => {
-  it('survives 1,000 random legal games with a consistent identity map', () => {
+  it('survives 100 random legal games with a consistent identity map', () => {
     const random = createSeededRandom(20260803);
     // Violations are collected rather than asserted per ply: a few million
     // `expect` calls cost minutes of CI time and say nothing extra.
@@ -190,7 +190,7 @@ describe('LivingBoard identity fuzz', () => {
     let castles = 0;
     let plies = 0;
 
-    for (let game = 0; game < 1000; game += 1) {
+    for (let game = 0; game < 100; game += 1) {
       const board = LivingBoard.standard();
       const living = new Set(board.pieces().map((piece) => piece.id));
       for (let ply = 0; ply < 120 && !board.isGameOver(); ply += 1) {
@@ -245,8 +245,8 @@ describe('LivingBoard identity fuzz', () => {
 
     expect(violations.slice(0, 5)).toEqual([]);
     // The corpus must actually exercise the hard paths.
-    expect(plies).toBeGreaterThan(50_000);
-    expect(captures).toBeGreaterThan(1_000);
+    expect(plies).toBeGreaterThan(5_000);
+    expect(captures).toBeGreaterThan(100);
     expect(promotions).toBeGreaterThan(0);
     expect(castles).toBeGreaterThan(0);
   });

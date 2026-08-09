@@ -322,15 +322,19 @@ gates; agents triage failures and interpret balance deltas.
 | Trigger | Workflow | Engine | What it proves |
 |---|---|---|---|
 | Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, fast Vitest goldens + sensitivity + coverage, 20-match smoke degeneracy bounds, Sonar |
-| Nightly cron (06:15 UTC) + manual dispatch | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Fake tests, then Lozza `--depth-cap=4` | Heavy trajectory/sweep Vitest tests, N≈100 tyrannical + supportive campaigns, and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
+| Manual `workflow_dispatch` (targeted) plus nightly cron for Lozza only | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Selected fake heavy test, or Lozza `--depth-cap=4` | On-demand trajectory, sweep, or large identity-fuzz tests; N≈100 tyrannical + supportive campaigns and an `OUTCOME_TRUST_LOSS_SCALE` sweep remain unattended calibration; metrics uploaded as artifacts |
 | Manual `workflow_dispatch` only | same nightly workflow, `engine=stockfish` | Stockfish uncapped | Explicit budgeted fidelity spot check (`stockfish_matches`, default 1). Never on the cron path |
 
 **PR path rules.** Keep Stockfish, campaign-scale balance measurements, and
 large-N calibration off PRs. `pnpm test` is the fast default and retains all
 load-bearing determinism anchors, reducer goldens, configuration goldens, and
 sensitivity probes. `pnpm test:heavy` contains the campaign trajectory-band
-measurement and coefficient sweep; these are behavior measurements rather than
-harness correctness checks and run in the nightly workflow.
+measurement, coefficient sweep, and large identity-fuzz corpus; these are
+purposeful behavior or measurement workloads rather than harness correctness
+checks. The `vitest-heavy` job is manual and accepts a target plus trajectory
+campaign length. The Lozza calibration job remains on the cron path because it
+produces unattended balance measurements; large parameter sweeps are intended
+for the Spot scale-out path rather than this workflow.
 
 The fixed campaign CSV transcript golden was retired because it pinned exact
 behavior while the model is deliberately changing; it moved in five consecutive

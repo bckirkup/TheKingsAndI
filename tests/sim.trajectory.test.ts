@@ -37,35 +37,36 @@ function handCheckMetric(match: number): MatchMetrics {
 
 describe('campaign trajectory bands', () => {
   it('uses four equal quartiles for 16 and 52 matches', async () => {
-    const intensive = (
-      await runCampaign({
-        matches: 16,
-        leader: 'supportive',
-        seed: 12,
-        engineKind: 'fake',
-      })
-    ).summary.trajectoryBands;
-    const nibelungen = (
-      await runCampaign({
-        matches: 52,
-        leader: 'supportive',
-        seed: 12,
-        engineKind: 'fake',
-      })
-    ).summary.trajectoryBands;
-
-    expect(intensive.map((band) => [band.startMatch, band.endMatch])).toEqual([
-      [1, 4],
-      [5, 8],
-      [9, 12],
-      [13, 16],
-    ]);
-    expect(nibelungen.map((band) => [band.startMatch, band.endMatch])).toEqual([
-      [1, 13],
-      [14, 26],
-      [27, 39],
-      [40, 52],
-    ]);
+    const requested = process.env.HEAVY_CAMPAIGN_MATCHES;
+    const matchCounts =
+      requested === undefined || requested === 'all'
+        ? [16, 52]
+        : requested.split(',').map((value) => Number(value));
+    for (const matches of matchCounts) {
+      const bands = (
+        await runCampaign({
+          matches,
+          leader: 'supportive',
+          seed: 12,
+          engineKind: 'fake',
+        })
+      ).summary.trajectoryBands;
+      expect(bands.map((band) => [band.startMatch, band.endMatch])).toEqual(
+        matches === 16
+          ? [
+              [1, 4],
+              [5, 8],
+              [9, 12],
+              [13, 16],
+            ]
+          : [
+              [1, 13],
+              [14, 26],
+              [27, 39],
+              [40, 52],
+            ],
+      );
+    }
   });
 
   it('assigns remainder matches to earlier quartiles', () => {

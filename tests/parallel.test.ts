@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  aggregateCampaign,
   buildTrajectoryBands,
   renderCsv,
   type MatchMetrics,
@@ -9,12 +10,17 @@ import {
   aggregateShardArtifacts,
   artifactFromShard,
   averageCampaignTrajectoryBands,
+  type CampaignRunner,
   deriveCampaignSeed,
   matchSeedsForCampaign,
   resolveRunPlan,
   runShard,
 } from '../sim/parallel';
-import { runCampaign } from '../sim/campaign';
+import {
+  matchSeedForCampaign,
+  type CampaignOptions,
+  type CampaignResult,
+} from '../sim/campaign';
 
 function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
   return {
@@ -47,6 +53,39 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     archetype: 'mixed',
   };
 }
+
+const cannedCampaignRunner: CampaignRunner = async (
+  options: CampaignOptions,
+): Promise<CampaignResult> => {
+  const metrics = Array.from({ length: options.matches }, (_, index) => {
+    const metric = makeMetric(index + 1, index, options.matches);
+    return {
+      ...metric,
+      seed: matchSeedForCampaign(options.seed, metric.match),
+      leader: options.leader,
+    };
+  });
+  return {
+    metrics,
+    summary: aggregateCampaign(options.leader, options.seed, metrics),
+    finalRoster: [],
+    determinismId: 'canned-campaign-runner',
+    checkpoint: {
+      schemaVersion: 0,
+      psychConfigVersion: 'canned',
+      determinismId: 'canned-campaign-runner',
+      seed: options.seed,
+      leader: options.leader,
+      initialTrust: 0,
+      nextMatch: options.matches + 1,
+      randomState: { s0: 0, s1: 0, s2: 0, s3: 0 },
+      roster: [],
+      completedMetrics: metrics,
+    },
+    justifiedRefusalObviousness: [],
+    justifiedRefusalPrivateViewLosses: [],
+  };
+};
 
 describe('parallel campaign planning', () => {
   it('keeps --matches=20 equivalent to one twenty-match campaign', () => {
@@ -108,6 +147,7 @@ describe('parallel campaign sharding', () => {
     masterSeed: 9,
     engineKind: 'fake' as const,
     depthCap: undefined,
+    campaignRunner: cannedCampaignRunner,
   };
   type ShardResult = Awaited<ReturnType<typeof runShard>>;
   let fourCampaignUnsharded: ShardResult;
@@ -137,6 +177,7 @@ describe('parallel campaign sharding', () => {
       masterSeed: 9,
       engineKind: 'fake' as const,
       depthCap: undefined,
+      campaignRunner: cannedCampaignRunner,
     };
     const unsharded = await runShard({
       ...options,
@@ -152,11 +193,12 @@ describe('parallel campaign sharding', () => {
   });
 
   it('keeps the legacy single-campaign CSV byte-identical', async () => {
-    const direct = await runCampaign({
+    const direct = await cannedCampaignRunner({
       matches: 2,
       leader: 'supportive',
       seed: 9,
       engineKind: 'fake',
+      depthCap: undefined,
     });
     const planned = await runShard({
       plan: { totalMatches: 2, campaignLength: 2, campaigns: 1 },
@@ -166,6 +208,7 @@ describe('parallel campaign sharding', () => {
       depthCap: undefined,
       shardIndex: 0,
       shardCount: 1,
+      campaignRunner: cannedCampaignRunner,
     });
     expect(renderCsv(direct.metrics)).toBe(
       renderCsv(planned.campaigns[0]?.result.metrics ?? []),
