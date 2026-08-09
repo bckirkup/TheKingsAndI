@@ -108,6 +108,8 @@ function bestAvailableResult(
   ladder: DepthLadder,
   requestedDepth: number,
 ): { readonly scoreCp: number; readonly pv: readonly string[] } | undefined {
+  // Lozza can terminate early when only one legal move is forced; that
+  // deterministic ladder rung is valid even when it is shallower than asked.
   for (let depth = requestedDepth; depth >= 1; depth -= 1) {
     const result = ladder.at.get(depth);
     if (result !== undefined) return result;
