@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   buildTrajectoryBands,
@@ -102,9 +102,37 @@ describe('parallel campaign planning', () => {
 });
 
 describe('parallel campaign sharding', () => {
+  const fourCampaignOptions = {
+    plan: { totalMatches: 8, campaignLength: 2, campaigns: 4 },
+    leader: 'supportive' as const,
+    masterSeed: 9,
+    engineKind: 'fake' as const,
+    depthCap: undefined,
+  };
+  type ShardResult = Awaited<ReturnType<typeof runShard>>;
+  let fourCampaignUnsharded: ShardResult;
+  let fourCampaignShards: ShardResult[];
+
+  beforeAll(async () => {
+    fourCampaignUnsharded = await runShard({
+      ...fourCampaignOptions,
+      shardIndex: 0,
+      shardCount: 1,
+    });
+    fourCampaignShards = await Promise.all(
+      [0, 1].map((shardIndex) =>
+        runShard({
+          ...fourCampaignOptions,
+          shardIndex,
+          shardCount: 2,
+        }),
+      ),
+    );
+  });
+
   it('keeps a one-shard run identical to the unsharded run', async () => {
     const options = {
-      plan: { totalMatches: 6, campaignLength: 3, campaigns: 2 },
+      plan: { totalMatches: 4, campaignLength: 2, campaigns: 2 },
       leader: 'supportive' as const,
       masterSeed: 9,
       engineKind: 'fake' as const,
@@ -125,13 +153,13 @@ describe('parallel campaign sharding', () => {
 
   it('keeps the legacy single-campaign CSV byte-identical', async () => {
     const direct = await runCampaign({
-      matches: 3,
+      matches: 2,
       leader: 'supportive',
       seed: 9,
       engineKind: 'fake',
     });
     const planned = await runShard({
-      plan: { totalMatches: 3, campaignLength: 3, campaigns: 1 },
+      plan: { totalMatches: 2, campaignLength: 2, campaigns: 1 },
       leader: 'supportive',
       masterSeed: 9,
       engineKind: 'fake',
@@ -145,82 +173,43 @@ describe('parallel campaign sharding', () => {
   });
 
   it('unions shards to the exact unsharded campaign set', async () => {
-    const options = {
-      plan: { totalMatches: 9, campaignLength: 3, campaigns: 3 },
-      leader: 'supportive' as const,
-      masterSeed: 9,
-      engineKind: 'fake' as const,
-      depthCap: undefined,
-    };
-    const unsharded = await runShard({
-      ...options,
-      shardIndex: 0,
-      shardCount: 1,
-    });
-    const shards = await Promise.all(
-      [0, 1, 2].map((shardIndex) =>
-        runShard({ ...options, shardIndex, shardCount: 3 }),
-      ),
+    const merged = aggregateShardArtifacts(
+      fourCampaignShards.map(artifactFromShard),
     );
-    const merged = aggregateShardArtifacts(shards.map(artifactFromShard));
-    expect(merged.campaigns).toEqual(artifactFromShard(unsharded).campaigns);
-    expect(merged.summary).toEqual(unsharded.summary);
+    expect(merged.campaigns).toEqual(
+      artifactFromShard(fourCampaignUnsharded).campaigns,
+    );
+    expect(merged.summary).toEqual(fourCampaignUnsharded.summary);
   });
 
   it('reproduces a campaign through its derived-seed shard', async () => {
-    const options = {
-      plan: { totalMatches: 9, campaignLength: 3, campaigns: 3 },
-      leader: 'supportive' as const,
-      masterSeed: 9,
-      engineKind: 'fake' as const,
-      depthCap: undefined,
-    };
-    const unsharded = await runShard({
-      ...options,
-      shardIndex: 0,
-      shardCount: 1,
-    });
-    const reproduced = await runShard({
-      ...options,
-      shardIndex: 1,
-      shardCount: 3,
-    });
-    expect(reproduced.campaigns).toEqual(
-      unsharded.campaigns.filter((campaign) => campaign.campaignIndex === 1),
+    const reproduced = fourCampaignShards[1]?.campaigns.find(
+      (campaign) => campaign.campaignIndex === 1,
     );
+    const expected = fourCampaignUnsharded.campaigns.find(
+      (campaign) => campaign.campaignIndex === 1,
+    );
+    expect(reproduced).toEqual(expected);
   });
 
   it('rejects incomplete, duplicate, and identity-mismatched shard sets', async () => {
-    const options = {
-      plan: { totalMatches: 6, campaignLength: 2, campaigns: 3 },
-      leader: 'supportive' as const,
-      masterSeed: 9,
-      engineKind: 'fake' as const,
-      depthCap: undefined,
-    };
-    const shards = await Promise.all(
-      [0, 1, 2].map((shardIndex) =>
-        runShard({ ...options, shardIndex, shardCount: 3 }),
-      ),
-    );
-    const artifacts = shards.map(artifactFromShard);
+    const artifacts = fourCampaignShards.map(artifactFromShard);
     const first = artifacts.at(0);
     const second = artifacts.at(1);
-    const third = artifacts.at(2);
-    if (first === undefined || second === undefined || third === undefined) {
-      throw new Error('Expected three shard artifacts.');
+    if (first === undefined || second === undefined) {
+      throw new Error('Expected two shard artifacts.');
     }
-    expect(() => aggregateShardArtifacts(artifacts.slice(0, 2))).toThrow(
+    expect(() => aggregateShardArtifacts(artifacts.slice(0, 1))).toThrow(
       /Incomplete shard set|Missing campaign indices/,
     );
-    expect(() =>
-      aggregateShardArtifacts([first, first, second, third]),
-    ).toThrow(/appears more than once|duplicate/);
+    expect(() => aggregateShardArtifacts([first, first, second])).toThrow(
+      /appears more than once|duplicate/,
+    );
     const mismatched = {
       ...second,
       manifest: { ...second.manifest, masterSeed: 10 },
     };
-    expect(() => aggregateShardArtifacts([first, mismatched, third])).toThrow(
+    expect(() => aggregateShardArtifacts([first, mismatched])).toThrow(
       /identity/,
     );
   });

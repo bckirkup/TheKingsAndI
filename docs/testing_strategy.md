@@ -321,12 +321,27 @@ gates; agents triage failures and interpret balance deltas.
 
 | Trigger | Workflow | Engine | What it proves |
 |---|---|---|---|
-| Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, Vitest goldens + sensitivity + coverage, 20-match smoke degeneracy bounds, Sonar |
-| Nightly cron (06:15 UTC) + manual dispatch | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Lozza `--depth-cap=4` | N≈100 tyrannical + supportive campaigns and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
+| Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, fast Vitest goldens + sensitivity + coverage, 20-match smoke degeneracy bounds, Sonar |
+| Nightly cron (06:15 UTC) + manual dispatch | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Fake tests, then Lozza `--depth-cap=4` | Heavy trajectory/sweep Vitest tests, N≈100 tyrannical + supportive campaigns, and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
 | Manual `workflow_dispatch` only | same nightly workflow, `engine=stockfish` | Stockfish uncapped | Explicit budgeted fidelity spot check (`stockfish_matches`, default 1). Never on the cron path |
 
-**PR path rules.** Keep Stockfish and large-N calibration off PRs. Fake-engine
-smoke is the CI substrate; its absolute rates are not calibration results.
+**PR path rules.** Keep Stockfish, campaign-scale balance measurements, and
+large-N calibration off PRs. `pnpm test` is the fast default and retains all
+load-bearing determinism anchors, reducer goldens, configuration goldens, and
+sensitivity probes. `pnpm test:heavy` contains the campaign trajectory-band
+measurement and coefficient sweep; these are behavior measurements rather than
+harness correctness checks and run in the nightly workflow.
+
+The fixed campaign CSV transcript golden was retired because it pinned exact
+behavior while the model is deliberately changing; it moved in five consecutive
+PRs for legitimate reasons and therefore repeated information already visible
+in each behavior-changing diff. Its determinism role is replaced by the
+cheaper same-seed self-consistency and checkpoint/resume equivalence tests.
+This does **not** remove configuration coverage: the knob-level golden and
+sensitivity tests in `tests/psychology.invariants.test.ts` remain in the fast
+tier, as required by `AGENTS.md` rule 6. The distinction is intentional:
+campaign behavior is measured nightly, while reducer/configuration correctness
+and reproducibility remain per-PR gates.
 
 **Developer machine.** Targeted Vitest while iterating; full local gate once
 before push. For status questions, read committed numbers in

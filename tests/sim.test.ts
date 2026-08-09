@@ -17,44 +17,12 @@ import {
   DEGENERACY_CONFIG,
   detectDegeneracy,
 } from '../sim/degeneracy';
-import {
-  aggregateCampaign,
-  buildTrajectoryBands,
-  type MatchMetrics,
-} from '../sim/metrics';
+import { aggregateCampaign, type MatchMetrics } from '../sim/metrics';
 
-describe('simulation harness golden output', () => {
-  it('renders a fixed CSV for a fixed configuration', async () => {
-    const csv = renderCsv(
-      await runSimulation({
-        matches: 2,
-        leader: 'tyrannical',
-        seed: 7,
-        engineKind: 'fake',
-      }),
-    );
-    const legacyCsv = csv
-      .split('\n')
-      .map((line) =>
-        line.includes(',') ? line.split(',').slice(0, 21).join(',') : line,
-      )
-      .join('\n');
-    expect(legacyCsv).toBe(
-      [
-        'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype',
-        '1,1000004,tyrannical,18,1,5,3,15,15,0,0.0556,0.1667,0.0000,0.2778,-10.00,-67.00,-20.00,15.00,0,1,tyrant',
-        '2,2000001,tyrannical,156,10,62,11,0,0,7,0.0641,0.0705,0.7000,0.3974,-13.56,-38.53,-18.75,-0.33,0,0,tyrant',
-        '',
-      ].join('\n'),
-    );
-    expect(csv).toContain(
-      ',mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size',
-    );
-  });
-
+describe('simulation harness determinism', () => {
   it('is byte-identical when repeated with the same seed', async () => {
     const options = {
-      matches: 4,
+      matches: 2,
       leader: 'supportive' as const,
       seed: 12,
       engineKind: 'fake' as const,
@@ -70,14 +38,14 @@ describe('simulation harness golden output', () => {
       seed: 12,
       engineKind: 'fake' as const,
     };
-    const straight = await runCampaign({ ...options, matches: 6 });
-    const firstSegment = await runCampaign({ ...options, matches: 3 });
+    const straight = await runCampaign({ ...options, matches: 2 });
+    const firstSegment = await runCampaign({ ...options, matches: 1 });
     const checkpoint = parseCampaignCheckpoint(
       JSON.parse(canonicalJson(firstSegment.checkpoint)) as unknown,
     );
     const resumed = await runCampaign({
       ...options,
-      matches: 6,
+      matches: 2,
       checkpoint,
     });
 
@@ -487,53 +455,3 @@ function handCheckMetric(match: number): MatchMetrics {
     archetype: 'caretaker',
   };
 }
-
-describe('campaign trajectory bands', () => {
-  it('uses four equal quartiles for 16 and 52 matches', async () => {
-    const intensive = (
-      await runCampaign({
-        matches: 16,
-        leader: 'supportive',
-        seed: 12,
-        engineKind: 'fake',
-      })
-    ).summary.trajectoryBands;
-    const nibelungen = (
-      await runCampaign({
-        matches: 52,
-        leader: 'supportive',
-        seed: 12,
-        engineKind: 'fake',
-      })
-    ).summary.trajectoryBands;
-
-    expect(intensive.map((band) => [band.startMatch, band.endMatch])).toEqual([
-      [1, 4],
-      [5, 8],
-      [9, 12],
-      [13, 16],
-    ]);
-    expect(nibelungen.map((band) => [band.startMatch, band.endMatch])).toEqual([
-      [1, 13],
-      [14, 26],
-      [27, 39],
-      [40, 52],
-    ]);
-  });
-
-  it('assigns remainder matches to earlier quartiles', () => {
-    const bands = buildTrajectoryBands([1, 2, 3, 4, 5].map(handCheckMetric));
-
-    expect(bands.map((band) => [band.startMatch, band.endMatch])).toEqual([
-      [1, 2],
-      [3, 3],
-      [4, 4],
-      [5, 5],
-    ]);
-    expect(bands[0]?.meanTauAbil).toBe(16);
-    expect(bands[0]?.meanTauBenev).toBe(32);
-    expect(bands[0]?.meanSurvivingRosterSize).toBe(1.5);
-    expect(bands[0]?.desertionRate).toBe(0.5);
-    expect(bands[0]?.routRate).toBe(0.5);
-  });
-});
