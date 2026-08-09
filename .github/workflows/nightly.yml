@@ -30,6 +30,27 @@ on:
         description: Run a one-knob Lozza coefficient sweep (skipped for stockfish).
         type: boolean
         default: true
+      vitest_target:
+        description: Heavy Vitest target to run on demand.
+        type: choice
+        options:
+          - trajectory
+          - sweep
+          - chess-fuzz
+          - all
+        default: trajectory
+      campaign_matches:
+        description: Trajectory campaign length (all, 16, or 52).
+        type: choice
+        options:
+          - all
+          - '16'
+          - '52'
+        default: all
+      run_vitest:
+        description: Run the selected heavy Vitest target.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -117,6 +138,9 @@ jobs:
 
   vitest-heavy:
     name: Heavy Vitest balance tests
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_vitest == true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -127,7 +151,30 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:heavy
+      - name: Run selected heavy Vitest target
+        env:
+          VITEST_TARGET: ${{ inputs.vitest_target }}
+          CAMPAIGN_MATCHES: ${{ inputs.campaign_matches }}
+        run: |
+          case "$VITEST_TARGET" in
+            trajectory)
+              HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" \
+                pnpm exec vitest run tests/sim.trajectory.test.ts
+              ;;
+            sweep)
+              pnpm exec vitest run tests/sim.sweep.test.ts
+              ;;
+            chess-fuzz)
+              pnpm exec vitest run tests/chess.board.fuzz.test.ts
+              ;;
+            all)
+              HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" pnpm test:heavy
+              ;;
+            *)
+              echo "Unknown heavy Vitest target: $VITEST_TARGET" >&2
+              exit 1
+              ;;
+          esac
 
   stockfish-spot:
     name: Stockfish spot check (dispatch only)

@@ -5,6 +5,7 @@ import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
 
 import {
   runCampaign,
+  type CampaignOptions,
   type CampaignResult,
   type CampaignCheckpoint,
   matchSeedForCampaign,
@@ -123,7 +124,13 @@ export interface ShardOptions {
   readonly shardIndex: number;
   readonly shardCount: number;
   readonly checkpoint?: CampaignCheckpoint;
+  readonly campaignRunner?: CampaignRunner;
+  readonly campaignRunnerDeterminismId?: string;
 }
+
+export type CampaignRunner = (
+  options: CampaignOptions,
+) => Promise<CampaignResult>;
 
 export interface ShardManifest {
   readonly manifestVersion: number;
@@ -228,7 +235,11 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     options.shardIndex,
     options.shardCount,
   );
-  const engine = await createSimEngine(options.engineKind);
+  const campaignRunner = options.campaignRunner ?? runCampaign;
+  const engine =
+    options.campaignRunner === undefined
+      ? await createSimEngine(options.engineKind)
+      : undefined;
   try {
     const campaigns: ShardCampaignResult[] = [];
     for (const campaignIndex of indices) {
@@ -236,11 +247,11 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
         options.plan.campaigns === 1
           ? options.masterSeed
           : deriveCampaignSeed(options.masterSeed, campaignIndex);
-      const result = await runCampaign({
+      const result = await campaignRunner({
         matches: options.plan.campaignLength,
         leader: options.leader,
         seed: campaignSeed,
-        engine,
+        ...(engine === undefined ? {} : { engine }),
         depthCap: options.depthCap,
         ...(options.checkpoint === undefined
           ? {}
@@ -250,7 +261,12 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     }
     const allMetrics = campaigns.flatMap((campaign) => campaign.result.metrics);
     const determinismId =
-      campaigns[0]?.result.determinismId ?? engine.determinismId;
+      campaigns[0]?.result.determinismId ??
+      engine?.determinismId ??
+      options.campaignRunnerDeterminismId;
+    if (determinismId === undefined) {
+      throw new Error('Campaign runner did not provide a determinism ID.');
+    }
     const manifest: ShardManifest = {
       manifestVersion: PARALLEL_MANIFEST_VERSION,
       schemaVersion: SCHEMA_VERSION,
@@ -278,7 +294,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       ),
     };
   } finally {
-    await disposeSimEngine(options.engineKind);
+    if (engine !== undefined) {
+      await disposeSimEngine(options.engineKind);
+    }
   }
 }
 
