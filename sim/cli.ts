@@ -284,11 +284,12 @@ async function main(): Promise<void> {
     await writeFile(options.out, csv, 'utf8');
   }
   if (options.checkpointOut !== undefined) {
-    await mkdir(dirname(options.checkpointOut), { recursive: true });
-    await writeAtomicCheckpoint(
-      options.checkpointOut,
-      result.campaigns[0]?.result.checkpoint as CampaignCheckpoint,
-    );
+    const checkpointResult = result.campaigns[0]?.result.checkpoint;
+    if (checkpointResult !== undefined) {
+      // Boundary callbacks already wrote this checkpoint; retain the final
+      // write for zero-match runs and belt-and-braces completion semantics.
+      await writeAtomicCheckpoint(options.checkpointOut, checkpointResult);
+    }
   }
   const findings = detectDegeneracy(
     options.leader,

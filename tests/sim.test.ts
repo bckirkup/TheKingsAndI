@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { readFile, unlink, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import { LivingBoard } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
@@ -102,6 +105,53 @@ describe('simulation harness determinism', () => {
       ]);
     }
   });
+
+  it('flushes a completed-match checkpoint before exiting on SIGTERM', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-'));
+    const checkpointPath = join(directory, 'checkpoint.json');
+    const child = spawn(
+      process.execPath,
+      [
+        resolve('node_modules/tsx/dist/cli.mjs'),
+        'sim/cli.ts',
+        '--matches=3',
+        '--leader=supportive',
+        '--seed=5',
+        '--engine=fake',
+        `--checkpoint-out=${checkpointPath}`,
+      ],
+      { cwd: process.cwd(), stdio: 'ignore' },
+    );
+    try {
+      let checkpoint: CampaignCheckpoint | undefined;
+      const deadline = Date.now() + 120_000;
+      while (checkpoint === undefined && Date.now() < deadline) {
+        try {
+          checkpoint = parseCampaignCheckpoint(
+            JSON.parse(await readFile(checkpointPath, 'utf8')) as unknown,
+          );
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      }
+      expect(checkpoint).toBeDefined();
+      child.kill('SIGTERM');
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', (code) => resolve(code ?? -1));
+      });
+      expect(exitCode).not.toBe(0);
+
+      const finalCheckpoint = parseCampaignCheckpoint(
+        JSON.parse(await readFile(checkpointPath, 'utf8')) as unknown,
+      );
+      expect(finalCheckpoint.nextMatch).toBeGreaterThan(1);
+      expect(finalCheckpoint.nextMatch).toBeLessThan(3);
+    } finally {
+      child.kill('SIGKILL');
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 130_000);
 
   it.each([
     ['schemaVersion', 'schemaVersion mismatch'],
