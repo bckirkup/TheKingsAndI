@@ -72,6 +72,7 @@ export interface CandidateMoveEvaluation {
 export type MoveResponseVerdict =
   | 'HEROIC_EXECUTION'
   | 'COMPLIANT_EXECUTION'
+  | 'FATALISTIC_COMPLIANCE'
   | 'QUIET_QUITTING'
   | 'MORAL_REFUSAL'
   | 'DESERTION_MUTINY';
@@ -256,6 +257,17 @@ export function evaluateMoveResponse(
 
   // 3. Check for Quiet Quitting / Malicious Compliance Stage
   if (utilityScore < 0 || actor.T_i <= 0) {
+    // 3b. Fatalistic compliance (ADR 0024) — full engagement when capture risk
+    // is high. Ability-credence gate lives in src/psychology/verdict.ts.
+    if (moveEval.P_captured >= 0.55) {
+      return {
+        verdict: 'FATALISTIC_COMPLIANCE',
+        utilityScore,
+        refusalThreshold,
+        effectiveSearchDepth: calculateEngineSearchDepth(actor.E_i, 1.0),
+        engagementFactor: 1.0
+      };
+    }
     const engagement = 0.2;
     return {
       verdict: 'QUIET_QUITTING',

@@ -3,6 +3,7 @@ import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
 import type { EnginePort } from '../engine/types';
 import {
+  applyFatalisticComplianceCosts,
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   evaluateMoveResponse,
@@ -14,12 +15,15 @@ import {
   type PieceState,
 } from '../psychology';
 
+import { CAMPAIGN_CONFIG } from './campaignConfig';
+import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
 import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import {
   createInsightRoundHandle,
   resolveAuditMoveScore,
   resolveMoverInsights,
 } from './insight';
+import type { OpponentArchetype } from './leaderPolicy';
 import {
   applyCostlySignalsToRoster,
   applyDeclinedSacrificeSignal,
@@ -34,6 +38,7 @@ import {
   isAvengedCapture,
 } from './psychologyHooks';
 import { scoreMatchOutcome } from './outcomeScore';
+import { createStartingRoster } from './roster';
 
 export interface HeadlessMoveChoice {
   readonly moverId: string;
@@ -63,15 +68,19 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  readonly initialEnemyRoster?: readonly PieceState[];
   readonly engine: EnginePort;
+  readonly opponentArchetype?: OpponentArchetype;
 }
 
 export interface HeadlessMatchResult {
   readonly events: readonly MatchEvent[];
   readonly roster: readonly PieceState[];
+  readonly enemyRoster: readonly PieceState[];
   readonly plies: number;
   readonly winScore: number;
   readonly rout: boolean;
+  readonly enemyRout: boolean;
   readonly refusedGoodMoves: number;
   /** Initial desertions whose true post-move audit score was materially winning. */
   readonly winningPositionDesertions: number;
@@ -80,6 +89,8 @@ export interface HeadlessMatchResult {
   /** Raw absolute private-view losses for accepted justified refusals. */
   readonly justifiedRefusalPrivateViewLosses: readonly number[];
   readonly determinismId: string;
+  /** Observable enemy behaviours — never private gauges (ADR 0025). */
+  readonly enemyObservableBehaviours: readonly string[];
 }
 
 function updatePiece(
@@ -101,16 +112,25 @@ export async function runHeadlessMatch(
 ): Promise<HeadlessMatchResult> {
   const board = LivingBoard.standard();
   let roster = config.initialRoster.map(normalizePieceState);
+  const enemySide = config.playerSide === 'w' ? 'b' : 'w';
+  let enemyRoster = trackEnemyIdentities(
+    config.initialEnemyRoster?.map(normalizePieceState) ??
+      createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
+    CAMPAIGN_CONFIG.ENEMY_TRACKED_IDENTITIES,
+  );
   const events: MatchEvent[] = [];
   let ply = 1;
   let rout = false;
+  let enemyRout = false;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
   const justifiedRefusalPrivateViewLosses: number[] = [];
+  const enemyObservableBehaviours: string[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
   let abilityObservations = 0;
+  const opponentArchetype = config.opponentArchetype ?? 'random';
 
   while (ply <= config.maxPlies) {
     if (board.isGameOver()) break;
@@ -118,28 +138,48 @@ export async function runHeadlessMatch(
     const leader = side === config.playerSide ? config.leader : config.opponent;
     const playerActiveIds = activePlayerPieceIds(board, config.playerSide);
     roster = roster.filter((piece) => playerActiveIds.includes(piece.id));
+    enemyRoster = enemyRoster.filter((piece) =>
+      board.piecesOf(enemySide).some((onBoard) => onBoard.id === piece.id),
+    );
 
     if (playerActiveIds.length <= 1) {
       rout = true;
       break;
     }
 
-    const choice = await leader.chooseMove(board, side, config.random, ply);
-    if (choice === undefined) break;
-
     if (side !== config.playerSide) {
       const beforeIds = new Set(playerActiveIds);
-      board.applySan(choice.san);
+      const enemyTurn = await applyEnemyTurn({
+        board,
+        enemyRoster,
+        enemySide,
+        random: config.random,
+        archetype: opponentArchetype,
+        ply,
+        engine: config.engine,
+        insight,
+        overrideRefusals: opponentArchetype === 'tyrannical',
+      });
+      enemyRoster = enemyTurn.enemyRoster;
+      events.push(...enemyTurn.events);
+      enemyObservableBehaviours.push(...enemyTurn.observableBehaviours);
+      ply = enemyTurn.ply;
+      if (enemyTurn.enemyRout) {
+        enemyRout = true;
+        break;
+      }
       const afterIds = new Set(activePlayerPieceIds(board, config.playerSide));
       for (const id of beforeIds) {
         if (!afterIds.has(id)) {
-          lastFriendlyCapturePly = ply;
+          lastFriendlyCapturePly = ply - 1;
           break;
         }
       }
-      ply += 1;
       continue;
     }
+
+    const choice = await leader.chooseMove(board, side, config.random, ply);
+    if (choice === undefined) break;
 
     const actor = roster.find((piece) => piece.id === choice.moverId);
     if (actor === undefined) {
@@ -302,6 +342,12 @@ export async function runHeadlessMatch(
       ),
     );
 
+    if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+      const fatalistic = applyFatalisticComplianceCosts(roster, actor.id, ply);
+      roster = fatalistic.roster;
+      events.push(...fatalistic.events);
+    }
+
     const attribution = attributeSacrifice(features, auditScore);
     const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
     const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
@@ -343,7 +389,12 @@ export async function runHeadlessMatch(
     ply += 1;
   }
 
-  const winScore = scoreMatchOutcome(board, config.playerSide, rout);
+  const winScore = scoreMatchOutcome(
+    board,
+    config.playerSide,
+    rout,
+    enemyRout,
+  );
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);
@@ -351,9 +402,11 @@ export async function runHeadlessMatch(
   return {
     events: Object.freeze(events),
     roster: roster.map(normalizePieceState),
+    enemyRoster: enemyRoster.map(normalizePieceState),
     plies: ply - 1,
     winScore,
     rout,
+    enemyRout,
     refusedGoodMoves,
     winningPositionDesertions,
     justifiedRefusalObviousness: Object.freeze(
@@ -363,5 +416,6 @@ export async function runHeadlessMatch(
       justifiedRefusalPrivateViewLosses,
     ),
     determinismId: config.engine.determinismId,
+    enemyObservableBehaviours: Object.freeze(enemyObservableBehaviours),
   };
 }

@@ -84,7 +84,7 @@ export {
   calculateMoveUtility,
   calculateRefusalThreshold,
 } from './utility';
-export { evaluateDesertionCascade, evaluateMoveResponse } from './verdict';
+export { evaluateDesertionCascade, evaluateMoveResponse, applyFatalisticComplianceCosts, isFatalisticCompliance } from './verdict';
 export {
   appraiseDesertionWitness,
   isWitnessedSacrifice,
