@@ -27,8 +27,10 @@
     "dexie": "^4.4.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "stockfish": "18.0.8",
     "zustand": "^5.0.14"
+  },
+  "optionalDependencies": {
+    "stockfish": "18.0.8"
   },
   "devDependencies": {
     "@types/node": "22.10.5",
