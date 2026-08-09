@@ -3,10 +3,13 @@ set -eu
 
 : "${RUN_ID:?RUN_ID is required}"
 : "${CAMPAIGN_LENGTH:?CAMPAIGN_LENGTH is required}"
+: "${CAMPAIGNS:?CAMPAIGNS is required}"
 : "${SHARD_COUNT:?SHARD_COUNT is required}"
 : "${LEADER:?LEADER is required}"
 : "${SEED:?SEED is required}"
 : "${DEPTH_CAP:?DEPTH_CAP is required}"
+: "${GIT_COMMIT_SHA:?GIT_COMMIT_SHA is required}"
+: "${IMAGE_DIGEST:?IMAGE_DIGEST is required}"
 
 shard_index="${AWS_BATCH_JOB_ARRAY_INDEX:-0}"
 engine="${ENGINE:-lozza}"
@@ -18,6 +21,9 @@ esac
 case "$SHARD_COUNT" in
   ''|*[!0-9]*|0) echo 'SHARD_COUNT must be a positive integer.' >&2; exit 2 ;;
 esac
+case "$CAMPAIGNS" in
+  ''|*[!0-9]*|0) echo 'CAMPAIGNS must be a positive integer.' >&2; exit 2 ;;
+esac
 case "$CAMPAIGN_LENGTH" in
   ''|*[!0-9]*|0) echo 'CAMPAIGN_LENGTH must be a positive integer.' >&2; exit 2 ;;
 esac
@@ -27,6 +33,10 @@ esac
 
 if [ "$shard_index" -ge "$SHARD_COUNT" ]; then
   echo 'AWS_BATCH_JOB_ARRAY_INDEX must be less than SHARD_COUNT.' >&2
+  exit 2
+fi
+if [ "$CAMPAIGNS" -ne "$SHARD_COUNT" ]; then
+  echo 'CAMPAIGNS must equal SHARD_COUNT because checkpoint resume requires a single campaign per worker.' >&2
   exit 2
 fi
 
@@ -53,25 +63,6 @@ if [ -n "${S3_BUCKET:-}" ]; then
 else
   s3_root=
   echo 'S3_BUCKET is unset; running without AWS access.'
-fi
-
-node >"$manifest_path.tmp" <<'NODE'
-const manifest = {
-  runId: process.env.RUN_ID,
-  campaignLength: Number(process.env.CAMPAIGN_LENGTH),
-  campaignCount: Number(process.env.SHARD_COUNT),
-  leader: process.env.LEADER,
-  masterSeed: Number(process.env.SEED),
-  depthCap: Number(process.env.DEPTH_CAP),
-  engine: process.env.ENGINE || 'lozza',
-  shardCount: Number(process.env.SHARD_COUNT),
-};
-process.stdout.write(`${JSON.stringify(manifest)}\n`);
-NODE
-mv "$manifest_path.tmp" "$manifest_path"
-
-if [ -n "$s3_root" ]; then
-  aws s3 cp "$manifest_path" "$s3_root/campaigns/$RUN_ID/manifest.json"
 fi
 
 upload_checkpoint() {
@@ -110,7 +101,7 @@ trap forward_signal TERM INT
 
 set -- pnpm sim \
   "--campaign-length=$CAMPAIGN_LENGTH" \
-  "--campaigns=$SHARD_COUNT" \
+  "--campaigns=$CAMPAIGNS" \
   "--leader=$LEADER" \
   "--seed=$SEED" \
   "--engine=$engine" \
@@ -156,9 +147,55 @@ if [ "$sim_status" -ne 0 ]; then
   exit "$sim_status"
 fi
 
+write_manifest() {
+  determinism_id="$(node - "$artifact_path" <<'NODE'
+const fs = require('node:fs');
+const artifactPath = process.argv[2];
+const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+const determinismId = artifact?.manifest?.determinismId;
+if (typeof determinismId !== 'string' || determinismId.length === 0) {
+  throw new Error('Shard artifact did not report a determinism ID.');
+}
+process.stdout.write(determinismId);
+NODE
+)"
+  export DETERMINISM_ID="$determinism_id"
+  node >"$manifest_path.tmp" <<'NODE'
+const required = ['RUN_ID', 'CAMPAIGN_LENGTH', 'CAMPAIGNS', 'LEADER', 'SEED',
+  'DEPTH_CAP', 'GIT_COMMIT_SHA', 'IMAGE_DIGEST', 'DETERMINISM_ID'];
+for (const name of required) {
+  if (!process.env[name]) {
+    throw new Error(`Missing manifest provenance: ${name}`);
+  }
+}
+const manifest = {
+  runId: process.env.RUN_ID,
+  campaignLength: Number(process.env.CAMPAIGN_LENGTH),
+  campaignCount: Number(process.env.CAMPAIGNS),
+  leader: process.env.LEADER,
+  masterSeed: Number(process.env.SEED),
+  depthCap: Number(process.env.DEPTH_CAP),
+  engine: process.env.ENGINE || 'lozza',
+  shardCount: Number(process.env.SHARD_COUNT),
+  determinismId: process.env.DETERMINISM_ID,
+  gitCommitSha: process.env.GIT_COMMIT_SHA,
+  imageDigest: process.env.IMAGE_DIGEST,
+};
+process.stdout.write(`${JSON.stringify(manifest)}\n`);
+NODE
+  mv "$manifest_path.tmp" "$manifest_path"
+}
+
+if [ "$shard_index" -eq 0 ]; then
+  write_manifest
+fi
+
 if [ -n "$s3_root" ]; then
   aws s3 cp "$csv_path" "$s3_root/campaigns/$RUN_ID/shards/shard-$shard_index.csv"
   aws s3 cp "$artifact_path" "$s3_root/campaigns/$RUN_ID/shards/shard-$shard_index.json"
+  if [ "$shard_index" -eq 0 ]; then
+    aws s3 cp "$manifest_path" "$s3_root/campaigns/$RUN_ID/manifest.json"
+  fi
 fi
 
 echo "Shard $shard_index completed successfully."

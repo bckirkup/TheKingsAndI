@@ -12,6 +12,7 @@ import {
   renderCsv,
   runCampaign,
   runSimulation,
+  assertCheckpointShardAssignment,
   shouldRunSmokeBounds,
   writeAtomicCheckpoint,
 } from '../sim/cli';
@@ -324,6 +325,25 @@ describe('simulation harness argument parsing', () => {
       checkpointOut: 'checkpoint.json',
       resume: 'prior.json',
     });
+  });
+
+  it('requires one assigned campaign when resuming a checkpoint', () => {
+    expect(() =>
+      assertCheckpointShardAssignment({
+        campaigns: 4,
+        shardIndex: 0,
+        shardCount: 2,
+      }),
+    ).toThrow(
+      'Checkpoint resume requires a single campaign assigned to this shard.',
+    );
+    expect(() =>
+      assertCheckpointShardAssignment({
+        campaigns: 4,
+        shardIndex: 0,
+        shardCount: 4,
+      }),
+    ).not.toThrow();
   });
 
   it('rejects a malformed checkpoint roster with its index', async () => {
