@@ -1,4 +1,9 @@
-import { extractMoveFeatures, LivingBoard, type MoveIntent } from '../chess';
+import {
+  extractMoveFeatures,
+  LivingBoard,
+  type MoveFeatures,
+  type MoveIntent,
+} from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
 import type { EnginePort } from '../engine/types';
@@ -12,6 +17,7 @@ import {
   normalizePieceState,
   shouldDesert,
   type CandidateMoveEvaluation,
+  type MoveDecisionOutcome,
   type MatchEvent,
   type PieceState,
 } from '../psychology';
@@ -23,6 +29,7 @@ import {
   createInsightRoundHandle,
   resolveAuditMoveScore,
   resolveMoverInsights,
+  type MoverInsights,
 } from './insight';
 import type { OpponentArchetype } from './leaderPolicy';
 import {
@@ -141,6 +148,112 @@ function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
   return board.piecesOf(playerSide).map((piece) => piece.id);
 }
 
+function applyPlayerMoveConsequences(input: {
+  readonly board: LivingBoard;
+  readonly actor: PieceState;
+  readonly choice: HeadlessMoveChoice;
+  readonly outcome: MoveDecisionOutcome;
+  readonly moveEval: CandidateMoveEvaluation;
+  readonly moverInsights: MoverInsights;
+  readonly features: MoveFeatures;
+  readonly auditScore: number;
+  readonly objectivelyGood: boolean;
+  readonly ply: number;
+  readonly roster: PieceState[];
+  readonly events: MatchEvent[];
+  readonly abilityObservations: number;
+  readonly lastFriendlyCapturePly: number | undefined;
+}): {
+  readonly roster: PieceState[];
+  readonly abilityObservations: number;
+  readonly lastFriendlyCapturePly: number | undefined;
+  readonly ply: number;
+} {
+  const {
+    board,
+    actor,
+    choice,
+    outcome,
+    moveEval,
+    moverInsights,
+    features,
+    auditScore,
+    objectivelyGood,
+    ply,
+    events,
+  } = input;
+  let roster = input.roster;
+  let lastFriendlyCapturePly = input.lastFriendlyCapturePly;
+  const applied = board.applySan(choice.san);
+  events.push({
+    t: 'MOVE',
+    ply,
+    san: choice.san,
+    pieceId: actor.id,
+    verdict: outcome.verdict,
+  });
+  const abilityObservations = input.abilityObservations + 1;
+  roster = updatePiece(roster, actor.id, (piece) =>
+    applyPostMoveCredence(
+      { ...piece, engagementFactor: outcome.engagementFactor },
+      moveEval,
+      objectivelyGood,
+      abilityObservations,
+    ),
+  );
+
+  if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+    const fatalistic = applyFatalisticComplianceCosts(roster, actor.id, ply);
+    roster = fatalistic.roster;
+    events.push(...fatalistic.events);
+  }
+
+  const attribution = attributeSacrifice(features, auditScore);
+  const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
+  const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
+  roster = sacrifice.roster;
+  events.push(...sacrifice.events);
+  if (
+    detectDeclinedSacrificeCostlySignal(
+      moverInsights.declinedSacrificeOpportunity,
+      choice.san,
+      auditScore,
+    )
+  ) {
+    const costly = applyDeclinedSacrificeSignal(
+      roster,
+      moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
+      ply,
+    );
+    roster = costly.roster;
+    events.push(...costly.events);
+  }
+
+  const kinds: Array<
+    'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
+  > = [];
+  if (detectKingEndangermentCostlySignal(features)) {
+    kinds.push('king_endangerment');
+  }
+  if (
+    applied.capture !== undefined &&
+    isAvengedCapture(lastFriendlyCapturePly, ply)
+  ) {
+    kinds.push('avenged_capture');
+    lastFriendlyCapturePly = undefined;
+  }
+  const costly = applyCostlySignalsToRoster(roster, kinds, ply);
+  roster = costly.roster;
+  events.push(...costly.events);
+
+  return {
+    roster,
+    abilityObservations,
+    lastFriendlyCapturePly,
+    ply: ply + 1,
+  };
+}
+
 export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
 ): Promise<HeadlessMatchResult> {
@@ -214,11 +327,17 @@ export async function runHeadlessMatch(
 
     const refusedSans = new Set<string>();
     const maxCandidates = board.legalMoves().length;
-    let lastRefused:
+    let firstRefused:
       | {
           readonly actor: PieceState;
+          readonly choice: HeadlessMoveChoice;
+          readonly features: MoveFeatures;
+          readonly moverInsights: MoverInsights;
           readonly san: string;
           readonly moveEval: CandidateMoveEvaluation;
+          readonly auditScore: number;
+          readonly objectivelyGood: boolean;
+          readonly outcome: MoveDecisionOutcome;
         }
       | undefined;
     let turnCompleted = false;
@@ -337,7 +456,17 @@ export async function runHeadlessMatch(
               credence: applyNeglectSignal(piece.credence),
             }));
           }
-          lastRefused = { actor, san: choice.san, moveEval };
+          firstRefused ??= {
+            actor,
+            choice,
+            features,
+            moverInsights,
+            san: choice.san,
+            moveEval,
+            auditScore,
+            objectivelyGood,
+            outcome,
+          };
           refusedSans.add(choice.san);
           continue;
         }
@@ -373,80 +502,33 @@ export async function runHeadlessMatch(
         break;
       }
 
-      const applied = board.applySan(choice.san);
-      events.push({
-        t: 'MOVE',
+      const committed = applyPlayerMoveConsequences({
+        board,
+        actor,
+        choice,
+        outcome,
+        moveEval,
+        moverInsights,
+        features,
+        auditScore,
+        objectivelyGood,
         ply,
-        san: choice.san,
-        pieceId: actor.id,
-        verdict: outcome.verdict,
+        roster,
+        events,
+        abilityObservations,
+        lastFriendlyCapturePly,
       });
-      abilityObservations += 1;
-      roster = updatePiece(roster, actor.id, (piece) =>
-        applyPostMoveCredence(
-          { ...piece, engagementFactor: outcome.engagementFactor },
-          moveEval,
-          objectivelyGood,
-          abilityObservations,
-        ),
-      );
-
-      if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
-        const fatalistic = applyFatalisticComplianceCosts(
-          roster,
-          actor.id,
-          ply,
-        );
-        roster = fatalistic.roster;
-        events.push(...fatalistic.events);
-      }
-
-      const attribution = attributeSacrifice(features, auditScore);
-      const hero = roster.find((piece) => piece.id === actor.id) ?? actor;
-      const sacrifice = applySacrificeWitnesses(roster, hero, attribution, ply);
-      roster = sacrifice.roster;
-      events.push(...sacrifice.events);
-      if (
-        detectDeclinedSacrificeCostlySignal(
-          moverInsights.declinedSacrificeOpportunity,
-          choice.san,
-          auditScore,
-        )
-      ) {
-        const costly = applyDeclinedSacrificeSignal(
-          roster,
-          moverInsights.declinedSacrificeOpportunity?.sacrificedPieceId ?? '',
-          ply,
-        );
-        roster = costly.roster;
-        events.push(...costly.events);
-      }
-
-      const kinds: Array<
-        'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
-      > = [];
-      if (detectKingEndangermentCostlySignal(features)) {
-        kinds.push('king_endangerment');
-      }
-      if (
-        applied.capture !== undefined &&
-        isAvengedCapture(lastFriendlyCapturePly, ply)
-      ) {
-        kinds.push('avenged_capture');
-        lastFriendlyCapturePly = undefined;
-      }
-      const costly = applyCostlySignalsToRoster(roster, kinds, ply);
-      roster = costly.roster;
-      events.push(...costly.events);
-
-      ply += 1;
+      roster = committed.roster;
+      abilityObservations = committed.abilityObservations;
+      lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
+      ply = committed.ply;
       turnCompleted = true;
       break;
     }
 
-    if (!turnCompleted && lastRefused !== undefined) {
+    if (!turnCompleted && firstRefused !== undefined) {
       const currentActor = roster.find(
-        (piece) => piece.id === lastRefused?.actor.id,
+        (piece) => piece.id === firstRefused?.actor.id,
       );
       if (currentActor === undefined) {
         throw new Error(
@@ -457,20 +539,34 @@ export async function runHeadlessMatch(
         roster,
         currentActor,
         ply,
-        lastRefused.san,
+        firstRefused.san,
         true,
       );
       events.push(...override.events);
       roster = override.roster;
-      const applied = board.applySan(lastRefused.san);
-      events.push({
-        t: 'MOVE',
+      const committed = applyPlayerMoveConsequences({
+        board,
+        actor: currentActor,
+        choice: firstRefused.choice,
+        outcome: {
+          ...firstRefused.outcome,
+          verdict: 'COMPLIANT_EXECUTION',
+        },
+        moveEval: firstRefused.moveEval,
+        moverInsights: firstRefused.moverInsights,
+        features: firstRefused.features,
+        auditScore: firstRefused.auditScore,
+        objectivelyGood: firstRefused.objectivelyGood,
         ply,
-        san: lastRefused.san,
-        pieceId: applied.moverId,
-        verdict: 'COMPLIANT_EXECUTION',
+        roster,
+        events,
+        abilityObservations,
+        lastFriendlyCapturePly,
       });
-      ply += 1;
+      roster = committed.roster;
+      abilityObservations = committed.abilityObservations;
+      lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
+      ply = committed.ply;
       continue;
     }
     if (!turnCompleted) break;
