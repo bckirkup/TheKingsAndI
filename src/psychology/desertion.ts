@@ -3,6 +3,8 @@ import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import type { DesertionContext, PieceState } from './types';
 
+const STANDARD_ROSTER_SIZE = 16;
+
 export function calculatePain(piece: PieceState): number {
   return (
     ENGINE_CONFIG.DESERTION_PAIN_BASE +
@@ -37,17 +39,37 @@ export function calculateUStay(
   lambda: number,
 ): number {
   const pain = calculatePain(piece);
-  const stayCost = -context.P_captured * pain - context.P_lossIfStay * lambda;
+  const collectiveStake =
+    context.P_lossIfStay * lambda * ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE;
+  const stayCost = -context.P_captured * pain - collectiveStake;
   return quantizeBoardValue(stayCost) / 1_000;
 }
 
 export function calculateUDesert(
+  piece: PieceState,
   context: DesertionContext,
   lambda: number,
+  activePeers: readonly PieceState[],
 ): number {
-  const desertCost =
-    -context.P_lossIfLeave * lambda * ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
-  return quantizeBoardValue(desertCost) / 1_000;
+  let standing = 0;
+  for (const peer of activePeers) {
+    if (peer.id === piece.id) continue;
+    const affinity = peer.dyadicAffinity[piece.id] ?? 0;
+    const prestige = peer.classPrestige[piece.role] ?? 0;
+    standing += Math.max(0, (affinity + prestige) / 200);
+  }
+  const audienceStanding = standing / Math.max(1, STANDARD_ROSTER_SIZE - 1);
+  const gloryWeight = (piece.traits.w_ambition + piece.traits.w_prestige) / 2;
+  const anticipatedStandingCost =
+    audienceStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
+  const residualCost =
+    -context.P_lossIfLeave *
+    lambda *
+    ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
+    ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
+  const quantizedResidualCost = quantizeBoardValue(residualCost);
+  const quantizedStandingCost = quantizeBoardValue(-anticipatedStandingCost);
+  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
 }
 
 export function shouldDesert(
@@ -61,7 +83,7 @@ export function shouldDesert(
 } {
   const lambda = calculateLambda(piece, activePeers);
   const uStay = calculateUStay(piece, context, lambda);
-  const uDesert = calculateUDesert(context, lambda);
+  const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const desert =
     uDesert > uStay + ENGINE_CONFIG.DESERTION_HYSTERESIS &&
     piece.role !== 'King';

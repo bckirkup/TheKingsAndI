@@ -7,7 +7,8 @@ _Owner intent:_
 > taken, but increases the risk of loss. You can definitely push your entire
 > team to losing the game quickly in a cascade.**
 
-Governed by ADR 0003 and ADR 0011. Nothing here is implemented.
+Governed by ADR 0003 and ADR 0011. The expected-cost comparison below is
+implemented in `src/psychology/desertion.ts`.
 
 ---
 
@@ -18,8 +19,11 @@ trip-wire that fires on state rather than on reasoning. Owner intent replaces it
 with an expected-cost comparison the piece performs itself:
 
 ```
-U_stay(i)   = -P_capture(i)·pain_i  -  P_loss(team | i stays)  · λ_i
-U_desert(i) =            0          -  P_loss(team | i leaves) · λ_i · μ_i
+U_stay(i)   = -P_capture(i)·pain_i
+              - P_loss(team | i stays)  · λ_i · S_collective
+U_desert(i) =            0
+              - P_loss(team | i leaves) · λ_i · S_collective · μ_i
+              - standing_i · glory_i · S_standing
 
 desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 ```
@@ -30,6 +34,10 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `pain_i` | how much being taken costs it — rises with accumulated `B_i` (ADR 0009) |
 | `P_loss(team \| ·)` | probability the army loses, with and without it on the board |
 | `λ_i` | **how much this piece cares that the team loses** |
+| `S_collective` | team-loss stake, measured in the same pain units as `pain_i` (default `50`) |
+| `standing_i` | audience bond at stake: the sum of remaining pieces' non-negative bonds toward `i`, normalized by the standard fifteen-peer roster scale; it falls as the audience leaves and is zero with no peers |
+| `glory_i` | `(w_ambition_i + w_prestige_i) / 2`, the piece's stake in reputation |
+| `S_standing` | anticipated standing-loss stake in pain units (default `100`) |
 | `μ_i` | residual stake after walking away, `0 ≤ μ_i ≤ 1` |
 
 Deserting sets the piece's personal capture risk to zero and raises
@@ -48,6 +56,19 @@ deserts on a much smaller personal danger.
 
 This is the cleanest statement of the game's thesis anywhere in the design: **a
 leader's trust budget is literally the coefficient on collective interest.**
+The implementation keeps `λ_i` as a dimensionless commitment factor and gives
+the team's defeat an explicit pain-scale stake, `S_collective`, so that trust
+can outweigh private capture pain rather than being confined to a
+probability-sized addend.
+Desertion also charges the deserter for the standing it expects to lose in
+front of its remaining comrades. This is the sum of each remaining observer's
+non-negative affinity-plus-class-prestige bond toward the deserter, normalized
+by the standard fifteen-peer roster scale, then weighted by the deserter's
+ambition and prestige traits. Unlike a peer average, the audience stake falls
+as comrades leave: the first deserter faces the full roster audience, while a
+late-cascade piece with only one witness pays only one fifteenth as much. It is
+exactly zero when no comrades remain, so it is an anticipated witness cost
+rather than a damping floor.
 
 Consequences that fall out for free, none of which need special-case code:
 
@@ -112,8 +133,9 @@ difference between a lesson and a bug report.
 
 Desertion is not the only way out from under a bad commander, and it is the
 expensive one. A piece that withdraws confidence and lets the King act pays
-none of desertion's costs — no capture risk on the way out, no witness cost, no
-affinity damage from the pieces that stayed — and the roster survives intact.
+none of desertion's costs — no capture risk on the way out, no anticipated
+standing cost, no affinity damage from the pieces that stayed — and the roster
+survives intact.
 
 So the model must price the two against each other:
 

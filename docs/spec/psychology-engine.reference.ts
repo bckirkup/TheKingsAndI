@@ -208,8 +208,14 @@ export function evaluateMoveResponse(
    * ADR 0011 supersedes the historical hard gate below. Production evaluates
    * expected-cost desertion at the actor's decision point:
    *
-   *   U_stay   = -P_captured * pain_i - P_lossIfStay * lambda_i
-   *   U_desert = -P_lossIfLeave * lambda_i * residual_stake
+   *   U_stay   = -P_captured * pain_i
+   *              - P_lossIfStay * lambda_i * collective_stake
+   *   U_desert = -P_lossIfLeave * lambda_i * collective_stake * residual_stake
+   *              - audience_standing_i * glory_i * standing_stake
+   *
+   * audience_standing_i is the sum of each remaining peer's non-negative
+   * affinity-plus-class-prestige bond toward the actor, normalized by the
+   * standard fifteen-peer roster scale.
    *
    * with desertion when U_desert > U_stay + hysteresis and the actor is not
    * the King. This retained branch documents the pre-ADR reference only; it

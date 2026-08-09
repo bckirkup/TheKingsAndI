@@ -39,6 +39,10 @@ export const ENGINE_CONFIG = {
   OVERRIDE_WITNESS_TRUST_PENALTY: -8,
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
   /** Desertion model (docs/desertion_model.md). */
+  /** Team-loss stake in pain units, modulated by lambda. */
+  DESERTION_COLLECTIVE_STAKE: 50,
+  /** Standing lost by deserting, measured in pain units. */
+  DESERTION_STANDING_STAKE: 150,
   DESERTION_RESIDUAL_STAKE: 0.3,
   DESERTION_HYSTERESIS: 0.05,
   DESERTION_PAIN_BASE: 10,

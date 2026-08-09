@@ -128,6 +128,9 @@ A deserting piece **quits the board** — it is removed from play for the rest o
 the match (ADR 0003). Defection to the opposing side is permanently out of
 scope. Rule 1 is not a threshold: it is the expected-cost comparison in
 `docs/desertion_model.md`, and the resulting cascade is intended (ADR 0011).
+The collective-interest term uses `DESERTION_COLLECTIVE_STAKE`, measured in the
+same pain units as capture pain; `λ_i` remains the piece's dimensionless
+commitment to the army and modulates that stake.
 
 Rules 2–5 are unaffected by trust dominance concerns only to the extent D19 is
 resolved; see §10.1.

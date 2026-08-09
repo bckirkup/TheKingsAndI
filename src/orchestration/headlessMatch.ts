@@ -71,6 +71,8 @@ export interface HeadlessMatchResult {
   readonly winScore: number;
   readonly rout: boolean;
   readonly refusedGoodMoves: number;
+  /** Initial desertions whose true post-move audit score was materially winning. */
+  readonly winningPositionDesertions: number;
   readonly determinismId: string;
 }
 
@@ -97,6 +99,7 @@ export async function runHeadlessMatch(
   let ply = 1;
   let rout = false;
   let refusedGoodMoves = 0;
+  let winningPositionDesertions = 0;
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
   let abilityObservations = 0;
@@ -218,6 +221,7 @@ export async function runHeadlessMatch(
     }
 
     if (outcome.verdict === 'DESERTION_MUTINY') {
+      if (auditScore >= 100) winningPositionDesertions += 1;
       const cascade = applyDesertionWithCascade(
         roster,
         {
@@ -316,6 +320,7 @@ export async function runHeadlessMatch(
     winScore,
     rout,
     refusedGoodMoves,
+    winningPositionDesertions,
     determinismId: config.engine.determinismId,
   };
 }
