@@ -148,6 +148,7 @@ describe('parallel campaign sharding', () => {
     engineKind: 'fake' as const,
     depthCap: undefined,
     campaignRunner: cannedCampaignRunner,
+    campaignRunnerDeterminismId: 'canned-campaign-runner',
   };
   type ShardResult = Awaited<ReturnType<typeof runShard>>;
   let fourCampaignUnsharded: ShardResult;
@@ -178,6 +179,7 @@ describe('parallel campaign sharding', () => {
       engineKind: 'fake' as const,
       depthCap: undefined,
       campaignRunner: cannedCampaignRunner,
+      campaignRunnerDeterminismId: 'canned-campaign-runner',
     };
     const unsharded = await runShard({
       ...options,
@@ -192,7 +194,7 @@ describe('parallel campaign sharding', () => {
     expect(artifactFromShard(oneShard)).toEqual(artifactFromShard(unsharded));
   });
 
-  it('keeps the legacy single-campaign CSV byte-identical', async () => {
+  it('passes single-campaign options through without mangling them', async () => {
     const direct = await cannedCampaignRunner({
       matches: 2,
       leader: 'supportive',
@@ -209,6 +211,7 @@ describe('parallel campaign sharding', () => {
       shardIndex: 0,
       shardCount: 1,
       campaignRunner: cannedCampaignRunner,
+      campaignRunnerDeterminismId: 'canned-campaign-runner',
     });
     expect(renderCsv(direct.metrics)).toBe(
       renderCsv(planned.campaigns[0]?.result.metrics ?? []),

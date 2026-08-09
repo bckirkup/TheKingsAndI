@@ -125,6 +125,7 @@ export interface ShardOptions {
   readonly shardCount: number;
   readonly checkpoint?: CampaignCheckpoint;
   readonly campaignRunner?: CampaignRunner;
+  readonly campaignRunnerDeterminismId?: string;
 }
 
 export type CampaignRunner = (
@@ -262,7 +263,10 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     const determinismId =
       campaigns[0]?.result.determinismId ??
       engine?.determinismId ??
-      'canned-campaign-runner';
+      options.campaignRunnerDeterminismId;
+    if (determinismId === undefined) {
+      throw new Error('Campaign runner did not provide a determinism ID.');
+    }
     const manifest: ShardManifest = {
       manifestVersion: PARALLEL_MANIFEST_VERSION,
       schemaVersion: SCHEMA_VERSION,

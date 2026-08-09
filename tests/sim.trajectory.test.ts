@@ -42,6 +42,12 @@ describe('campaign trajectory bands', () => {
       requested === undefined || requested === 'all'
         ? [16, 52]
         : requested.split(',').map((value) => Number(value));
+    if (
+      matchCounts.some((matches) => matches !== 16 && matches !== 52) ||
+      matchCounts.length === 0
+    ) {
+      throw new Error('HEAVY_CAMPAIGN_MATCHES must be all, 16, or 52.');
+    }
     for (const matches of matchCounts) {
       const bands = (
         await runCampaign({
