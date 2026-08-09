@@ -58,7 +58,7 @@ export interface EnemyTurnResult {
   readonly lastMove: readonly [Square, Square] | null;
   readonly observableBehaviours: readonly (
     | 'move'
-    | 'refusal_tempo'
+    | 'refusal'
     | 'desertion'
     | 'quiet_quit'
     | 'fatalistic'
@@ -157,7 +157,7 @@ function applyTrackedEnemyDecision(input: {
         ply,
         enemyRout: false,
         lastMove: null,
-        observableBehaviours: ['refusal_tempo'],
+        observableBehaviours: ['refusal'],
       };
     }
   }
@@ -287,6 +287,7 @@ export function applyEnemyTurnSync(input: {
   const refusedSans = new Set<string>();
   const priorEvents: MatchEvent[] = [];
   const priorBehaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  let currentEnemyRoster = enemyRoster;
   const maxCandidates = input.board.legalMoves().length;
   for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
     const san = chooseOpponentMove(
@@ -335,7 +336,7 @@ export function applyEnemyTurnSync(input: {
     const moveEval = featuresToEvaluation(features, 0);
     const result = applyTrackedEnemyDecision({
       board: input.board,
-      enemyRoster,
+      enemyRoster: currentEnemyRoster,
       enemySide: input.enemySide,
       actor,
       san,
@@ -351,17 +352,13 @@ export function applyEnemyTurnSync(input: {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);
     }
     refusedSans.add(san);
+    currentEnemyRoster = result.enemyRoster;
     priorEvents.push(...result.events);
     priorBehaviours.push(...result.observableBehaviours);
   }
-  return {
-    enemyRoster,
-    events: priorEvents,
-    ply: input.ply,
-    enemyRout: false,
-    lastMove: null,
-    observableBehaviours: priorBehaviours,
-  };
+  throw new Error(
+    `Enemy turn could not produce a move at ply ${input.ply} after refusing ${refusedSans.size} candidates.`,
+  );
 }
 
 /** Async opposing ply with engine insights (headless path). */
@@ -398,6 +395,7 @@ export async function applyEnemyTurn(input: {
   const refusedSans = new Set<string>();
   const priorEvents: MatchEvent[] = [];
   const priorBehaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  let currentEnemyRoster = enemyRoster;
   const maxCandidates = input.board.legalMoves().length;
   for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
     const san = chooseOpponentMove(
@@ -461,7 +459,7 @@ export async function applyEnemyTurn(input: {
     );
     const result = applyTrackedEnemyDecision({
       board: input.board,
-      enemyRoster,
+      enemyRoster: currentEnemyRoster,
       enemySide: input.enemySide,
       actor,
       san,
@@ -477,17 +475,13 @@ export async function applyEnemyTurn(input: {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);
     }
     refusedSans.add(san);
+    currentEnemyRoster = result.enemyRoster;
     priorEvents.push(...result.events);
     priorBehaviours.push(...result.observableBehaviours);
   }
-  return {
-    enemyRoster,
-    events: priorEvents,
-    ply: input.ply,
-    enemyRout: false,
-    lastMove: null,
-    observableBehaviours: priorBehaviours,
-  };
+  throw new Error(
+    `Enemy turn could not produce a move at ply ${input.ply} after refusing ${refusedSans.size} candidates.`,
+  );
 }
 
 /** Difficulty must select leader policy, never engine depth (ADR 0025 / D67). */

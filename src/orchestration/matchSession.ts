@@ -398,7 +398,6 @@ export class MatchSession {
     }));
     this.pending = null;
     this.phase = 'playing';
-    this.ply += 1;
   }
 
   confirmOverride(): void {
