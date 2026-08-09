@@ -305,7 +305,7 @@ export function applyEnemyTurnSync(input: {
         priorBehaviours,
         finishUntrackedMove(
           input.board,
-          enemyRoster,
+          currentEnemyRoster,
           input.enemySide,
           san,
           input.ply,
@@ -317,14 +317,14 @@ export function applyEnemyTurnSync(input: {
     const actor =
       mover === undefined
         ? undefined
-        : enemyRoster.find((piece) => piece.id === mover.id);
+        : currentEnemyRoster.find((piece) => piece.id === mover.id);
     if (actor === undefined) {
       return mergeRefusalHistory(
         priorEvents,
         priorBehaviours,
         finishUntrackedMove(
           input.board,
-          enemyRoster,
+          currentEnemyRoster,
           input.enemySide,
           san,
           input.ply,
@@ -413,7 +413,7 @@ export async function applyEnemyTurn(input: {
         priorBehaviours,
         finishUntrackedMove(
           input.board,
-          enemyRoster,
+          currentEnemyRoster,
           input.enemySide,
           san,
           input.ply,
@@ -425,14 +425,14 @@ export async function applyEnemyTurn(input: {
     const actor =
       mover === undefined
         ? undefined
-        : enemyRoster.find((piece) => piece.id === mover.id);
+        : currentEnemyRoster.find((piece) => piece.id === mover.id);
     if (actor === undefined) {
       return mergeRefusalHistory(
         priorEvents,
         priorBehaviours,
         finishUntrackedMove(
           input.board,
-          enemyRoster,
+          currentEnemyRoster,
           input.enemySide,
           san,
           input.ply,
@@ -447,7 +447,7 @@ export async function applyEnemyTurn(input: {
       intent,
       actor,
       insight,
-      enemyRoster,
+      currentEnemyRoster,
       features,
       0,
     );
