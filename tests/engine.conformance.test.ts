@@ -50,6 +50,15 @@ describe('engine conformance corpus (Lozza)', () => {
     }
   });
 
+  it('accepts Lozza output that terminates at depth one for a forced move', async () => {
+    const result = await port.evaluate(
+      'r1bqkb1r/ppppp2p/5n2/5pp1/8/P7/RPnPPPPP/1NBQKBNR w Kkq - 0 7',
+      8,
+    );
+    expect(result.scoreCp).toBe(496);
+    expect(result.pv.slice(0, 1)).toEqual(['d1c2']);
+  });
+
   it('is reproducible on repeat evaluation', async () => {
     const testCase = CONFORMANCE_CORPUS[1];
     if (testCase === undefined) throw new Error('missing corpus case');
