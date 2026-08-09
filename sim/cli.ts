@@ -9,7 +9,12 @@ import {
 } from './degeneracy';
 import { type SimEngineKind } from './engine';
 import { renderCsv } from './metrics';
-import { resolveRunPlan, runShard, writeShardArtifact } from './parallel';
+import {
+  campaignIndicesForShard,
+  resolveRunPlan,
+  runShard,
+  writeShardArtifact,
+} from './parallel';
 import { plainChessMeanWinScore } from './baseline';
 import { canonicalJson } from '../src/core/canonicalJson';
 
@@ -62,6 +67,23 @@ export interface SimulationOptions {
 
 export function shouldRunSmokeBounds(executedMatches: number): boolean {
   return executedMatches <= 20;
+}
+
+export function assertCheckpointShardAssignment(options: {
+  readonly campaigns: number;
+  readonly shardIndex: number;
+  readonly shardCount: number;
+}): void {
+  const assignedCampaignCount = campaignIndicesForShard(
+    options.campaigns,
+    options.shardIndex,
+    options.shardCount,
+  ).length;
+  if (assignedCampaignCount !== 1) {
+    throw new Error(
+      'Checkpoint resume requires a single campaign assigned to this shard.',
+    );
+  }
 }
 
 function parseArguments(
@@ -250,8 +272,12 @@ async function main(): Promise<void> {
       JSON.parse(await readFile(options.resume, 'utf8')) as unknown,
     );
   }
-  if (checkpoint !== undefined && options.campaigns !== 1) {
-    throw new Error('Checkpoint resume requires a single campaign run.');
+  if (checkpoint !== undefined) {
+    assertCheckpointShardAssignment({
+      campaigns: options.campaigns,
+      shardIndex: options.shardIndex,
+      shardCount: options.shardCount,
+    });
   }
   const result = await runShard({
     plan: {
