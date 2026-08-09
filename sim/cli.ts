@@ -212,18 +212,16 @@ export {
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
+  const checkpointOut = options.checkpointOut;
   let latestCheckpoint: CampaignCheckpoint | undefined;
   let checkpointWrite: Promise<void> = Promise.resolve();
   let signalHandled = false;
   const checkpointCallback =
-    options.checkpointOut === undefined
+    checkpointOut === undefined
       ? undefined
       : (checkpoint: CampaignCheckpoint): Promise<void> => {
           latestCheckpoint = checkpoint;
-          checkpointWrite = writeAtomicCheckpoint(
-            options.checkpointOut as string,
-            checkpoint,
-          );
+          checkpointWrite = writeAtomicCheckpoint(checkpointOut, checkpoint);
           return checkpointWrite;
         };
   const handleSignal = (signal: NodeJS.Signals): void => {
@@ -231,11 +229,8 @@ async function main(): Promise<void> {
     signalHandled = true;
     void (async () => {
       await checkpointWrite;
-      if (
-        latestCheckpoint !== undefined &&
-        options.checkpointOut !== undefined
-      ) {
-        await writeAtomicCheckpoint(options.checkpointOut, latestCheckpoint);
+      if (latestCheckpoint !== undefined && checkpointOut !== undefined) {
+        await writeAtomicCheckpoint(checkpointOut, latestCheckpoint);
       }
       console.error(`Received ${signal}; exiting for retry.`);
       process.exit(1);
