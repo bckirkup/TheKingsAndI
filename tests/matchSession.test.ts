@@ -25,7 +25,6 @@ describe('match session', () => {
     });
     const accepted = await session.submitPlayerIntent({ from: 'e2', to: 'e4' });
     expect(accepted).toBe(true);
-    session.confirmOverride();
     const after = session.snapshot();
     expect(after.events.some((event) => event.t === 'MOVE')).toBe(true);
     expect(after.board.turn()).toBe('w');
@@ -43,7 +42,6 @@ describe('match session', () => {
     };
     const session = new MatchSession({ seed: 5, engine });
     await session.submitPlayerIntent({ from: 'e2', to: 'e4' });
-    session.confirmOverride();
     const playerMove = session
       .snapshot()
       .events.find((event) => event.t === 'MOVE' && event.pieceId === 'w:P:e2');

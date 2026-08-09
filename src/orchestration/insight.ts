@@ -19,6 +19,11 @@ import { applyPrivateEvaluation, evalProfileFor } from './privateEvaluation';
 export { evalProfileFor } from './privateEvaluation';
 
 export const LEADER_INSIGHT_SEAT_ID = '\u0000leader';
+const BEFORE_INSIGHT_PREFIX = '\u0000before:';
+
+function beforeInsightSeatId(pieceId: string): string {
+  return `${BEFORE_INSIGHT_PREFIX}${pieceId}`;
+}
 
 export interface InsightRoundHandle {
   readonly cache: EvaluationCache;
@@ -83,43 +88,118 @@ export async function resolveMoverInsights(
   probe.applyMove(intent);
   const terminalScore = terminalMoveScore(probe);
   if (terminalScore !== undefined) {
-    const insight = Object.freeze({
-      pieceId: actor.id,
-      depth,
-      scoreCp: terminalScore,
-      pv: Object.freeze([]),
+    const orderedRoster = [...roster].sort((left, right) =>
+      left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
+    );
+    const beforeProfiles = new Map(
+      orderedRoster.map((piece) => [piece.id, evalProfileFor(piece, board)]),
+    );
+    const depths = [
+      ...new Set(
+        orderedRoster.map((piece) =>
+          calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        ),
+      ),
+    ].sort((left, right) => left - right);
+    const beforeAttentionResultsPromise =
+      port.multiPvAt === undefined
+        ? Promise.resolve([])
+        : Promise.all(
+            depths.map(
+              (rung) =>
+                port.multiPvAt?.(board.fen(), rung) ?? Promise.resolve([]),
+            ),
+          );
+    const requests = buildInsightRound({
+      fen: board.fen(),
+      seats: orderedRoster.map((piece) => ({
+        pieceId: beforeInsightSeatId(piece.id),
+        depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        evalProfile: beforeProfiles.get(piece.id) ?? {},
+      })),
     });
+    const [beforeAttentionResults, rawBundle] = await Promise.all([
+      beforeAttentionResultsPromise,
+      resolveInsightRound(port, requests, {
+        round: handle.round,
+        cache: handle.cache,
+      }),
+    ]);
+    const bundle = requireComplete(rawBundle);
+    const beforeAttentionByDepth = new Map<
+      number,
+      readonly EngineEvaluation[]
+    >();
+    for (let index = 0; index < depths.length; index += 1) {
+      const rung = depths[index];
+      const lines = beforeAttentionResults[index] ?? [];
+      if (rung !== undefined && lines !== undefined) {
+        beforeAttentionByDepth.set(rung, lines);
+      }
+    }
+    handle.round += 1;
     const leader = Object.freeze({
       pieceId: LEADER_INSIGHT_SEAT_ID,
       depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
       scoreCp: terminalScore,
       pv: Object.freeze([]),
     });
-    handle.round += 1;
     const desertionMoveEvals: Record<string, CandidateMoveEvaluation> = {};
-    for (const piece of roster) {
+    let actorBeforeScoreCp: number | undefined;
+    for (const piece of orderedRoster) {
+      const beforeSharedInsight = insightOf(
+        bundle,
+        beforeInsightSeatId(piece.id),
+      );
+      if (beforeSharedInsight === undefined) {
+        throw new Error(`Missing before insight for ${piece.id}`);
+      }
+      const beforePrivateInsight = applyPrivateEvaluation(
+        beforeSharedInsight,
+        board,
+        piece,
+        beforeProfiles.get(piece.id) ?? {},
+        beforeAttentionByDepth.get(
+          calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        ) ?? [],
+      );
+      if (piece.id === actor.id) {
+        actorBeforeScoreCp = beforePrivateInsight.scoreCp;
+      }
       desertionMoveEvals[piece.id] = {
         moveNotation: features.san,
-        deltaV_board: terminalScore / 100,
+        deltaV_board: (terminalScore - beforePrivateInsight.scoreCp) / 100,
         vLeaderImplied: terminalScore / 100 + leaderImpliedBias,
         deltaV_capture: features.deltaVCapture,
         P_captured: features.captureRiskByPiece[piece.id] ?? 0,
         peerSafetyDeltas: features.peerSafetyDeltas,
       };
     }
+    if (actorBeforeScoreCp === undefined) {
+      throw new Error(`Missing actor baseline score for ${actor.id}`);
+    }
     return {
-      actor: insight,
+      actor: Object.freeze({
+        pieceId: actor.id,
+        depth,
+        scoreCp: terminalScore - actorBeforeScoreCp,
+        pv: Object.freeze([]),
+      }),
       leader,
       desertionMoveEvals,
       declinedSacrificeOpportunity: undefined,
     };
   }
+  const beforeFen = board.fen();
   const fen = probe.fen();
   const orderedRoster = [...roster].sort((left, right) =>
     left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
   );
   const profiles = new Map(
     orderedRoster.map((piece) => [piece.id, evalProfileFor(piece, probe)]),
+  );
+  const beforeProfiles = new Map(
+    orderedRoster.map((piece) => [piece.id, evalProfileFor(piece, board)]),
   );
   const depths = [
     ...new Set(
@@ -139,38 +219,66 @@ export async function resolveMoverInsights(
             (rung) => port.multiPvAt?.(fen, rung) ?? Promise.resolve([]),
           ),
         );
-  const requests = buildInsightRound({
-    fen,
-    seats: [
-      ...orderedRoster.map((piece) => ({
-        pieceId: piece.id,
+  const beforeAttentionResultsPromise =
+    port.multiPvAt === undefined
+      ? Promise.resolve([])
+      : Promise.all(
+          depths.map(
+            (rung) => port.multiPvAt?.(beforeFen, rung) ?? Promise.resolve([]),
+          ),
+        );
+  const requests = [
+    ...buildInsightRound({
+      fen,
+      seats: [
+        ...orderedRoster.map((piece) => ({
+          pieceId: piece.id,
+          depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+          evalProfile: profiles.get(piece.id) ?? {},
+        })),
+        {
+          pieceId: LEADER_INSIGHT_SEAT_ID,
+          depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
+          evalProfile: {},
+        },
+      ],
+    }),
+    ...buildInsightRound({
+      fen: beforeFen,
+      seats: orderedRoster.map((piece) => ({
+        pieceId: beforeInsightSeatId(piece.id),
         depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
-        evalProfile: profiles.get(piece.id) ?? {},
+        evalProfile: beforeProfiles.get(piece.id) ?? {},
       })),
-      {
-        pieceId: LEADER_INSIGHT_SEAT_ID,
-        depth: CAMPAIGN_CONFIG.PLAYER_EFFECTIVE_DEPTH,
-        evalProfile: {},
-      },
-    ],
-  });
+    }),
+  ];
   const bundlePromise = resolveInsightRound(port, requests, {
     round: handle.round,
     cache: handle.cache,
   });
-  const [preferredLine, attentionResults, rawBundle] = await Promise.all([
-    preferredLinePromise,
-    attentionResultsPromise,
-    bundlePromise,
-  ]);
+  const [preferredLine, attentionResults, beforeAttentionResults, rawBundle] =
+    await Promise.all([
+      preferredLinePromise,
+      attentionResultsPromise,
+      beforeAttentionResultsPromise,
+      bundlePromise,
+    ]);
   const bundle = requireComplete(rawBundle);
   const attentionByDepth = new Map<number, readonly EngineEvaluation[]>();
+  const beforeAttentionByDepth = new Map<number, readonly EngineEvaluation[]>();
   if (port.multiPvAt !== undefined) {
     for (let index = 0; index < depths.length; index += 1) {
       const rung = depths[index];
       const lines = attentionResults[index] ?? [];
       if (rung !== undefined && lines !== undefined) {
         attentionByDepth.set(rung, lines);
+      }
+    }
+    for (let index = 0; index < depths.length; index += 1) {
+      const rung = depths[index];
+      const lines = beforeAttentionResults[index] ?? [];
+      if (rung !== undefined && lines !== undefined) {
+        beforeAttentionByDepth.set(rung, lines);
       }
     }
   }
@@ -184,6 +292,7 @@ export async function resolveMoverInsights(
     throw new Error(`Missing leader insight for ${LEADER_INSIGHT_SEAT_ID}`);
   }
   const privateByPiece = new Map<string, EngineEvaluation>();
+  const privateBeforeByPiece = new Map<string, EngineEvaluation>();
   for (const piece of orderedRoster) {
     const sharedInsight = insightOf(bundle, piece.id);
     if (sharedInsight === undefined) {
@@ -204,6 +313,25 @@ export async function resolveMoverInsights(
       attentionByDepth.get(pieceDepth) ?? [],
     );
     privateByPiece.set(piece.id, privateInsight);
+    const beforeSharedInsight = insightOf(
+      bundle,
+      beforeInsightSeatId(piece.id),
+    );
+    if (beforeSharedInsight === undefined) {
+      throw new Error(`Missing before insight for ${piece.id}`);
+    }
+    const beforeDepth = calculateEngineSearchDepth(
+      piece.E_i,
+      piece.engagementFactor,
+    );
+    const privateBeforeInsight = applyPrivateEvaluation(
+      beforeSharedInsight,
+      board,
+      piece,
+      beforeProfiles.get(piece.id) ?? {},
+      beforeAttentionByDepth.get(beforeDepth) ?? [],
+    );
+    privateBeforeByPiece.set(piece.id, privateBeforeInsight);
   }
   const sacrificedPieceId =
     preferredLine === undefined
@@ -221,6 +349,10 @@ export async function resolveMoverInsights(
   if (privateActor === undefined) {
     throw new Error(`Missing private insight for ${actor.id}`);
   }
+  const privateBeforeActor = privateBeforeByPiece.get(actor.id);
+  if (privateBeforeActor === undefined) {
+    throw new Error(`Missing before private insight for ${actor.id}`);
+  }
   const moverLeader = {
     ...leaderInsight,
     scoreCp: -leaderInsight.scoreCp,
@@ -231,9 +363,16 @@ export async function resolveMoverInsights(
     if (privateInsightForPiece === undefined) {
       throw new Error(`Missing private insight for ${piece.id}`);
     }
+    const privateBeforeInsightForPiece = privateBeforeByPiece.get(piece.id);
+    if (privateBeforeInsightForPiece === undefined) {
+      throw new Error(`Missing before private insight for ${piece.id}`);
+    }
     desertionMoveEvals[piece.id] = {
       moveNotation: features.san,
-      deltaV_board: privateInsightForPiece.scoreCp / 100,
+      deltaV_board:
+        (privateInsightForPiece.scoreCp -
+          privateBeforeInsightForPiece.scoreCp) /
+        100,
       vLeaderImplied: moverLeader.scoreCp / 100 + leaderImpliedBias,
       deltaV_capture: features.deltaVCapture,
       P_captured: features.captureRiskByPiece[piece.id] ?? 0,
@@ -247,6 +386,7 @@ export async function resolveMoverInsights(
       ...privateActor,
       pieceId: actor.id,
       depth,
+      scoreCp: privateActor.scoreCp - privateBeforeActor.scoreCp,
     }),
     leader: Object.freeze({
       ...moverLeader,

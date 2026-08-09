@@ -75,9 +75,12 @@ in `[-1, +1]`, so:
 - endangering a loved or respected peer subtracts utility → protective refusal;
 - endangering a despised peer *adds* utility → the piece is pleased.
 
-Note `ΔV_board` is the **piece's own** evaluation at depth `D_i`, not the true
-engine evaluation. Variable insight therefore changes what a piece is willing to
-do, not merely the quality of its advice.
+Note `ΔV_board` is the **piece's own before/after evaluation delta** at depth
+`D_i`, not the true engine evaluation: the private score of the position after
+the commanded move minus that of the position before it, using the same
+piece-specific profile at both positions. Variable insight therefore changes
+what a piece is willing to do, while being behind on the board does not by
+itself make every order look bad.
 
 ## 5. Refusal threshold
 
@@ -228,8 +231,13 @@ This was a reconciliation defect: ADR 0015 moved trust into credence-weighted
 perception, but §5's threshold constant remained in the superseded utility
 scale. The resolution is to express the boundary in board-value units:
 `Θ_refusal = -3 + (100 - T_i) · REFUSAL_THRESHOLD_TRUST_SCALE`. The new slope
-is an explicit coefficient with golden and sensitivity coverage. Desertion
-utility and the authority signal are unchanged.
+is an explicit coefficient with golden and sensitivity coverage. The same
+comparison also requires `ΔV_board` to be an order delta, not an absolute
+post-move position score: the private after-position score minus the private
+before-position score at the same depth and profile. Otherwise a losing
+position makes every order look bad and the refusal boundary remains
+state-driven. The orchestration barrier collects both positions before
+psychology runs; desertion utility and the authority signal are unchanged.
 
 ### 10.2 `w_prestige` is declared but never used
 The trait exists in `PieceTraits` and is documented as "sensitivity to rank and

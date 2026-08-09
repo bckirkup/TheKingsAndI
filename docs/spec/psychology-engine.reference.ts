@@ -56,7 +56,10 @@ export interface PieceState {
 
 export interface CandidateMoveEvaluation {
   moveNotation: string;
-  /** Board evaluation delta from engine perspective (-10.0 to +10.0) */
+  /**
+   * Piece-private board evaluation delta: after the commanded move minus the
+   * before-position score, at the piece's own depth/profile (-10.0 to +10.0).
+   */
   deltaV_board: number;
   /** Value of captured enemy piece (Pawn=1, N/B=3, R=5, Q=9, K=0) */
   deltaV_capture: number;
