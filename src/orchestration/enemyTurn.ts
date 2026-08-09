@@ -58,7 +58,7 @@ export interface EnemyTurnResult {
   readonly lastMove: readonly [Square, Square] | null;
   readonly observableBehaviours: readonly (
     | 'move'
-    | 'refusal_tempo'
+    | 'refusal'
     | 'desertion'
     | 'quiet_quit'
     | 'fatalistic'
@@ -154,10 +154,10 @@ function applyTrackedEnemyDecision(input: {
       return {
         enemyRoster,
         events,
-        ply: ply + 1,
+        ply,
         enemyRout: false,
         lastMove: null,
-        observableBehaviours: ['refusal_tempo'],
+        observableBehaviours: ['refusal'],
       };
     }
   }
@@ -241,6 +241,18 @@ function applyTrackedEnemyDecision(input: {
   };
 }
 
+function mergeRefusalHistory(
+  priorEvents: MatchEvent[],
+  priorBehaviours: EnemyTurnResult['observableBehaviours'][number][],
+  result: EnemyTurnResult,
+): EnemyTurnResult {
+  return {
+    ...result,
+    events: [...priorEvents, ...result.events],
+    observableBehaviours: [...priorBehaviours, ...result.observableBehaviours],
+  };
+}
+
 /**
  * Synchronous opposing ply using board features (interactive path).
  * Observable behaviours only — never exposes private gauges (ADR 0025).
@@ -272,59 +284,81 @@ export function applyEnemyTurnSync(input: {
     };
   }
 
-  const san = chooseOpponentMove(input.board, input.random, input.archetype);
-  if (san === undefined) {
-    return {
-      enemyRoster,
-      events: [],
+  const refusedSans = new Set<string>();
+  const priorEvents: MatchEvent[] = [];
+  const priorBehaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  let currentEnemyRoster = enemyRoster;
+  const maxCandidates = input.board.legalMoves().length;
+  for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
+    const san = chooseOpponentMove(
+      input.board,
+      input.random,
+      input.archetype,
+      refusedSans,
+    );
+    if (san === undefined) break;
+
+    const intent = resolveIntent(input.board, san);
+    if (intent === undefined) {
+      return mergeRefusalHistory(
+        priorEvents,
+        priorBehaviours,
+        finishUntrackedMove(
+          input.board,
+          currentEnemyRoster,
+          input.enemySide,
+          san,
+          input.ply,
+        ),
+      );
+    }
+
+    const mover = input.board.pieceAt(intent.from);
+    const actor =
+      mover === undefined
+        ? undefined
+        : currentEnemyRoster.find((piece) => piece.id === mover.id);
+    if (actor === undefined) {
+      return mergeRefusalHistory(
+        priorEvents,
+        priorBehaviours,
+        finishUntrackedMove(
+          input.board,
+          currentEnemyRoster,
+          input.enemySide,
+          san,
+          input.ply,
+        ),
+      );
+    }
+
+    const features = extractMoveFeatures(input.board, intent);
+    const moveEval = featuresToEvaluation(features, 0);
+    const result = applyTrackedEnemyDecision({
+      board: input.board,
+      enemyRoster: currentEnemyRoster,
+      enemySide: input.enemySide,
+      actor,
+      san,
+      moveEval,
+      desertionMoveEvals: { [actor.id]: moveEval },
       ply: input.ply,
-      enemyRout: false,
-      lastMove: null,
-      observableBehaviours: [],
-    };
+      overrideRefusals:
+        (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
+        attempt === maxCandidates - 1,
+      abilityObservations: input.abilityObservations ?? 0,
+    });
+    if (!result.events.some((event) => event.t === 'REFUSAL')) {
+      return mergeRefusalHistory(priorEvents, priorBehaviours, result);
+    }
+    refusedSans.add(san);
+    currentEnemyRoster = result.enemyRoster;
+    priorEvents.push(...result.events);
+    priorBehaviours.push(...result.observableBehaviours);
   }
-
-  const intent = resolveIntent(input.board, san);
-  if (intent === undefined) {
-    return finishUntrackedMove(
-      input.board,
-      enemyRoster,
-      input.enemySide,
-      san,
-      input.ply,
-    );
-  }
-
-  const mover = input.board.pieceAt(intent.from);
-  const actor =
-    mover === undefined
-      ? undefined
-      : enemyRoster.find((piece) => piece.id === mover.id);
-  if (actor === undefined) {
-    return finishUntrackedMove(
-      input.board,
-      enemyRoster,
-      input.enemySide,
-      san,
-      input.ply,
-    );
-  }
-
-  const features = extractMoveFeatures(input.board, intent);
-  const moveEval = featuresToEvaluation(features, 0);
-  return applyTrackedEnemyDecision({
-    board: input.board,
-    enemyRoster,
-    enemySide: input.enemySide,
-    actor,
-    san,
-    moveEval,
-    desertionMoveEvals: { [actor.id]: moveEval },
-    ply: input.ply,
-    overrideRefusals:
-      input.overrideRefusals ?? input.archetype === 'tyrannical',
-    abilityObservations: input.abilityObservations ?? 0,
-  });
+  throw new Error(
+    `Enemy turn could not produce a move at ply ${input.ply} after refusing ${refusedSans.size} candidates.`,
+  );
 }
 
 /** Async opposing ply with engine insights (headless path). */
@@ -358,74 +392,96 @@ export async function applyEnemyTurn(input: {
     };
   }
 
-  const san = chooseOpponentMove(input.board, input.random, input.archetype);
-  if (san === undefined) {
-    return {
-      enemyRoster,
-      events: [],
+  const refusedSans = new Set<string>();
+  const priorEvents: MatchEvent[] = [];
+  const priorBehaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  let currentEnemyRoster = enemyRoster;
+  const maxCandidates = input.board.legalMoves().length;
+  for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
+    const san = chooseOpponentMove(
+      input.board,
+      input.random,
+      input.archetype,
+      refusedSans,
+    );
+    if (san === undefined) break;
+
+    const intent = resolveIntent(input.board, san);
+    if (intent === undefined) {
+      return mergeRefusalHistory(
+        priorEvents,
+        priorBehaviours,
+        finishUntrackedMove(
+          input.board,
+          currentEnemyRoster,
+          input.enemySide,
+          san,
+          input.ply,
+        ),
+      );
+    }
+
+    const mover = input.board.pieceAt(intent.from);
+    const actor =
+      mover === undefined
+        ? undefined
+        : currentEnemyRoster.find((piece) => piece.id === mover.id);
+    if (actor === undefined) {
+      return mergeRefusalHistory(
+        priorEvents,
+        priorBehaviours,
+        finishUntrackedMove(
+          input.board,
+          currentEnemyRoster,
+          input.enemySide,
+          san,
+          input.ply,
+        ),
+      );
+    }
+
+    const features = extractMoveFeatures(input.board, intent);
+    const moverInsights = await resolveMoverInsights(
+      input.engine,
+      input.board,
+      intent,
+      actor,
+      insight,
+      currentEnemyRoster,
+      features,
+      0,
+    );
+    const moveEval = insightToEvaluation(
+      features,
+      moverInsights.actor,
+      moverInsights.leader,
+      0,
+    );
+    const result = applyTrackedEnemyDecision({
+      board: input.board,
+      enemyRoster: currentEnemyRoster,
+      enemySide: input.enemySide,
+      actor,
+      san,
+      moveEval,
+      desertionMoveEvals: moverInsights.desertionMoveEvals,
       ply: input.ply,
-      enemyRout: false,
-      lastMove: null,
-      observableBehaviours: [],
-    };
+      overrideRefusals:
+        (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
+        attempt === maxCandidates - 1,
+      abilityObservations: input.abilityObservations ?? 0,
+    });
+    if (!result.events.some((event) => event.t === 'REFUSAL')) {
+      return mergeRefusalHistory(priorEvents, priorBehaviours, result);
+    }
+    refusedSans.add(san);
+    currentEnemyRoster = result.enemyRoster;
+    priorEvents.push(...result.events);
+    priorBehaviours.push(...result.observableBehaviours);
   }
-
-  const intent = resolveIntent(input.board, san);
-  if (intent === undefined) {
-    return finishUntrackedMove(
-      input.board,
-      enemyRoster,
-      input.enemySide,
-      san,
-      input.ply,
-    );
-  }
-
-  const mover = input.board.pieceAt(intent.from);
-  const actor =
-    mover === undefined
-      ? undefined
-      : enemyRoster.find((piece) => piece.id === mover.id);
-  if (actor === undefined) {
-    return finishUntrackedMove(
-      input.board,
-      enemyRoster,
-      input.enemySide,
-      san,
-      input.ply,
-    );
-  }
-
-  const features = extractMoveFeatures(input.board, intent);
-  const moverInsights = await resolveMoverInsights(
-    input.engine,
-    input.board,
-    intent,
-    actor,
-    insight,
-    enemyRoster,
-    features,
-    0,
+  throw new Error(
+    `Enemy turn could not produce a move at ply ${input.ply} after refusing ${refusedSans.size} candidates.`,
   );
-  const moveEval = insightToEvaluation(
-    features,
-    moverInsights.actor,
-    moverInsights.leader,
-    0,
-  );
-  return applyTrackedEnemyDecision({
-    board: input.board,
-    enemyRoster,
-    enemySide: input.enemySide,
-    actor,
-    san,
-    moveEval,
-    desertionMoveEvals: moverInsights.desertionMoveEvals,
-    ply: input.ply,
-    overrideRefusals:
-      input.overrideRefusals ?? input.archetype === 'tyrannical',
-    abilityObservations: input.abilityObservations ?? 0,
-  });
 }
 
 /** Difficulty must select leader policy, never engine depth (ADR 0025 / D67). */

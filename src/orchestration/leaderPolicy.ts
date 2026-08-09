@@ -58,8 +58,11 @@ export function chooseOpponentMove(
   board: LivingBoard,
   random: SeededRandom,
   archetype: OpponentArchetype = 'random',
+  excludedSans: ReadonlySet<string> = new Set(),
 ): string | undefined {
-  const moves = legalScoredMoves(board);
+  const moves = legalScoredMoves(board).filter(
+    (move) => !excludedSans.has(move.san),
+  );
   if (moves.length === 0) return undefined;
 
   let chosen: ScoredMove | undefined;

@@ -33,6 +33,26 @@ describe('match session', () => {
     expect(after.lastMove).toHaveLength(2);
   });
 
+  it('continues after an enemy refusal instead of deadlocking on its turn', async () => {
+    const session = new MatchSession({
+      seed: 5,
+      engine: createFakeEnginePort(),
+    });
+    await session.submitPlayerIntent({ from: 'e2', to: 'e4' });
+    const afterEnemyTurn = session.snapshot();
+    expect(afterEnemyTurn.events.some((event) => event.t === 'REFUSAL')).toBe(
+      true,
+    );
+    const accepted = await session.submitPlayerIntent({ from: 'd2', to: 'd4' });
+    if (session.snapshot().phase === 'awaiting_player') {
+      session.confirmOverride();
+    }
+    const after = session.snapshot();
+    expect(accepted).toBe(true);
+    expect(after.board.turn()).toBe('w');
+    expect(after.ply).toBeGreaterThan(afterEnemyTurn.ply);
+  });
+
   it('records the true audit score on the player move event', async () => {
     const engine = {
       ...createFakeEnginePort(),
