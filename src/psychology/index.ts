@@ -18,6 +18,7 @@ export {
   applyNeglectSignal,
   calculateFaithGap,
   calculatePerceivedValue,
+  justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
   isExpendableRefusal,
 } from './credence';

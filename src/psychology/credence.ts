@@ -3,6 +3,8 @@ import { clampCredence } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import type { CredenceState } from './types';
 
+const REFUSAL_AUTHORITY_OBVIOUSNESS_RANGE = 2.5;
+
 /** Blend the piece's own view with inferred leader judgment (ADR 0015). */
 export function calculatePerceivedValue(
   vOwn: number,
@@ -57,9 +59,16 @@ export function justifiedRefusalAuthorityLoss(
   actorView: number,
   justified: boolean,
 ): number {
-  if (!justified || actorView >= 0) return 0;
-  const obviousness = Math.min(1, -actorView);
+  const obviousness = justifiedRefusalObviousness(actorView, justified);
   return Math.trunc(obviousness * ENGINE_CONFIG.REFUSAL_AUTHORITY_LOSS_SCALE);
+}
+
+export function justifiedRefusalObviousness(
+  actorView: number,
+  justified: boolean,
+): number {
+  if (!justified || actorView >= 0) return 0;
+  return Math.min(1, -actorView / REFUSAL_AUTHORITY_OBVIOUSNESS_RANGE);
 }
 
 export function applyAuthorityLoss(

@@ -30,15 +30,19 @@ For a justified refusal, the refusing piece's own private view determines
 obviousness:
 
 ```text
-obviousness = clamp(-deltaV_board_i, 0, 1)
+obviousness = clamp(-deltaV_board_i / 2.5, 0, 1)
 authorityLoss = trunc(obviousness * REFUSAL_AUTHORITY_LOSS_SCALE)
 ```
 
-The one-pawn scale is deliberate: a shallow piece that clearly sees a bad order
-can impose the full authored signal, while a subtle disagreement approaches
-zero. Witnesses receive only the public refusal and its derived authority-loss
-event, not the true audit score. Every active roster member other than the
-refusing piece loses that amount from `tau_abil`; `tau_benev` is unchanged.
+The `2.5` board-value range is structural rather than another configuration
+knob. A fake-engine breadth run found justified private-view losses from
+`0.01` to `2.46`, with medians from `0.96` to `1.93`; using the observed
+two-and-a-half-pawn range preserves a gradient across ordinary disagreements
+instead of charging the full amount for every refusal. A refusal beyond that
+range still saturates at the configured maximum. Witnesses receive only the
+public refusal and its derived authority-loss event, not the true audit score.
+Every active roster member other than the refusing piece loses that amount from
+`tau_abil`; `tau_benev` is unchanged.
 
 An unjustified refusal has zero authority loss. The commander is not charged
 when the piece's private objection is contradicted by the audit. ADR 0002 still

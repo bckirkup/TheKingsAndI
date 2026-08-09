@@ -19,6 +19,7 @@ import {
   evaluateMoveResponse,
   isKingExempt,
   isWitnessedSacrifice,
+  justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
   normalizePieceState,
   replayDigest,
@@ -81,8 +82,11 @@ function makeMove(
 
 describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   it('charges justified refusal authority by the refusing piece view (golden)', () => {
-    expect(justifiedRefusalAuthorityLoss(-0.5, true)).toBe(10);
-    expect(justifiedRefusalAuthorityLoss(-2, true)).toBe(20);
+    expect(justifiedRefusalObviousness(-0.5, true)).toBe(0.2);
+    expect(justifiedRefusalObviousness(-2, true)).toBe(0.8);
+    expect(justifiedRefusalObviousness(-3, true)).toBe(1);
+    expect(justifiedRefusalAuthorityLoss(-0.5, true)).toBe(4);
+    expect(justifiedRefusalAuthorityLoss(-2, true)).toBe(16);
     expect(justifiedRefusalAuthorityLoss(-0.5, false)).toBe(0);
     expect(justifiedRefusalAuthorityLoss(0.5, true)).toBe(0);
   });
@@ -94,7 +98,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       config.REFUSAL_AUTHORITY_LOSS_SCALE = 0;
       expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(0);
       config.REFUSAL_AUTHORITY_LOSS_SCALE = 40;
-      expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(40);
+      expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(16);
     } finally {
       config.REFUSAL_AUTHORITY_LOSS_SCALE = original;
     }
@@ -112,11 +116,11 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       -1,
       true,
     );
-    expect(accepted.authorityLoss).toBe(20);
+    expect(accepted.authorityLoss).toBe(8);
     expect(accepted.roster[0]?.credence).toEqual(actor.credence);
     expect(accepted.roster[1]?.credence).toEqual({
       tauBenev: 61,
-      tauAbil: 43,
+      tauAbil: 55,
     });
     const rejected = applyRefusalAuthorityCost(
       [actor, witness],

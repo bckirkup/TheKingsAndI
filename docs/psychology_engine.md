@@ -157,14 +157,17 @@ justified, but true audit values never cross into `psychology/`. The witnesses'
 reaction is derived only from the refusing piece's own private view:
 
 ```text
-o_i = clamp(-deltaV_board_i, 0, 1)
+o_i = clamp(-deltaV_board_i / 2.5, 0, 1)
 loss_i = trunc(o_i · REFUSAL_AUTHORITY_LOSS_SCALE)
 ```
 
 For a justified refusal, `loss_i` is subtracted from every other active piece's
 `tau_abil`. `tau_benev` is unchanged. An unjustified refusal has `loss_i = 0`.
 Overrides do not produce this signal because the commander did not accept the
-correction. The default authority-loss scale is 20 credence points.
+correction. The `2.5` board-value range is structural: observed justified
+refusals span `0.01–2.46`, with medians near `0.96–1.93`, so the range preserves
+a gradient across ordinary disagreements without introducing another tuning
+knob. The default authority-loss scale is 20 credence points.
 
 ## 8. Benching / roster reassignment
 

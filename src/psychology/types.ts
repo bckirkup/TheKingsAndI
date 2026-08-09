@@ -128,6 +128,10 @@ export type MatchEvent =
       readonly utility: number;
       readonly threshold: number;
       readonly perceivedValue: number;
+      /** Absolute private-view loss before obviousness clamping. */
+      readonly privateViewLoss?: number;
+      /** Private-view obviousness used for the justified-refusal authority cost. */
+      readonly obviousness?: number;
       /** Ability-channel authority loss applied to the other roster members. */
       readonly authorityLoss?: number;
       /** True only when the command was bad in the audit view. */

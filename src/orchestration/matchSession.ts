@@ -13,6 +13,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   applyOverride,
+  justifiedRefusalObviousness,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
@@ -336,6 +337,10 @@ export class MatchSession {
       utility: pending.outcome.utilityScore,
       threshold: pending.outcome.refusalThreshold,
       perceivedValue: pending.outcome.perceivedValue,
+      privateViewLoss: justified ? -pending.moveEval.deltaV_board : 0,
+      obviousness: justified
+        ? justifiedRefusalObviousness(pending.moveEval.deltaV_board, true)
+        : 0,
       authorityLoss: 0,
       justified,
     };

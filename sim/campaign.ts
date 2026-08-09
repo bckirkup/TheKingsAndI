@@ -50,6 +50,8 @@ export interface CampaignResult {
   readonly finalRoster: readonly PieceState[];
   readonly determinismId: string;
   readonly checkpoint: CampaignCheckpoint;
+  readonly justifiedRefusalObviousness: readonly number[];
+  readonly justifiedRefusalPrivateViewLosses: readonly number[];
 }
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
@@ -166,6 +168,8 @@ export async function runCampaign(
       : [...checkpoint.roster];
   const metrics: MatchMetrics[] =
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
+  const justifiedRefusalObviousness: number[] = [];
+  const justifiedRefusalPrivateViewLosses: number[] = [];
   const firstMatch = checkpoint?.nextMatch ?? 1;
 
   for (let match = firstMatch; match <= options.matches; match += 1) {
@@ -196,6 +200,10 @@ export async function runCampaign(
     );
     metrics.push(metric);
     roster = [...result.roster];
+    justifiedRefusalObviousness.push(...result.justifiedRefusalObviousness);
+    justifiedRefusalPrivateViewLosses.push(
+      ...result.justifiedRefusalPrivateViewLosses,
+    );
   }
 
   const resultCheckpoint: CampaignCheckpoint = {
@@ -216,6 +224,10 @@ export async function runCampaign(
     finalRoster: roster,
     determinismId: engine.determinismId,
     checkpoint: resultCheckpoint,
+    justifiedRefusalObviousness: Object.freeze(justifiedRefusalObviousness),
+    justifiedRefusalPrivateViewLosses: Object.freeze(
+      justifiedRefusalPrivateViewLosses,
+    ),
   };
 }
 
