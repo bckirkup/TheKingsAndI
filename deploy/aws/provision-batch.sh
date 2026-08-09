@@ -31,6 +31,32 @@ case "$capacity_type" in
     ;;
 esac
 
+wait_for_valid_compute_environment() {
+  attempt=0
+  while [ "$attempt" -lt 60 ]; do
+    status="$(
+      aws batch describe-compute-environments \
+        --compute-environments "$compute_environment" \
+        --query 'computeEnvironments[0].status' \
+        --output text
+    )"
+    case "$status" in
+      VALID) return 0 ;;
+      INVALID)
+        aws batch describe-compute-environments \
+          --compute-environments "$compute_environment" \
+          --query 'computeEnvironments[0].statusReason' \
+          --output text >&2
+        return 1
+        ;;
+    esac
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+  echo "Timed out waiting for compute environment $compute_environment to become VALID." >&2
+  return 1
+}
+
 if ! aws batch describe-compute-environments \
   --compute-environments "$compute_environment" \
   --query 'computeEnvironments[0].computeEnvironmentArn' \
@@ -46,6 +72,8 @@ fi
 aws batch update-compute-environment \
   --compute-environment "$compute_environment" \
   --compute-resources "maxvCpus=$max_vcpus,subnets=$SUBNETS,securityGroupIds=$SECURITY_GROUP_IDS"
+
+wait_for_valid_compute_environment
 
 if ! aws batch describe-job-queues \
   --job-queues "$job_queue" \
