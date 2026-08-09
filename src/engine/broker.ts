@@ -1,15 +1,13 @@
 import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
 import { EnginePool, type EnginePoolOptions } from './pool';
+import {
+  DEFAULT_PREFERRED_MULTIPV_WIDTH,
+  DEFAULT_PREFERRED_POOL_SIZE,
+  DEFAULT_PRIVATE_MULTIPV_WIDTH,
+  SHARED_SEARCH_D_MAX,
+  applyPrivateScoring,
+} from './search';
 import type { DepthLadder } from './uci';
-
-/** Shared-search depth ceiling (architecture §5, ADR 0017). */
-export const SHARED_SEARCH_D_MAX = 16;
-/** Default private-attention width; calibrated against engine runtime budget. */
-export const DEFAULT_PRIVATE_MULTIPV_WIDTH = 8;
-/** Width of the player-visible preferred-line search. */
-export const DEFAULT_PREFERRED_MULTIPV_WIDTH = 1;
-/** One serialized worker is sufficient for the preferred-line search. */
-export const DEFAULT_PREFERRED_POOL_SIZE = 1;
 
 export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly determinismId: string;
@@ -39,18 +37,6 @@ export interface SharedSearchBroker extends EnginePort {
 
 interface InflightShared {
   readonly promise: Promise<DepthLadder>;
-}
-
-/** Engine transport is profile-agnostic; private scoring belongs to orchestration. */
-export function applyPrivateScoring(
-  base: EngineEvaluation,
-  evalProfile: EvalProfile,
-): EngineEvaluation {
-  void evalProfile;
-  return Object.freeze({
-    scoreCp: base.scoreCp,
-    pv: Object.freeze([...base.pv]),
-  });
 }
 
 function freezeEval(result: {

@@ -17,14 +17,38 @@ const higherLayers = {
   ],
 };
 
-const boundaryRule = (patterns) => ({
+/**
+ * Modules that reach `node:child_process` / `node:os` and therefore cannot
+ * appear anywhere in the browser bundle's import graph (`pnpm build` fails
+ * with "spawn is not exported by __vite-browser-external"). Type-only imports
+ * are erased and stay allowed.
+ */
+const nodeOnlyEngineModules = [
+  '**/engine/node',
+  '**/engine/broker',
+  '**/engine/pool',
+  '**/engine/uci',
+  '**/engine/adapters/**',
+];
+
+const nodeOnlyEngineGroup = {
+  group: nodeOnlyEngineModules,
+  allowTypeImports: true,
+  message:
+    'This module ships in the browser bundle; the engine pool, UCI transport, broker, and real adapters are Node-only. Inject an EnginePort instead.',
+};
+
+const boundaryRule = (patterns, { nodeOnlyEngine = true } = {}) => ({
   '@typescript-eslint/no-restricted-imports': [
     'error',
     {
-      patterns: patterns.map((group) => ({
-        group: [group],
-        message: 'Layer imports must flow downward only.',
-      })),
+      patterns: [
+        ...patterns.map((group) => ({
+          group: [group],
+          message: 'Layer imports must flow downward only.',
+        })),
+        ...(nodeOnlyEngine ? [nodeOnlyEngineGroup] : []),
+      ],
     },
   ],
 });
@@ -122,6 +146,22 @@ export default tseslint.config(
   {
     name: 'engine-layer-boundary',
     files: ['src/engine/**'],
+    rules: boundaryRule(higherLayers.engine, { nodeOnlyEngine: false }),
+  },
+  {
+    // The browser-safe half of the engine layer: `src/app` imports it, so it
+    // must stay clear of the Node-only half.
+    name: 'engine-browser-surface',
+    files: [
+      'src/engine/index.ts',
+      'src/engine/barrier.ts',
+      'src/engine/cache.ts',
+      'src/engine/conformanceCorpus.ts',
+      'src/engine/fake.ts',
+      'src/engine/round.ts',
+      'src/engine/search.ts',
+      'src/engine/types.ts',
+    ],
     rules: boundaryRule(higherLayers.engine),
   },
   {
