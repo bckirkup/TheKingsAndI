@@ -551,6 +551,7 @@ function handCheckMetric(match: number): MatchMetrics {
     plies: 10,
     refusals: 1,
     overrides: 0,
+    implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: 0,
     winningPositionDesertions: 0,

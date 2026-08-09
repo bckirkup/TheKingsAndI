@@ -24,6 +24,7 @@ export interface MatchMetrics {
   readonly plies: number;
   readonly refusals: number;
   readonly overrides: number;
+  readonly implicitOverrides: number;
   readonly quietQuitMoves: number;
   readonly desertions: number;
   readonly winningPositionDesertions: number;
@@ -93,16 +94,18 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
 
 function countEvents(events: readonly MatchEvent[]): {
   refusals: number;
   overrides: number;
+  implicitOverrides: number;
   quietQuitMoves: number;
   desertions: number;
 } {
   let refusals = 0;
   let overrides = 0;
+  let implicitOverrides = 0;
   let quietQuitMoves = 0;
   let desertions = 0;
   for (const event of events) {
@@ -112,6 +115,7 @@ function countEvents(events: readonly MatchEvent[]): {
         break;
       case 'OVERRIDE':
         overrides += 1;
+        if (event.implicit === true) implicitOverrides += 1;
         break;
       case 'MOVE':
         if (event.verdict === 'QUIET_QUITTING') quietQuitMoves += 1;
@@ -123,7 +127,13 @@ function countEvents(events: readonly MatchEvent[]): {
         break;
     }
   }
-  return { refusals, overrides, quietQuitMoves, desertions };
+  return {
+    refusals,
+    overrides,
+    implicitOverrides,
+    quietQuitMoves,
+    desertions,
+  };
 }
 
 function cascadeLength(events: readonly MatchEvent[]): number {
@@ -184,6 +194,7 @@ export function metricsFromMatch(
     plies: result.plies,
     refusals: counts.refusals,
     overrides: counts.overrides,
+    implicitOverrides: counts.implicitOverrides,
     quietQuitMoves: counts.quietQuitMoves,
     desertions: counts.desertions,
     winningPositionDesertions: result.winningPositionDesertions,
@@ -327,6 +338,7 @@ export function renderCsv(
       metric.plies,
       metric.refusals,
       metric.overrides,
+      metric.implicitOverrides,
       metric.quietQuitMoves,
       metric.desertions,
       metric.cascadeLength,

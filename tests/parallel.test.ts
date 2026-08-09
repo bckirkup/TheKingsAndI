@@ -30,6 +30,7 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     plies: 1,
     refusals: 0,
     overrides: 0,
+    implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: match <= Math.ceil(length / 4) ? 1 : 0,
     winningPositionDesertions: 0,
