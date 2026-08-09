@@ -3,6 +3,17 @@ import type { CampaignMetrics, MatchMetrics } from './metrics';
 export const EARLY_QUARTILE_COUNT = 2;
 export const EARLY_SATURATION_RATE = 0.8;
 
+export const DEGENERACY_CONFIG = {
+  /** Pearson |r| above this indicates transcript-column collapse. */
+  metricCorrelationThreshold: 0.95,
+  /** Correlations need at least four matches to be meaningful. */
+  metricCorrelationMinimumSamples: 4,
+  /** Normalized movement required between redeemer trajectory bands. */
+  learningDeltaThreshold: 0.02,
+  /** Minimum seed matches before the weak counterfactual can report. */
+  counterfactualMinimumMatches: 1,
+} as const;
+
 export interface DegeneracyFinding {
   readonly code: string;
   readonly message: string;
@@ -11,6 +22,181 @@ export interface DegeneracyFinding {
 export interface DegeneracyAssertionOptions {
   readonly enforceEarlySaturation?: boolean;
   readonly matchedSkillWinScore?: number;
+  readonly metricCorrelationThreshold?: number;
+  readonly metricCorrelationMinimumSamples?: number;
+  readonly learningDeltaThreshold?: number;
+  readonly counterfactualMinimumMatches?: number;
+  /**
+   * Forward campaigns run on the same seed set. This is deliberately not the
+   * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
+   */
+  readonly oracleCampaigns?: readonly CampaignMetrics[];
+}
+
+type TranscriptMetricKey =
+  | 'refusalRate'
+  | 'quietQuitRate'
+  | 'refusedGoodMoveRate'
+  | 'overrideRate'
+  | 'meanTrustStart'
+  | 'meanTrustEnd'
+  | 'meanTauAbilStart'
+  | 'meanTauAbilEnd'
+  | 'meanTauBenevStart'
+  | 'meanTauBenevEnd'
+  | 'classContemptStart'
+  | 'classContemptEnd'
+  | 'survivingRosterSize'
+  | 'winScore';
+
+const TRANSCRIPT_METRICS: readonly TranscriptMetricKey[] = [
+  'refusalRate',
+  'quietQuitRate',
+  'refusedGoodMoveRate',
+  'overrideRate',
+  'meanTrustStart',
+  'meanTrustEnd',
+  'meanTauAbilStart',
+  'meanTauAbilEnd',
+  'meanTauBenevStart',
+  'meanTauBenevEnd',
+  'classContemptStart',
+  'classContemptEnd',
+  'survivingRosterSize',
+  'winScore',
+];
+
+function pearsonSquared(
+  left: readonly number[],
+  right: readonly number[],
+): number | null {
+  if (left.length !== right.length || left.length < 2) return null;
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+  let numerator = 0;
+  let leftVariance = 0;
+  let rightVariance = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftDelta = (left[index] ?? 0) - leftMean;
+    const rightDelta = (right[index] ?? 0) - rightMean;
+    numerator += leftDelta * rightDelta;
+    leftVariance += leftDelta * leftDelta;
+    rightVariance += rightDelta * rightDelta;
+  }
+  if (leftVariance === 0 || rightVariance === 0) return null;
+  return (numerator * numerator) / (leftVariance * rightVariance);
+}
+
+function metricCollinearityFinding(
+  metrics: readonly MatchMetrics[],
+  threshold: number,
+  minimumSamples: number,
+): DegeneracyFinding | null {
+  if (metrics.length < minimumSamples) return null;
+  const correlated: string[] = [];
+  for (
+    let leftIndex = 0;
+    leftIndex < TRANSCRIPT_METRICS.length;
+    leftIndex += 1
+  ) {
+    const leftKey = TRANSCRIPT_METRICS[leftIndex];
+    if (leftKey === undefined) continue;
+    const leftValues = metrics.map((metric) => metric[leftKey]);
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < TRANSCRIPT_METRICS.length;
+      rightIndex += 1
+    ) {
+      const rightKey = TRANSCRIPT_METRICS[rightIndex];
+      if (rightKey === undefined) continue;
+      const correlationSquared = pearsonSquared(
+        leftValues,
+        metrics.map((metric) => metric[rightKey]),
+      );
+      if (
+        correlationSquared !== null &&
+        correlationSquared > threshold * threshold
+      ) {
+        correlated.push(`${leftKey}/${rightKey}`);
+      }
+    }
+  }
+  if (correlated.length === 0) return null;
+  return {
+    code: 'metric-collinearity',
+    message: `Transcript metrics are highly collinear (|r| > ${threshold.toFixed(2)}): ${correlated.join(', ')}.`,
+  };
+}
+
+function normalizedLearningDelta(
+  left: CampaignMetrics['trajectoryBands'][number],
+  right: CampaignMetrics['trajectoryBands'][number],
+): number {
+  const deltas = [
+    Math.abs(right.meanTauAbil - left.meanTauAbil) / 100,
+    Math.abs(right.meanTauBenev - left.meanTauBenev) / 100,
+    Math.abs(right.meanRefusalRate - left.meanRefusalRate),
+    Math.abs(right.desertionRate - left.desertionRate),
+    Math.abs(right.routRate - left.routRate),
+    Math.abs(right.meanSurvivingRosterSize - left.meanSurvivingRosterSize) / 16,
+  ];
+  return Math.max(...deltas);
+}
+
+function unmeasurableLearningFinding(
+  leader: CampaignMetrics['leader'],
+  metrics: readonly MatchMetrics[],
+  summary: CampaignMetrics,
+  threshold: number,
+): DegeneracyFinding | null {
+  const changedPolicy =
+    leader === 'redeemer' ||
+    metrics.some((metric) => metric.archetype === 'redeemer_arc');
+  if (!changedPolicy) return null;
+  const bands = summary.trajectoryBands.filter((band) => band.matches > 0);
+  if (bands.length < 2) return null;
+  let maximumMovement = 0;
+  for (let index = 1; index < bands.length; index += 1) {
+    const previous = bands[index - 1];
+    const current = bands[index];
+    if (previous !== undefined && current !== undefined) {
+      maximumMovement = Math.max(
+        maximumMovement,
+        normalizedLearningDelta(previous, current),
+      );
+    }
+  }
+  if (maximumMovement > threshold) return null;
+  return {
+    code: 'unmeasurable-learning',
+    message: `Redeemer policy changed between trajectory bands, but normalized learning movement stayed at ${maximumMovement.toFixed(3)} (threshold ${threshold.toFixed(3)}).`,
+  };
+}
+
+function flatteringCounterfactualFinding(
+  subject: CampaignMetrics,
+  oracleCampaigns: readonly CampaignMetrics[],
+  minimumMatches: number,
+): DegeneracyFinding | null {
+  if (oracleCampaigns.length === 0) return null;
+  const subjectBySeed = new Map(
+    subject.matchMetrics.map((metric) => [metric.seed, metric]),
+  );
+  let comparable = 0;
+  let oracleOutperformed = false;
+  for (const oracle of oracleCampaigns) {
+    for (const metric of oracle.matchMetrics) {
+      const subjectMetric = subjectBySeed.get(metric.seed);
+      if (subjectMetric === undefined) continue;
+      comparable += 1;
+      if (metric.winScore > subjectMetric.winScore) oracleOutperformed = true;
+    }
+  }
+  if (comparable < minimumMatches || oracleOutperformed) return null;
+  return {
+    code: 'flattering-counterfactual',
+    message: `Seed-matched forward-comparison approximation is vacuous: no supplied oracle outperformed the subject on ${comparable} comparable seed${comparable === 1 ? '' : 's'}. This does not close ADR 0030's replay-based detector.`,
+  };
 }
 
 export function detectDegeneracy(
@@ -20,6 +206,42 @@ export function detectDegeneracy(
   options: DegeneracyAssertionOptions = {},
 ): DegeneracyFinding[] {
   const findings: DegeneracyFinding[] = [];
+  const config = {
+    metricCorrelationThreshold:
+      options.metricCorrelationThreshold ??
+      DEGENERACY_CONFIG.metricCorrelationThreshold,
+    metricCorrelationMinimumSamples:
+      options.metricCorrelationMinimumSamples ??
+      DEGENERACY_CONFIG.metricCorrelationMinimumSamples,
+    learningDeltaThreshold:
+      options.learningDeltaThreshold ??
+      DEGENERACY_CONFIG.learningDeltaThreshold,
+    counterfactualMinimumMatches:
+      options.counterfactualMinimumMatches ??
+      DEGENERACY_CONFIG.counterfactualMinimumMatches,
+  };
+
+  const collinearity = metricCollinearityFinding(
+    metrics,
+    config.metricCorrelationThreshold,
+    config.metricCorrelationMinimumSamples,
+  );
+  if (collinearity !== null) findings.push(collinearity);
+
+  const learning = unmeasurableLearningFinding(
+    leader,
+    metrics,
+    summary,
+    config.learningDeltaThreshold,
+  );
+  if (learning !== null) findings.push(learning);
+
+  const counterfactual = flatteringCounterfactualFinding(
+    summary,
+    options.oracleCampaigns ?? [],
+    config.counterfactualMinimumMatches,
+  );
+  if (counterfactual !== null) findings.push(counterfactual);
 
   if (leader === 'tyrannical' && summary.desertionCampaignRate < 0.2) {
     findings.push({

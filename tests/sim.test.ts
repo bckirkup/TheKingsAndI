@@ -14,6 +14,7 @@ import { parseCampaignCheckpoint } from '../sim/campaign';
 import {
   assertCalibrationBounds,
   assertSmokeBounds,
+  DEGENERACY_CONFIG,
   detectDegeneracy,
 } from '../sim/degeneracy';
 import {
@@ -326,6 +327,132 @@ describe('degeneracy detectors', () => {
     expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
       'early',
     );
+  });
+
+  it('flags collinear transcript metrics with a golden pair', () => {
+    const metrics = [1, 2, 3, 4].map((match) => ({
+      ...handCheckMetric(match),
+      refusalRate: match / 10,
+      quietQuitRate: match / 20,
+    }));
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const findings = detectDegeneracy('supportive', metrics, summary);
+    expect(findings.map((finding) => finding.code)).toContain(
+      'metric-collinearity',
+    );
+  });
+
+  it('does not flag collinearity for too few samples or constants', () => {
+    const shortMetrics = [1, 2, 3].map(handCheckMetric);
+    const shortSummary = aggregateCampaign('supportive', 7, shortMetrics);
+    expect(
+      detectDegeneracy('supportive', shortMetrics, shortSummary).some(
+        (finding) => finding.code === 'metric-collinearity',
+      ),
+    ).toBe(false);
+
+    const constantMetrics = [1, 2, 3, 4].map((match) => ({
+      ...handCheckMetric(match),
+      refusalRate: 0.2,
+      quietQuitRate: 0.2,
+    }));
+    const constantSummary = aggregateCampaign('supportive', 7, constantMetrics);
+    expect(
+      detectDegeneracy('supportive', constantMetrics, constantSummary).some(
+        (finding) => finding.code === 'metric-collinearity',
+      ),
+    ).toBe(false);
+  });
+
+  it('changes collinearity findings when its threshold changes', () => {
+    const metrics = [1, 2, 3, 4].map((match) => ({
+      ...handCheckMetric(match),
+      refusalRate: match / 10,
+      quietQuitRate: match / 20 + (match === 4 ? 0.4 : 0),
+    }));
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const defaultCodes = detectDegeneracy('supportive', metrics, summary).map(
+      (finding) => finding.code,
+    );
+    const sensitiveCodes = detectDegeneracy('supportive', metrics, summary, {
+      metricCorrelationThreshold: 0.5,
+    }).map((finding) => finding.code);
+    expect(defaultCodes).not.toContain('metric-collinearity');
+    expect(sensitiveCodes).toContain('metric-collinearity');
+    expect(DEGENERACY_CONFIG.metricCorrelationThreshold).toBe(0.95);
+  });
+
+  it('flags a redeemer with no movement between trajectory bands', () => {
+    const metrics = [1, 2, 3, 4].map((match) => ({
+      ...handCheckMetric(match),
+      leader: 'redeemer' as const,
+      archetype: 'redeemer_arc' as const,
+      meanTauAbilEnd: 10,
+      meanTauBenevEnd: 10,
+    }));
+    const summary = aggregateCampaign('redeemer', 7, metrics);
+    const findings = detectDegeneracy('redeemer', metrics, summary);
+    expect(findings.map((finding) => finding.code)).toContain(
+      'unmeasurable-learning',
+    );
+  });
+
+  it('changes learning findings when its movement threshold changes', () => {
+    const metrics = [1, 2, 3, 4].map((match) => ({
+      ...handCheckMetric(match),
+      leader: 'redeemer' as const,
+      archetype: 'redeemer_arc' as const,
+      meanTauAbilEnd: match === 3 ? 20 : 10,
+      meanTauBenevEnd: 10,
+    }));
+    const summary = aggregateCampaign('redeemer', 7, metrics);
+    expect(
+      detectDegeneracy('redeemer', metrics, summary).some(
+        (finding) => finding.code === 'unmeasurable-learning',
+      ),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('redeemer', metrics, summary, {
+        learningDeltaThreshold: 0.5,
+      }).some((finding) => finding.code === 'unmeasurable-learning'),
+    ).toBe(true);
+  });
+
+  it('flags the weak seed-matched counterfactual approximation', () => {
+    const subjectMetrics = [1, 2, 3, 4].map(handCheckMetric);
+    const subject = aggregateCampaign('supportive', 7, subjectMetrics);
+    const oracle = aggregateCampaign(
+      'pure_tactician',
+      7,
+      subjectMetrics.map((metric) => ({
+        ...metric,
+        winScore: metric.winScore,
+      })),
+    );
+    const findings = detectDegeneracy('supportive', subjectMetrics, subject, {
+      oracleCampaigns: [oracle],
+    });
+    expect(findings.map((finding) => finding.code)).toContain(
+      'flattering-counterfactual',
+    );
+  });
+
+  it('changes counterfactual findings when minimum matches changes', () => {
+    const subjectMetrics = [1, 2, 3, 4].map(handCheckMetric);
+    const subject = aggregateCampaign('supportive', 7, subjectMetrics);
+    const oracle = aggregateCampaign('pure_tactician', 7, [subjectMetrics[0]!]);
+    expect(
+      detectDegeneracy('supportive', subjectMetrics, subject, {
+        oracleCampaigns: [oracle],
+        counterfactualMinimumMatches: 2,
+      }).some((finding) => finding.code === 'flattering-counterfactual'),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', subjectMetrics, subject, {
+        oracleCampaigns: [oracle],
+        counterfactualMinimumMatches: 1,
+      }).some((finding) => finding.code === 'flattering-counterfactual'),
+    ).toBe(true);
   });
 });
 

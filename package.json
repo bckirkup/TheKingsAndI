@@ -17,7 +17,8 @@
     "sim:aggregate": "tsx sim/aggregate.ts",
     "sim:sweep": "tsx sim/sweep.ts",
     "dialogue:distill": "tsx scripts/distill-dialogue.ts",
-    "dialogue:check": "tsx scripts/distill-dialogue.ts --check"
+    "dialogue:check": "tsx scripts/distill-dialogue.ts --check",
+    "trait-leakage:check": "tsx scripts/check-trait-leakage.ts"
   },
   "dependencies": {
     "chess.js": "1.4.0",

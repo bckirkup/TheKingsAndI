@@ -23,6 +23,11 @@ export {
   type CoverageReport,
 } from './coverage';
 export {
+  BANNED_DISPOSITION_PHRASES,
+  scanTraitLeakage,
+  type TraitLeakageFinding,
+} from './traitLeakage';
+export {
   AUDIT_PROSE_CONFIG,
   campaignDebriefProse,
   matchAuditProse,
