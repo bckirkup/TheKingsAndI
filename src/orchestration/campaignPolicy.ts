@@ -4,9 +4,12 @@ import { CAMPAIGN_CONFIG } from './campaignConfig';
 import type {
   MatchResult,
   ActTerminalState,
+  DismissalCause,
   StoredPieceState,
 } from '../persistence/types';
 import { classifyActTerminal } from './terminalState';
+
+export type { DismissalCause };
 
 export function meanRosterTrust(roster: readonly PieceState[]): number {
   if (roster.length === 0) return 0;
@@ -14,9 +17,51 @@ export function meanRosterTrust(roster: readonly PieceState[]): number {
 }
 
 /** Mandate lost — roster intact but trust collapsed (ADR 0021, D26). */
-export function shouldDismiss(roster: readonly PieceState[]): boolean {
+export function shouldDismissByRoom(roster: readonly PieceState[]): boolean {
   if (roster.length <= 1) return false;
   return meanRosterTrust(roster) <= CAMPAIGN_CONFIG.DISMISSAL_MEAN_TRUST;
+}
+
+/**
+ * King dismisses on results even when the room still believes (ADR 0024 §3).
+ * `kingTauAbil` is the King's independent ability channel in the player.
+ */
+export function shouldDismissByKing(kingTauAbil: number): boolean {
+  return kingTauAbil <= CAMPAIGN_CONFIG.KING_DISMISSAL_TAU_ABIL;
+}
+
+export type DismissalDecision =
+  | { readonly dismiss: false }
+  | { readonly dismiss: true; readonly cause: DismissalCause };
+
+export function evaluateDismissal(
+  roster: readonly PieceState[],
+  kingTauAbil: number,
+): DismissalDecision {
+  if (shouldDismissByRoom(roster)) {
+    return { dismiss: true, cause: 'dismissed_by_room' };
+  }
+  if (shouldDismissByKing(kingTauAbil)) {
+    return { dismiss: true, cause: 'dismissed_by_king' };
+  }
+  return { dismiss: false };
+}
+
+/** @deprecated Prefer evaluateDismissal — room path only. */
+export function shouldDismiss(roster: readonly PieceState[]): boolean {
+  return shouldDismissByRoom(roster);
+}
+
+/**
+ * Update the King's results channel from match realized quality.
+ * Winning / high-quality play raises it; collapse lowers it.
+ */
+export function updateKingTauAbil(
+  previous: number,
+  realizedQuality: number,
+): number {
+  const delta = Math.round((realizedQuality - 50) / 5);
+  return Math.max(0, Math.min(100, previous + delta));
 }
 
 /** Career victory: realized position quality sustained above player ceiling (5.10, ADR 0023). */
@@ -101,4 +146,30 @@ export function rosterBenevolenceAppraisal(
     roster.reduce((sum, piece) => sum + piece.credence.tauBenev, 0) /
       roster.length,
   );
+}
+
+/**
+ * Select a successor after dismissal (ADR 0025 §4).
+ * Prefer the opposing commander when available; King is the fallback.
+ */
+export function selectSuccessorLeader(input: {
+  readonly rivalLeaderId: string | undefined;
+  readonly kingLeaderId: string;
+  readonly rivalAvailable: boolean;
+}): string {
+  if (input.rivalAvailable && input.rivalLeaderId !== undefined) {
+    return input.rivalLeaderId;
+  }
+  return input.kingLeaderId;
+}
+
+/** Thin the available roster for a diminished appointment (ADR 0024 §4). */
+export function thinRosterForDiminishedAppointment<
+  T extends { readonly T_i: number },
+>(
+  roster: readonly T[],
+  cap: number = CAMPAIGN_CONFIG.DIMINISHED_ROSTER_CAP,
+): T[] {
+  if (roster.length <= cap) return [...roster];
+  return [...roster].sort((a, b) => b.T_i - a.T_i).slice(0, cap);
 }

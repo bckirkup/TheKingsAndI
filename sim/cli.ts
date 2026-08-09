@@ -21,6 +21,8 @@ export const LEADERS = [
   'random',
   'pure_tactician',
   'redeemer',
+  'cold_winner',
+  'rebuilder',
 ] as const;
 
 export type Leader = (typeof LEADERS)[number];

@@ -7,17 +7,31 @@ import {
 } from './credence';
 import { shouldDesert } from './desertion';
 import { calculateMoveUtility, calculateRefusalThreshold } from './utility';
+import { clampTrust } from './clamp';
+import { normalizePieceState } from './reducers';
 import type {
   CandidateMoveEvaluation,
   DesertionContext,
+  MatchEvent,
   MoveDecisionOutcome,
   PieceState,
 } from './types';
+
+export function isFatalisticCompliance(
+  actor: PieceState,
+  moveEval: CandidateMoveEvaluation,
+): boolean {
+  return (
+    moveEval.P_captured >= ENGINE_CONFIG.FATALISTIC_CAPTURE_RISK &&
+    actor.credence.tauAbil <= ENGINE_CONFIG.FATALISTIC_TAU_ABIL_CEILING
+  );
+}
 
 /**
  * Full verdict ladder (docs/psychology_engine.md §6).
  * Rule 1: desertion via expected-cost comparison (ADR 0011).
  * Rules 2–5: credence-weighted refusal and execution bands.
+ * Rule 3b: fatalistic compliance (ADR 0024) — full effort, cost on witnesses.
  */
 export function evaluateMoveResponse(
   actor: PieceState,
@@ -72,6 +86,19 @@ export function evaluateMoveResponse(
   }
 
   if (utilityScore < 0 || actor.T_i <= 0) {
+    if (isFatalisticCompliance(actor, moveEval)) {
+      return {
+        verdict: 'FATALISTIC_COMPLIANCE',
+        utilityScore,
+        perceivedValue,
+        refusalThreshold,
+        effectiveSearchDepth: calculateEngineSearchDepth(
+          actor.E_i,
+          ENGINE_CONFIG.FULL_ENGAGEMENT,
+        ),
+        engagementFactor: ENGINE_CONFIG.FULL_ENGAGEMENT,
+      };
+    }
     const engagement = ENGINE_CONFIG.QUIET_QUIT_ENGAGEMENT;
     return {
       verdict: 'QUIET_QUITTING',
@@ -97,6 +124,48 @@ export function evaluateMoveResponse(
     effectiveSearchDepth: calculateEngineSearchDepth(actor.E_i, engagement),
     engagementFactor: engagement,
   };
+}
+
+/**
+ * Cost of fatalistic compliance lands on witnesses and the actor's future
+ * willingness — never on the move itself (ADR 0024).
+ */
+export function applyFatalisticComplianceCosts(
+  roster: readonly PieceState[],
+  actorId: string,
+  ply: number,
+): { readonly roster: PieceState[]; readonly events: MatchEvent[] } {
+  const events: MatchEvent[] = [];
+  const next = roster.map((piece) => {
+    if (piece.id === actorId) {
+      const engagement = Math.max(
+        ENGINE_CONFIG.QUIET_QUIT_ENGAGEMENT,
+        piece.engagementFactor -
+          ENGINE_CONFIG.FATALISTIC_ACTOR_ENGAGEMENT_PENALTY,
+      );
+      events.push({
+        t: 'PSYCH_DELTA',
+        ply,
+        pieceId: piece.id,
+        field: 'engagementFactor',
+        delta: engagement - piece.engagementFactor,
+      });
+      return normalizePieceState({ ...piece, engagementFactor: engagement });
+    }
+    const trustDelta = ENGINE_CONFIG.FATALISTIC_WITNESS_TRUST_PENALTY;
+    events.push({
+      t: 'FATALISTIC_WITNESS',
+      ply,
+      actorId,
+      witnessId: piece.id,
+      trustDelta,
+    });
+    return normalizePieceState({
+      ...piece,
+      T_i: clampTrust(piece.T_i + trustDelta),
+    });
+  });
+  return { roster: next, events };
 }
 
 /**

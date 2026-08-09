@@ -1,5 +1,6 @@
 import { compileCampaignCultureDrift } from '../psychology/events';
 import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
+import { foldPlayerCommendations } from './commendations';
 import { foldCampaignTranscript } from './transcript';
 import {
   AUDIT_FOLD_VERSION,
@@ -14,6 +15,7 @@ import {
 const VERDICT_QUALITY_CP: Record<string, number> = {
   HEROIC_EXECUTION: 120,
   COMPLIANT_EXECUTION: 80,
+  FATALISTIC_COMPLIANCE: 90,
   QUIET_QUITTING: 35,
   MORAL_REFUSAL: 0,
   DESERTION_MUTINY: 0,
@@ -141,6 +143,7 @@ export function buildCampaignDebrief(
   initialRoster: readonly StoredPieceState[],
   finalRoster: readonly StoredPieceState[],
   actTerminalState: ActTerminalState,
+  act2Matches: readonly MatchRecord[] = [],
 ): CampaignDebrief {
   const cultureDrift = foldCampaignCultureDrift(
     matches,
@@ -166,5 +169,6 @@ export function buildCampaignDebrief(
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),
+    commendations: foldPlayerCommendations(matches, act2Matches),
   };
 }

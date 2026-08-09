@@ -169,25 +169,31 @@ a playtest note documenting whether refusal feels *dramatic* or *annoying*.
 ### Milestone 5 status (single-player spine vs seminar)
 
 The **single-player career spine** (5.1–5.7, 5.8o/m, 5.9–5.10, 5.5) is implemented.
-Seminar / cohort / multi-commander tasks below are **not** silently incomplete
-Milestone 5 — they are tracked as **Milestone 5b**.
+Seminar / cohort / multi-commander tasks below are tracked as **Milestone 5b**.
+
+**Landed in the independent 5b tranche:** player commendations (5.8r player set),
+learning delta fold (5.8q), consumer pacing profile (5.8i), `FATALISTIC_COMPLIANCE`
++ King results dismissal + diminished act-2 creation (5.8b/c), `cold_winner` /
+`rebuilder` oracle stubs (5.8p partial), world/cohort **types** only, and opposing
+roster psychology (5.8a). Still deferred: facilitator awards/host, signed
+passports, D49 keyed credence, replay counterfactuals, scarcity sweep.
 
 ## Milestone 5b — Seminar, cohort & multi-commander (deferred)
 
-| Task | Deliverable |
-|---|---|
-| 5.8j | Local world host (seminar / LAN / friend) |
-| 5.8k | Facilitator audit tooling |
-| 5.8l | Curriculum-bounded world lifecycle |
-| 5.8r | Commendations / awards |
-| 5.8p | Counterfactual oracle re-runs |
-| 5.8q | Learning delta across acts |
-| 5.8n | Pool × curriculum scarcity sweep |
-| 5.8g / 5.8h | Cohort registry + facilitator dashboard |
-| 5.8i | Consumer pacing profile |
-| 5.8a / 5.8d | Enemy roster psychology + free-agent market |
-| 5.8b / 5.8c | Multi-act appointments + King's results channel |
-| 5.8e / 5.8f | Retirement + signed passports (keyed credence resolved by ADR 0035; implementation still requires identity and passport work) |
+| Task | Deliverable | Status |
+|---|---|---|
+| 5.8j | Local world host (seminar / LAN / friend) | types only |
+| 5.8k | Facilitator audit tooling | deferred |
+| 5.8l | Curriculum-bounded world lifecycle | types only |
+| 5.8r | Commendations / awards | **player set landed**; facilitator set deferred |
+| 5.8p | Counterfactual oracle re-runs | oracle stubs landed; replay deferred |
+| 5.8q | Learning delta across acts | **landed** |
+| 5.8n | Pool × curriculum scarcity sweep | deferred |
+| 5.8g / 5.8h | Cohort registry + facilitator dashboard | types only / deferred |
+| 5.8i | Consumer pacing profile | **landed** |
+| 5.8a / 5.8d | Enemy roster psychology + free-agent market | **5.8a landed**; 5.8d waits on D49 |
+| 5.8b / 5.8c | Multi-act appointments + King's results channel | **landed** |
+| 5.8e / 5.8f | Retirement + signed passports (keyed credence resolved by ADR 0035; implementation still requires identity and passport work) | deferred |
 
 ## Milestone 6 — Narration layer (≈1.5 weeks)
 

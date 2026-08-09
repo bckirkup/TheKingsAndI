@@ -5,10 +5,29 @@ export {
   verifyCertificateDigest,
 } from './certificate';
 export {
+  COMMENDATION_CONFIG,
+  type CommendationConfig,
+} from './commendationConfig';
+export {
+  commendationLabelsForLeakageScan,
+  foldFacilitatorCommendations,
+  foldPlayerCommendations,
+  type CommendationAward,
+  type FacilitatorCommendationId,
+  type FacilitatorCommendationStub,
+  type PlayerCommendationId,
+  type PlayerCommendationSet,
+} from './commendations';
+export {
   buildCampaignDebrief,
   foldCampaignCultureDrift,
   foldMatchAudit,
 } from './folds';
+export {
+  foldLearningDelta,
+  normalizeBandLearningDelta,
+  type LearningDelta,
+} from './learningDelta';
 export {
   assertSchemaVersion,
   MIGRATIONS,
@@ -31,6 +50,7 @@ export type {
   CareerOutcome,
   CareerRecord,
   CertificateBundle,
+  DismissalCause,
   FirePreview,
   MatchAudit,
   MatchRecord,
@@ -41,11 +61,24 @@ export type {
   PieceStatus,
   StoredPieceState,
 } from './types';
+export type {
+  CohortParticipantRecord,
+  CohortRecord,
+  CurriculumFormat,
+  CurriculumRecord,
+  PieceLifecycleStatus,
+  WorldDisposition,
+  WorldKind,
+  WorldPieceIdentityScaffold,
+  WorldRecord,
+} from './worldTypes';
 export {
   AUDIT_FOLD_VERSION,
   CERTIFICATE_VERSION,
+  COMMENDATION_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   DETERMINISM_ID,
+  LEARNING_DELTA_FOLD_VERSION,
   PASSPORT_VERSION,
   PSYCH_CONFIG_VERSION,
   SCHEMA_VERSION,

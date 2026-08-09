@@ -10,6 +10,7 @@ import { createSeededRandom, type SeededRandom } from '../core/random';
 import type { EnginePort } from '../engine/types';
 import {
   applyNeglectSignal,
+  applyFatalisticComplianceCosts,
   evaluateMoveResponse,
   normalizePieceState,
   applyOverride,
@@ -23,7 +24,11 @@ import {
 } from '../psychology';
 
 import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
-import { shouldDismiss } from './campaignPolicy';
+import {
+  evaluateDismissal,
+  selectSuccessorLeader,
+  type DismissalCause,
+} from './campaignPolicy';
 import {
   createInsightRoundHandle,
   resolveAuditMoveScore,
@@ -31,7 +36,8 @@ import {
   type InsightRoundHandle,
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
-import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
+import { type OpponentArchetype } from './leaderPolicy';
+import { applyEnemyTurnSync } from './enemyTurn';
 import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
@@ -94,6 +100,8 @@ export interface DialogueCue {
 export interface MatchSessionSnapshot {
   readonly board: LivingBoard;
   readonly roster: readonly PieceState[];
+  /** Enemy psych state — never expose via gauges (ADR 0025); tests only. */
+  readonly enemyRoster: readonly PieceState[];
   readonly events: readonly MatchEvent[];
   readonly ply: number;
   readonly phase: MatchPhase;
@@ -106,6 +114,9 @@ export interface MatchSessionSnapshot {
   readonly winScore: number;
   readonly lastMove: readonly [Square, Square] | null;
   readonly dismissed: boolean;
+  readonly dismissalCause: DismissalCause | null;
+  readonly successorLeaderId: string | null;
+  readonly kingTauAbil: number;
   readonly determinismId: string;
 }
 
@@ -115,8 +126,11 @@ export interface MatchSessionConfig {
   readonly playerSide?: Side;
   readonly initialTrust?: number;
   readonly initialRoster?: readonly PieceState[];
+  readonly initialEnemyRoster?: readonly PieceState[];
   readonly opponentArchetype?: OpponentArchetype;
   readonly rosterPreamble?: readonly MatchEvent[];
+  readonly kingTauAbil?: number;
+  readonly rivalLeaderId?: string;
 }
 
 function updatePiece(
@@ -141,6 +155,7 @@ function syncRoster(
 export class MatchSession {
   private board: LivingBoard;
   private roster: PieceState[];
+  private enemyRoster: PieceState[];
   private events: MatchEvent[] = [];
   private ply = 1;
   private phase: MatchPhase = 'playing';
@@ -153,6 +168,10 @@ export class MatchSession {
   private rout = false;
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
+  private dismissalCause: DismissalCause | null = null;
+  private successorLeaderId: string | null = null;
+  private kingTauAbil: number;
+  private readonly rivalLeaderId: string;
   private readonly opponentArchetype: OpponentArchetype;
   private readonly engine: EnginePort;
   private readonly insight: InsightRoundHandle;
@@ -167,6 +186,9 @@ export class MatchSession {
     this.opponentArchetype = config.opponentArchetype ?? 'random';
     this.engine = config.engine;
     this.insight = createInsightRoundHandle();
+    this.kingTauAbil = config.kingTauAbil ?? 50;
+    this.rivalLeaderId =
+      config.rivalLeaderId ?? `opponent:${this.opponentArchetype}`;
     this.board = LivingBoard.standard();
     this.roster =
       config.initialRoster !== undefined
@@ -174,6 +196,16 @@ export class MatchSession {
         : createStartingRoster(
             this.board,
             this.playerSide,
+            config.initialTrust ?? 20,
+            this.random.nextInt(10_000) / 10_000,
+          );
+    const enemySide = this.playerSide === 'w' ? 'b' : 'w';
+    this.enemyRoster =
+      config.initialEnemyRoster !== undefined
+        ? config.initialEnemyRoster.map(normalizePieceState)
+        : createStartingRoster(
+            this.board,
+            enemySide,
             config.initialTrust ?? 20,
             this.random.nextInt(10_000) / 10_000,
           );
@@ -186,6 +218,7 @@ export class MatchSession {
     return {
       board: this.board,
       roster: this.roster.map(normalizePieceState),
+      enemyRoster: this.enemyRoster.map(normalizePieceState),
       events: [...this.events],
       ply: this.ply,
       phase: this.phase,
@@ -198,6 +231,9 @@ export class MatchSession {
       winScore: this.winScore(),
       lastMove: this.lastMove,
       dismissed: this.dismissed,
+      dismissalCause: this.dismissalCause,
+      successorLeaderId: this.successorLeaderId,
+      kingTauAbil: this.kingTauAbil,
       determinismId: this.engine.determinismId,
     };
   }
@@ -507,8 +543,15 @@ export class MatchSession {
 
   private maybeTriggerDismissal(): void {
     if (this.dismissed || this.rout || this.phase === 'game_over') return;
-    if (!shouldDismiss(this.roster)) return;
+    const decision = evaluateDismissal(this.roster, this.kingTauAbil);
+    if (!decision.dismiss) return;
     this.dismissed = true;
+    this.dismissalCause = decision.cause;
+    this.successorLeaderId = selectSuccessorLeader({
+      rivalLeaderId: this.rivalLeaderId,
+      kingLeaderId: 'king:field-command',
+      rivalAvailable: decision.cause === 'dismissed_by_king',
+    });
     this.phase = 'succession_spectate';
     this.dialogueCue = {
       eventKind: 'rout',
@@ -593,6 +636,14 @@ export class MatchSession {
         san,
         verdict: outcome.verdict,
       };
+    } else if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+      // Full effort with no faith — presented as compliance, cost is off-move.
+      this.dialogueCue = {
+        eventKind: 'compliant',
+        pieceId: actor.id,
+        san,
+        verdict: outcome.verdict,
+      };
     } else if (outcome.verdict === 'HEROIC_EXECUTION') {
       this.dialogueCue = {
         eventKind: 'heroic',
@@ -638,6 +689,16 @@ export class MatchSession {
         this.abilityObservations,
       ),
     );
+
+    if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+      const fatalistic = applyFatalisticComplianceCosts(
+        this.roster,
+        actor.id,
+        this.ply,
+      );
+      this.roster = fatalistic.roster;
+      this.events.push(...fatalistic.events);
+    }
 
     if (features !== undefined) {
       const attribution = attributeSacrifice(
@@ -694,19 +755,39 @@ export class MatchSession {
     if (this.phase === 'rout' || this.phase === 'game_over') return;
     if (this.board.turn() === this.playerSide) return;
 
-    const san = chooseOpponentMove(
-      this.board,
-      this.random,
-      this.opponentArchetype,
+    const enemySide = this.playerSide === 'w' ? 'b' : 'w';
+    const beforeFriendly = new Set(
+      this.board.piecesOf(this.playerSide).map((piece) => piece.id),
     );
-    if (san === undefined) {
+    const result = applyEnemyTurnSync({
+      board: this.board,
+      enemyRoster: this.enemyRoster,
+      enemySide,
+      random: this.random,
+      archetype: this.opponentArchetype,
+      ply: this.ply,
+      overrideRefusals: this.opponentArchetype === 'tyrannical',
+    });
+    this.enemyRoster = result.enemyRoster;
+    this.events.push(...result.events);
+    this.ply = result.ply;
+    if (result.lastMove !== null) {
+      this.lastMove = result.lastMove;
+    }
+    const afterFriendly = new Set(
+      this.board.piecesOf(this.playerSide).map((piece) => piece.id),
+    );
+    for (const id of beforeFriendly) {
+      if (!afterFriendly.has(id)) {
+        this.lastFriendlyCapturePly = this.ply - 1;
+        break;
+      }
+    }
+    this.roster = syncRoster(this.board, this.roster, this.playerSide);
+    if (result.enemyRout) {
       this.phase = 'game_over';
       return;
     }
-    const applied = this.board.applySan(san);
-    this.lastMove = [applied.from, applied.to];
-    this.roster = syncRoster(this.board, this.roster, this.playerSide);
-    this.ply += 1;
     if (this.board.isGameOver()) {
       this.phase = 'game_over';
     }

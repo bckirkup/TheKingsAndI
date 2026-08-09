@@ -40,6 +40,9 @@ function normalizeAct(act: ActRecord): ActRecord {
     ...act,
     playerSuspended: act.playerSuspended ?? false,
     opponentArchetype: act.opponentArchetype ?? 'tyrannical',
+    kingTauAbil: act.kingTauAbil ?? 50,
+    appointmentIndex: act.appointmentIndex ?? 1,
+    diminished: act.diminished ?? false,
   };
 }
 
@@ -122,6 +125,9 @@ export class CareerRepository {
       kingsRemaining: 3,
       playerSuspended: false,
       opponentArchetype: 'tyrannical',
+      kingTauAbil: 50,
+      appointmentIndex: 1,
+      diminished: false,
     };
     const campaign: CampaignRecord = {
       id: campaignId,
@@ -274,6 +280,68 @@ export class CareerRepository {
     const act = await this.db.acts.get(actId);
     if (act === undefined) return;
     await this.db.acts.put({ ...act, playerSuspended: false });
+  }
+
+  async createDiminishedAppointment(input: {
+    readonly careerId: string;
+    readonly seed: number;
+    readonly kingId?: string;
+    readonly opponentArchetype?: ActRecord['opponentArchetype'];
+    readonly targetMatches?: number;
+    readonly kingsRemaining?: number;
+  }): Promise<{
+    readonly career: CareerRecord;
+    readonly act: ActRecord;
+    readonly campaign: CampaignRecord;
+  }> {
+    const career = await this.db.careers.get(input.careerId);
+    if (career === undefined) {
+      throw new Error(`Career not found: ${input.careerId}`);
+    }
+    const appointmentIndex = career.actIds.length + 1;
+    if (appointmentIndex > 3) {
+      throw new Error('Career already has three appointments.');
+    }
+    let counter = career.actIds.length * 17 + 1;
+    const actId = deterministicId('act', input.seed, counter++);
+    const campaignId = deterministicId('campaign', input.seed, counter++);
+    const act: ActRecord = {
+      id: actId,
+      careerId: career.id,
+      kingId: input.kingId ?? 'w:K:e1',
+      matchIds: [],
+      terminalState: 'ongoing',
+      kingsRemaining: input.kingsRemaining ?? 2,
+      playerSuspended: false,
+      opponentArchetype: input.opponentArchetype ?? 'tyrannical',
+      kingTauAbil: 45,
+      appointmentIndex,
+      diminished: appointmentIndex >= 2,
+    };
+    const campaign: CampaignRecord = {
+      id: campaignId,
+      actId,
+      matchIds: [],
+      targetMatches: input.targetMatches ?? 5,
+      cultureDriftFoldVersion: CULTURE_DRIFT_FOLD_VERSION,
+    };
+    const nextCareer: CareerRecord = {
+      ...career,
+      actIds: [...career.actIds, actId],
+      outcome: 'ongoing',
+    };
+    await this.db.transaction(
+      'rw',
+      this.db.careers,
+      this.db.acts,
+      this.db.campaigns,
+      async () => {
+        await this.db.careers.put(nextCareer);
+        await this.db.acts.put(act);
+        await this.db.campaigns.put(campaign);
+      },
+    );
+    return { career: nextCareer, act, campaign };
   }
 
   async listFreeAgents(): Promise<StoredPieceState[]> {

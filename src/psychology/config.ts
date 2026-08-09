@@ -82,6 +82,16 @@ export const ENGINE_CONFIG = {
   PRIVATE_EVAL_DISTORTION_BOUND_CP: 30,
   /** D43 trauma drift remains an explicit calibration branch, off by default. */
   PRIVATE_EVAL_TRAUMA_DRIFT: false,
+  /**
+   * Fatalistic compliance (ADR 0024): high personal capture risk with low
+   * ability credence — the piece still executes at full engagement.
+   */
+  FATALISTIC_CAPTURE_RISK: 0.55,
+  FATALISTIC_TAU_ABIL_CEILING: 35,
+  /** Witness trust penalty when a peer marches under fatalistic compliance. */
+  FATALISTIC_WITNESS_TRUST_PENALTY: -12,
+  /** Actor future-willingness hit after fatalistic compliance. */
+  FATALISTIC_ACTOR_ENGAGEMENT_PENALTY: 0.25,
 } as const;
 
 export type EngineConfig = typeof ENGINE_CONFIG;

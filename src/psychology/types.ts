@@ -71,6 +71,7 @@ export interface CandidateMoveEvaluation {
 export type MoveResponseVerdict =
   | 'HEROIC_EXECUTION'
   | 'COMPLIANT_EXECUTION'
+  | 'FATALISTIC_COMPLIANCE'
   | 'QUIET_QUITTING'
   | 'MORAL_REFUSAL'
   | 'DESERTION_MUTINY';
@@ -198,6 +199,14 @@ export type MatchEvent =
       readonly pieceId: PieceId;
       readonly kind: CostlySignalKind;
       readonly trustCredit: number;
+    }
+  | {
+      /** Witness cost of fatalistic compliance (ADR 0024) — never on the move. */
+      readonly t: 'FATALISTIC_WITNESS';
+      readonly ply: number;
+      readonly actorId: PieceId;
+      readonly witnessId: PieceId;
+      readonly trustDelta: number;
     };
 
 export interface CampaignCultureDriftVector {

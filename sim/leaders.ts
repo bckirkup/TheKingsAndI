@@ -171,6 +171,44 @@ function createPolicy(style: Leader): LeaderPolicy {
           return createPolicy('supportive').shouldOverride(random, context);
         },
       };
+    case 'cold_winner':
+      // High ability, low benevolence — overrides freely while winning (ADR 0024).
+      return {
+        style,
+        chooseMove: (_board, moves) => {
+          const chosen = pickByScore(moves, (feature) =>
+            tacticalScore(feature, 0.25),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 2.5,
+          };
+        },
+        shouldOverride: (random) => random.nextInt(100) < 90,
+      };
+    case 'rebuilder':
+      // Patient restoration — avoid burns, accept refusals (ADR 0030 oracle).
+      return {
+        style,
+        chooseMove: (_board, moves) => {
+          const chosen = pickByScore(
+            moves,
+            (feature) =>
+              tacticalScore(feature, 3) +
+              feature.kingSafetyDelta * 4 -
+              feature.pCaptured * 8,
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: -0.5,
+          };
+        },
+        shouldOverride: (random) => random.nextInt(100) < 15,
+      };
     case 'random':
     default:
       return {
@@ -198,6 +236,8 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   random: createPolicy('random'),
   pure_tactician: createPolicy('pure_tactician'),
   redeemer: createPolicy('redeemer'),
+  cold_winner: createPolicy('cold_winner'),
+  rebuilder: createPolicy('rebuilder'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {

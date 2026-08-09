@@ -68,6 +68,7 @@ export async function runMatch(
     opponent: leaderPort('random', contextBase),
     initialRoster: options.roster,
     engine: options.engine,
+    opponentArchetype: 'random',
   });
 }
 

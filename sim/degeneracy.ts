@@ -1,4 +1,14 @@
 import type { CampaignMetrics, MatchMetrics } from './metrics';
+import {
+  COMMENDATION_CONFIG,
+  type PlayerCommendationId,
+  type PlayerCommendationSet,
+} from '../src/persistence';
+import {
+  evaluateConsumerPacing,
+  PACING_CONFIG,
+} from '../src/orchestration/pacingConfig';
+import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
 
 export const EARLY_QUARTILE_COUNT = 2;
 export const EARLY_SATURATION_RATE = 0.8;
@@ -12,6 +22,8 @@ export const DEGENERACY_CONFIG = {
   learningDeltaThreshold: 0.02,
   /** Minimum seed matches before the weak counterfactual can report. */
   counterfactualMinimumMatches: 1,
+  /** Fraction of awards one policy may earn before dominating-strategy fires. */
+  dominatingAwardFraction: COMMENDATION_CONFIG.DOMINATING_AWARD_FRACTION,
 } as const;
 
 export interface DegeneracyFinding {
@@ -31,6 +43,33 @@ export interface DegeneracyAssertionOptions {
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
    */
   readonly oracleCampaigns?: readonly CampaignMetrics[];
+  /** Per-oracle commendation sets for non-domination checks (ADR 0031). */
+  readonly oracleCommendations?: readonly {
+    readonly leader: string;
+    readonly commendations: PlayerCommendationSet;
+  }[];
+  /** Student-facing strings scanned for live commendation leakage (D93). */
+  readonly studentFacingStrings?: readonly string[];
+  /** Match audits for the consumer pacing cliff detector (5.8i). */
+  readonly pacingMatches?: readonly {
+    readonly matchIndex: number;
+    readonly audit: {
+      readonly refusalCount: number;
+      readonly overrideCount: number;
+      readonly desertionCount: number;
+      readonly meanTrustDelta: number;
+      readonly boardQuality: number;
+      readonly executionFidelity: number;
+    };
+  }[];
+  /** True when enemy psych never produced an observable behaviour. */
+  readonly enemyBehaviourCount?: number;
+  /** True when any enemy private field leaked to player-facing surfaces. */
+  readonly enemyPsychLeak?: boolean;
+  /** True when difficulty changed engine depth rather than leader policy. */
+  readonly difficultyChangedDepth?: boolean;
+  /** Dismissal occurred while mean roster trust remained high (McClellan). */
+  readonly dismissalWithHighMandate?: boolean;
 }
 
 type TranscriptMetricKey =
@@ -132,15 +171,7 @@ function normalizedLearningDelta(
   left: CampaignMetrics['trajectoryBands'][number],
   right: CampaignMetrics['trajectoryBands'][number],
 ): number {
-  const deltas = [
-    Math.abs(right.meanTauAbil - left.meanTauAbil) / 100,
-    Math.abs(right.meanTauBenev - left.meanTauBenev) / 100,
-    Math.abs(right.meanRefusalRate - left.meanRefusalRate),
-    Math.abs(right.desertionRate - left.desertionRate),
-    Math.abs(right.routRate - left.routRate),
-    Math.abs(right.meanSurvivingRosterSize - left.meanSurvivingRosterSize) / 16,
-  ];
-  return Math.max(...deltas);
+  return normalizeBandLearningDelta(left, right);
 }
 
 function unmeasurableLearningFinding(
@@ -320,7 +351,143 @@ export function detectDegeneracy(
     }
   }
 
+  const dominating = dominatingStrategyFinding(
+    options.oracleCommendations ?? [],
+  );
+  if (dominating !== null) findings.push(dominating);
+
+  const leakage = commendationLeakageFinding(
+    options.studentFacingStrings ?? [],
+  );
+  if (leakage !== null) findings.push(leakage);
+
+  const unwinnable = unwinnableAwardFinding(options.oracleCommendations ?? []);
+  if (unwinnable !== null) findings.push(unwinnable);
+
+  if (options.pacingMatches !== undefined) {
+    const pacing = evaluateConsumerPacing(options.pacingMatches);
+    if (pacing.cliff) {
+      findings.push({
+        code: 'ninety-minute-cliff',
+        message: `Consumer pacing profile missed a leadership beat inside the first ${PACING_CONFIG.CONSUMER_WINDOW_MINUTES} minutes.`,
+      });
+    }
+  }
+
+  if (options.enemyBehaviourCount === 0) {
+    findings.push({
+      code: 'inert-opposition',
+      message:
+        'Enemy morale never produced an observable behaviour — opposing psychology is decoration.',
+    });
+  }
+
+  if (options.enemyPsychLeak === true) {
+    findings.push({
+      code: 'telepathy',
+      message:
+        'Enemy psychological state reached a player-facing surface (ADR 0025).',
+    });
+  }
+
+  if (options.difficultyChangedDepth === true) {
+    findings.push({
+      code: 'difficulty-by-depth',
+      message:
+        'Difficulty scaled engine depth rather than opposing leader policy (ADR 0025 / D67).',
+    });
+  }
+
+  if (options.dismissalWithHighMandate === false) {
+    findings.push({
+      code: 'no-mcclellan',
+      message:
+        'Dismissal never occurred while roster mandate was high — King results channel inert (ADR 0024).',
+    });
+  }
+
   return findings;
+}
+
+function dominatingStrategyFinding(
+  oracleCommendations: readonly {
+    readonly leader: string;
+    readonly commendations: PlayerCommendationSet;
+  }[],
+): DegeneracyFinding | null {
+  if (oracleCommendations.length === 0) return null;
+  const totalAwards = 8;
+  for (const entry of oracleCommendations) {
+    const fraction = entry.commendations.earnedIds.length / totalAwards;
+    if (fraction >= DEGENERACY_CONFIG.dominatingAwardFraction) {
+      return {
+        code: 'dominating-strategy',
+        message: `${entry.leader} earned ${entry.commendations.earnedIds.length}/${totalAwards} commendations — awards collapsed into one score.`,
+      };
+    }
+  }
+  return null;
+}
+
+function commendationLeakageFinding(
+  studentFacingStrings: readonly string[],
+): DegeneracyFinding | null {
+  const banned = [
+    'evenness of attention',
+    'nobody drowned',
+    'best of the best',
+    'overall improvement',
+    'commendation',
+  ];
+  for (const text of studentFacingStrings) {
+    const lower = text.toLowerCase();
+    for (const phrase of banned) {
+      if (lower.includes(phrase)) {
+        return {
+          code: 'commendation-leakage',
+          message: `Student-facing surface mentions "${phrase}" during play (D93).`,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function unwinnableAwardFinding(
+  oracleCommendations: readonly {
+    readonly leader: string;
+    readonly commendations: PlayerCommendationSet;
+  }[],
+): DegeneracyFinding | null {
+  if (oracleCommendations.length < 2) return null;
+  const awardIds: PlayerCommendationId[] = [
+    'evenness_of_attention',
+    'best_of_the_best',
+    'nobody_drowned',
+    'overcoming_a_weakness',
+    'grit_and_endurance',
+    'overall_improvement',
+    'honest_sacrifice',
+    'repaired_breach',
+  ];
+  for (const id of awardIds) {
+    const earners = oracleCommendations.filter((entry) =>
+      entry.commendations.earnedIds.includes(id),
+    );
+    if (earners.length === 0) {
+      return {
+        code: 'unwinnable-award',
+        message: `Commendation ${id} was never earned by any oracle policy.`,
+      };
+    }
+    if (earners.length === oracleCommendations.length) {
+      return {
+        code: 'unwinnable-award',
+        message: `Commendation ${id} was earned by every oracle — dead content.`,
+      };
+    }
+  }
+  return null;
 }
 
 export function assertSmokeBounds(

@@ -63,6 +63,12 @@ describe('campaign policy', () => {
     expect(shouldDismiss([makePiece(40), makePiece(50)])).toBe(false);
   });
 
+  it('asserts diminished king depth below full king depth', () => {
+    expect(CAMPAIGN_CONFIG.DIMINISHED_KING_MAX_SEARCH_DEPTH).toBeLessThan(
+      CAMPAIGN_CONFIG.KING_MAX_SEARCH_DEPTH,
+    );
+  });
+
   it('detects sustained career victory (5.10)', () => {
     const matches = [
       { audit: { realizedQuality: 80 } },

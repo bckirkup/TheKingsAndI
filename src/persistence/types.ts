@@ -12,6 +12,11 @@ export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
 export const DETERMINISM_ID = 'heuristic-eval-v1';
+export const COMMENDATION_FOLD_VERSION = 'commendations-v1';
+export const LEARNING_DELTA_FOLD_VERSION = 'learning-delta-v1';
+
+/** Why a commander was dismissed (ADR 0024 §3). */
+export type DismissalCause = 'dismissed_by_room' | 'dismissed_by_king';
 
 export type PieceStatus =
   | 'ACTIVE'
@@ -74,6 +79,16 @@ export interface ActRecord {
   /** Player dismissed last match; reinstatement evaluated at next match start (ADR 0022 §7). */
   readonly playerSuspended: boolean;
   readonly opponentArchetype: OpponentArchetype;
+  /**
+   * King's independent ability channel in the player (ADR 0024 §3).
+   * Formed from results, not from roster rumor.
+   */
+  readonly kingTauAbil: number;
+  /** Appointment index within the career (1 = first act). */
+  readonly appointmentIndex: number;
+  /** Diminished second appointments (ADR 0024 §4). */
+  readonly diminished: boolean;
+  readonly dismissalCause?: DismissalCause;
 }
 
 export interface CampaignRecord {
@@ -123,6 +138,26 @@ export interface CampaignDebrief {
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
   readonly transcript: CampaignTranscript;
+  /** Debrief-only — never written into live match UI (ADR 0031 / D93). */
+  readonly commendations: {
+    readonly foldVersion: string;
+    readonly awards: readonly {
+      readonly id: string;
+      readonly label: string;
+      readonly earned: boolean;
+      readonly score: number;
+      readonly threshold: number;
+    }[];
+    readonly earnedIds: readonly string[];
+    readonly learningDelta: {
+      readonly foldVersion: string;
+      readonly overrideRateDelta: number;
+      readonly concessionQualityDelta: number;
+      readonly benevolenceRecovery: number;
+      readonly fidelityIndependentOfQuality: number;
+      readonly composite: number;
+    } | null;
+  };
 }
 
 export interface CampaignTranscript {
