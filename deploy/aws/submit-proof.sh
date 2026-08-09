@@ -41,11 +41,18 @@ jq -n \
     ]
   }' >/tmp/kingsandi-container-overrides.json
 
+array_args=
+if [ "$SHARD_COUNT" -gt 1 ]; then
+  array_args="--array-properties size=$SHARD_COUNT"
+fi
+
+# A one-shard proof is submitted as a regular job because Batch requires array
+# sizes greater than one. Production shard runs use the array path.
 aws batch submit-job \
   --job-name "$RUN_ID" \
   --job-queue "$JOB_QUEUE" \
   --job-definition "$JOB_DEFINITION" \
-  --array-properties size="$SHARD_COUNT" \
   --container-overrides file:///tmp/kingsandi-container-overrides.json \
+  $array_args \
   --query jobId \
   --output text
