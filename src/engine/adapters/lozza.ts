@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 
 import {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
@@ -25,37 +25,57 @@ export interface LozzaPortOptions {
   readonly enginePath?: string;
 }
 
-let sharedEngine: UciEngine | undefined;
-let bestEngine: UciEngine | undefined;
-let searchQueue: Promise<void> = Promise.resolve();
-let bestSearchQueue: Promise<void> = Promise.resolve();
-const ladderByFen = new Map<string, DepthLadder>();
+interface LozzaEngineState {
+  sharedEngine: UciEngine;
+  bestEngine: UciEngine | undefined;
+  searchQueue: Promise<void>;
+  bestSearchQueue: Promise<void>;
+  ladderByFen: Map<string, DepthLadder>;
+}
 
-function getSharedEngine(enginePath: string): UciEngine {
-  if (sharedEngine === undefined) {
-    sharedEngine = new UciEngine({
+const statesByPath = new Map<string, LozzaEngineState>();
+const artifactIdentityByPath = new Map<
+  string,
+  { readonly build: string; readonly hash: string }
+>();
+
+function getState(enginePath: string): LozzaEngineState {
+  const existing = statesByPath.get(enginePath);
+  if (existing !== undefined) return existing;
+  const state: LozzaEngineState = {
+    sharedEngine: new UciEngine({
       enginePath,
       hashMb: LOZZA_HASH_MB,
       threads: 1,
       multiPv: DEFAULT_PRIVATE_MULTIPV_WIDTH,
-    });
-  }
-  return sharedEngine;
+    }),
+    bestEngine: undefined,
+    searchQueue: Promise.resolve(),
+    bestSearchQueue: Promise.resolve(),
+    ladderByFen: new Map(),
+  };
+  statesByPath.set(enginePath, state);
+  return state;
 }
 
-function getBestEngine(enginePath: string): UciEngine {
-  if (bestEngine === undefined) {
-    bestEngine = new UciEngine({
+function getBestEngine(state: LozzaEngineState, enginePath: string): UciEngine {
+  if (state.bestEngine === undefined) {
+    state.bestEngine = new UciEngine({
       enginePath,
       hashMb: LOZZA_HASH_MB,
       threads: 1,
       multiPv: 1,
     });
   }
-  return bestEngine;
+  return state.bestEngine;
 }
 
-function lozzaDeterminismId(enginePath: string): string {
+function getArtifactIdentity(enginePath: string): {
+  readonly build: string;
+  readonly hash: string;
+} {
+  const cached = artifactIdentityByPath.get(enginePath);
+  if (cached !== undefined) return cached;
   const artifact = readFileSync(enginePath);
   const source = artifact.toString('utf8');
   const build = LOZZA_BUILD_PATTERN.exec(source)?.[1];
@@ -64,13 +84,20 @@ function lozzaDeterminismId(enginePath: string): string {
       `Lozza artifact does not declare a readable BUILD label: ${enginePath}`,
     );
   }
-  const artifactHash = createHash('sha256')
+  const hash = createHash('sha256')
     .update(artifact)
     .digest('hex')
     .slice(0, LOZZA_ARTIFACT_HASH_PREFIX_LENGTH);
+  const identity = { build, hash };
+  artifactIdentityByPath.set(enginePath, identity);
+  return identity;
+}
+
+function lozzaDeterminismId(enginePath: string): string {
+  const { build, hash } = getArtifactIdentity(enginePath);
   // The short hash is an equality token, not a security boundary.
   return (
-    `lozza-${build}/artifact-${artifactHash}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
+    `lozza-${build}/artifact-${hash}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
     `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
     `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
     `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`
@@ -83,22 +110,24 @@ function lozzaDeterminismId(enginePath: string): string {
  * handles deduplication across pieces at the barrier.
  */
 export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
-  const enginePath = options.enginePath ?? defaultEnginePath;
+  const enginePath = resolve(options.enginePath ?? defaultEnginePath);
   const determinismId = lozzaDeterminismId(enginePath);
-  const engine = getSharedEngine(enginePath);
+  const state = getState(enginePath);
   const ladderFor = async (
     fen: string,
     depth: number,
   ): Promise<DepthLadder> => {
-    const cached = ladderByFen.get(fen);
+    const cached = state.ladderByFen.get(fen);
     if (cached !== undefined && cached.maxDepth >= depth) return cached;
-    const search = searchQueue.then(() => engine.searchLadder(fen, depth));
-    searchQueue = search.then(
+    const search = state.searchQueue.then(() =>
+      state.sharedEngine.searchLadder(fen, depth),
+    );
+    state.searchQueue = search.then(
       () => undefined,
       () => undefined,
     );
     const ladder = await search;
-    ladderByFen.set(fen, ladder);
+    state.ladderByFen.set(fen, ladder);
     return ladder;
   };
   return {
@@ -137,10 +166,10 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       return Object.freeze([]);
     },
     async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
-      const search = bestSearchQueue.then(() =>
-        getBestEngine(enginePath).searchLadder(fen, depth),
+      const search = state.bestSearchQueue.then(() =>
+        getBestEngine(state, enginePath).searchLadder(fen, depth),
       );
-      bestSearchQueue = search.then(
+      state.bestSearchQueue = search.then(
         () => undefined,
         () => undefined,
       );
@@ -180,15 +209,12 @@ function linesAt(
 
 /** Tear down the shared process (test cleanup). */
 export async function disposeLozzaPort(): Promise<void> {
-  if (sharedEngine !== undefined) {
-    await sharedEngine.dispose();
-    sharedEngine = undefined;
-  }
-  if (bestEngine !== undefined) {
-    await bestEngine.dispose();
-    bestEngine = undefined;
-  }
-  searchQueue = Promise.resolve();
-  bestSearchQueue = Promise.resolve();
-  ladderByFen.clear();
+  const states = [...statesByPath.values()];
+  statesByPath.clear();
+  await Promise.all(
+    states.flatMap((state) => [
+      state.sharedEngine.dispose(),
+      ...(state.bestEngine === undefined ? [] : [state.bestEngine.dispose()]),
+    ]),
+  );
 }

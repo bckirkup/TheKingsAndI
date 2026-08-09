@@ -81,12 +81,23 @@ describe('engine conformance corpus (Lozza)', () => {
           fileURLToPath(new URL('../vendor/lozza/lozza.cjs', import.meta.url)),
         ),
       );
-      const lastByte = artifact[artifact.length - 1];
-      if (lastByte === undefined) throw new Error('Lozza artifact is empty.');
-      artifact[artifact.length - 1] = lastByte ^ 1;
-      await writeFile(artifactPath, artifact);
+      const source = artifact.toString('utf8');
+      const mutatedSource = source.replace(
+        "const BUILD = '11';",
+        "const BUILD = '12';",
+      );
+      if (mutatedSource === source) {
+        throw new Error('Lozza BUILD declaration was not found.');
+      }
+      const mutatedArtifact = Buffer.from(mutatedSource, 'utf8');
+      await writeFile(artifactPath, mutatedArtifact);
       const mutated = createLozzaPort({ enginePath: artifactPath });
       expect(mutated.determinismId).not.toBe(port.determinismId);
+      const testCase = CONFORMANCE_CORPUS[0];
+      if (testCase === undefined) throw new Error('missing corpus case');
+      await expect(
+        mutated.evaluate(testCase.fen, testCase.depth),
+      ).resolves.toEqual(await port.evaluate(testCase.fen, testCase.depth));
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
