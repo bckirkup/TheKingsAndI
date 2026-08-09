@@ -1,4 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 import {
   CONFORMANCE_CORPUS,
@@ -66,6 +70,37 @@ describe('engine conformance corpus (Lozza)', () => {
     const testCase = CONFORMANCE_CORPUS[0];
     if (testCase === undefined) throw new Error('missing corpus case');
     await expectMultiPvContract(port, testCase);
+  });
+
+  it('includes the vendored artifact contents in its determinism ID', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-lozza-'));
+    const artifactPath = join(directory, 'lozza.cjs');
+    try {
+      const artifact = Buffer.from(
+        await readFile(
+          fileURLToPath(new URL('../vendor/lozza/lozza.cjs', import.meta.url)),
+        ),
+      );
+      const source = artifact.toString('utf8');
+      const mutatedSource = source.replace(
+        "const BUILD = '11';",
+        "const BUILD = '12';",
+      );
+      if (mutatedSource === source) {
+        throw new Error('Lozza BUILD declaration was not found.');
+      }
+      const mutatedArtifact = Buffer.from(mutatedSource, 'utf8');
+      await writeFile(artifactPath, mutatedArtifact);
+      const mutated = createLozzaPort({ enginePath: artifactPath });
+      expect(mutated.determinismId).not.toBe(port.determinismId);
+      const testCase = CONFORMANCE_CORPUS[0];
+      if (testCase === undefined) throw new Error('missing corpus case');
+      await expect(
+        mutated.evaluate(testCase.fen, testCase.depth),
+      ).resolves.toEqual(await port.evaluate(testCase.fen, testCase.depth));
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
 
