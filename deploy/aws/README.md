@@ -112,3 +112,27 @@ fault.
 
 On retry, the entrypoint downloads the existing checkpoint when available and
 passes it to `pnpm sim --resume`. A missing checkpoint means a clean start.
+
+## ECR and Batch provisioning
+
+The deployment scripts require credentials for the deploy role and take all
+account-specific values from their environment:
+
+```bash
+export AWS_REGION=us-east-1
+export ECR_REPOSITORY=kingsandi-campaign
+export IMAGE_NAME=kingsandi-campaign:local
+export IMAGE_TAG="$GIT_COMMIT_SHA"
+deploy/aws/push-image.sh
+```
+
+Use the immutable `repository@sha256:...` reference printed by that command as
+`ECR_IMAGE` when running `provision-batch.sh`. That script creates the
+Fargate Spot compute environment and queue if absent, then registers a job
+definition with one vCPU, 2048 MiB, public-IP networking, CloudWatch logs, and
+the retry policy for interruption exit code `1` and terminal configuration
+exit code `2`. `MAX_VCPUS` controls the environment-wide concurrency ceiling
+and defaults to `50`; provisioning updates that ceiling on existing
+environments as well as new ones. `submit-proof.sh` requires `DEPTH_CAP`,
+`GIT_COMMIT_SHA`, and `IMAGE_DIGEST` explicitly; none has a job-definition
+default.
