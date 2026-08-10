@@ -21,8 +21,10 @@ function leaderPort(
 ): HeadlessLeaderPort {
   const policy = leaderPolicy(style);
   return {
-    chooseMove(board, side, random, ply) {
-      const moves = legalScoredMoves(board);
+    chooseMove(board, side, random, ply, refusedSans) {
+      const moves = legalScoredMoves(board).filter(
+        (move) => refusedSans?.has(move.features.san) !== true,
+      );
       if (moves.length === 0) return undefined;
       const context: LeaderContext = { ...contextBase, ply };
       const choice = policy.chooseMove(board, moves, random, context);

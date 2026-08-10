@@ -36,6 +36,7 @@ function makeMetric(): MatchMetrics {
     plies: 1,
     refusals: 0,
     overrides: 0,
+    implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: 0,
     winningPositionDesertions: 0,
