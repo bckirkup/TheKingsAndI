@@ -31,6 +31,12 @@ export const DEGENERACY_CONFIG = {
   earlySaturationAttritionThreshold: 0.8,
   /** Early-quartile rout rate above this is campaign saturation. */
   earlySaturationRoutThreshold: 0.8,
+  /** Bounded refusal rate below this means refusals are inert. */
+  refusalDeadRateThreshold: 0.001,
+  /** Bounded refusal rate above this makes refused-good detection meaningful. */
+  toothlessRefusalRateThreshold: 0.05,
+  /** Bounded refusal rate above this makes override detection meaningful. */
+  overrideInertRefusalRateThreshold: 0.05,
 } as const;
 
 export interface DegeneracyFinding {
@@ -49,6 +55,9 @@ export interface DegeneracyAssertionOptions {
   readonly supportiveRoutAttritionThreshold?: number;
   readonly earlySaturationAttritionThreshold?: number;
   readonly earlySaturationRoutThreshold?: number;
+  readonly refusalDeadRateThreshold?: number;
+  readonly toothlessRefusalRateThreshold?: number;
+  readonly overrideInertRefusalRateThreshold?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -273,6 +282,15 @@ export function detectDegeneracy(
     earlySaturationRoutThreshold:
       options.earlySaturationRoutThreshold ??
       DEGENERACY_CONFIG.earlySaturationRoutThreshold,
+    refusalDeadRateThreshold:
+      options.refusalDeadRateThreshold ??
+      DEGENERACY_CONFIG.refusalDeadRateThreshold,
+    toothlessRefusalRateThreshold:
+      options.toothlessRefusalRateThreshold ??
+      DEGENERACY_CONFIG.toothlessRefusalRateThreshold,
+    overrideInertRefusalRateThreshold:
+      options.overrideInertRefusalRateThreshold ??
+      DEGENERACY_CONFIG.overrideInertRefusalRateThreshold,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -315,7 +333,10 @@ export function detectDegeneracy(
       message: `Supportive leader desertion attrition above ${config.supportiveRoutAttritionThreshold * 100}%.`,
     });
   }
-  if (summary.meanRefusalRate < 0.001 && leader !== 'supportive') {
+  if (
+    summary.meanRefusalRate < config.refusalDeadRateThreshold &&
+    leader !== 'supportive'
+  ) {
     findings.push({
       code: 'refusal-dead',
       message: 'Refusal rate near zero across the campaign.',
@@ -323,7 +344,7 @@ export function detectDegeneracy(
   }
   if (
     summary.meanRefusedGoodMoveRate < 0.01 &&
-    summary.meanRefusalRate > 0.05
+    summary.meanRefusalRate > config.toothlessRefusalRateThreshold
   ) {
     findings.push({
       code: 'toothless-refusal',
@@ -333,7 +354,7 @@ export function detectDegeneracy(
   if (
     leader === 'tyrannical' &&
     summary.meanOverrideRate < 0.01 &&
-    summary.meanRefusalRate > 0.05
+    summary.meanRefusalRate > config.overrideInertRefusalRateThreshold
   ) {
     findings.push({
       code: 'override-inert',

@@ -649,9 +649,11 @@ Decide whether a nomination mark is permanent or decays across matches. This
 interacts directly with ADR 0026's community-of-pieces model.
 
 ### D105 ⚠ How should desertion detector thresholds be re-ranged for attrition?
-The existing `0.2`, `0.5`, and early-saturation thresholds were calibrated against
-match incidence. Re-range them against campaign desertion attrition before using
-the detectors as balance acceptance gates.
+The existing desertion thresholds (`0.2`, `0.5`, and early-saturation `0.8`) and
+refusal thresholds (`0.001` and `0.05`) were calibrated against the old
+match-incidence and refusals-per-ply quantities. Re-range them against campaign
+desertion attrition and bounded refusal rate before using the detectors as
+balance acceptance gates.
 
 ### D106 ⚠ Should terminal desertion advance the headless ply?
 The interactive path increments `ply` for terminal desertion before handling

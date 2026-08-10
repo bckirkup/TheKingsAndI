@@ -400,6 +400,9 @@ describe('degeneracy detectors', () => {
     expect(DEGENERACY_CONFIG.supportiveRoutAttritionThreshold).toBe(0.5);
     expect(DEGENERACY_CONFIG.earlySaturationAttritionThreshold).toBe(0.8);
     expect(DEGENERACY_CONFIG.earlySaturationRoutThreshold).toBe(0.8);
+    expect(DEGENERACY_CONFIG.refusalDeadRateThreshold).toBe(0.001);
+    expect(DEGENERACY_CONFIG.toothlessRefusalRateThreshold).toBe(0.05);
+    expect(DEGENERACY_CONFIG.overrideInertRefusalRateThreshold).toBe(0.05);
 
     const metrics = await runSimulation({
       matches: 1,
@@ -457,6 +460,55 @@ describe('degeneracy detectors', () => {
       detectDegeneracy('tyrannical', metrics, earlySummary, {
         earlySaturationRoutThreshold: 0.95,
       }).some((finding) => finding.code === 'early-saturation'),
+    ).toBe(false);
+
+    const refusalSummary = {
+      ...summary,
+      meanRefusalRate: 0.0005,
+      meanRefusedGoodMoveRate: 0,
+      meanOverrideRate: 0,
+    };
+    expect(
+      detectDegeneracy('tyrannical', metrics, refusalSummary).some(
+        (finding) => finding.code === 'refusal-dead',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, refusalSummary, {
+        refusalDeadRateThreshold: 0.0001,
+      }).some((finding) => finding.code === 'refusal-dead'),
+    ).toBe(false);
+
+    const toothlessSummary = {
+      ...summary,
+      meanRefusalRate: 0.06,
+      meanRefusedGoodMoveRate: 0,
+    };
+    expect(
+      detectDegeneracy('supportive', metrics, toothlessSummary).some(
+        (finding) => finding.code === 'toothless-refusal',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, toothlessSummary, {
+        toothlessRefusalRateThreshold: 0.07,
+      }).some((finding) => finding.code === 'toothless-refusal'),
+    ).toBe(false);
+
+    const overrideSummary = {
+      ...summary,
+      meanRefusalRate: 0.06,
+      meanOverrideRate: 0,
+    };
+    expect(
+      detectDegeneracy('tyrannical', metrics, overrideSummary).some(
+        (finding) => finding.code === 'override-inert',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, overrideSummary, {
+        overrideInertRefusalRateThreshold: 0.07,
+      }).some((finding) => finding.code === 'override-inert'),
     ).toBe(false);
   });
 
