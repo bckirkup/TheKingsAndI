@@ -4,6 +4,9 @@ _Date: 2026-08-07. Seed: 7. The historical comparison used 20 matches. The
 corrected post-change checks deliberately use small match counts to keep engine
 runtime bounded._
 
+For measurements taken after ADR 0037, ADR 0038, and ADR 0039, the numbers in
+this historical report are superseded by `2026-08-10-state-of-play.md`.
+
 ## Harness configuration
 
 - Play path: `EnginePort` → ADR 0034 barrier → `insightToEvaluation` (Phase 2).
