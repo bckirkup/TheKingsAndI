@@ -108,14 +108,12 @@ describe('headless refusal re-plan (ADR 0002, ADR 0014)', () => {
     const firstPlyRefusals = counts.get(1) ?? 0;
     expect(firstPlyRefusals).toBeGreaterThan(1);
     // Refusal costs no turn, so a re-plan happens at the same ply...
-    expect(result.events.filter((event) => event.t === 'MOVE')).not.toHaveLength(
-      0,
-    );
+    expect(
+      result.events.filter((event) => event.t === 'MOVE'),
+    ).not.toHaveLength(0);
     // ...and each re-plan sees every order refused so far at this position.
     const growth = seen.slice(0, firstPlyRefusals).map((set) => set.size);
-    expect(growth).toStrictEqual(
-      growth.map((_value, index) => index),
-    );
+    expect(growth).toStrictEqual(growth.map((_value, index) => index));
   });
 
   it('always resolves the ply: the last unrefused order is overridden', async () => {

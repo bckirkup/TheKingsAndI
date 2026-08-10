@@ -9,11 +9,7 @@ import {
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
 } from '../search';
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
-import {
-  UciEngine,
-  type DepthLadder,
-  type UciSearchResult,
-} from '../uci';
+import { UciEngine, type DepthLadder, type UciSearchResult } from '../uci';
 
 const LOZZA_HASH_MB = 16;
 const LOZZA_BUILD_PATTERN = /\bconst BUILD = ['"]([^'"]+)['"];/;
