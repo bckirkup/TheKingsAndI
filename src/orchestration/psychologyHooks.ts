@@ -139,17 +139,12 @@ export function applyPostMoveCredence(
   actor: PieceState,
   moveEval: CandidateMoveEvaluation,
   objectivelyGood: boolean,
-  observationCount: number,
 ): PieceState {
   const surrendered =
     moveEval.deltaV_board < 0 &&
     moveEval.vLeaderImplied > moveEval.deltaV_board;
   let credence = applyHeardSignal(actor.credence, surrendered);
-  credence = applyAbilityObservation(
-    credence,
-    objectivelyGood,
-    observationCount,
-  );
+  credence = applyAbilityObservation(credence, objectivelyGood);
   return normalizePieceState({ ...actor, credence });
 }
 

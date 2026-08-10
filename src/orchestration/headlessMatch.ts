@@ -161,11 +161,9 @@ function applyPlayerMoveConsequences(input: {
   readonly ply: number;
   readonly roster: PieceState[];
   readonly events: MatchEvent[];
-  readonly abilityObservations: number;
   readonly lastFriendlyCapturePly: number | undefined;
 }): {
   readonly roster: PieceState[];
-  readonly abilityObservations: number;
   readonly lastFriendlyCapturePly: number | undefined;
   readonly ply: number;
 } {
@@ -192,13 +190,11 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
-  const abilityObservations = input.abilityObservations + 1;
   roster = updatePiece(roster, actor.id, (piece) =>
     applyPostMoveCredence(
       { ...piece, engagementFactor: outcome.engagementFactor },
       moveEval,
       objectivelyGood,
-      abilityObservations,
     ),
   );
 
@@ -248,7 +244,6 @@ function applyPlayerMoveConsequences(input: {
 
   return {
     roster,
-    abilityObservations,
     lastFriendlyCapturePly,
     ply: ply + 1,
   };
@@ -276,7 +271,6 @@ export async function runHeadlessMatch(
   const enemyObservableBehaviours: string[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
-  let abilityObservations = 0;
   const opponentArchetype = config.opponentArchetype ?? 'random';
 
   while (ply <= config.maxPlies) {
@@ -517,11 +511,9 @@ export async function runHeadlessMatch(
         ply,
         roster,
         events,
-        abilityObservations,
         lastFriendlyCapturePly,
       });
       roster = committed.roster;
-      abilityObservations = committed.abilityObservations;
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       ply = committed.ply;
       turnCompleted = true;
@@ -562,11 +554,9 @@ export async function runHeadlessMatch(
         ply,
         roster,
         events,
-        abilityObservations,
         lastFriendlyCapturePly,
       });
       roster = committed.roster;
-      abilityObservations = committed.abilityObservations;
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       ply = committed.ply;
       continue;

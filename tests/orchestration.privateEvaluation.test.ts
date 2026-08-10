@@ -42,7 +42,7 @@ const ACTOR: PieceState = {
     King: 50,
   },
   engagementFactor: 1,
-  credence: { tauBenev: 50, tauAbil: 50 },
+  credence: { tauBenev: 50, tauAbil: 50, abilityObservationCount: 0 },
   rumor: { pLossTeam: 0, leaderAppraisal: 0 },
 };
 

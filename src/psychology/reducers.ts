@@ -9,7 +9,7 @@ import {
 import type { CredenceState, PieceState, RumorState } from './types';
 
 export function defaultCredence(): CredenceState {
-  return { tauBenev: 50, tauAbil: 50 };
+  return { tauBenev: 50, tauAbil: 50, abilityObservationCount: 0 };
 }
 
 export function defaultRumor(): RumorState {
@@ -39,6 +39,10 @@ export function normalizePieceState(piece: PieceState): PieceState {
     credence: {
       tauBenev: clampCredence(piece.credence.tauBenev),
       tauAbil: clampCredence(piece.credence.tauAbil),
+      abilityObservationCount: Math.max(
+        0,
+        Math.trunc(piece.credence.abilityObservationCount ?? 0),
+      ),
     },
     rumor: {
       pLossTeam: clampPermille(piece.rumor.pLossTeam),

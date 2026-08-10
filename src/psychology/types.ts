@@ -32,6 +32,8 @@ export interface ClassPrestigeMatrix {
 export interface CredenceState {
   readonly tauBenev: number;
   readonly tauAbil: number;
+  /** Per-piece ability observations retained across matches. */
+  readonly abilityObservationCount: number;
 }
 
 /** Rumor scalars — appraisals only, never board facts (ADR 0016). */

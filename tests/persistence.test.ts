@@ -59,6 +59,25 @@ describe('persistence repository', () => {
     expect(loaded?.roster).toHaveLength(16);
   });
 
+  it('migrates legacy credence accounts with zero ability observations', async () => {
+    const repo = new CareerRepository();
+    await repo.init();
+    const { roster, identities } = bootstrapRoster(17);
+    await repo.createCareer({ seed: 17, roster, identities, targetMatches: 1 });
+    const db = getDatabase();
+    const legacy = roster[0];
+    if (legacy === undefined) throw new Error('expected bootstrap roster');
+    await db.pieceStates.put({
+      ...legacy,
+      credence: { tauBenev: 50, tauAbil: 50 },
+    } as typeof legacy);
+
+    const migrated = (await repo.getRoster()).find(
+      (piece) => piece.id === legacy.id,
+    );
+    expect(migrated?.credence.abilityObservationCount).toBe(0);
+  });
+
   it('records matches and builds a debrief fold', async () => {
     const repo = new CareerRepository();
     await repo.init();

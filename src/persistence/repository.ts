@@ -3,6 +3,7 @@ import { createSeededRandom } from '../core/random';
 import { getDatabase } from './db';
 import { buildCampaignDebrief, foldMatchAudit } from './folds';
 import { stampSchemaVersion } from './migrations';
+import { normalizePieceState } from '../psychology';
 import type {
   ActRecord,
   ActTerminalState,
@@ -44,6 +45,10 @@ function normalizeAct(act: ActRecord): ActRecord {
     appointmentIndex: act.appointmentIndex ?? 1,
     diminished: act.diminished ?? false,
   };
+}
+
+function normalizeStoredPiece(piece: StoredPieceState): StoredPieceState {
+  return { ...normalizePieceState(piece), status: piece.status };
 }
 
 export class CareerRepository {
@@ -157,11 +162,11 @@ export class CareerRepository {
   }
 
   async getRoster(): Promise<StoredPieceState[]> {
-    return this.db.pieceStates.toArray();
+    return (await this.db.pieceStates.toArray()).map(normalizeStoredPiece);
   }
 
   async saveRoster(roster: readonly StoredPieceState[]): Promise<void> {
-    await this.db.pieceStates.bulkPut([...roster]);
+    await this.db.pieceStates.bulkPut(roster.map(normalizeStoredPiece));
   }
 
   async getCampaign(campaignId: string): Promise<CampaignRecord | undefined> {
@@ -345,7 +350,9 @@ export class CareerRepository {
   }
 
   async listFreeAgents(): Promise<StoredPieceState[]> {
-    return this.db.pieceStates.where('status').equals('DESERTED').toArray();
+    return (
+      await this.db.pieceStates.where('status').equals('DESERTED').toArray()
+    ).map(normalizeStoredPiece);
   }
 
   async getIdentities(

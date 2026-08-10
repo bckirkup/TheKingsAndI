@@ -33,6 +33,11 @@ export const ENGINE_CONFIG = {
   BENEV_EXPENDABLE_GAP: 1.5,
   /** Ability channel Bayesian step numerator (ADR 0019). */
   ABIL_BAYES_NUMERATOR: 100,
+  /**
+   * Placeholder prior strength for ability credence (ADR 0039).
+   * The owner will choose the calibrated value.
+   */
+  ABIL_PRIOR_STRENGTH: 10,
   /** Override penalties (ADR 0014). */
   OVERRIDE_PIECE_TRUST_PENALTY: -35,
   OVERRIDE_PIECE_TRAUMA_GAIN: 20,

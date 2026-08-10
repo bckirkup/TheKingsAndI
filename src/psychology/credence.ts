@@ -84,14 +84,18 @@ export function applyAuthorityLoss(
 export function applyAbilityObservation(
   credence: CredenceState,
   vindicated: boolean,
-  observationCount: number,
 ): CredenceState {
-  const n = Math.max(1, observationCount);
+  const observationCount = Math.max(
+    0,
+    Math.trunc(credence.abilityObservationCount),
+  );
+  const n = Math.max(1, observationCount + ENGINE_CONFIG.ABIL_PRIOR_STRENGTH);
   const step = Math.trunc(ENGINE_CONFIG.ABIL_BAYES_NUMERATOR / n);
   const delta = vindicated ? step : -step;
   return {
     ...credence,
     tauAbil: clampCredence(credence.tauAbil + delta),
+    abilityObservationCount: observationCount + 1,
   };
 }
 
