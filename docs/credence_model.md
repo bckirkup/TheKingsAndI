@@ -129,6 +129,12 @@ like people rather than a threshold table.
   benevolence, unfixable by winning).
 - **D40:** Does this replace `w_loyalty · T_i` in `U` entirely, or sit alongside
   a smaller residual loyalty term for the purely affective part of trust?
+- **D95–D96: decided (ADR 0039, proposed).** "Slow Bayesian accretion" requires
+  the prior to carry evidential weight: the implemented step `100 / n` counts
+  observations from zero, so the *first* one moves `τ_abil` across the whole
+  scale — accretion in name only. The counter starts from a prior strength
+  `n₀ > 0` on the relationship account, and a world may raise `n₀` with a
+  cohort-uniform training record that grants patience rather than trust.
 
 ## 7. Calibration targets
 

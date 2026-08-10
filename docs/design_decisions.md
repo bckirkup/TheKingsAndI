@@ -25,6 +25,8 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D15 | Save compatibility | **No compatibility promise during development.** Saves may be invalidated by recalibration. | — |
 | D14 | Language and package/state stack | **TypeScript strict everywhere** — UI, core, and harness — with pnpm, Vite + React 18, Vitest, ESLint flat + Prettier, and Zustand for view state only. Transcendental math is banned in `psychology/` because JS engines disagree in the last bits; the Rust/WASM escape hatch is scoped to `psychology/` alone. | [0032](adr/0032-language-and-toolchain.md) |
 | D48 | Sequencing async engine results | **A per-ply query barrier.** All queries for a round issued and collected in `PieceId` order, bundle frozen before psychology runs, psychology synchronous, PRNG drawn only after the barrier. Dependent queries become numbered rounds; failures abort the ply. | [0034](adr/0034-deterministic-query-barrier.md) |
+| D95 | How fast may a piece revise its read of a commander? | **Proportional to evidence.** The ability-observation counter starts from a prior strength `n₀ > 0`, so the first observation no longer moves `τ_abil` by the whole scale. Not a floor, not a decay, not a damper — step size only. *ADR proposed; the value of `n₀` is a calibration ruling still owned by the user.* | [0039](adr/0039-credence-prior-strength-and-the-first-match.md) |
+| D96 | What has a roster observed before a participant's first match? | **Optionally a cohort-uniform training record, and it buys patience only.** No mechanics-only game and no required first win; the record raises `n₀` and never `τ` for the participant. *ADR proposed; record size still owned by the user.* | [0039](adr/0039-credence-prior-strength-and-the-first-match.md) |
 | D80 | Static analysis and coverage gate | **SonarQube Cloud** (`bckirkup_TheKingsAndI`), CI-based analysis with Vitest lcov coverage, gate on new code. Sonar advises; ESLint owns the project invariants. | [0033](adr/0033-static-analysis-and-quality-gate.md) |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
 | D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
@@ -168,6 +170,30 @@ evaluations are persisted in a separate, droppable audit stream with no code
 path from the psychology loader. Every audit score carries provenance,
 including `determinismId` and depth for true engine values or an explicit
 authored/placeholder marker for non-measured values.
+
+### D95–D96 ✅ How fast a read forms, and what precedes it (ADR 0039, proposed)
+Surfaced from the Milestone 3 calibration failure and the owner's question of
+whether pieces read a weak opening "how fast", and whether a seminar needs a
+mechanics-only game or a required first win. `applyAbilityObservation` steps
+`τ_abil` by `100 / n` with `n` counting observations from zero, so the *first*
+observation moves credence by the entire 0–100 scale — the clamp decides the
+outcome, not the evidence, and the harness duly shows `τ_abil` at 0.00 by the
+second quartile of a supportive campaign. Sweeping `ABIL_BAYES_NUMERATOR` cannot
+reach this, because rescaling every step leaves the first one dominant.
+
+**Ruling (ADR 0039):** the counter starts from a **prior strength** `n₀ > 0`
+carried on the relationship account (ADR 0035), so a read forms in proportion to
+the evidence that displaces it — inside a match, but not inside an order. `n₀`
+changes step size only: no floor, no decay toward baseline (ADR 0007), no
+damping of a cascade (ADR 0011). A mechanics-only first game is **not** required,
+and a scripted first win is **rejected** — it forces an AI first opponent
+(against ADR 0025), makes credence a function of a scripted outcome (against
+ADR 0022's stance for succession), and personalizes every roster so no cohort is
+comparable. Instead a world may ship a **cohort-uniform training record**
+attributed to a training commander, entering the log as ordinary observations
+with `TRAINING` provenance, which raises `n₀` and never `τ` for the participant:
+a trained roster is slower to condemn, not more obedient. The value of `n₀` and
+the size of the record are calibration rulings the owner still holds.
 
 ### D51 ✅ Does the King have psychology? — yes, as a mandate (ADR 0021, proposed)
 Resolved by the owner's own observation that *"the king is involved in every
