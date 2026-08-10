@@ -27,6 +27,10 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 | D48 | Sequencing async engine results | **A per-ply query barrier.** All queries for a round issued and collected in `PieceId` order, bundle frozen before psychology runs, psychology synchronous, PRNG drawn only after the barrier. Dependent queries become numbered rounds; failures abort the ply. | [0034](adr/0034-deterministic-query-barrier.md) |
 | D95 | How fast may a piece revise its read of a commander? | **Proportional to evidence.** The ability-observation counter starts from a prior strength `n₀ > 0`, so the first observation no longer moves `τ_abil` by the whole scale. Not a floor, not a decay, not a damper — step size only. *ADR proposed; the value of `n₀` is a calibration ruling still owned by the user.* | [0039](adr/0039-credence-prior-strength-and-the-first-match.md) |
 | D96 | What has a roster observed before a participant's first match? | **Optionally a cohort-uniform training record, and it buys patience only.** No mechanics-only game and no required first win; the record raises `n₀` and never `τ` for the participant. *ADR proposed; record size still owned by the user.* | [0039](adr/0039-credence-prior-strength-and-the-first-match.md) |
+| D97 | What does a refusal offer the commander? | **A generated crisis menu whose options are gated by the state of the organisation, not two buttons.** | [0040](adr/0040-the-refusal-crisis-menu.md) |
+| D98 | Where does inter-piece obligation live? | **In a fold over the event log, handed into psychology as plain data — never as new fields on `PieceState`.** | [0040](adr/0040-the-refusal-crisis-menu.md) |
+| D99 | What may stand in for momentum? | **Only piece-visible facts** — material, recent losses, and refusals this match; never the audit stream, per ADR 0013. | [0040](adr/0040-the-refusal-crisis-menu.md) |
+| D104 | When does a crisis in one student's match become the cohort's business? | **Deferred to Milestone 5b**, with teachable-moment scoring and facilitator override recorded by ADR 0041. | [0041](adr/0041-stopping-the-seminar.md) |
 | D80 | Static analysis and coverage gate | **SonarQube Cloud** (`bckirkup_TheKingsAndI`), CI-based analysis with Vitest lcov coverage, gate on new code. Sonar advises; ESLint owns the project invariants. | [0033](adr/0033-static-analysis-and-quality-gate.md) |
 | D16 | Licensing | **Dual-license** — AGPL-3.0 for the open build, commercial terms available. Requires holding all copyright, so contributor terms must land before outside contributions. | [0006](adr/0006-licensing.md) |
 | D18 | Naming | **The Kings and I: Sacrifice and Command.** The plural and the subtitle are the trademark mitigation, not a clearance. "Living Chess" is the internal codename only. | [0010](adr/0010-naming-the-king-and-i.md) |
@@ -194,6 +198,23 @@ attributed to a training commander, entering the log as ordinary observations
 with `TRAINING` provenance, which raises `n₀` and never `τ` for the participant:
 a trained roster is slower to condemn, not more obedient. The value of `n₀` and
 the size of the record are calibration rulings the owner still holds.
+
+### D97 ✅ What does a refusal offer the commander? (ADR 0040, proposed)
+A refusal opens a generated crisis menu whose options are gated by the state of
+the organisation, rather than reducing the commander to two buttons.
+
+### D98 ✅ Where does inter-piece obligation live? (ADR 0040, proposed)
+Obligation is a fold over the event log, handed into psychology as plain data;
+it never becomes a new field on `PieceState`.
+
+### D99 ✅ What may stand in for momentum? (ADR 0040, proposed)
+Only piece-visible facts — material, recent losses, and refusals this match —
+may stand in for momentum. The audit stream remains outside psychology under
+ADR 0013.
+
+### D104 ✅ When does a crisis in one student's match become the cohort's business? (ADR 0041, proposed; deferred to Milestone 5b)
+The crisis becomes cohort business through a teachable-moment score with
+facilitator override, but the seminar broadcast remains deferred to Milestone 5b.
 
 ### D51 ✅ Does the King have psychology? — yes, as a mandate (ADR 0021, proposed)
 Resolved by the owner's own observation that *"the king is involved in every
@@ -611,6 +632,22 @@ player clicks through the psychology. Too expensive and it is a trap button
 nobody presses twice. Calibrate against *override rate by leader archetype*:
 `tyrannical` should use it freely, `supportive` almost never.
 
+### D100 ⚠ What are the crisis-menu gate thresholds and transaction magnitudes?
+Every crisis option needs a threshold and a transaction magnitude. These belong
+to the harness, not to prose or intuition.
+
+### D101 ⚠ What is the restoration curve for a nomination?
+Calibrate how much calm a sacrifice buys and how quickly that restoration decays
+to nothing.
+
+### D102 ⚠ Is the menu offered on an unjustified refusal?
+Decide whether every refusal opens a crisis or only a refusal justified in the
+piece's own view.
+
+### D103 ⚠ Does a nomination mark decay across matches?
+Decide whether a nomination mark is permanent or decays across matches. This
+interacts directly with ADR 0026's community-of-pieces model.
+
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
 recruitable, and the cost is set by the roster's verdict on his departure rather
@@ -692,6 +729,9 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
+3. **D100–D103** — with the harness before the crisis-menu transactions ship:
+   thresholds, magnitudes, nomination restoration and mark persistence, and the
+   scope of the menu on unjustified refusals.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
