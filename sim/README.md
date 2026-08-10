@@ -100,8 +100,9 @@ when measuring engine fidelity.
 When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 
 Campaign output includes four match-index quartile trajectory bands. Each band
-reports mean ability trust, mean benevolence trust, refusal rate, desertion
-rate, rout rate, mean surviving roster size, and mean win score. Match indices are assigned by
+reports mean ability trust, mean benevolence trust, bounded refusal rate,
+refusals per ply, desertion match rate, desertion attrition, rout rate, mean
+surviving roster size, and mean win score. Match indices are assigned by
 `floor(((match - 1) * 4) / campaignMatches) + 1`; any remainder matches go to
 the earlier quartiles. The CSV appends the channel metrics and roster size to
 each existing match row, then appends a trajectory-band section. It also
@@ -109,8 +110,8 @@ appends a cumulative horizon section with one row for every prefix of the
 campaign; horizon `h` reports the campaign aggregates as if the career ended
 after match `h`.
 
-The first two quartiles are the early-frustration check: desertion and rout
-rates of 80% or more in either early quartile produce an `early-saturation`
+The first two quartiles are the early-frustration check: desertion attrition and
+rout rates of 80% or more in either early quartile produce an `early-saturation`
 finding. The default smoke reports that finding without failing, because
 pre-existing balance defects must not block unrelated CI. Pass
 `--enforce-calibration=true` to make it a calibration failure. This threshold

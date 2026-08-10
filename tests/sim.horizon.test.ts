@@ -29,7 +29,10 @@ function metric(
     firstDeparture: EMPTY_DESERTION_SUMMARY,
     cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 0,
-    refusalRate: match / 100,
+    fieldedPieceIds: ['piece'],
+    desertedPieceIds: [],
+    refusalRate: match / (match + 10),
+    refusalsPerPly: match / 10,
     quietQuitRate: 0,
     refusedGoodMoveRate: 0,
     overrideRate: 0,
@@ -50,6 +53,23 @@ function metric(
 }
 
 describe('campaign horizon series', () => {
+  it('folds distinct deserted and fielded identities into attrition', () => {
+    const metrics = [
+      metric(1, {
+        fieldedPieceIds: ['a', 'b'],
+        desertedPieceIds: ['a'],
+        desertions: 1,
+      }),
+      metric(2, {
+        fieldedPieceIds: ['a', 'b'],
+        desertedPieceIds: [],
+      }),
+    ];
+    const summary = aggregateCampaign('supportive', 1, metrics);
+    expect(summary.desertionMatchRate).toBe(0.5);
+    expect(summary.desertionAttrition).toBe(0.5);
+  });
+
   it('uses cumulative prefixes and matches the campaign summary at full length', () => {
     const metrics = [metric(1), metric(2), metric(3)];
     const summary = aggregateCampaign('supportive', 1, metrics);
@@ -65,7 +85,8 @@ describe('campaign horizon series', () => {
       meanWinScore: firstMetric.winScore,
       routRate: firstMetric.rout ? 1 : 0,
       meanRefusalRate: firstMetric.refusalRate,
-      desertionRate: firstMetric.desertions > 0 ? 1 : 0,
+      desertionMatchRate: firstMetric.desertions > 0 ? 1 : 0,
+      desertionAttrition: 0,
       meanDesertions: firstMetric.desertions,
       meanSurvivingRosterSize: firstMetric.survivingRosterSize,
       meanTauAbil: firstMetric.meanTauAbilEnd,
@@ -77,7 +98,8 @@ describe('campaign horizon series', () => {
       meanWinScore: summary.meanWinScore,
       routRate: summary.routCampaignRate,
       meanRefusalRate: summary.meanRefusalRate,
-      desertionRate: summary.desertionCampaignRate,
+      desertionMatchRate: summary.desertionMatchRate,
+      desertionAttrition: summary.desertionAttrition,
       meanDesertions: summary.meanDesertions,
       meanSurvivingRosterSize: summary.meanSurvivingRosterSize,
       meanTauAbil: summary.meanTauAbil,
@@ -129,17 +151,17 @@ describe('campaign horizon series', () => {
 
     expect(bands[0]?.meanWinScore).toBe(10);
     expect(csv).toContain(
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_rate,rout_rate,mean_surviving_roster_size,mean_win_score',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
     );
     expect(csv).toContain(
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_rate,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
     );
     expect(csv.indexOf('\n\ntrajectory_quartile')).toBeGreaterThan(-1);
     expect(csv.indexOf('\n\nhorizon')).toBeGreaterThan(
       csv.indexOf('\n\ntrajectory_quartile'),
     );
     expect(csv).toContain(
-      '\n1,10.00,0.0000,0.0100,1.0000,1.00,19.00,2.00,3.00,1.00\n',
+      '\n1,10.00,0.0000,0.0909,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
     );
   });
 });

@@ -1,3 +1,4 @@
+import type { PieceId } from '../src/chess';
 import type { MatchEvent } from '../src/psychology';
 import type { HeadlessMatchResult } from '../src/orchestration';
 
@@ -32,7 +33,10 @@ export interface MatchMetrics {
   readonly firstDeparture: DesertionSummary;
   readonly cascadeDeparture: DesertionSummary;
   readonly refusedGoodMoves: number;
+  readonly fieldedPieceIds: readonly PieceId[];
+  readonly desertedPieceIds: readonly PieceId[];
   readonly refusalRate: number;
+  readonly refusalsPerPly: number;
   readonly quietQuitRate: number;
   readonly refusedGoodMoveRate: number;
   readonly overrideRate: number;
@@ -103,7 +107,8 @@ export interface CampaignTrajectoryBand {
   readonly meanTauAbil: number;
   readonly meanTauBenev: number;
   readonly meanRefusalRate: number;
-  readonly desertionRate: number;
+  readonly desertionMatchRate: number;
+  readonly desertionAttrition: number;
   readonly routRate: number;
   readonly meanSurvivingRosterSize: number;
   readonly meanWinScore: number;
@@ -114,7 +119,8 @@ export interface CampaignHorizon {
   readonly meanWinScore: number;
   readonly routRate: number;
   readonly meanRefusalRate: number;
-  readonly desertionRate: number;
+  readonly desertionMatchRate: number;
+  readonly desertionAttrition: number;
   readonly meanDesertions: number;
   readonly meanSurvivingRosterSize: number;
   readonly meanTauAbil: number;
@@ -132,10 +138,12 @@ export interface CampaignMetrics {
   readonly seed: number;
   readonly matches: number;
   readonly matchMetrics: readonly MatchMetrics[];
-  readonly desertionCampaignRate: number;
+  readonly desertionMatchRate: number;
+  readonly desertionAttrition: number;
   readonly winningPositionDesertionRate: number;
   readonly routCampaignRate: number;
   readonly meanRefusalRate: number;
+  readonly meanRefusalsPerPly: number;
   readonly meanQuietQuitRate: number;
   readonly meanRefusedGoodMoveRate: number;
   readonly meanOverrideRate: number;
@@ -156,34 +164,53 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
 
-function countEvents(events: readonly MatchEvent[]): {
+function countEvents(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+): {
   refusals: number;
   overrides: number;
   implicitOverrides: number;
   quietQuitMoves: number;
   desertions: number;
+  executedOrders: number;
+  orderTerminatedDesertionPlies: number;
+  desertedPieceIds: ReadonlySet<PieceId>;
 } {
   let refusals = 0;
   let overrides = 0;
   let implicitOverrides = 0;
   let quietQuitMoves = 0;
   let desertions = 0;
+  let executedOrders = 0;
+  const orderTerminatedDesertionPlies = new Set<number>();
+  const desertedPieceIds = new Set<PieceId>();
+  const fieldedIds = new Set<PieceId>(fieldedPieceIds);
   for (const event of events) {
+    const isCommandedPiece =
+      'pieceId' in event && fieldedIds.has(event.pieceId);
     switch (event.t) {
       case 'REFUSAL':
-        refusals += 1;
+        if (isCommandedPiece) refusals += 1;
         break;
       case 'OVERRIDE':
         overrides += 1;
         if (event.implicit === true) implicitOverrides += 1;
         break;
       case 'MOVE':
-        if (event.verdict === 'QUIET_QUITTING') quietQuitMoves += 1;
+        if (isCommandedPiece) {
+          executedOrders += 1;
+          if (event.verdict === 'QUIET_QUITTING') quietQuitMoves += 1;
+        }
         break;
       case 'DESERTION':
-        desertions += 1;
+        if (isCommandedPiece) {
+          desertions += 1;
+          desertedPieceIds.add(event.pieceId);
+          orderTerminatedDesertionPlies.add(event.ply);
+        }
         break;
       default:
         break;
@@ -195,7 +222,25 @@ function countEvents(events: readonly MatchEvent[]): {
     implicitOverrides,
     quietQuitMoves,
     desertions,
+    executedOrders,
+    orderTerminatedDesertionPlies: orderTerminatedDesertionPlies.size,
+    desertedPieceIds,
   };
+}
+
+function attritionForMetrics(metrics: readonly MatchMetrics[]): number {
+  const fieldedPieceIds = new Set<PieceId>();
+  const desertedPieceIds = new Set<PieceId>();
+  for (const metric of metrics) {
+    metric.fieldedPieceIds.forEach((pieceId) => fieldedPieceIds.add(pieceId));
+    metric.desertedPieceIds.forEach((pieceId) => desertedPieceIds.add(pieceId));
+  }
+  if (fieldedPieceIds.size === 0) return 0;
+  let desertedFieldedPieces = 0;
+  for (const pieceId of desertedPieceIds) {
+    if (fieldedPieceIds.has(pieceId)) desertedFieldedPieces += 1;
+  }
+  return desertedFieldedPieces / fieldedPieceIds.size;
 }
 
 function cascadeLength(events: readonly MatchEvent[]): number {
@@ -271,9 +316,15 @@ export function metricsFromMatch(
   result: HeadlessMatchResult,
   refusedGoodMoves: number,
 ): MatchMetrics {
-  const counts = countEvents(result.events);
+  const fieldedPieceIds = rosterStart.map((piece) => piece.id);
+  const counts = countEvents(result.events, fieldedPieceIds);
   const plies = Math.max(1, result.plies);
-  const refusalRate = counts.refusals / plies;
+  const ordersIssued =
+    counts.executedOrders +
+    counts.refusals +
+    counts.orderTerminatedDesertionPlies;
+  const refusalRate = counts.refusals / Math.max(1, ordersIssued);
+  const refusalsPerPly = counts.refusals / plies;
   const quietQuitRate = counts.quietQuitMoves / plies;
   const refusedGoodMoveRate =
     counts.refusals === 0 ? 0 : refusedGoodMoves / counts.refusals;
@@ -301,7 +352,10 @@ export function metricsFromMatch(
     firstDeparture: summarizeDesertions(result.events, 'first'),
     cascadeDeparture: summarizeDesertions(result.events, 'cascade'),
     refusedGoodMoves,
+    fieldedPieceIds,
+    desertedPieceIds: [...counts.desertedPieceIds],
     refusalRate,
+    refusalsPerPly,
     quietQuitRate,
     refusedGoodMoveRate,
     overrideRate,
@@ -354,9 +408,10 @@ export function buildTrajectoryBands(
       meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
       meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
       meanRefusalRate: mean((metric) => metric.refusalRate),
-      desertionRate:
+      desertionMatchRate:
         metrics.filter((metric) => metric.desertions > 0).length /
         Math.max(1, metrics.length),
+      desertionAttrition: attritionForMetrics(metrics),
       routRate:
         metrics.filter((metric) => metric.rout).length /
         Math.max(1, metrics.length),
@@ -372,9 +427,10 @@ function aggregateCampaignCore(
   matchMetrics: readonly MatchMetrics[],
 ): Omit<CampaignMetrics, 'horizon'> {
   const matches = matchMetrics.length;
-  const desertionCampaignRate =
+  const desertionMatchRate =
     matchMetrics.filter((metric) => metric.desertions > 0).length /
     Math.max(1, matches);
+  const desertionAttrition = attritionForMetrics(matchMetrics);
   const totalDesertions = matchMetrics.reduce(
     (sum, metric) => sum + metric.desertions,
     0,
@@ -408,10 +464,12 @@ function aggregateCampaignCore(
     seed,
     matches,
     matchMetrics,
-    desertionCampaignRate,
+    desertionMatchRate,
+    desertionAttrition,
     winningPositionDesertionRate,
     routCampaignRate,
     meanRefusalRate: mean((metric) => metric.refusalRate),
+    meanRefusalsPerPly: mean((metric) => metric.refusalsPerPly),
     meanQuietQuitRate: mean((metric) => metric.quietQuitRate),
     meanRefusedGoodMoveRate: mean((metric) => metric.refusedGoodMoveRate),
     meanOverrideRate: mean((metric) => metric.overrideRate),
@@ -442,7 +500,8 @@ function horizonFromSummary(
     meanWinScore: summary.meanWinScore,
     routRate: summary.routCampaignRate,
     meanRefusalRate: summary.meanRefusalRate,
-    desertionRate: summary.desertionCampaignRate,
+    desertionMatchRate: summary.desertionMatchRate,
+    desertionAttrition: summary.desertionAttrition,
     meanDesertions: summary.meanDesertions,
     meanSurvivingRosterSize: summary.meanSurvivingRosterSize,
     meanTauAbil: summary.meanTauAbil,
@@ -518,6 +577,7 @@ export function renderCsv(
       metric.firstDeparture.meanTauAbil.toFixed(3),
       metric.refusedGoodMoves,
       metric.refusalRate.toFixed(4),
+      metric.refusalsPerPly.toFixed(4),
       metric.quietQuitRate.toFixed(4),
       metric.refusedGoodMoveRate.toFixed(4),
       metric.overrideRate.toFixed(4),
@@ -539,7 +599,7 @@ export function renderCsv(
   if (trajectoryBands !== undefined) {
     output.push(
       '',
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_rate,rout_rate,mean_surviving_roster_size,mean_win_score',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
       ...trajectoryBands.map((band) =>
         [
           band.quartile,
@@ -549,7 +609,8 @@ export function renderCsv(
           band.meanTauAbil.toFixed(2),
           band.meanTauBenev.toFixed(2),
           band.meanRefusalRate.toFixed(4),
-          band.desertionRate.toFixed(4),
+          band.desertionMatchRate.toFixed(4),
+          band.desertionAttrition.toFixed(4),
           band.routRate.toFixed(4),
           band.meanSurvivingRosterSize.toFixed(2),
           band.meanWinScore.toFixed(2),
@@ -560,14 +621,15 @@ export function renderCsv(
   if (horizon !== undefined) {
     output.push(
       '',
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_rate,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
       ...horizon.map((point) =>
         [
           point.horizon,
           point.meanWinScore.toFixed(2),
           point.routRate.toFixed(4),
           point.meanRefusalRate.toFixed(4),
-          point.desertionRate.toFixed(4),
+          point.desertionMatchRate.toFixed(4),
+          point.desertionAttrition.toFixed(4),
           point.meanDesertions.toFixed(2),
           point.meanSurvivingRosterSize.toFixed(2),
           point.meanTauAbil.toFixed(2),

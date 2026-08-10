@@ -274,6 +274,16 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     if (determinismId === undefined) {
       throw new Error('Campaign runner did not provide a determinism ID.');
     }
+    const summary = aggregateCampaign(
+      options.leader,
+      options.masterSeed,
+      allMetrics,
+    );
+    const campaignAttrition =
+      campaigns.reduce(
+        (sum, campaign) => sum + campaign.result.summary.desertionAttrition,
+        0,
+      ) / Math.max(1, campaigns.length);
     const manifest: ShardManifest = {
       manifestVersion: PARALLEL_MANIFEST_VERSION,
       schemaVersion: SCHEMA_VERSION,
@@ -291,11 +301,7 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     return {
       manifest,
       campaigns,
-      summary: aggregateCampaign(
-        options.leader,
-        options.masterSeed,
-        allMetrics,
-      ),
+      summary: { ...summary, desertionAttrition: campaignAttrition },
       trajectoryBands: averageCampaignTrajectoryBands(
         campaigns.map((campaign) => campaign.result.metrics),
       ),
@@ -387,7 +393,8 @@ export function averageCampaignTrajectoryBands(
       meanTauAbil: mean((band) => band.meanTauAbil),
       meanTauBenev: mean((band) => band.meanTauBenev),
       meanRefusalRate: mean((band) => band.meanRefusalRate),
-      desertionRate: mean((band) => band.desertionRate),
+      desertionMatchRate: mean((band) => band.desertionMatchRate),
+      desertionAttrition: mean((band) => band.desertionAttrition),
       routRate: mean((band) => band.routRate),
       meanSurvivingRosterSize: mean((band) => band.meanSurvivingRosterSize),
       meanWinScore: mean((band) => band.meanWinScore),
@@ -412,7 +419,8 @@ export function averageCampaignHorizonSeries(
       meanWinScore: mean((point) => point.meanWinScore),
       routRate: mean((point) => point.routRate),
       meanRefusalRate: mean((point) => point.meanRefusalRate),
-      desertionRate: mean((point) => point.desertionRate),
+      desertionMatchRate: mean((point) => point.desertionMatchRate),
+      desertionAttrition: mean((point) => point.desertionAttrition),
       meanDesertions: mean((point) => point.meanDesertions),
       meanSurvivingRosterSize: mean((point) => point.meanSurvivingRosterSize),
       meanTauAbil: mean((point) => point.meanTauAbil),
@@ -509,6 +517,15 @@ export function aggregateShardArtifacts(
     (left, right) => left.campaignIndex - right.campaignIndex,
   );
   const allMetrics = orderedCampaigns.flatMap((campaign) => campaign.metrics);
+  const summary = aggregateCampaign(first.leader, first.masterSeed, allMetrics);
+  const campaignAttrition =
+    orderedCampaigns.reduce(
+      (sum, campaign) =>
+        sum +
+        aggregateCampaign(first.leader, campaign.campaignSeed, campaign.metrics)
+          .desertionAttrition,
+      0,
+    ) / Math.max(1, orderedCampaigns.length);
   return {
     manifest: {
       manifestVersion: first.manifestVersion,
@@ -523,7 +540,7 @@ export function aggregateShardArtifacts(
       nodeVersion: first.nodeVersion,
       shardCount: artifacts.length,
     },
-    summary: aggregateCampaign(first.leader, first.masterSeed, allMetrics),
+    summary: { ...summary, desertionAttrition: campaignAttrition },
     campaigns: orderedCampaigns,
     trajectoryBands: averageCampaignTrajectoryBands(
       orderedCampaigns.map((campaign) => campaign.metrics),

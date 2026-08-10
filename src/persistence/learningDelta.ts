@@ -102,7 +102,7 @@ export function normalizeBandLearningDelta(
     readonly meanTauAbil: number;
     readonly meanTauBenev: number;
     readonly meanRefusalRate: number;
-    readonly desertionRate: number;
+    readonly desertionMatchRate: number;
     readonly routRate: number;
     readonly meanSurvivingRosterSize: number;
   },
@@ -110,7 +110,7 @@ export function normalizeBandLearningDelta(
     readonly meanTauAbil: number;
     readonly meanTauBenev: number;
     readonly meanRefusalRate: number;
-    readonly desertionRate: number;
+    readonly desertionMatchRate: number;
     readonly routRate: number;
     readonly meanSurvivingRosterSize: number;
   },
@@ -119,7 +119,7 @@ export function normalizeBandLearningDelta(
     Math.abs(right.meanTauAbil - left.meanTauAbil) / 100,
     Math.abs(right.meanTauBenev - left.meanTauBenev) / 100,
     Math.abs(right.meanRefusalRate - left.meanRefusalRate),
-    Math.abs(right.desertionRate - left.desertionRate),
+    Math.abs(right.desertionMatchRate - left.desertionMatchRate),
     Math.abs(right.routRate - left.routRate),
     Math.abs(right.meanSurvivingRosterSize - left.meanSurvivingRosterSize) / 16,
   ];
