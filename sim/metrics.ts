@@ -106,6 +106,20 @@ export interface CampaignTrajectoryBand {
   readonly desertionRate: number;
   readonly routRate: number;
   readonly meanSurvivingRosterSize: number;
+  readonly meanWinScore: number;
+}
+
+export interface CampaignHorizon {
+  readonly horizon: number;
+  readonly meanWinScore: number;
+  readonly routRate: number;
+  readonly meanRefusalRate: number;
+  readonly desertionRate: number;
+  readonly meanDesertions: number;
+  readonly meanSurvivingRosterSize: number;
+  readonly meanTauAbil: number;
+  readonly meanTauBenev: number;
+  readonly meanTrustEnd: number;
 }
 
 export interface PerRoleCultureMetric {
@@ -126,6 +140,11 @@ export interface CampaignMetrics {
   readonly meanRefusedGoodMoveRate: number;
   readonly meanOverrideRate: number;
   readonly meanWinScore: number;
+  readonly meanDesertions: number;
+  readonly meanSurvivingRosterSize: number;
+  readonly meanTauAbil: number;
+  readonly meanTauBenev: number;
+  readonly meanTrustEnd: number;
   readonly meanTrustDelta: number;
   readonly classContemptDelta: number;
   /** Per-match mean trust at end — distribution over the campaign (3.3). */
@@ -133,6 +152,7 @@ export interface CampaignMetrics {
   /** Mean class contempt by role across the final match of the campaign. */
   readonly perRoleCulture: readonly PerRoleCultureMetric[];
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
+  readonly horizon: readonly CampaignHorizon[];
 }
 
 const CSV_HEADER =
@@ -341,15 +361,16 @@ export function buildTrajectoryBands(
         metrics.filter((metric) => metric.rout).length /
         Math.max(1, metrics.length),
       meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
+      meanWinScore: mean((metric) => metric.winScore),
     };
   });
 }
 
-export function aggregateCampaign(
+function aggregateCampaignCore(
   leader: Leader,
   seed: number,
   matchMetrics: readonly MatchMetrics[],
-): CampaignMetrics {
+): Omit<CampaignMetrics, 'horizon'> {
   const matches = matchMetrics.length;
   const desertionCampaignRate =
     matchMetrics.filter((metric) => metric.desertions > 0).length /
@@ -395,6 +416,11 @@ export function aggregateCampaign(
     meanRefusedGoodMoveRate: mean((metric) => metric.refusedGoodMoveRate),
     meanOverrideRate: mean((metric) => metric.overrideRate),
     meanWinScore: mean((metric) => metric.winScore),
+    meanDesertions: mean((metric) => metric.desertions),
+    meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
+    meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
+    meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
+    meanTrustEnd: last?.meanTrustEnd ?? 0,
     meanTrustDelta: mean(
       (metric) => metric.meanTrustEnd - metric.meanTrustStart,
     ),
@@ -407,9 +433,57 @@ export function aggregateCampaign(
   };
 }
 
+function horizonFromSummary(
+  horizon: number,
+  summary: Omit<CampaignMetrics, 'horizon'>,
+): CampaignHorizon {
+  return {
+    horizon,
+    meanWinScore: summary.meanWinScore,
+    routRate: summary.routCampaignRate,
+    meanRefusalRate: summary.meanRefusalRate,
+    desertionRate: summary.desertionCampaignRate,
+    meanDesertions: summary.meanDesertions,
+    meanSurvivingRosterSize: summary.meanSurvivingRosterSize,
+    meanTauAbil: summary.meanTauAbil,
+    meanTauBenev: summary.meanTauBenev,
+    meanTrustEnd: summary.meanTrustEnd,
+  };
+}
+
+export function buildHorizonSeries(
+  matchMetrics: readonly MatchMetrics[],
+): readonly CampaignHorizon[] {
+  const first = matchMetrics[0];
+  if (first === undefined) return [];
+  return matchMetrics.map((_, index) =>
+    horizonFromSummary(
+      index + 1,
+      aggregateCampaignCore(
+        first.leader,
+        first.seed,
+        matchMetrics.slice(0, index + 1),
+      ),
+    ),
+  );
+}
+
+export function aggregateCampaign(
+  leader: Leader,
+  seed: number,
+  matchMetrics: readonly MatchMetrics[],
+): CampaignMetrics {
+  const summary = aggregateCampaignCore(leader, seed, matchMetrics);
+  return {
+    ...summary,
+    horizon: buildHorizonSeries(matchMetrics),
+  };
+}
+
 export function renderCsv(
   metrics: readonly MatchMetrics[],
   trajectoryBands?: readonly CampaignTrajectoryBand[],
+  horizon?: readonly CampaignHorizon[],
 ): string {
   const rows = metrics.map((metric) =>
     [
@@ -465,7 +539,7 @@ export function renderCsv(
   if (trajectoryBands !== undefined) {
     output.push(
       '',
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_rate,rout_rate,mean_surviving_roster_size',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_rate,rout_rate,mean_surviving_roster_size,mean_win_score',
       ...trajectoryBands.map((band) =>
         [
           band.quartile,
@@ -478,6 +552,27 @@ export function renderCsv(
           band.desertionRate.toFixed(4),
           band.routRate.toFixed(4),
           band.meanSurvivingRosterSize.toFixed(2),
+          band.meanWinScore.toFixed(2),
+        ].join(','),
+      ),
+    );
+  }
+  if (horizon !== undefined) {
+    output.push(
+      '',
+      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_rate,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      ...horizon.map((point) =>
+        [
+          point.horizon,
+          point.meanWinScore.toFixed(2),
+          point.routRate.toFixed(4),
+          point.meanRefusalRate.toFixed(4),
+          point.desertionRate.toFixed(4),
+          point.meanDesertions.toFixed(2),
+          point.meanSurvivingRosterSize.toFixed(2),
+          point.meanTauAbil.toFixed(2),
+          point.meanTauBenev.toFixed(2),
+          point.meanTrustEnd.toFixed(2),
         ].join(','),
       ),
     );

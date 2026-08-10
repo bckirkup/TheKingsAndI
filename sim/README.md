@@ -44,7 +44,7 @@ Each `--out` CSV has an adjacent `.json` shard artifact containing its run
 manifest, campaign assignments, and metrics. CSV metric columns are append-only:
 the ability/benevolence trust start/end channels and surviving roster size follow
 the historical columns, and the trajectory-band section follows the metric
-rows. The aggregator rejects mismatched
+rows, followed by the cumulative horizon section. The aggregator rejects mismatched
 manifests, duplicate or missing campaigns, and incomplete runs rather than
 silently producing a partial report. Use `--enforce-calibration=true` on the
 simulation or aggregation command when an exit-criterion failure should be
@@ -101,10 +101,13 @@ When `--matches` is ≤ 20, smoke degeneracy bounds run before exit (CI gate).
 
 Campaign output includes four match-index quartile trajectory bands. Each band
 reports mean ability trust, mean benevolence trust, refusal rate, desertion
-rate, rout rate, and mean surviving roster size. Match indices are assigned by
+rate, rout rate, mean surviving roster size, and mean win score. Match indices are assigned by
 `floor(((match - 1) * 4) / campaignMatches) + 1`; any remainder matches go to
 the earlier quartiles. The CSV appends the channel metrics and roster size to
-each existing match row, then appends a trajectory-band section.
+each existing match row, then appends a trajectory-band section. It also
+appends a cumulative horizon section with one row for every prefix of the
+campaign; horizon `h` reports the campaign aggregates as if the career ended
+after match `h`.
 
 The first two quartiles are the early-frustration check: desertion and rout
 rates of 80% or more in either early quartile produce an `early-saturation`
