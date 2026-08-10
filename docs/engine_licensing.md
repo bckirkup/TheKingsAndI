@@ -103,3 +103,18 @@ which is the *last* audience (D1), not for Steam, which is the first.
   wrapper) or wait for a permissive engine? The former ships far sooner.
 - Trademark clearance on *The Kings and I: Sacrifice and Command* remains a
   separate pre-store-page item (ADR 0010).
+
+### Lozza terminal-score observation
+
+During adapter diagnostics, the vendored Lozza artifact returned `score cp 0`
+for both of these terminal positions:
+
+```text
+checkmate: 7k/6Q1/5K2/8/8/8/8/8 b - - 0 1
+stalemate: 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1
+```
+
+Both searches also returned `bestmove NULL`. The stalemate result is neutral,
+but the checkmate result is a material-model hole: a mating move can appear
+neutral to a piece that evaluates it. This observation is recorded for later
+engine/psychology work; it is not corrected here.

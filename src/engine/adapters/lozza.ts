@@ -104,6 +104,19 @@ function lozzaDeterminismId(enginePath: string): string {
   );
 }
 
+function bestAvailableResult(
+  ladder: DepthLadder,
+  requestedDepth: number,
+): { readonly scoreCp: number; readonly pv: readonly string[] } | undefined {
+  // Lozza can terminate early when only one legal move is forced; that
+  // deterministic ladder rung is valid even when it is shallower than asked.
+  for (let depth = requestedDepth; depth >= 1; depth -= 1) {
+    const result = ladder.at.get(depth);
+    if (result !== undefined) return result;
+  }
+  return ladder.multiPvAtMax.get(1);
+}
+
 /**
  * Permissive MIT adapter proving `EnginePort` is real (ADR 0020 §4).
  * A single shared UCI process serialises searches; the evaluation cache
@@ -139,7 +152,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
     ): Promise<EngineEvaluation> {
       void evalProfile;
       const ladder = await ladderFor(fen, depth);
-      const result = ladder.at.get(depth) ?? ladder.multiPvAtMax.get(1);
+      const result = bestAvailableResult(ladder, depth);
       if (result === undefined) {
         throw new Error(`Lozza produced no score at depth ${depth}`);
       }
@@ -174,7 +187,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
         () => undefined,
       );
       const ladder = await search;
-      const result = ladder.at.get(depth) ?? ladder.multiPvAtMax.get(1);
+      const result = bestAvailableResult(ladder, depth);
       if (result === undefined) {
         throw new Error(`Lozza produced no best line at depth ${depth}`);
       }

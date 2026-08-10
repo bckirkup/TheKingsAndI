@@ -22,6 +22,26 @@ export interface UciEngineOptions {
   readonly multiPv?: number;
 }
 
+export class UciEngineExitedError extends Error {
+  constructor(
+    readonly code: number | null,
+    readonly signal: NodeJS.Signals | null,
+    readonly stderr: string,
+    readonly fen: string | undefined,
+    readonly depth: number | undefined,
+  ) {
+    const status =
+      code === null ? `signal ${signal ?? 'unknown'}` : `code ${code}`;
+    const tail = stderr.length === 0 ? '' : `; stderr: ${stderr}`;
+    const request =
+      fen === undefined || depth === undefined
+        ? ''
+        : ` at depth ${depth} for FEN ${fen}`;
+    super(`Engine child exited with ${status}${request}${tail}`);
+    this.name = 'UciEngineExitedError';
+  }
+}
+
 /** Per-depth principal line captured from a single `go depth N` search. */
 export interface DepthLadder {
   readonly maxDepth: number;
@@ -92,7 +112,14 @@ export class UciEngine {
   private depthBest = new Map<number, UciSearchResult>();
   private multiPvByDepth = new Map<number, Map<number, UciSearchResult>>();
   private multiPvAtMax = new Map<number, UciSearchResult>();
-  private lineWaiters: Array<(line: string) => boolean> = [];
+  private lineWaiters: Array<{
+    readonly predicate: (line: string) => boolean;
+    readonly resolve: () => void;
+    readonly reject: (cause: unknown) => void;
+  }> = [];
+  private stderrTail = '';
+  private processFailure: UciEngineExitedError | undefined;
+  private searchFen: string | undefined;
   private busy = false;
 
   constructor(options: UciEngineOptions) {
@@ -113,13 +140,31 @@ export class UciEngine {
     });
     this.reader = createInterface({ input: this.process.stdout });
     this.reader.on('line', (line) => this.dispatch(line.trim()));
-    this.process.on('error', (cause) => this.searchReject?.(cause));
-    this.process.on('exit', (code) => {
-      if (this.searchReject !== undefined) {
-        this.searchReject(
-          new Error(`Engine exited with code ${code ?? 'unknown'}`),
-        );
-      }
+    this.process.stderr.on('data', (chunk: Buffer | string) => {
+      const text = chunk.toString();
+      this.stderrTail = (this.stderrTail + text).slice(-2_000);
+    });
+    this.process.on('error', (cause) => {
+      this.failProcess(
+        new UciEngineExitedError(
+          null,
+          null,
+          `${String(cause)}${this.stderrTail}`,
+          this.searchFen,
+          this.targetDepth,
+        ),
+      );
+    });
+    this.process.on('exit', (code, signal) => {
+      this.failProcess(
+        new UciEngineExitedError(
+          code,
+          signal,
+          this.stderrTail,
+          this.searchFen,
+          this.targetDepth,
+        ),
+      );
     });
     this.ready = this.handshake();
   }
@@ -133,8 +178,9 @@ export class UciEngine {
     for (let index = 0; index < this.lineWaiters.length; index += 1) {
       const waiter = this.lineWaiters[index];
       if (waiter === undefined) continue;
-      if (waiter(line)) {
+      if (waiter.predicate(line)) {
         this.lineWaiters.splice(index, 1);
+        waiter.resolve();
         return;
       }
     }
@@ -189,7 +235,10 @@ export class UciEngine {
       const multiPvAtMax = new Map(this.multiPvAtMax);
       if (at.size === 0 && multiPvAtMax.size === 0) {
         this.searchReject?.(
-          new Error(`Engine returned ${line} without a score`),
+          new Error(
+            `Engine returned ${line} without a score at depth ${this.targetDepth} ` +
+              `for FEN ${this.searchFen ?? 'unknown'}`,
+          ),
         );
       } else {
         const multiPvAt = new Map(
@@ -218,16 +267,24 @@ export class UciEngine {
 
   private waitForLine(predicate: (line: string) => boolean): Promise<void> {
     return new Promise((resolve, reject) => {
-      const waiter = (line: string): boolean => {
-        if (predicate(line)) {
-          resolve();
-          return true;
-        }
-        return false;
-      };
+      if (this.processFailure !== undefined) {
+        reject(this.processFailure);
+        return;
+      }
+      const waiter = { predicate, resolve, reject };
       this.lineWaiters.push(waiter);
-      this.process.once('error', reject);
     });
+  }
+
+  private failProcess(cause: UciEngineExitedError): void {
+    if (this.processFailure !== undefined) return;
+    this.processFailure = cause;
+    this.busy = false;
+    this.searchReject?.(cause);
+    this.searchResolve = undefined;
+    this.searchReject = undefined;
+    for (const waiter of this.lineWaiters) waiter.reject(cause);
+    this.lineWaiters = [];
   }
 
   private async handshake(): Promise<void> {
@@ -245,6 +302,10 @@ export class UciEngine {
 
   private send(command: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (this.processFailure !== undefined) {
+        reject(this.processFailure);
+        return;
+      }
       this.process.stdin.write(`${command}\n`, (error) => {
         if (error === null || error === undefined) resolve();
         else reject(error);
@@ -260,8 +321,12 @@ export class UciEngine {
     if (this.busy) {
       throw new Error('UciEngine is busy; use the pool scheduler.');
     }
+    if (this.processFailure !== undefined) {
+      throw this.processFailure;
+    }
     this.busy = true;
     await this.ready;
+    this.searchFen = fen;
     this.targetDepth = depth;
     this.depthBest = new Map();
     this.multiPvByDepth = new Map();
