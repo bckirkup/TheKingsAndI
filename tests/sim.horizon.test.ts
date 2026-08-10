@@ -85,6 +85,7 @@ describe('campaign horizon series', () => {
       meanWinScore: firstMetric.winScore,
       routRate: firstMetric.rout ? 1 : 0,
       meanRefusalRate: firstMetric.refusalRate,
+      meanRefusalsPerPly: firstMetric.refusalsPerPly,
       desertionMatchRate: firstMetric.desertions > 0 ? 1 : 0,
       desertionAttrition: 0,
       meanDesertions: firstMetric.desertions,
@@ -98,6 +99,7 @@ describe('campaign horizon series', () => {
       meanWinScore: summary.meanWinScore,
       routRate: summary.routCampaignRate,
       meanRefusalRate: summary.meanRefusalRate,
+      meanRefusalsPerPly: summary.meanRefusalsPerPly,
       desertionMatchRate: summary.desertionMatchRate,
       desertionAttrition: summary.desertionAttrition,
       meanDesertions: summary.meanDesertions,
@@ -140,6 +142,7 @@ describe('campaign horizon series', () => {
     expect(average[0]?.meanWinScore).toBe(50);
     expect(average[1]?.meanWinScore).toBe(50);
     expect(average[2]?.meanWinScore).toBe(50);
+    expect(average[2]?.meanRefusalsPerPly).toBeCloseTo(0.2);
     expect(average[2]?.meanTrustEnd).toBe(long[2]?.meanTrustEnd);
   });
 
@@ -151,17 +154,17 @@ describe('campaign horizon series', () => {
 
     expect(bands[0]?.meanWinScore).toBe(10);
     expect(csv).toContain(
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
     );
     expect(csv).toContain(
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
     );
     expect(csv.indexOf('\n\ntrajectory_quartile')).toBeGreaterThan(-1);
     expect(csv.indexOf('\n\nhorizon')).toBeGreaterThan(
       csv.indexOf('\n\ntrajectory_quartile'),
     );
     expect(csv).toContain(
-      '\n1,10.00,0.0000,0.0909,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
+      '\n1,10.00,0.0000,0.0909,0.1000,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
     );
   });
 });

@@ -107,6 +107,7 @@ export interface CampaignTrajectoryBand {
   readonly meanTauAbil: number;
   readonly meanTauBenev: number;
   readonly meanRefusalRate: number;
+  readonly meanRefusalsPerPly: number;
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly routRate: number;
@@ -119,6 +120,7 @@ export interface CampaignHorizon {
   readonly meanWinScore: number;
   readonly routRate: number;
   readonly meanRefusalRate: number;
+  readonly meanRefusalsPerPly: number;
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly meanDesertions: number;
@@ -408,6 +410,7 @@ export function buildTrajectoryBands(
       meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
       meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
       meanRefusalRate: mean((metric) => metric.refusalRate),
+      meanRefusalsPerPly: mean((metric) => metric.refusalsPerPly),
       desertionMatchRate:
         metrics.filter((metric) => metric.desertions > 0).length /
         Math.max(1, metrics.length),
@@ -500,6 +503,7 @@ function horizonFromSummary(
     meanWinScore: summary.meanWinScore,
     routRate: summary.routCampaignRate,
     meanRefusalRate: summary.meanRefusalRate,
+    meanRefusalsPerPly: summary.meanRefusalsPerPly,
     desertionMatchRate: summary.desertionMatchRate,
     desertionAttrition: summary.desertionAttrition,
     meanDesertions: summary.meanDesertions,
@@ -599,7 +603,7 @@ export function renderCsv(
   if (trajectoryBands !== undefined) {
     output.push(
       '',
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
       ...trajectoryBands.map((band) =>
         [
           band.quartile,
@@ -609,6 +613,7 @@ export function renderCsv(
           band.meanTauAbil.toFixed(2),
           band.meanTauBenev.toFixed(2),
           band.meanRefusalRate.toFixed(4),
+          band.meanRefusalsPerPly.toFixed(4),
           band.desertionMatchRate.toFixed(4),
           band.desertionAttrition.toFixed(4),
           band.routRate.toFixed(4),
@@ -621,13 +626,14 @@ export function renderCsv(
   if (horizon !== undefined) {
     output.push(
       '',
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
       ...horizon.map((point) =>
         [
           point.horizon,
           point.meanWinScore.toFixed(2),
           point.routRate.toFixed(4),
           point.meanRefusalRate.toFixed(4),
+          point.meanRefusalsPerPly.toFixed(4),
           point.desertionMatchRate.toFixed(4),
           point.desertionAttrition.toFixed(4),
           point.meanDesertions.toFixed(2),

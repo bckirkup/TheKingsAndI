@@ -7,6 +7,11 @@ _Measured against `main` @ `ac21192` (PR #69 merged). Supersedes the numbers in
 fixes. Nothing in this pass tuned a coefficient; `ENGINE_CONFIG` still holds the
 original defaults._
 
+> **Metric-definition note:** The refusal and desertion figures in this
+> historical report use the pre-fix definitions. Current harness output uses
+> bounded refusal rate, retains refusals per ply, labels match incidence as
+> desertion match rate, and adds campaign desertion attrition.
+
 ## How this was measured
 
 ```bash
@@ -74,11 +79,6 @@ engines. Detector 6 of the balance skill is the one that decides whether a game
 exists, and it is currently red: nothing is traded away by being kind. Until a
 warm leader pays *something* — tempo, material, the ADR 0024 promise that a
 cold, highly able leader can still win a career — the central tension is absent.
-
-> **Metric-definition note:** The refusal and desertion figures in this
-> historical report use the pre-fix definitions. Current harness output uses
-> bounded refusal rate, retains refusals per ply, labels match incidence as
-> desertion match rate, and adds campaign desertion attrition.
 
 ### 2. `desertion_campaign` is saturated at 1.000 for every style
 Every leader, including `servant` with a 0% rout rate and a roster that stays at
