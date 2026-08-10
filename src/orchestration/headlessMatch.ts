@@ -27,6 +27,7 @@ import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
 import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import {
   createInsightRoundHandle,
+  resolveBestAuditMoveScore,
   resolveAuditMoveScore,
   resolveMoverInsights,
   type MoverInsights,
@@ -36,6 +37,7 @@ import {
   applyCostlySignalsToRoster,
   applyDeclinedSacrificeSignal,
   applyDesertionWithCascade,
+  applyOutcomeVindication,
   applyPostMoveCredence,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
@@ -44,6 +46,7 @@ import {
   desertionContextFor,
   detectKingEndangermentCostlySignal,
   isAvengedCapture,
+  applyVindicationAuthorityGain,
 } from './psychologyHooks';
 import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
@@ -55,7 +58,6 @@ export interface HeadlessMoveChoice {
   /** When omitted, orchestration resolves engine insight for the mover. */
   readonly moveEval?: CandidateMoveEvaluation;
   readonly leaderImpliedBias?: number;
-  readonly objectivelyGood?: boolean;
 }
 
 export interface HeadlessLeaderPort {
@@ -118,14 +120,28 @@ function applyPlayerOverride(
   ply: number,
   san: string,
   implicit: boolean,
+  actorView: number,
+  justified: boolean,
+  vindicated: boolean,
 ): {
   readonly roster: PieceState[];
   readonly events: readonly MatchEvent[];
 } {
   const witnesses = roster.filter((piece) => piece.id !== actor.id);
-  const override = applyOverride(actor, witnesses, ply, san);
+  const override = applyOverride(actor, witnesses, ply, san, vindicated);
+  const gained = applyVindicationAuthorityGain(
+    [override.overriddenPiece, ...override.witnesses],
+    actor.id,
+    actorView,
+    justified,
+    vindicated,
+  );
   return {
     roster: roster.map((piece) => {
+      const updated = gained.roster.find(
+        (candidate) => candidate.id === piece.id,
+      );
+      if (updated !== undefined) return normalizePieceState(updated);
       if (piece.id === override.overriddenPiece.id) {
         return normalizePieceState(override.overriddenPiece);
       }
@@ -138,7 +154,8 @@ function applyPlayerOverride(
       {
         ...override.event,
         ...(implicit ? { implicit: true } : {}),
-      },
+        authorityGain: gained.authorityGain,
+      } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
       ...override.witnessEvents,
     ],
   };
@@ -380,10 +397,12 @@ export async function runHeadlessMatch(
         choice.intent,
         insight,
       );
-      const bestAudit = Math.max(auditScore, moverInsights.actor.scoreCp);
-      const objectivelyGood =
-        choice.objectivelyGood ??
-        isObjectivelyGoodMove(moverInsights.actor.scoreCp, bestAudit);
+      const bestAudit = await resolveBestAuditMoveScore(
+        config.engine,
+        board,
+        insight,
+      );
+      const objectivelyGood = isObjectivelyGoodMove(auditScore, bestAudit);
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
       const desertionContext = desertionContextFor(actor, moveEval);
@@ -403,6 +422,9 @@ export async function runHeadlessMatch(
             ply,
             choice.san,
             false,
+            moveEval.deltaV_board,
+            justifiedRefusal,
+            objectivelyGood,
           );
           events.push(...override.events);
           roster = override.roster;
@@ -535,6 +557,9 @@ export async function runHeadlessMatch(
         ply,
         firstRefused.san,
         true,
+        firstRefused.moveEval.deltaV_board,
+        firstRefused.moveEval.deltaV_board < 0 && firstRefused.auditScore < 0,
+        firstRefused.objectivelyGood,
       );
       events.push(...override.events);
       roster = override.roster;
@@ -568,6 +593,10 @@ export async function runHeadlessMatch(
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);
+  const contestedOrders = events.filter(
+    (event) => event.t === 'OVERRIDE' && event.vindicated === true,
+  ).length;
+  roster = applyOutcomeVindication(roster, winScore, contestedOrders);
 
   return {
     events: Object.freeze(events),

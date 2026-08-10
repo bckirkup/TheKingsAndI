@@ -2,10 +2,12 @@ import type { MoveFeatures } from '../chess';
 import { isObjectivelyGoodMove } from './evaluation';
 import {
   applyAbilityObservation,
+  applyAuthorityGain,
   applyAuthorityLoss,
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
   isWitnessedSacrifice,
   normalizePieceState,
@@ -169,6 +171,53 @@ export function applyRefusalAuthorityCost(
     ),
     authorityLoss,
   };
+}
+
+export function applyVindicationAuthorityGain(
+  roster: readonly PieceState[],
+  actorId: string,
+  actorView: number,
+  justified: boolean,
+  vindicated: boolean,
+): { readonly roster: PieceState[]; readonly authorityGain: number } {
+  const obviousness = justifiedRefusalObviousness(actorView, justified);
+  const authorityGain =
+    vindicated && obviousness > 0
+      ? Math.trunc(obviousness * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE)
+      : 0;
+  if (authorityGain === 0) {
+    return { roster: [...roster], authorityGain };
+  }
+  return {
+    roster: roster.map((piece) =>
+      piece.id === actorId
+        ? piece
+        : normalizePieceState({
+            ...piece,
+            credence: applyAuthorityGain(piece.credence, authorityGain),
+          }),
+    ),
+    authorityGain,
+  };
+}
+
+export function applyOutcomeVindication(
+  roster: readonly PieceState[],
+  winScore: number,
+  contestedOrders: number,
+): PieceState[] {
+  const matchGain = Math.trunc(
+    (Math.max(0, Math.min(100, winScore)) / 100) *
+      Math.max(0, Math.trunc(contestedOrders)) *
+      ENGINE_CONFIG.ABIL_OUTCOME_VINDICATION_SCALE,
+  );
+  if (matchGain === 0) return roster.map(normalizePieceState);
+  return roster.map((piece) =>
+    normalizePieceState({
+      ...piece,
+      credence: applyAuthorityGain(piece.credence, matchGain),
+    }),
+  );
 }
 
 export function isAvengedCapture(

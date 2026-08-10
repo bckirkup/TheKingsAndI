@@ -31,7 +31,11 @@ import {
   type PieceState,
   type ReplayManifest,
 } from '../src/psychology';
-import { applyRefusalAuthorityCost } from '../src/orchestration/psychologyHooks';
+import {
+  applyOutcomeVindication,
+  applyRefusalAuthorityCost,
+  applyVindicationAuthorityGain,
+} from '../src/orchestration/psychologyHooks';
 
 const neutralTraits = {
   w_honor: 0.5,
@@ -102,6 +106,75 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       expect(justifiedRefusalAuthorityLoss(-1, true)).toBe(16);
     } finally {
       config.REFUSAL_AUTHORITY_LOSS_SCALE = original;
+    }
+  });
+
+  it('defaults reciprocal vindication gains off (golden)', () => {
+    expect(ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE).toBe(0);
+    expect(ENGINE_CONFIG.ABIL_OUTCOME_VINDICATION_SCALE).toBe(0);
+    const actor = makePiece({ id: 'w:N:g1' });
+    const witness = makePiece({ id: 'w:B:f1' });
+    expect(
+      applyVindicationAuthorityGain([actor, witness], actor.id, -1, true, true)
+        .roster,
+    ).toEqual([actor, witness]);
+    expect(applyOutcomeVindication([actor, witness], 100, 2)).toEqual([
+      actor,
+      witness,
+    ]);
+  });
+
+  it('credits only witnesses for justified vindication and responds to both scales', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const gainOriginal = config.ABIL_VINDICATION_GAIN_SCALE ?? 0;
+    const outcomeOriginal = config.ABIL_OUTCOME_VINDICATION_SCALE ?? 0;
+    const actor = makePiece({ id: 'w:N:g1' });
+    const witness = makePiece({ id: 'w:B:f1' });
+    try {
+      config.ABIL_VINDICATION_GAIN_SCALE = 20;
+      const gained = applyVindicationAuthorityGain(
+        [actor, witness],
+        actor.id,
+        -1,
+        true,
+        true,
+      );
+      expect(gained.authorityGain).toBe(8);
+      expect(gained.roster[0]?.credence.tauAbil).toBe(actor.credence.tauAbil);
+      expect(gained.roster[1]?.credence.tauAbil).toBe(58);
+      expect(
+        applyVindicationAuthorityGain(
+          [actor, witness],
+          actor.id,
+          -1,
+          false,
+          true,
+        ).authorityGain,
+      ).toBe(0);
+      config.ABIL_VINDICATION_GAIN_SCALE = 40;
+      expect(
+        applyVindicationAuthorityGain(
+          [actor, witness],
+          actor.id,
+          -1,
+          true,
+          true,
+        ).authorityGain,
+      ).toBe(16);
+      config.ABIL_OUTCOME_VINDICATION_SCALE = 20;
+      expect(
+        applyOutcomeVindication([actor], 100, 2)[0]?.credence.tauAbil,
+      ).toBe(90);
+      config.ABIL_OUTCOME_VINDICATION_SCALE = 40;
+      expect(
+        applyOutcomeVindication([actor], 100, 2)[0]?.credence.tauAbil,
+      ).toBe(100);
+      expect(applyOutcomeVindication([actor], 0, 2)[0]?.credence.tauAbil).toBe(
+        actor.credence.tauAbil,
+      );
+    } finally {
+      config.ABIL_VINDICATION_GAIN_SCALE = gainOriginal;
+      config.ABIL_OUTCOME_VINDICATION_SCALE = outcomeOriginal;
     }
   });
 

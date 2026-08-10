@@ -17,10 +17,11 @@ import {
 } from '../psychology';
 
 import { CAMPAIGN_CONFIG } from './campaignConfig';
-import { featuresToEvaluation, insightToEvaluation } from './evaluation';
+import { featuresToEvaluation, isObjectivelyGoodMove } from './evaluation';
 import {
   createInsightRoundHandle,
-  resolveMoverInsights,
+  resolveBestAuditMoveScore,
+  resolveAuditMoveScore,
   type InsightRoundHandle,
 } from './insight';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
@@ -92,7 +93,7 @@ function finishUntrackedMove(
         san,
         pieceId: applied.moverId,
         verdict: 'COMPLIANT_EXECUTION',
-        orderQualityCp: 40,
+        orderQualityCp: 0,
       },
     ],
     ply: ply + 1,
@@ -114,6 +115,8 @@ function applyTrackedEnemyDecision(input: {
   >;
   readonly ply: number;
   readonly overrideRefusals: boolean;
+  readonly orderQualityCp?: number;
+  readonly objectivelyGood?: boolean;
 }): EnemyTurnResult {
   const {
     board,
@@ -124,6 +127,8 @@ function applyTrackedEnemyDecision(input: {
     desertionMoveEvals,
     ply,
     overrideRefusals,
+    objectivelyGood = false,
+    orderQualityCp = 0,
   } = input;
   let enemyRoster = input.enemyRoster;
   const events: MatchEvent[] = [];
@@ -201,7 +206,7 @@ function applyTrackedEnemyDecision(input: {
     san,
     pieceId: actor.id,
     verdict: outcome.verdict,
-    orderQualityCp: 50,
+    orderQualityCp,
   });
   behaviours.push('move');
   if (outcome.verdict === 'QUIET_QUITTING') behaviours.push('quiet_quit');
@@ -214,7 +219,7 @@ function applyTrackedEnemyDecision(input: {
       ? applyPostMoveCredence(
           { ...piece, engagementFactor: outcome.engagementFactor },
           moveEval,
-          true,
+          objectivelyGood,
         )
       : piece,
   );
@@ -436,21 +441,17 @@ export async function applyEnemyTurn(input: {
     }
 
     const features = extractMoveFeatures(input.board, intent);
-    const moverInsights = await resolveMoverInsights(
+    const moveEval = featuresToEvaluation(features, 0);
+    const orderQualityCp = await resolveAuditMoveScore(
       input.engine,
       input.board,
       intent,
-      actor,
       insight,
-      currentEnemyRoster,
-      features,
-      0,
     );
-    const moveEval = insightToEvaluation(
-      features,
-      moverInsights.actor,
-      moverInsights.leader,
-      0,
+    const bestAuditScore = await resolveBestAuditMoveScore(
+      input.engine,
+      input.board,
+      insight,
     );
     const result = applyTrackedEnemyDecision({
       board: input.board,
@@ -459,11 +460,13 @@ export async function applyEnemyTurn(input: {
       actor,
       san,
       moveEval,
-      desertionMoveEvals: moverInsights.desertionMoveEvals,
+      desertionMoveEvals: { [actor.id]: moveEval },
       ply: input.ply,
       overrideRefusals:
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
+      orderQualityCp,
+      objectivelyGood: isObjectivelyGoodMove(orderQualityCp, bestAuditScore),
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);

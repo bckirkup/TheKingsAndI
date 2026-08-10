@@ -45,6 +45,10 @@ export const ENGINE_CONFIG = {
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
   /** Ability-channel authority loss when a justified refusal is accepted. */
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
+  /** Ability-channel credit to witnesses when an overridden refusal is vindicated. */
+  ABIL_VINDICATION_GAIN_SCALE: 0,
+  /** Match-end ability credit per contested win, disabled by default. */
+  ABIL_OUTCOME_VINDICATION_SCALE: 0,
   /** Trust-to-refusal threshold slope in board-value units. */
   REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */
