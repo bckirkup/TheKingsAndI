@@ -12,7 +12,9 @@ import {
 } from './campaign';
 import {
   aggregateCampaign,
+  buildHorizonSeries,
   buildTrajectoryBands,
+  type CampaignHorizon,
   type CampaignTrajectoryBand,
   type CampaignMetrics,
   type MatchMetrics,
@@ -171,6 +173,7 @@ export interface ShardResult {
   readonly campaigns: readonly ShardCampaignResult[];
   readonly summary: CampaignMetrics;
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
+  readonly horizon: readonly CampaignHorizon[];
 }
 
 export function deriveCampaignSeed(
@@ -296,6 +299,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       trajectoryBands: averageCampaignTrajectoryBands(
         campaigns.map((campaign) => campaign.result.metrics),
       ),
+      horizon: averageCampaignHorizonSeries(
+        campaigns.map((campaign) => campaign.result.metrics),
+      ),
     };
   } finally {
     if (engine !== undefined) {
@@ -352,6 +358,7 @@ export interface AggregatedRun {
   readonly summary: CampaignMetrics;
   readonly campaigns: readonly CampaignArtifact[];
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
+  readonly horizon: readonly CampaignHorizon[];
 }
 
 export function averageCampaignTrajectoryBands(
@@ -383,6 +390,40 @@ export function averageCampaignTrajectoryBands(
       desertionRate: mean((band) => band.desertionRate),
       routRate: mean((band) => band.routRate),
       meanSurvivingRosterSize: mean((band) => band.meanSurvivingRosterSize),
+      meanWinScore: mean((band) => band.meanWinScore),
+    };
+  });
+}
+
+export function averageCampaignHorizonSeries(
+  campaigns: readonly (readonly MatchMetrics[])[],
+): readonly CampaignHorizon[] {
+  const series = campaigns.map((metrics) =>
+    buildHorizonSeries(
+      metrics[0]?.leader ?? 'supportive',
+      metrics[0]?.seed ?? 0,
+      metrics,
+    ),
+  );
+  const maxLength = Math.max(...series.map((horizon) => horizon.length), 0);
+  return Array.from({ length: maxLength }, (_, index) => {
+    const selected = series
+      .map((horizon) => horizon[index])
+      .filter((point): point is CampaignHorizon => point !== undefined);
+    const mean = (pick: (point: CampaignHorizon) => number): number =>
+      selected.reduce((sum, point) => sum + pick(point), 0) /
+      Math.max(1, selected.length);
+    return {
+      horizon: index + 1,
+      meanWinScore: mean((point) => point.meanWinScore),
+      routRate: mean((point) => point.routRate),
+      meanRefusalRate: mean((point) => point.meanRefusalRate),
+      desertionRate: mean((point) => point.desertionRate),
+      meanDesertions: mean((point) => point.meanDesertions),
+      meanSurvivingRosterSize: mean((point) => point.meanSurvivingRosterSize),
+      meanTauAbil: mean((point) => point.meanTauAbil),
+      meanTauBenev: mean((point) => point.meanTauBenev),
+      meanTrustEnd: mean((point) => point.meanTrustEnd),
     };
   });
 }
@@ -491,6 +532,9 @@ export function aggregateShardArtifacts(
     summary: aggregateCampaign(first.leader, first.masterSeed, allMetrics),
     campaigns: orderedCampaigns,
     trajectoryBands: averageCampaignTrajectoryBands(
+      orderedCampaigns.map((campaign) => campaign.metrics),
+    ),
+    horizon: averageCampaignHorizonSeries(
       orderedCampaigns.map((campaign) => campaign.metrics),
     ),
   };

@@ -299,6 +299,7 @@ async function main(): Promise<void> {
   const csv = renderCsv(
     result.campaigns.flatMap((campaign) => campaign.result.metrics),
     result.trajectoryBands,
+    result.horizon,
   );
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
