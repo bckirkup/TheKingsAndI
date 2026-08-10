@@ -44,6 +44,18 @@ describe('UCI score failures', () => {
     await engine.dispose();
   });
 
+  it('distinguishes a child exit during search from a missing score', async () => {
+    const engine = new UciEngine({
+      enginePath: fileURLToPath(
+        new URL('./fixtures/uci-exit-during-search.mjs', import.meta.url),
+      ),
+    });
+    await expect(
+      engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 2),
+    ).rejects.toThrow('Engine child exited with code 17');
+    await engine.dispose();
+  });
+
   it('accepts Lozza mate zero as a decisive score', async () => {
     const engine = new UciEngine({
       enginePath: fileURLToPath(
