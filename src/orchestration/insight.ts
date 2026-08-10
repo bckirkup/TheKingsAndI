@@ -493,9 +493,9 @@ export async function resolveAuditMoveScore(
 }
 
 /**
- * Audit-only score of the best legal move from the side to move. Every
- * candidate is evaluated through the same post-move true-evaluation path as
- * resolveAuditMoveScore, so the result remains in mover-side absolute units.
+ * Audit-only score of the best line from the side to move. A true evaluation
+ * of the pre-move position is already from the side-to-move's perspective,
+ * matching the mover-side units returned by resolveAuditMoveScore.
  */
 export async function resolveBestAuditMoveScore(
   port: EnginePort & {
@@ -507,6 +507,10 @@ export async function resolveBestAuditMoveScore(
   board: LivingBoard,
   handle: InsightRoundHandle,
 ): Promise<number> {
+  if (port.evaluateTrue !== undefined) {
+    const trueEval = await port.evaluateTrue(board.fen());
+    return trueEval.scoreCp;
+  }
   const moves = board.legalMoves();
   if (moves.length === 0) return 0;
   let bestScore = Number.NEGATIVE_INFINITY;

@@ -543,7 +543,7 @@ export class MatchSession {
   }
 
   /** Advance one King command ply under succession (ADR 0022 spectate). */
-  stepSuccession(): void {
+  async stepSuccession(): Promise<void> {
     if (this.phase !== 'succession_spectate' || this.board.isGameOver()) {
       return;
     }
@@ -566,7 +566,7 @@ export class MatchSession {
       this.roster = syncRoster(this.board, this.roster, this.playerSide);
       this.ply += 1;
     } else {
-      void this.runOpponentTurn();
+      await this.runOpponentTurn();
     }
     if (this.board.isGameOver()) {
       this.phase = 'game_over';
@@ -574,7 +574,7 @@ export class MatchSession {
   }
 
   /** Fast-forward remainder under the King after dismissal (ADR 0022). */
-  fastForwardSuccession(): void {
+  async fastForwardSuccession(): Promise<void> {
     if (
       !this.dismissed ||
       this.phase === 'rout' ||
@@ -582,7 +582,7 @@ export class MatchSession {
     ) {
       return;
     }
-    this.playUnderKingCommand();
+    await this.playUnderKingCommand();
   }
 
   private maybeTriggerDismissal(): void {
@@ -604,7 +604,7 @@ export class MatchSession {
     };
   }
 
-  private playUnderKingCommand(): void {
+  private async playUnderKingCommand(): Promise<void> {
     while (
       this.phase === 'succession_spectate' &&
       !this.board.isGameOver() &&
@@ -629,7 +629,7 @@ export class MatchSession {
         this.roster = syncRoster(this.board, this.roster, this.playerSide);
         this.ply += 1;
       } else {
-        void this.runOpponentTurn();
+        await this.runOpponentTurn();
       }
       if (this.board.isGameOver()) {
         this.phase = 'game_over';

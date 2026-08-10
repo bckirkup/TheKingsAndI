@@ -229,8 +229,9 @@ export function MatchScreen({
             <OverridePanel
               pending={pending}
               onOverride={() => {
-                session.confirmOverride();
-                refresh();
+                void session.confirmOverride().then(() => {
+                  refresh();
+                });
               }}
               onReplan={() => {
                 session.replanAfterRefusal();
@@ -243,8 +244,9 @@ export function MatchScreen({
             <DesertionPanel
               pending={pending}
               onAcknowledge={() => {
-                session.acknowledgeDesertion();
-                refresh();
+                void session.acknowledgeDesertion().then(() => {
+                  refresh();
+                });
               }}
             />
           ) : null}
@@ -261,8 +263,9 @@ export function MatchScreen({
                   type="button"
                   className="btn"
                   onClick={() => {
-                    session.stepSuccession();
-                    refresh();
+                    void session.stepSuccession().then(() => {
+                      refresh();
+                    });
                   }}
                 >
                   Step King&apos;s move
@@ -271,8 +274,9 @@ export function MatchScreen({
                   type="button"
                   className="btn"
                   onClick={() => {
-                    session.fastForwardSuccession();
-                    refresh();
+                    void session.fastForwardSuccession().then(() => {
+                      refresh();
+                    });
                   }}
                 >
                   Fast-forward to end
