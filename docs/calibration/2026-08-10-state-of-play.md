@@ -24,7 +24,7 @@ below.
 
 ## The numbers
 
-| Engine | Leader | Seed | Refusal | Quiet quit | Desertion (per match) | Rout | Refused-good | Override | Win | Δtrust |
+| Engine | Leader | Seed | Refusal | Quiet quit | Desertion campaign | Rout campaign | Refused-good | Override | Win | Δtrust |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | fake | tyrannical | 7 | 0.154 | 0.156 | 1.000 | 0.725 | 0.408 | 0.395 | 27.5 | −61.98 |
 | fake | tyrannical | 11 | 0.163 | 0.174 | 1.000 | 0.575 | 0.322 | 0.400 | 40.0 | −49.20 |
