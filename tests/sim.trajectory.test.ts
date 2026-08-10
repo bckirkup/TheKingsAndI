@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { runCampaign } from '../sim/campaign';
-import { buildTrajectoryBands, type MatchMetrics } from '../sim/metrics';
+import {
+  buildTrajectoryBands,
+  EMPTY_DESERTION_SUMMARY,
+  type MatchMetrics,
+} from '../sim/metrics';
 
 function handCheckMetric(match: number): MatchMetrics {
   return {
@@ -16,6 +20,8 @@ function handCheckMetric(match: number): MatchMetrics {
     desertions: match % 2,
     winningPositionDesertions: 0,
     cascadeLength: match % 2,
+    firstDeparture: EMPTY_DESERTION_SUMMARY,
+    cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 1,
     refusalRate: match / 100,
     quietQuitRate: 0,

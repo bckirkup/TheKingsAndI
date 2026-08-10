@@ -17,6 +17,7 @@ import {
   justifiedRefusalObviousness,
   shouldDesert,
   type CandidateMoveEvaluation,
+  type DesertionDecisionTerms,
   type MatchEvent,
   type MoveDecisionOutcome,
   type MoveResponseVerdict,
@@ -71,6 +72,9 @@ export interface PendingVerdict {
   readonly orderQualityCp: number;
   readonly outcome: MoveDecisionOutcome;
   readonly verdict: 'MORAL_REFUSAL' | 'DESERTION_MUTINY';
+  readonly desertionTerms: DesertionDecisionTerms;
+  readonly desertionUStay: number;
+  readonly desertionUDesert: number;
   readonly desertionMoveEvals: Readonly<
     Record<string, CandidateMoveEvaluation>
   >;
@@ -289,14 +293,19 @@ export class MatchSession {
       intent,
       this.insight,
     );
+    const desertionContext = desertionContextFor(actor, moveEval);
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,
       this.roster,
-      desertionContextFor(actor, moveEval),
+      desertionContext,
     );
-
     if (outcome.verdict === 'MORAL_REFUSAL') {
+      const desertionDecision = shouldDesert(
+        actor,
+        desertionContext,
+        this.roster,
+      );
       this.pending = {
         intent,
         san: features.san,
@@ -306,6 +315,9 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'MORAL_REFUSAL',
+        desertionTerms: desertionDecision.terms,
+        desertionUStay: desertionDecision.uStay,
+        desertionUDesert: desertionDecision.uDesert,
         desertionMoveEvals,
         declinedSacrificeOpportunity: insights.declinedSacrificeOpportunity,
       };
@@ -320,6 +332,11 @@ export class MatchSession {
     }
 
     if (outcome.verdict === 'DESERTION_MUTINY') {
+      const desertionDecision = shouldDesert(
+        actor,
+        desertionContext,
+        this.roster,
+      );
       this.pending = {
         intent,
         san: features.san,
@@ -329,6 +346,9 @@ export class MatchSession {
         orderQualityCp,
         outcome,
         verdict: 'DESERTION_MUTINY',
+        desertionTerms: desertionDecision.terms,
+        desertionUStay: desertionDecision.uStay,
+        desertionUDesert: desertionDecision.uDesert,
         desertionMoveEvals,
         declinedSacrificeOpportunity: insights.declinedSacrificeOpportunity,
       };
@@ -448,11 +468,6 @@ export class MatchSession {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
 
-    const desertionDecision = shouldDesert(
-      pending.actor,
-      desertionContextFor(pending.actor, pending.moveEval),
-      this.roster,
-    );
     const cascade = applyDesertionWithCascade(
       this.roster,
       {
@@ -460,8 +475,9 @@ export class MatchSession {
         refusedMove: pending.san,
         refusedMoveEval: pending.moveEval,
         moveEvalByPiece: pending.desertionMoveEvals,
-        uStay: desertionDecision.uStay,
-        uDesert: desertionDecision.uDesert,
+        uStay: pending.desertionUStay,
+        uDesert: pending.desertionUDesert,
+        terms: pending.desertionTerms,
       },
       this.ply,
     );

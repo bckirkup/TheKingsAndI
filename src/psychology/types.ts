@@ -91,6 +91,23 @@ export interface DesertionContext {
   readonly P_lossIfLeave: number;
 }
 
+export interface DesertionDecisionTerms {
+  readonly P_captured: number;
+  readonly pain: number;
+  readonly P_lossIfStay: number;
+  readonly P_lossIfLeave: number;
+  readonly lambda: number;
+  readonly lambdaTrust: number;
+  readonly lambdaMorale: number;
+  readonly lambdaLoyalty: number;
+  readonly lambdaAffinity: number;
+  /** Positive cost subtracted from U_desert. */
+  readonly standingCost: number;
+  readonly gloryWeight: number;
+  readonly tauBenev: number;
+  readonly tauAbil: number;
+}
+
 export interface SacrificeAttribution {
   readonly removedThreatToPeer: boolean;
   readonly enabledForcedWin: boolean;
@@ -156,6 +173,8 @@ export type MatchEvent =
       readonly refusedMove: string;
       readonly uStay: number;
       readonly uDesert: number;
+      readonly terms?: DesertionDecisionTerms;
+      readonly departureKind: 'first' | 'cascade';
     }
   | {
       readonly t: 'DESERTION_WITNESS';

@@ -6,6 +6,7 @@ import { appraiseDesertionWitness } from './witness';
 import type {
   CandidateMoveEvaluation,
   DesertionContext,
+  DesertionDecisionTerms,
   MatchEvent,
   PieceState,
 } from './types';
@@ -59,6 +60,7 @@ export interface DesertionDeparture {
   readonly moveEvalByPiece: Readonly<Record<string, CandidateMoveEvaluation>>;
   readonly uStay: number;
   readonly uDesert: number;
+  readonly terms?: DesertionDecisionTerms;
 }
 
 export interface CascadeResult {
@@ -88,14 +90,17 @@ export function applyDesertionWithCascade(
     const actor = roster.find((piece) => piece.id === next.actor.id);
     if (actor === undefined) continue;
 
-    events.push({
+    const event: Extract<MatchEvent, { t: 'DESERTION' }> = {
       t: 'DESERTION',
       ply,
       pieceId: actor.id,
       refusedMove: next.refusedMove,
       uStay: next.uStay,
       uDesert: next.uDesert,
-    });
+      departureKind: cascadeLength === 0 ? 'first' : 'cascade',
+      ...(next.terms === undefined ? {} : { terms: next.terms }),
+    };
+    events.push(event);
 
     for (const witness of roster) {
       if (witness.id === actor.id || witness.role === 'King') continue;
@@ -139,6 +144,7 @@ export function applyDesertionWithCascade(
         moveEvalByPiece: next.moveEvalByPiece,
         uStay: candidate.uStay,
         uDesert: candidate.uDesert,
+        terms: candidate.terms,
       });
     }
   }

@@ -87,6 +87,7 @@ function commitPly(
         moveEvalByPiece: { [actor.id]: replayPly.moveEval },
         uStay: desertion?.uStay ?? 0,
         uDesert: desertion?.uDesert ?? 0,
+        ...(desertion?.terms === undefined ? {} : { terms: desertion.terms }),
       },
       ply,
     );

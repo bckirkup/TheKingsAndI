@@ -12,6 +12,7 @@ import { normalizePieceState } from './reducers';
 import type {
   CandidateMoveEvaluation,
   DesertionContext,
+  DesertionDecisionTerms,
   MatchEvent,
   MoveDecisionOutcome,
   PieceState,
@@ -179,11 +180,13 @@ export function evaluateDesertionCascade(
   readonly pieceId: string;
   readonly uStay: number;
   readonly uDesert: number;
+  readonly terms: DesertionDecisionTerms;
 }[] {
   const results: {
     pieceId: string;
     uStay: number;
     uDesert: number;
+    terms: DesertionDecisionTerms;
   }[] = [];
   const active = roster.filter((piece) => piece.role !== 'King');
   for (const piece of active) {
@@ -195,6 +198,7 @@ export function evaluateDesertionCascade(
         pieceId: piece.id,
         uStay: decision.uStay,
         uDesert: decision.uDesert,
+        terms: decision.terms,
       });
     }
   }

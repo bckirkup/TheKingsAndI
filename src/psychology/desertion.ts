@@ -1,7 +1,11 @@
 import { quantizeBoardValue } from '../core/math';
 import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
-import type { DesertionContext, PieceState } from './types';
+import type {
+  DesertionContext,
+  DesertionDecisionTerms,
+  PieceState,
+} from './types';
 
 const STANDARD_ROSTER_SIZE = 16;
 
@@ -12,10 +16,18 @@ export function calculatePain(piece: PieceState): number {
   );
 }
 
-export function calculateLambda(
+export interface LambdaComponents {
+  readonly trust: number;
+  readonly morale: number;
+  readonly loyalty: number;
+  readonly affinity: number;
+  readonly total: number;
+}
+
+export function calculateLambdaComponents(
   piece: PieceState,
   activePeers: readonly PieceState[],
-): number {
+): LambdaComponents {
   const trustTerm =
     ((piece.T_i + 100) / 200) * ENGINE_CONFIG.DESERTION_LAMBDA_TRUST_SCALE;
   const moraleTerm =
@@ -30,7 +42,20 @@ export function calculateLambda(
   const affinityTerm =
     (Math.max(-100, Math.min(100, affinitySum)) / 100) *
     ENGINE_CONFIG.DESERTION_LAMBDA_AFFINITY_SCALE;
-  return trustTerm + moraleTerm + loyaltyTerm + affinityTerm;
+  return {
+    trust: trustTerm,
+    morale: moraleTerm,
+    loyalty: loyaltyTerm,
+    affinity: affinityTerm,
+    total: trustTerm + moraleTerm + loyaltyTerm + affinityTerm,
+  };
+}
+
+export function calculateLambda(
+  piece: PieceState,
+  activePeers: readonly PieceState[],
+): number {
+  return calculateLambdaComponents(piece, activePeers).total;
 }
 
 export function calculateUStay(
@@ -51,6 +76,26 @@ export function calculateUDesert(
   lambda: number,
   activePeers: readonly PieceState[],
 ): number {
+  const standing = calculateStandingCostComponents(piece, activePeers);
+  const residualCost =
+    -context.P_lossIfLeave *
+    lambda *
+    ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
+    ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
+  const quantizedResidualCost = quantizeBoardValue(residualCost);
+  const quantizedStandingCost = quantizeBoardValue(
+    -standing.anticipatedStandingCost,
+  );
+  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
+}
+
+function calculateStandingCostComponents(
+  piece: PieceState,
+  activePeers: readonly PieceState[],
+): {
+  readonly anticipatedStandingCost: number;
+  readonly gloryWeight: number;
+} {
   let standing = 0;
   for (const peer of activePeers) {
     if (peer.id === piece.id) continue;
@@ -62,14 +107,10 @@ export function calculateUDesert(
   const gloryWeight = (piece.traits.w_ambition + piece.traits.w_prestige) / 2;
   const anticipatedStandingCost =
     audienceStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
-  const residualCost =
-    -context.P_lossIfLeave *
-    lambda *
-    ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
-    ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
-  const quantizedResidualCost = quantizeBoardValue(residualCost);
-  const quantizedStandingCost = quantizeBoardValue(-anticipatedStandingCost);
-  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
+  return {
+    anticipatedStandingCost,
+    gloryWeight,
+  };
 }
 
 export function shouldDesert(
@@ -80,14 +121,37 @@ export function shouldDesert(
   readonly desert: boolean;
   readonly uStay: number;
   readonly uDesert: number;
+  readonly terms: DesertionDecisionTerms;
 } {
-  const lambda = calculateLambda(piece, activePeers);
+  const lambdaComponents = calculateLambdaComponents(piece, activePeers);
+  const lambda = lambdaComponents.total;
   const uStay = calculateUStay(piece, context, lambda);
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
+  const standing = calculateStandingCostComponents(piece, activePeers);
   const desert =
     uDesert > uStay + ENGINE_CONFIG.DESERTION_HYSTERESIS &&
     piece.role !== 'King';
-  return { desert, uStay, uDesert };
+  return {
+    desert,
+    uStay,
+    uDesert,
+    terms: {
+      P_captured: context.P_captured,
+      pain: calculatePain(piece),
+      P_lossIfStay: context.P_lossIfStay,
+      P_lossIfLeave: context.P_lossIfLeave,
+      lambda,
+      lambdaTrust: lambdaComponents.trust,
+      lambdaMorale: lambdaComponents.morale,
+      lambdaLoyalty: lambdaComponents.loyalty,
+      lambdaAffinity: lambdaComponents.affinity,
+      standingCost:
+        quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
+      gloryWeight: standing.gloryWeight,
+      tauBenev: piece.credence.tauBenev,
+      tauAbil: piece.credence.tauAbil,
+    },
+  };
 }
 
 export function isKingExempt(role: PieceState['role']): boolean {

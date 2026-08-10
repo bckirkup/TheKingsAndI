@@ -175,6 +175,7 @@ function applyTrackedEnemyDecision(input: {
         },
         uStay: desertionDecision.uStay,
         uDesert: desertionDecision.uDesert,
+        terms: desertionDecision.terms,
       },
       ply,
     );

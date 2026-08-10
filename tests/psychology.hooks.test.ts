@@ -132,6 +132,7 @@ describe('desertion cascade (live path)', () => {
         },
         uStay: decision.uStay,
         uDesert: decision.uDesert,
+        terms: decision.terms,
       },
       4,
     );
@@ -145,7 +146,16 @@ describe('desertion cascade (live path)', () => {
     expect(departure).toMatchObject({
       uStay: decision.uStay,
       uDesert: decision.uDesert,
+      terms: decision.terms,
+      departureKind: 'first',
     });
+    const cascadeDepartures = cascade.events.filter(
+      (event): event is Extract<typeof event, { t: 'DESERTION' }> =>
+        event.t === 'DESERTION' && event.departureKind === 'cascade',
+    );
+    expect(cascadeDepartures.every((event) => event.terms !== undefined)).toBe(
+      true,
+    );
   });
 
   it('uses each witness private move evaluation for departure appraisal', () => {
@@ -188,6 +198,7 @@ describe('desertion cascade (live path)', () => {
         },
         uStay: decision.uStay,
         uDesert: decision.uDesert,
+        terms: decision.terms,
       },
       4,
     );
