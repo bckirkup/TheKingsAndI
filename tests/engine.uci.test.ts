@@ -40,7 +40,9 @@ describe('UCI score failures', () => {
     });
     await expect(
       engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 2),
-    ).rejects.toThrow('without a score');
+    ).rejects.toThrow(
+      'without a score at depth 2 for FEN 8/8/8/8/8/8/8/7K w - - 0 1',
+    );
     await engine.dispose();
   });
 
@@ -52,7 +54,10 @@ describe('UCI score failures', () => {
     });
     await expect(
       engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 2),
-    ).rejects.toThrow('Engine child exited with code 17');
+    ).rejects.toThrow(
+      'Engine child exited with code 17 at depth 2 for FEN ' +
+        '8/8/8/8/8/8/8/7K w - - 0 1',
+    );
     await engine.dispose();
   });
 

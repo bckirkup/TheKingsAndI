@@ -27,11 +27,17 @@ export class UciEngineExitedError extends Error {
     readonly code: number | null,
     readonly signal: NodeJS.Signals | null,
     readonly stderr: string,
+    readonly fen: string | undefined,
+    readonly depth: number | undefined,
   ) {
     const status =
       code === null ? `signal ${signal ?? 'unknown'}` : `code ${code}`;
     const tail = stderr.length === 0 ? '' : `; stderr: ${stderr}`;
-    super(`Engine child exited with ${status}${tail}`);
+    const request =
+      fen === undefined || depth === undefined
+        ? ''
+        : ` at depth ${depth} for FEN ${fen}`;
+    super(`Engine child exited with ${status}${request}${tail}`);
     this.name = 'UciEngineExitedError';
   }
 }
@@ -113,6 +119,7 @@ export class UciEngine {
   }> = [];
   private stderrTail = '';
   private processFailure: UciEngineExitedError | undefined;
+  private searchFen: string | undefined;
   private busy = false;
 
   constructor(options: UciEngineOptions) {
@@ -143,11 +150,21 @@ export class UciEngine {
           null,
           null,
           `${String(cause)}${this.stderrTail}`,
+          this.searchFen,
+          this.targetDepth,
         ),
       );
     });
     this.process.on('exit', (code, signal) => {
-      this.failProcess(new UciEngineExitedError(code, signal, this.stderrTail));
+      this.failProcess(
+        new UciEngineExitedError(
+          code,
+          signal,
+          this.stderrTail,
+          this.searchFen,
+          this.targetDepth,
+        ),
+      );
     });
     this.ready = this.handshake();
   }
@@ -218,7 +235,10 @@ export class UciEngine {
       const multiPvAtMax = new Map(this.multiPvAtMax);
       if (at.size === 0 && multiPvAtMax.size === 0) {
         this.searchReject?.(
-          new Error(`Engine returned ${line} without a score`),
+          new Error(
+            `Engine returned ${line} without a score at depth ${this.targetDepth} ` +
+              `for FEN ${this.searchFen ?? 'unknown'}`,
+          ),
         );
       } else {
         const multiPvAt = new Map(
@@ -306,6 +326,7 @@ export class UciEngine {
     }
     this.busy = true;
     await this.ready;
+    this.searchFen = fen;
     this.targetDepth = depth;
     this.depthBest = new Map();
     this.multiPvByDepth = new Map();
