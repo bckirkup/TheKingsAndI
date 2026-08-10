@@ -24,7 +24,7 @@ import {
   type PieceState,
 } from '../psychology';
 
-import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import { insightToEvaluation, isVindicatedMove } from './evaluation';
 import {
   evaluateDismissal,
   selectSuccessorLeader,
@@ -301,10 +301,6 @@ export class MatchSession {
       this.board,
       this.insight,
     );
-    const objectivelyGood = isObjectivelyGoodMove(
-      orderQualityCp,
-      bestAuditScore,
-    );
     const justified = moveEval.deltaV_board < 0 && orderQualityCp < 0;
     const desertionContext = desertionContextFor(actor, moveEval);
     const outcome = evaluateMoveResponse(
@@ -312,6 +308,12 @@ export class MatchSession {
       moveEval,
       this.roster,
       desertionContext,
+    );
+    const objectivelyGood = isVindicatedMove(
+      orderQualityCp,
+      bestAuditScore,
+      bestAuditScore,
+      outcome.perceivedValue,
     );
     if (outcome.verdict === 'MORAL_REFUSAL') {
       const desertionDecision = shouldDesert(

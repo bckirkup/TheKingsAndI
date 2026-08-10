@@ -541,7 +541,9 @@ describe('degeneracy detectors', () => {
     expect(
       findings.some((finding) => finding.code === 'early-saturation'),
     ).toBe(true);
-    expect(() => assertSmokeBounds('tyrannical', summary)).not.toThrow();
+    expect(() => assertSmokeBounds('tyrannical', summary)).toThrow(
+      'Refusals occur but refused-good-move rate is near zero.',
+    );
     expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
       'early',
     );

@@ -24,7 +24,7 @@ import {
 
 import { CAMPAIGN_CONFIG } from './campaignConfig';
 import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
-import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import { insightToEvaluation, isVindicatedMove } from './evaluation';
 import {
   createInsightRoundHandle,
   resolveBestAuditMoveScore,
@@ -402,7 +402,6 @@ export async function runHeadlessMatch(
         board,
         insight,
       );
-      const objectivelyGood = isObjectivelyGoodMove(auditScore, bestAudit);
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
       const desertionContext = desertionContextFor(actor, moveEval);
@@ -412,6 +411,12 @@ export async function runHeadlessMatch(
         moveEval,
         roster,
         desertionContext,
+      );
+      const objectivelyGood = isVindicatedMove(
+        auditScore,
+        bestAudit,
+        bestAudit,
+        outcome.perceivedValue,
       );
 
       if (outcome.verdict === 'MORAL_REFUSAL') {

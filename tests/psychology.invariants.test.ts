@@ -36,6 +36,10 @@ import {
   applyRefusalAuthorityCost,
   applyVindicationAuthorityGain,
 } from '../src/orchestration/psychologyHooks';
+import {
+  isVindicatedMove,
+  resolveVindicationBaselineScore,
+} from '../src/orchestration/evaluation';
 
 const neutralTraits = {
   w_honor: 0.5,
@@ -122,6 +126,31 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       actor,
       witness,
     ]);
+  });
+
+  it('uses the expectation baseline by default and keeps the oracle branch', () => {
+    expect(ENGINE_CONFIG.VINDICATION_BASELINE).toBe('expectation');
+    expect(resolveVindicationBaselineScore('expectation', 100, 200, -0.5)).toBe(
+      50,
+    );
+    expect(resolveVindicationBaselineScore('oracle', 100, 200, -0.5)).toBe(200);
+  });
+
+  it('changes the vindication baseline when the branch changes', () => {
+    const config = ENGINE_CONFIG as {
+      VINDICATION_BASELINE: 'expectation' | 'oracle';
+    };
+    const original = config.VINDICATION_BASELINE;
+    try {
+      config.VINDICATION_BASELINE = 'expectation';
+      const expectation = isVindicatedMove(100, 100, 200, -0.5);
+      config.VINDICATION_BASELINE = 'oracle';
+      const oracle = isVindicatedMove(100, 100, 200, -0.5);
+      expect(expectation).toBe(true);
+      expect(oracle).toBe(false);
+    } finally {
+      config.VINDICATION_BASELINE = original;
+    }
   });
 
   it('credits only witnesses for justified vindication and responds to both scales', () => {

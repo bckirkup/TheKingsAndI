@@ -3,6 +3,8 @@
  * Every knob here must have a golden test and a sensitivity probe.
  */
 export const ENGINE_CONFIG = {
+  /** Vindication baseline: the piece's expectation is the shipped default. */
+  VINDICATION_BASELINE: 'expectation' as 'expectation' | 'oracle',
   MIN_SEARCH_DEPTH: 2,
   MAX_SEARCH_DEPTH: 16,
   DEFAULT_BENCHING_SELF_PENALTY: -30,

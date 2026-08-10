@@ -17,7 +17,7 @@ import {
 } from '../psychology';
 
 import { CAMPAIGN_CONFIG } from './campaignConfig';
-import { featuresToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import { featuresToEvaluation, isVindicatedMove } from './evaluation';
 import {
   createInsightRoundHandle,
   resolveBestAuditMoveScore,
@@ -453,6 +453,13 @@ export async function applyEnemyTurn(input: {
       input.board,
       insight,
     );
+    const outcome = evaluateMoveResponse(actor, moveEval, currentEnemyRoster);
+    const objectivelyGood = isVindicatedMove(
+      orderQualityCp,
+      bestAuditScore,
+      bestAuditScore,
+      outcome.perceivedValue,
+    );
     const result = applyTrackedEnemyDecision({
       board: input.board,
       enemyRoster: currentEnemyRoster,
@@ -466,7 +473,7 @@ export async function applyEnemyTurn(input: {
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,
-      objectivelyGood: isObjectivelyGoodMove(orderQualityCp, bestAuditScore),
+      objectivelyGood,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);

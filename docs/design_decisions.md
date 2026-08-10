@@ -686,6 +686,14 @@ Measure whether immediate witness credit and match-end roster credit provide
 distinct evidence or merely duplicate the same authority signal before deciding
 whether both channels should remain.
 
+### D111 ⚠ Which baseline should vindication use?
+Vindication may compare the played audit outcome against the piece's own
+pessimistic expectation or against the engine-best oracle. The shipped default
+is `VINDICATION_BASELINE = 'expectation'`, while `'oracle'` remains available
+as the long-term variant. The expectation is the verdict ladder's
+credence-weighted board-value prediction, reconciled to mover-side absolute cp
+by adding it to the pre-move audit score.
+
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
 recruitable, and the cost is set by the roster's verdict on his departure rather
@@ -767,7 +775,7 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D110** — with the harness before the crisis-menu transactions ship:
+3. **D100–D111** — with the harness before the crisis-menu transactions ship:
    thresholds, magnitudes, nomination restoration and mark persistence, the
    scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.

@@ -57,7 +57,25 @@ The owner's ruling on the shape of the fix:
 
 ## Decision
 
-### 1. Vindication is measured against the best available move
+### 1. Vindication is measured against the piece's expectation
+
+Vindication is relational rather than oracular. The default comparison uses
+the piece's own expected value of complying, namely the verdict ladder's
+`perceivedValue` term. This is the same credence-weighted, pessimistic
+prediction used when deciding whether to refuse:
+
+```text
+expectedAbsoluteCp = preMoveAuditCp + round(perceivedValue * 100)
+objectivelyGood = playedAuditCp >= expectedAbsoluteCp - tolerance
+```
+
+`perceivedValue` is a board-value delta in pawn units; the audit scores are
+mover-side absolute centipawns. Adding the expected delta to the pre-move
+absolute audit score puts both sides in the same units without passing the
+audit score into psychology.
+
+The `VINDICATION_BASELINE` configuration knob defaults to `'expectation'`.
+The `'oracle'` branch retains the engine-best comparison:
 
 `objectivelyGood` compares the audit's score for the move actually played
 against the audit's score for the best move available at that ply, both
@@ -69,8 +87,9 @@ objectivelyGood = auditScore(played) >= auditScore(best available) - tolerance
 
 Both terms come from the same stream in the same units. As with ADR 0038 the
 audit is an orchestration-side gate only; the score never enters `psychology/`,
-and pieces receive only the resulting boolean. The interactive and enemy paths
-use the same computation as the headless path rather than a substitute.
+and pieces receive only the resulting per-piece boolean. The interactive and
+enemy paths use the same computation as the headless path rather than a
+substitute. D111 records the open baseline choice.
 
 ### 2. Authority lost in public can be won back in public
 
