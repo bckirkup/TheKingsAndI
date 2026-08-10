@@ -65,6 +65,18 @@ describe('engine conformance corpus (Lozza)', () => {
     expect(shallow.scoreCp).not.toBe(deep.scoreCp);
   });
 
+  it('falls back to the deepest reported rung when Lozza truncates deepening', async () => {
+    // Lozza stops iterative deepening on a near-forced check and reports only
+    // `info depth 1`, so every deeper request resolves to that same rung.
+    const forced =
+      'r1b1kb1r/2pq1p2/1p1p2p1/p2Pp3/7p/P2n4/RP1PPPPP/1NBQKBNR w K - 2 23';
+    const shallow = await port.evaluate(forced, 1);
+    expect(shallow.scoreCp).toBe(877);
+    for (const depth of [2, 4, 6]) {
+      expect(await port.evaluate(forced, depth)).toEqual(shallow);
+    }
+  });
+
   it('provides deterministic per-rung MultiPV lines', async () => {
     const testCase = CONFORMANCE_CORPUS[0];
     if (testCase === undefined) throw new Error('missing corpus case');

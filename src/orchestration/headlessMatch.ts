@@ -51,11 +51,17 @@ export interface HeadlessMoveChoice {
 }
 
 export interface HeadlessLeaderPort {
+  /**
+   * `refusedSans` holds the orders this side already issued at this position
+   * and had refused. Refusal is free to re-plan (ADR 0002), so a leader that
+   * re-issued a refused order would loop until the ply cap.
+   */
   chooseMove(
     board: LivingBoard,
     side: Side,
     random: SeededRandom,
     ply: number,
+    refusedSans: ReadonlySet<string>,
   ): HeadlessMoveChoice | undefined | Promise<HeadlessMoveChoice | undefined>;
   shouldOverride(random: SeededRandom, ply: number): boolean;
   onMatchEnd?(roster: readonly PieceState[], winScore: number): PieceState[];
@@ -131,6 +137,8 @@ export async function runHeadlessMatch(
   let lastFriendlyCapturePly: number | undefined;
   let abilityObservations = 0;
   const opponentArchetype = config.opponentArchetype ?? 'random';
+  let refusalPositionFen: string | undefined;
+  let refusedSans = new Set<string>();
 
   while (ply <= config.maxPlies) {
     if (board.isGameOver()) break;
@@ -178,8 +186,27 @@ export async function runHeadlessMatch(
       continue;
     }
 
-    const choice = await leader.chooseMove(board, side, config.random, ply);
+    const positionFen = board.fen();
+    if (positionFen !== refusalPositionFen) {
+      refusalPositionFen = positionFen;
+      refusedSans = new Set<string>();
+    }
+    const choice = await leader.chooseMove(
+      board,
+      side,
+      config.random,
+      ply,
+      refusedSans,
+    );
     if (choice === undefined) break;
+    /*
+     * ADR 0014: the board is never stuck. Once the roster has refused every
+     * order but one, the last one is overridden rather than refused, whatever
+     * the leader policy would otherwise do.
+     */
+    const lastCandidate =
+      refusedSans.has(choice.san) ||
+      refusedSans.size >= board.legalMoves().length - 1;
 
     const actor = roster.find((piece) => piece.id === choice.moverId);
     if (actor === undefined) {
@@ -232,7 +259,7 @@ export async function runHeadlessMatch(
     );
 
     if (outcome.verdict === 'MORAL_REFUSAL') {
-      if (leader.shouldOverride(config.random, ply)) {
+      if (lastCandidate || leader.shouldOverride(config.random, ply)) {
         events.push({
           t: 'OVERRIDE',
           ply,
@@ -290,7 +317,8 @@ export async function runHeadlessMatch(
             credence: applyNeglectSignal(piece.credence),
           }));
         }
-        ply += 1;
+        // Refusal costs no turn (ADR 0002); the leader re-plans at this ply.
+        refusedSans.add(choice.san);
         continue;
       }
     }

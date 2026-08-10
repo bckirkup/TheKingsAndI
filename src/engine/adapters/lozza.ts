@@ -9,7 +9,11 @@ import {
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
 } from '../search';
 import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
-import { UciEngine, type DepthLadder } from '../uci';
+import {
+  UciEngine,
+  type DepthLadder,
+  type UciSearchResult,
+} from '../uci';
 
 const LOZZA_HASH_MB = 16;
 const LOZZA_BUILD_PATTERN = /\bconst BUILD = ['"]([^'"]+)['"];/;
@@ -139,7 +143,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
     ): Promise<EngineEvaluation> {
       void evalProfile;
       const ladder = await ladderFor(fen, depth);
-      const result = ladder.at.get(depth) ?? ladder.multiPvAtMax.get(1);
+      const result = deepestAtOrBelow(ladder, depth);
       if (result === undefined) {
         throw new Error(`Lozza produced no score at depth ${depth}`);
       }
@@ -184,6 +188,25 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       });
     },
   };
+}
+
+/**
+ * Deepest rung the engine actually reported at or below `depth`.
+ *
+ * Lozza stops iterative deepening once the move is forced — a position with a
+ * single legal reply yields `info depth 1` and nothing after it — so demanding
+ * the exact rung fails on precisely the positions the psychology cares most
+ * about. The fallback stays deterministic: same FEN and depth, same rung.
+ */
+function deepestAtOrBelow(
+  ladder: DepthLadder,
+  depth: number,
+): UciSearchResult | undefined {
+  for (let rung = Math.min(depth, ladder.maxDepth); rung >= 1; rung -= 1) {
+    const result = ladder.at.get(rung);
+    if (result !== undefined) return result;
+  }
+  return ladder.multiPvAtMax.get(1);
 }
 
 function linesAt(
