@@ -341,14 +341,14 @@ async function main(): Promise<void> {
     `Milestone 3 harness: ${result.summary.matches} matches across ${result.campaigns.length} campaigns for ${options.leader} (${result.manifest.determinismId}).`,
   );
   console.log(
-    `refusal=${result.summary.meanRefusalRate.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_campaign=${result.summary.desertionCampaignRate.toFixed(3)} winning_position_desertion=${result.summary.winningPositionDesertionRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
+    `refusal=${result.summary.meanRefusalRate.toFixed(3)} refusals_per_ply=${result.summary.meanRefusalsPerPly.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_match=${result.summary.desertionMatchRate.toFixed(3)} desertion_attrition=${result.summary.desertionAttrition.toFixed(3)} winning_position_desertion=${result.summary.winningPositionDesertionRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)}`,
   );
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
   for (const band of result.trajectoryBands) {
     console.log(
-      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} refusal=${band.meanRefusalRate.toFixed(3)} desertion=${band.desertionRate.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} refusal=${band.meanRefusalRate.toFixed(3)} refusals_per_ply=${band.meanRefusalsPerPly.toFixed(3)} desertion_match=${band.desertionMatchRate.toFixed(3)} desertion_attrition=${band.desertionAttrition.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
     );
   }
   for (const finding of findings) {

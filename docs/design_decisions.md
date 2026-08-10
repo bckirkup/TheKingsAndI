@@ -648,6 +648,18 @@ piece's own view.
 Decide whether a nomination mark is permanent or decays across matches. This
 interacts directly with ADR 0026's community-of-pieces model.
 
+### D105 ⚠ How should desertion detector thresholds be re-ranged for attrition?
+The existing desertion thresholds (`0.2`, `0.5`, and early-saturation `0.8`) and
+refusal thresholds (`0.001` and `0.05`) were calibrated against the old
+match-incidence and refusals-per-ply quantities. Re-range them against campaign
+desertion attrition and bounded refusal rate before using the detectors as
+balance acceptance gates.
+
+### D106 ⚠ Should terminal desertion advance the headless ply?
+The interactive path increments `ply` for terminal desertion before handling
+rout, while the headless path does not. Reconcile the accounting without changing
+the meaning of `plies` or the replay contract.
+
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
 recruitable, and the cost is set by the roster's verdict on his departure rather
@@ -729,9 +741,9 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D103** — with the harness before the crisis-menu transactions ship:
-   thresholds, magnitudes, nomination restoration and mark persistence, and the
-   scope of the menu on unjustified refusals.
+3. **D100–D105** — with the harness before the crisis-menu transactions ship:
+   thresholds, magnitudes, nomination restoration and mark persistence, the
+   scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)

@@ -7,6 +7,11 @@ _Measured against `main` @ `ac21192` (PR #69 merged). Supersedes the numbers in
 fixes. Nothing in this pass tuned a coefficient; `ENGINE_CONFIG` still holds the
 original defaults._
 
+> **Metric-definition note:** The refusal and desertion figures in this
+> historical report use the pre-fix definitions. Current harness output uses
+> bounded refusal rate, retains refusals per ply, labels match incidence as
+> desertion match rate, and adds campaign desertion attrition.
+
 ## How this was measured
 
 ```bash

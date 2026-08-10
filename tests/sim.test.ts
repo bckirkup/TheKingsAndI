@@ -395,6 +395,123 @@ describe('simulation harness argument parsing', () => {
 });
 
 describe('degeneracy detectors', () => {
+  it('uses named attrition thresholds and responds to each threshold', async () => {
+    expect(DEGENERACY_CONFIG.noRoutAttritionThreshold).toBe(0.2);
+    expect(DEGENERACY_CONFIG.supportiveRoutAttritionThreshold).toBe(0.5);
+    expect(DEGENERACY_CONFIG.earlySaturationAttritionThreshold).toBe(0.8);
+    expect(DEGENERACY_CONFIG.earlySaturationRoutThreshold).toBe(0.8);
+    expect(DEGENERACY_CONFIG.refusalDeadRateThreshold).toBe(0.001);
+    expect(DEGENERACY_CONFIG.toothlessRefusalRateThreshold).toBe(0.05);
+    expect(DEGENERACY_CONFIG.overrideInertRefusalRateThreshold).toBe(0.05);
+
+    const metrics = await runSimulation({
+      matches: 1,
+      leader: 'tyrannical',
+      seed: 7,
+      engineKind: 'fake',
+    });
+    const summary = aggregateCampaign('tyrannical', 7, metrics);
+    const noRoutSummary = { ...summary, desertionAttrition: 0.1 };
+    expect(
+      detectDegeneracy('tyrannical', metrics, noRoutSummary).some(
+        (finding) => finding.code === 'no-rout',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, noRoutSummary, {
+        noRoutAttritionThreshold: 0.05,
+      }).some((finding) => finding.code === 'no-rout'),
+    ).toBe(false);
+
+    const supportiveSummary = {
+      ...summary,
+      desertionAttrition: 0.6,
+    };
+    expect(
+      detectDegeneracy('supportive', metrics, supportiveSummary).some(
+        (finding) => finding.code === 'supportive-rout',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, supportiveSummary, {
+        supportiveRoutAttritionThreshold: 0.7,
+      }).some((finding) => finding.code === 'supportive-rout'),
+    ).toBe(false);
+
+    const earlySummary = {
+      ...summary,
+      trajectoryBands: summary.trajectoryBands.map((band, index) =>
+        index === 0
+          ? { ...band, desertionAttrition: 0.9, routRate: 0.9 }
+          : band,
+      ),
+    };
+    expect(
+      detectDegeneracy('tyrannical', metrics, earlySummary).some(
+        (finding) => finding.code === 'early-saturation',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, earlySummary, {
+        earlySaturationAttritionThreshold: 0.95,
+      }).some((finding) => finding.code === 'early-saturation'),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('tyrannical', metrics, earlySummary, {
+        earlySaturationRoutThreshold: 0.95,
+      }).some((finding) => finding.code === 'early-saturation'),
+    ).toBe(false);
+
+    const refusalSummary = {
+      ...summary,
+      meanRefusalRate: 0.0005,
+      meanRefusedGoodMoveRate: 0,
+      meanOverrideRate: 0,
+    };
+    expect(
+      detectDegeneracy('tyrannical', metrics, refusalSummary).some(
+        (finding) => finding.code === 'refusal-dead',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, refusalSummary, {
+        refusalDeadRateThreshold: 0.0001,
+      }).some((finding) => finding.code === 'refusal-dead'),
+    ).toBe(false);
+
+    const toothlessSummary = {
+      ...summary,
+      meanRefusalRate: 0.06,
+      meanRefusedGoodMoveRate: 0,
+    };
+    expect(
+      detectDegeneracy('supportive', metrics, toothlessSummary).some(
+        (finding) => finding.code === 'toothless-refusal',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, toothlessSummary, {
+        toothlessRefusalRateThreshold: 0.07,
+      }).some((finding) => finding.code === 'toothless-refusal'),
+    ).toBe(false);
+
+    const overrideSummary = {
+      ...summary,
+      meanRefusalRate: 0.06,
+      meanOverrideRate: 0,
+    };
+    expect(
+      detectDegeneracy('tyrannical', metrics, overrideSummary).some(
+        (finding) => finding.code === 'override-inert',
+      ),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('tyrannical', metrics, overrideSummary, {
+        overrideInertRefusalRateThreshold: 0.07,
+      }).some((finding) => finding.code === 'override-inert'),
+    ).toBe(false);
+  });
+
   it('flags tyrannical campaigns with no desertions', async () => {
     const metrics = await runSimulation({
       matches: 1,
@@ -405,7 +522,8 @@ describe('degeneracy detectors', () => {
     const summary = aggregateCampaign('tyrannical', 7, metrics);
     const findings = detectDegeneracy('tyrannical', metrics, {
       ...summary,
-      desertionCampaignRate: 0,
+      desertionMatchRate: 0,
+      desertionAttrition: 0,
       meanRefusalRate: 0.1,
     });
     expect(findings.some((finding) => finding.code === 'no-rout')).toBe(true);
@@ -572,7 +690,10 @@ function handCheckMetric(match: number): MatchMetrics {
     firstDeparture: EMPTY_DESERTION_SUMMARY,
     cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 1,
-    refusalRate: match / 100,
+    fieldedPieceIds: ['piece'],
+    desertedPieceIds: [],
+    refusalRate: 1 / 11,
+    refusalsPerPly: 1 / 10,
     quietQuitRate: 0,
     refusedGoodMoveRate: 1,
     overrideRate: 0,

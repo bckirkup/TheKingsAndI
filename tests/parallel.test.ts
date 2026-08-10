@@ -39,7 +39,10 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     firstDeparture: EMPTY_DESERTION_SUMMARY,
     cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 0,
+    fieldedPieceIds: ['piece'],
+    desertedPieceIds: match <= Math.ceil(length / 4) ? ['piece'] : [],
     refusalRate: 0,
+    refusalsPerPly: tauAbil,
     quietQuitRate: 0,
     refusedGoodMoveRate: 0,
     overrideRate: 0,
@@ -293,6 +296,7 @@ describe('trajectory aggregation', () => {
       }));
     const bands = averageCampaignTrajectoryBands([make(4, 100), make(8, 0)]);
     expect(bands[0]?.meanTauAbil).toBe(50);
+    expect(bands[0]?.meanRefusalsPerPly).toBe(50);
     const concatenatedFirstQuartile = [...make(4, 100), ...make(8, 0)].slice(
       0,
       3,

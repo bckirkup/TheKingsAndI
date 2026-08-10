@@ -80,8 +80,9 @@ the most likely silent bug in a system this parameter-heavy.
 Emitted by `pnpm sim` as CSV/JSON; CI asserts loose bands, calibration tightens
 them (initial hypotheses in `docs/development_plan.md` M3):
 
-- refusal rate, **refused-good-move rate**, **override rate**, quiet-quit ply
-  share, desertion incidence and cascade length
+- bounded refusal rate (`refusals / (refusals + plies)`), refusals per ply,
+  **refused-good-move rate**, **override rate**, quiet-quit ply share,
+  desertion match rate, campaign desertion attrition, and cascade length
 - divergence between each piece's evaluation and the true one (the "he was
   wrong" vs. "he was disloyal" split)
 - trust trajectory (mean, variance, per-class)
@@ -93,9 +94,9 @@ them (initial hypotheses in `docs/development_plan.md` M3):
 **Degeneracy detectors** — CI should fail if any of these appear, because each
 means the model has collapsed:
 
-1. Mutiny rate ≈ 0 for the tyrannical leader (no consequences).
-2. Mutiny rate > 80% for the supportive leader (noise dominates).
-3. Refusal rate ≈ 0 or ≈ 1 across all styles (thresholds mis-scaled).
+1. Desertion attrition ≈ 0 for the tyrannical leader (no consequences).
+2. Desertion attrition > 80% for the supportive leader (noise dominates).
+3. Bounded refusal rate ≈ 0 or ≈ 1 across all styles (thresholds mis-scaled).
 4. Trust monotonic for every piece regardless of play (dead wiring).
 5. Class-bias variance ≈ 0 after 20 matches (relationship layer inert).
 6. Supportive leader win rate ≥ the matched-skill psychology-disabled control
@@ -117,8 +118,8 @@ only the matched-skill interpretation decides the detector.
 10. **Skill nullification:** corr(player strength, campaign win rate) ≈ 0.
 11. **Free redemption:** `redeemer` recovers as fast as it fell, or recovers
     without paying board cost.
-12. **No rout:** `tyrannical` campaigns end in a desertion cascade in < 50% of
-    cases — the consequence layer is inert (ADR 0011).
+12. **No rout:** `tyrannical` campaign desertion attrition falls below the
+    configured no-rout threshold — the consequence layer is inert (ADR 0011).
 13. **Instant rout:** the whole roster leaves in the first match under a neutral
     leader — `λ` is mis-scaled.
 14. **Suicide desertion:** desertions occur in materially winning positions.

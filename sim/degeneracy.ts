@@ -11,7 +11,6 @@ import {
 import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
 
 export const EARLY_QUARTILE_COUNT = 2;
-export const EARLY_SATURATION_RATE = 0.8;
 
 export const DEGENERACY_CONFIG = {
   /** Pearson |r| above this indicates transcript-column collapse. */
@@ -24,6 +23,20 @@ export const DEGENERACY_CONFIG = {
   counterfactualMinimumMatches: 1,
   /** Fraction of awards one policy may earn before dominating-strategy fires. */
   dominatingAwardFraction: COMMENDATION_CONFIG.DOMINATING_AWARD_FRACTION,
+  /** Attrition below this means a tyrant never routs the roster. */
+  noRoutAttritionThreshold: 0.2,
+  /** Attrition above this means a supportive leader routs too often. */
+  supportiveRoutAttritionThreshold: 0.5,
+  /** Early-quartile attrition above this is campaign saturation. */
+  earlySaturationAttritionThreshold: 0.8,
+  /** Early-quartile rout rate above this is campaign saturation. */
+  earlySaturationRoutThreshold: 0.8,
+  /** Bounded refusal rate below this means refusals are inert. */
+  refusalDeadRateThreshold: 0.001,
+  /** Bounded refusal rate above this makes refused-good detection meaningful. */
+  toothlessRefusalRateThreshold: 0.05,
+  /** Bounded refusal rate above this makes override detection meaningful. */
+  overrideInertRefusalRateThreshold: 0.05,
 } as const;
 
 export interface DegeneracyFinding {
@@ -38,6 +51,13 @@ export interface DegeneracyAssertionOptions {
   readonly metricCorrelationMinimumSamples?: number;
   readonly learningDeltaThreshold?: number;
   readonly counterfactualMinimumMatches?: number;
+  readonly noRoutAttritionThreshold?: number;
+  readonly supportiveRoutAttritionThreshold?: number;
+  readonly earlySaturationAttritionThreshold?: number;
+  readonly earlySaturationRoutThreshold?: number;
+  readonly refusalDeadRateThreshold?: number;
+  readonly toothlessRefusalRateThreshold?: number;
+  readonly overrideInertRefusalRateThreshold?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -250,6 +270,27 @@ export function detectDegeneracy(
     counterfactualMinimumMatches:
       options.counterfactualMinimumMatches ??
       DEGENERACY_CONFIG.counterfactualMinimumMatches,
+    noRoutAttritionThreshold:
+      options.noRoutAttritionThreshold ??
+      DEGENERACY_CONFIG.noRoutAttritionThreshold,
+    supportiveRoutAttritionThreshold:
+      options.supportiveRoutAttritionThreshold ??
+      DEGENERACY_CONFIG.supportiveRoutAttritionThreshold,
+    earlySaturationAttritionThreshold:
+      options.earlySaturationAttritionThreshold ??
+      DEGENERACY_CONFIG.earlySaturationAttritionThreshold,
+    earlySaturationRoutThreshold:
+      options.earlySaturationRoutThreshold ??
+      DEGENERACY_CONFIG.earlySaturationRoutThreshold,
+    refusalDeadRateThreshold:
+      options.refusalDeadRateThreshold ??
+      DEGENERACY_CONFIG.refusalDeadRateThreshold,
+    toothlessRefusalRateThreshold:
+      options.toothlessRefusalRateThreshold ??
+      DEGENERACY_CONFIG.toothlessRefusalRateThreshold,
+    overrideInertRefusalRateThreshold:
+      options.overrideInertRefusalRateThreshold ??
+      DEGENERACY_CONFIG.overrideInertRefusalRateThreshold,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -274,20 +315,28 @@ export function detectDegeneracy(
   );
   if (counterfactual !== null) findings.push(counterfactual);
 
-  if (leader === 'tyrannical' && summary.desertionCampaignRate < 0.2) {
+  if (
+    leader === 'tyrannical' &&
+    summary.desertionAttrition < config.noRoutAttritionThreshold
+  ) {
     findings.push({
       code: 'no-rout',
-      message:
-        'Tyrannical leader desertion campaign rate below 20% — consequence layer may be inert.',
+      message: `Tyrannical leader desertion attrition below ${config.noRoutAttritionThreshold * 100}% — consequence layer may be inert.`,
     });
   }
-  if (leader === 'supportive' && summary.desertionCampaignRate > 0.5) {
+  if (
+    leader === 'supportive' &&
+    summary.desertionAttrition > config.supportiveRoutAttritionThreshold
+  ) {
     findings.push({
       code: 'supportive-rout',
-      message: 'Supportive leader desertion campaign rate above 50%.',
+      message: `Supportive leader desertion attrition above ${config.supportiveRoutAttritionThreshold * 100}%.`,
     });
   }
-  if (summary.meanRefusalRate < 0.001 && leader !== 'supportive') {
+  if (
+    summary.meanRefusalRate < config.refusalDeadRateThreshold &&
+    leader !== 'supportive'
+  ) {
     findings.push({
       code: 'refusal-dead',
       message: 'Refusal rate near zero across the campaign.',
@@ -295,7 +344,7 @@ export function detectDegeneracy(
   }
   if (
     summary.meanRefusedGoodMoveRate < 0.01 &&
-    summary.meanRefusalRate > 0.05
+    summary.meanRefusalRate > config.toothlessRefusalRateThreshold
   ) {
     findings.push({
       code: 'toothless-refusal',
@@ -305,7 +354,7 @@ export function detectDegeneracy(
   if (
     leader === 'tyrannical' &&
     summary.meanOverrideRate < 0.01 &&
-    summary.meanRefusalRate > 0.05
+    summary.meanRefusalRate > config.overrideInertRefusalRateThreshold
   ) {
     findings.push({
       code: 'override-inert',
@@ -341,12 +390,12 @@ export function detectDegeneracy(
   for (const band of summary.trajectoryBands.slice(0, EARLY_QUARTILE_COUNT)) {
     if (
       band.matches > 0 &&
-      band.desertionRate >= EARLY_SATURATION_RATE &&
-      band.routRate >= EARLY_SATURATION_RATE
+      band.desertionAttrition >= config.earlySaturationAttritionThreshold &&
+      band.routRate >= config.earlySaturationRoutThreshold
     ) {
       findings.push({
         code: 'early-saturation',
-        message: `Quartile ${band.quartile} desertion and rout rates are both at least ${EARLY_SATURATION_RATE * 100}% — the campaign collapses too early.`,
+        message: `Quartile ${band.quartile} desertion attrition and rout rates are both at least ${config.earlySaturationAttritionThreshold * 100}% — the campaign collapses too early.`,
       });
     }
   }

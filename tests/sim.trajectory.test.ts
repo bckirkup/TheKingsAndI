@@ -23,7 +23,10 @@ function handCheckMetric(match: number): MatchMetrics {
     firstDeparture: EMPTY_DESERTION_SUMMARY,
     cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 1,
-    refusalRate: match / 100,
+    fieldedPieceIds: ['piece'],
+    desertedPieceIds: match % 2 ? ['piece'] : [],
+    refusalRate: 1 / 11,
+    refusalsPerPly: 1 / 10,
     quietQuitRate: 0,
     refusedGoodMoveRate: 1,
     overrideRate: 0,
@@ -94,7 +97,8 @@ describe('campaign trajectory bands', () => {
     expect(bands[0]?.meanTauAbil).toBe(16);
     expect(bands[0]?.meanTauBenev).toBe(32);
     expect(bands[0]?.meanSurvivingRosterSize).toBe(1.5);
-    expect(bands[0]?.desertionRate).toBe(0.5);
+    expect(bands[0]?.desertionMatchRate).toBe(0.5);
+    expect(bands[0]?.desertionAttrition).toBe(1);
     expect(bands[0]?.routRate).toBe(0.5);
   });
 });

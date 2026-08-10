@@ -19,7 +19,9 @@ export interface SweepPoint {
   readonly knob: string;
   readonly value: number;
   readonly meanRefusalRate: number;
-  readonly desertionCampaignRate: number;
+  readonly meanRefusalsPerPly: number;
+  readonly desertionMatchRate: number;
+  readonly desertionAttrition: number;
   readonly meanOverrideRate: number;
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
@@ -74,7 +76,9 @@ export async function runCoefficientSweep(options: {
         knob: String(options.knob),
         value,
         meanRefusalRate: campaign.summary.meanRefusalRate,
-        desertionCampaignRate: campaign.summary.desertionCampaignRate,
+        meanRefusalsPerPly: campaign.summary.meanRefusalsPerPly,
+        desertionMatchRate: campaign.summary.desertionMatchRate,
+        desertionAttrition: campaign.summary.desertionAttrition,
         meanOverrideRate: campaign.summary.meanOverrideRate,
         meanWinScore: campaign.summary.meanWinScore,
         meanTrustDelta: campaign.summary.meanTrustDelta,
@@ -140,7 +144,7 @@ async function main(): Promise<void> {
     engineKind: options.engine,
   });
   console.log(
-    'knob,value,refusal,desertion_campaign,override,win,trust_delta,plain_chess_win_delta',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,plain_chess_win_delta',
   );
   for (const point of points) {
     console.log(
@@ -148,7 +152,9 @@ async function main(): Promise<void> {
         point.knob,
         point.value,
         point.meanRefusalRate.toFixed(4),
-        point.desertionCampaignRate.toFixed(4),
+        point.meanRefusalsPerPly.toFixed(4),
+        point.desertionMatchRate.toFixed(4),
+        point.desertionAttrition.toFixed(4),
         point.meanOverrideRate.toFixed(4),
         point.meanWinScore.toFixed(1),
         point.meanTrustDelta.toFixed(2),
