@@ -26,7 +26,11 @@ import {
   DEGENERACY_CONFIG,
   detectDegeneracy,
 } from '../sim/degeneracy';
-import { aggregateCampaign, type MatchMetrics } from '../sim/metrics';
+import {
+  aggregateCampaign,
+  EMPTY_DESERTION_SUMMARY,
+  type MatchMetrics,
+} from '../sim/metrics';
 
 describe('simulation harness determinism', () => {
   it('is byte-identical when repeated with the same seed', async () => {
@@ -36,8 +40,17 @@ describe('simulation harness determinism', () => {
       seed: 12,
       engineKind: 'fake' as const,
     };
-    expect(renderCsv(await runSimulation(options))).toBe(
-      renderCsv(await runSimulation(options)),
+    const first = await runSimulation(options);
+    const second = await runSimulation(options);
+    expect(renderCsv(first)).toBe(renderCsv(second));
+    expect(first.every((metric) => metric.firstDeparture !== undefined)).toBe(
+      true,
+    );
+    expect(first.every((metric) => metric.cascadeDeparture !== undefined)).toBe(
+      true,
+    );
+    expect(renderCsv(first)).toContain(
+      'first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay',
     );
   });
 
@@ -556,6 +569,8 @@ function handCheckMetric(match: number): MatchMetrics {
     desertions: 0,
     winningPositionDesertions: 0,
     cascadeLength: 0,
+    firstDeparture: EMPTY_DESERTION_SUMMARY,
+    cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 1,
     refusalRate: match / 100,
     quietQuitRate: 0,

@@ -29,6 +29,8 @@ export interface MatchMetrics {
   readonly desertions: number;
   readonly winningPositionDesertions: number;
   readonly cascadeLength: number;
+  readonly firstDeparture: DesertionSummary;
+  readonly cascadeDeparture: DesertionSummary;
   readonly refusedGoodMoves: number;
   readonly refusalRate: number;
   readonly quietQuitRate: number;
@@ -47,6 +49,46 @@ export interface MatchMetrics {
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
 }
+
+export interface DesertionSummary {
+  readonly count: number;
+  readonly unknownCauseCount: number;
+  readonly meanUStay: number;
+  readonly meanUDesert: number;
+  readonly meanPCaptured: number;
+  readonly meanPain: number;
+  readonly meanPLossIfStay: number;
+  readonly meanPLossIfLeave: number;
+  readonly meanLambda: number;
+  readonly meanLambdaTrust: number;
+  readonly meanLambdaMorale: number;
+  readonly meanLambdaLoyalty: number;
+  readonly meanLambdaAffinity: number;
+  readonly meanStandingCost: number;
+  readonly meanGloryWeight: number;
+  readonly meanTauBenev: number;
+  readonly meanTauAbil: number;
+}
+
+export const EMPTY_DESERTION_SUMMARY: DesertionSummary = {
+  count: 0,
+  unknownCauseCount: 0,
+  meanUStay: 0,
+  meanUDesert: 0,
+  meanPCaptured: 0,
+  meanPain: 0,
+  meanPLossIfStay: 0,
+  meanPLossIfLeave: 0,
+  meanLambda: 0,
+  meanLambdaTrust: 0,
+  meanLambdaMorale: 0,
+  meanLambdaLoyalty: 0,
+  meanLambdaAffinity: 0,
+  meanStandingCost: 0,
+  meanGloryWeight: 0,
+  meanTauBenev: 0,
+  meanTauAbil: 0,
+};
 
 export interface TrustTrajectoryBin {
   readonly match: number;
@@ -94,7 +136,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,cascade_length,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size';
 
 function countEvents(events: readonly MatchEvent[]): {
   refusals: number;
@@ -150,6 +192,43 @@ function cascadeLength(events: readonly MatchEvent[]): number {
   return max;
 }
 
+function summarizeDesertions(
+  events: readonly MatchEvent[],
+  departureKind: 'first' | 'cascade',
+): DesertionSummary {
+  const departures = events.filter(
+    (event): event is Extract<MatchEvent, { t: 'DESERTION' }> =>
+      event.t === 'DESERTION' && event.departureKind === departureKind,
+  );
+  const attributed = departures.filter((event) => event.terms !== undefined);
+  const count = attributed.length;
+  const unknownCauseCount = departures.length - count;
+  const mean = (
+    pick: (event: Extract<MatchEvent, { t: 'DESERTION' }>) => number,
+  ): number =>
+    attributed.reduce((sum, event) => sum + pick(event), 0) /
+    Math.max(1, count);
+  return {
+    count,
+    unknownCauseCount,
+    meanUStay: mean((event) => event.uStay),
+    meanUDesert: mean((event) => event.uDesert),
+    meanPCaptured: mean((event) => event.terms?.P_captured ?? 0),
+    meanPain: mean((event) => event.terms?.pain ?? 0),
+    meanPLossIfStay: mean((event) => event.terms?.P_lossIfStay ?? 0),
+    meanPLossIfLeave: mean((event) => event.terms?.P_lossIfLeave ?? 0),
+    meanLambda: mean((event) => event.terms?.lambda ?? 0),
+    meanLambdaTrust: mean((event) => event.terms?.lambdaTrust ?? 0),
+    meanLambdaMorale: mean((event) => event.terms?.lambdaMorale ?? 0),
+    meanLambdaLoyalty: mean((event) => event.terms?.lambdaLoyalty ?? 0),
+    meanLambdaAffinity: mean((event) => event.terms?.lambdaAffinity ?? 0),
+    meanStandingCost: mean((event) => event.terms?.standingCost ?? 0),
+    meanGloryWeight: mean((event) => event.terms?.gloryWeight ?? 0),
+    meanTauBenev: mean((event) => event.terms?.tauBenev ?? 0),
+    meanTauAbil: mean((event) => event.terms?.tauAbil ?? 0),
+  };
+}
+
 function classifyArchetype(
   leader: Leader,
   refusalRate: number,
@@ -199,6 +278,8 @@ export function metricsFromMatch(
     desertions: counts.desertions,
     winningPositionDesertions: result.winningPositionDesertions,
     cascadeLength: cascadeLength(result.events),
+    firstDeparture: summarizeDesertions(result.events, 'first'),
+    cascadeDeparture: summarizeDesertions(result.events, 'cascade'),
     refusedGoodMoves,
     refusalRate,
     quietQuitRate,
@@ -341,7 +422,26 @@ export function renderCsv(
       metric.implicitOverrides,
       metric.quietQuitMoves,
       metric.desertions,
+      metric.firstDeparture.count,
+      metric.firstDeparture.unknownCauseCount,
+      metric.cascadeDeparture.count,
+      metric.cascadeDeparture.unknownCauseCount,
       metric.cascadeLength,
+      metric.firstDeparture.meanUStay.toFixed(3),
+      metric.firstDeparture.meanUDesert.toFixed(3),
+      metric.firstDeparture.meanPCaptured.toFixed(4),
+      metric.firstDeparture.meanPain.toFixed(3),
+      metric.firstDeparture.meanPLossIfStay.toFixed(4),
+      metric.firstDeparture.meanPLossIfLeave.toFixed(4),
+      metric.firstDeparture.meanLambda.toFixed(4),
+      metric.firstDeparture.meanLambdaTrust.toFixed(4),
+      metric.firstDeparture.meanLambdaMorale.toFixed(4),
+      metric.firstDeparture.meanLambdaLoyalty.toFixed(4),
+      metric.firstDeparture.meanLambdaAffinity.toFixed(4),
+      metric.firstDeparture.meanStandingCost.toFixed(3),
+      metric.firstDeparture.meanGloryWeight.toFixed(4),
+      metric.firstDeparture.meanTauBenev.toFixed(3),
+      metric.firstDeparture.meanTauAbil.toFixed(3),
       metric.refusedGoodMoves,
       metric.refusalRate.toFixed(4),
       metric.quietQuitRate.toFixed(4),

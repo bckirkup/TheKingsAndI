@@ -31,6 +31,7 @@ export {
 export type { CascadeResult, DesertionDeparture } from './cascade';
 export {
   calculateLambda,
+  calculateLambdaComponents,
   calculatePain,
   calculateUDesert,
   calculateUStay,
@@ -38,6 +39,7 @@ export {
   raiseLossEstimatesAfterDesertion,
   shouldDesert,
 } from './desertion';
+export type { LambdaComponents } from './desertion';
 export {
   appendEvent,
   applyWitnessedSacrificeEvent,
@@ -59,6 +61,7 @@ export type {
   CandidateMoveEvaluation,
   ClassPrestigeMatrix,
   CostlySignalKind,
+  DesertionDecisionTerms,
   CredenceState,
   DesertionContext,
   MatchEvent,

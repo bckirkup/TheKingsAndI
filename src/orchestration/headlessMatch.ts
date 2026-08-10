@@ -483,6 +483,7 @@ export async function runHeadlessMatch(
             moveEvalByPiece,
             uStay: desertionDecision.uStay,
             uDesert: desertionDecision.uDesert,
+            terms: desertionDecision.terms,
           },
           ply,
         );

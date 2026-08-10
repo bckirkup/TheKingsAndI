@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   aggregateCampaign,
   buildTrajectoryBands,
+  EMPTY_DESERTION_SUMMARY,
   renderCsv,
   type MatchMetrics,
 } from '../sim/metrics';
@@ -35,6 +36,8 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     desertions: match <= Math.ceil(length / 4) ? 1 : 0,
     winningPositionDesertions: 0,
     cascadeLength: 0,
+    firstDeparture: EMPTY_DESERTION_SUMMARY,
+    cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 0,
     refusalRate: 0,
     quietQuitRate: 0,

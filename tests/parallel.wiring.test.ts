@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { aggregateCampaign, type MatchMetrics } from '../sim/metrics';
+import {
+  aggregateCampaign,
+  EMPTY_DESERTION_SUMMARY,
+  type MatchMetrics,
+} from '../sim/metrics';
 import type { EnginePort } from '../src/engine/types';
 
 const mocks = vi.hoisted(() => {
@@ -41,6 +45,8 @@ function makeMetric(): MatchMetrics {
     desertions: 0,
     winningPositionDesertions: 0,
     cascadeLength: 0,
+    firstDeparture: EMPTY_DESERTION_SUMMARY,
+    cascadeDeparture: EMPTY_DESERTION_SUMMARY,
     refusedGoodMoves: 0,
     refusalRate: 0,
     quietQuitRate: 0,

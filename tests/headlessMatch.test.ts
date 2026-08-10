@@ -78,5 +78,31 @@ describe('headless player refusal replanning', () => {
     expect(
       new Set(refusals.map((event) => event.t === 'REFUSAL' && event.san)),
     ).toHaveLength(20);
+
+    const repeated = await runHeadlessMatch({
+      random: createSeededRandom(7),
+      maxPlies: 1,
+      playerSide: 'w',
+      leader,
+      opponent: leader,
+      initialRoster: createStartingRoster(board, 'w', 0, 0.5),
+      engine: createFakeEnginePort(),
+    });
+    const observableEvents = (events: typeof result.events) =>
+      events.map((event) => {
+        if (event.t !== 'DESERTION') return event;
+        return {
+          t: event.t,
+          ply: event.ply,
+          pieceId: event.pieceId,
+          refusedMove: event.refusedMove,
+          uStay: event.uStay,
+          uDesert: event.uDesert,
+        };
+      });
+    expect(observableEvents(repeated.events)).toEqual(
+      observableEvents(result.events),
+    );
+    expect(repeated.winScore).toBe(result.winScore);
   });
 });
