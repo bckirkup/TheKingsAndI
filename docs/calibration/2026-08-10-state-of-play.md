@@ -19,8 +19,9 @@ Health of the tree at the same commit: `pnpm lint`, `pnpm typecheck`,
 
 The fake engine is the deterministic substrate; its absolute rates are not real
 chess and only the *separation between styles* is meaningful. The two Lozza runs
-are the reality check, and they agree with the fake engine on every conclusion
-below.
+are the reality check: they agree with the fake engine on the direction of every
+finding below, though refusal and quiet-quit run markedly higher under Lozza.
+There was no Lozza `servant` run.
 
 ## The numbers
 
@@ -53,7 +54,7 @@ table.
 ## What works
 
 - **Benevolence is legible and style-separated.** `τ_benev` ends at ~0 for
-  tyrannical, 56–65 for supportive/servant, on both engines. The two-channel
+  tyrannical on both engines, and 42–66 for supportive/servant. The two-channel
   split of ADR 0019 is doing real work.
 - **Override separates cleanly.** Tyrannical overrides on ~40% of plies,
   supportive and servant on ~0%. Detector 2c is satisfied.
@@ -94,8 +95,9 @@ definitions comes before any coefficient sweep, or the sweep optimises the wrong
 number.
 
 ### 4. `τ_abil` collapses under every leadership style
-Ability credence ends at 0.06–25 for all nine styles, including servant (8–23)
-and supportive (6–12), while `τ_benev` holds. One of the two channels is a
+Ability credence ends at 0.06–25 for eight of the nine styles, including servant
+(8–23) and supportive (6–12), while `τ_benev` holds; only `cold_winner` (37–41)
+escapes. One of the two channels is a
 one-way ratchet down regardless of play, which is detector 4's failure shape
 applied to a single channel. ADR 0039 gave credence a prior strength; the
 measurements say the prior is not surviving contact.
@@ -107,7 +109,7 @@ random alike — supportive's target is <2% — while `redeemer` (0.65–0.80) a
 refuses on 60% of plies and quiet-quits on 57%. Refusal is currently a property
 of the position, not of the leader.
 
-### 6. `metric-collinearity` fires on 11 of 12 configurations
+### 6. `metric-collinearity` fires on 17 of the 19 completed runs
 `survivingRosterSize`/`winScore` are collinear almost everywhere, and the Lozza
 tyrannical run collapses seven column pairs. The transcript is reporting one
 underlying variable several times over, which will make the audit and the
