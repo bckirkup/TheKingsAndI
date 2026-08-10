@@ -452,14 +452,18 @@ function horizonFromSummary(
 }
 
 export function buildHorizonSeries(
-  leader: Leader,
-  seed: number,
   matchMetrics: readonly MatchMetrics[],
 ): readonly CampaignHorizon[] {
+  const first = matchMetrics[0];
+  if (first === undefined) return [];
   return matchMetrics.map((_, index) =>
     horizonFromSummary(
       index + 1,
-      aggregateCampaignCore(leader, seed, matchMetrics.slice(0, index + 1)),
+      aggregateCampaignCore(
+        first.leader,
+        first.seed,
+        matchMetrics.slice(0, index + 1),
+      ),
     ),
   );
 }
@@ -472,7 +476,7 @@ export function aggregateCampaign(
   const summary = aggregateCampaignCore(leader, seed, matchMetrics);
   return {
     ...summary,
-    horizon: buildHorizonSeries(leader, seed, matchMetrics),
+    horizon: buildHorizonSeries(matchMetrics),
   };
 }
 

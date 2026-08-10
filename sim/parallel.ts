@@ -398,13 +398,7 @@ export function averageCampaignTrajectoryBands(
 export function averageCampaignHorizonSeries(
   campaigns: readonly (readonly MatchMetrics[])[],
 ): readonly CampaignHorizon[] {
-  const series = campaigns.map((metrics) =>
-    buildHorizonSeries(
-      metrics[0]?.leader ?? 'supportive',
-      metrics[0]?.seed ?? 0,
-      metrics,
-    ),
-  );
+  const series = campaigns.map((metrics) => buildHorizonSeries(metrics));
   const maxLength = Math.max(...series.map((horizon) => horizon.length), 0);
   return Array.from({ length: maxLength }, (_, index) => {
     const selected = series

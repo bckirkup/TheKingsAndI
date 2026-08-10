@@ -87,14 +87,11 @@ describe('campaign horizon series', () => {
   });
 
   it('has one point per match for 16-match and odd-length campaigns', () => {
+    expect(buildHorizonSeries([])).toEqual([]);
     const sixteen = buildHorizonSeries(
-      'supportive',
-      1,
       Array.from({ length: 16 }, (_, index) => metric(index + 1)),
     );
     const five = buildHorizonSeries(
-      'supportive',
-      1,
       Array.from({ length: 5 }, (_, index) => metric(index + 1)),
     );
 
@@ -127,7 +124,7 @@ describe('campaign horizon series', () => {
   it('adds mean win score to bands and emits the horizon section', () => {
     const metrics = [metric(1), metric(2), metric(3), metric(4)];
     const bands = buildTrajectoryBands(metrics);
-    const horizon = buildHorizonSeries('supportive', 1, metrics);
+    const horizon = buildHorizonSeries(metrics);
     const csv = renderCsv(metrics, bands, horizon);
 
     expect(bands[0]?.meanWinScore).toBe(10);
