@@ -114,7 +114,6 @@ function applyTrackedEnemyDecision(input: {
   >;
   readonly ply: number;
   readonly overrideRefusals: boolean;
-  readonly abilityObservations: number;
 }): EnemyTurnResult {
   const {
     board,
@@ -125,7 +124,6 @@ function applyTrackedEnemyDecision(input: {
     desertionMoveEvals,
     ply,
     overrideRefusals,
-    abilityObservations,
   } = input;
   let enemyRoster = input.enemyRoster;
   const events: MatchEvent[] = [];
@@ -217,7 +215,6 @@ function applyTrackedEnemyDecision(input: {
           { ...piece, engagementFactor: outcome.engagementFactor },
           moveEval,
           true,
-          abilityObservations + 1,
         )
       : piece,
   );
@@ -266,7 +263,6 @@ export function applyEnemyTurnSync(input: {
   readonly archetype: OpponentArchetype;
   readonly ply: number;
   readonly overrideRefusals?: boolean;
-  readonly abilityObservations?: number;
 }): EnemyTurnResult {
   const enemyRoster = syncSideRoster(
     input.board,
@@ -347,7 +343,6 @@ export function applyEnemyTurnSync(input: {
       overrideRefusals:
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
-      abilityObservations: input.abilityObservations ?? 0,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);
@@ -372,7 +367,6 @@ export async function applyEnemyTurn(input: {
   readonly ply: number;
   readonly engine: EnginePort;
   readonly insight?: InsightRoundHandle;
-  readonly abilityObservations?: number;
   readonly overrideRefusals?: boolean;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
@@ -470,7 +464,6 @@ export async function applyEnemyTurn(input: {
       overrideRefusals:
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
-      abilityObservations: input.abilityObservations ?? 0,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);

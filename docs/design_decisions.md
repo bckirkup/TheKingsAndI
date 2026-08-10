@@ -660,6 +660,16 @@ The interactive path increments `ply` for terminal desertion before handling
 rout, while the headless path does not. Reconcile the accounting without changing
 the meaning of `plies` or the replay contract.
 
+### D107 ⚠ Should ability accretion be allowed to freeze permanently?
+The ability observation step uses `trunc(100 / n)`. With the new per-piece
+observation count persisted across a career, this reaches exactly zero once
+`n` reaches `101`, so a piece can no longer revise its read of a commander.
+For prior strength `n₀`, that occurs on the observation after
+`101 - n₀` prior observations (`91` prior observations, then the 92nd
+observation, at the placeholder `n₀ = 10`). Decide whether ability accretion
+should be allowed to freeze permanently; the freeze is caused by truncation,
+not by the model's intended evidential direction.
+
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
 recruitable, and the cost is set by the roster's verdict on his departure rather
@@ -741,7 +751,7 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D105** — with the harness before the crisis-menu transactions ship:
+3. **D100–D107** — with the harness before the crisis-menu transactions ship:
    thresholds, magnitudes, nomination restoration and mark persistence, the
    scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.

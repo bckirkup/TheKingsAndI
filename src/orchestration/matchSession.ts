@@ -180,7 +180,6 @@ export class MatchSession {
   private readonly engine: EnginePort;
   private readonly insight: InsightRoundHandle;
   private lastFriendlyCapturePly: number | undefined;
-  private abilityObservations = 0;
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -691,7 +690,6 @@ export class MatchSession {
     declinedSacrificeOpportunity: PendingVerdict['declinedSacrificeOpportunity'],
     orderQualityCp: number,
   ): void {
-    this.abilityObservations += 1;
     const objectivelyGood = isObjectivelyGoodMove(
       Math.round(moveEval.deltaV_board * 100),
       Math.round(moveEval.deltaV_board * 100),
@@ -701,7 +699,6 @@ export class MatchSession {
         { ...piece, engagementFactor: outcome.engagementFactor },
         moveEval,
         objectivelyGood,
-        this.abilityObservations,
       ),
     );
 

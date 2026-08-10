@@ -6,6 +6,7 @@ import {
   ENGINE_CONFIG,
   applyBetrayalSignal,
   applyAuthorityLoss,
+  applyAbilityObservation,
   applyCostlySignal,
   applyHeardSignal,
   applyMatchOutcomeTrust,
@@ -108,7 +109,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const actor = makePiece({ id: 'w:N:g1' });
     const witness = makePiece({
       id: 'w:B:f1',
-      credence: { tauBenev: 61, tauAbil: 63 },
+      credence: { tauBenev: 61, tauAbil: 63, abilityObservationCount: 0 },
     });
     const accepted = applyRefusalAuthorityCost(
       [actor, witness],
@@ -121,6 +122,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(accepted.roster[1]?.credence).toEqual({
       tauBenev: 61,
       tauAbil: 55,
+      abilityObservationCount: 0,
     });
     const rejected = applyRefusalAuthorityCost(
       [actor, witness],
@@ -154,10 +156,10 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   it('uses credence-weighted perception instead of additive trust', () => {
     const lowAbil = makePiece({
       T_i: -80,
-      credence: { tauBenev: 80, tauAbil: 0 },
+      credence: { tauBenev: 80, tauAbil: 0, abilityObservationCount: 0 },
     });
     const highAbil = makePiece({
-      credence: { tauBenev: 80, tauAbil: 100 },
+      credence: { tauBenev: 80, tauAbil: 100, abilityObservationCount: 0 },
     });
     const move = makeMove({ deltaV_board: -1, vLeaderImplied: 3 });
     const toleratedMove = makeMove({ deltaV_board: 2, vLeaderImplied: 3 });
@@ -312,6 +314,38 @@ describe('desertion cascade', () => {
 });
 
 describe('credence channel updates', () => {
+  it('uses the configured prior strength and advances the account count', () => {
+    expect(ENGINE_CONFIG.ABIL_PRIOR_STRENGTH).toBe(10);
+    const initial = defaultCredence();
+    const observed = applyAbilityObservation(initial, false);
+    expect(observed.tauAbil).toBe(40);
+    expect(observed.abilityObservationCount).toBe(1);
+  });
+
+  it('moves the saturation ply when prior strength changes', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_PRIOR_STRENGTH ?? 10;
+    const saturationPly = (): number => {
+      let state = defaultCredence();
+      for (let ply = 1; ply <= 150; ply += 1) {
+        state = applyAbilityObservation(state, false);
+        if (state.tauAbil === 0) return ply;
+      }
+      return 0;
+    };
+    try {
+      config.ABIL_PRIOR_STRENGTH = 10;
+      const defaultSaturation = saturationPly();
+      config.ABIL_PRIOR_STRENGTH = 20;
+      const changedSaturation = saturationPly();
+      expect(defaultSaturation).toBeGreaterThan(0);
+      expect(changedSaturation).toBeGreaterThan(0);
+      expect(defaultSaturation).not.toBe(changedSaturation);
+    } finally {
+      config.ABIL_PRIOR_STRENGTH = original;
+    }
+  });
+
   it('raises benevolence only when real value was surrendered', () => {
     const credence = defaultCredence();
     expect(applyHeardSignal(credence, false).tauBenev).toBe(credence.tauBenev);
@@ -321,7 +355,11 @@ describe('credence channel updates', () => {
   });
 
   it('applies a betrayal cliff larger than linear erosion', () => {
-    const credence = { tauBenev: 80, tauAbil: 50 };
+    const credence = {
+      tauBenev: 80,
+      tauAbil: 50,
+      abilityObservationCount: 0,
+    };
     const betrayed = applyBetrayalSignal(credence, 8);
     expect(betrayed.tauBenev).toBeLessThanOrEqual(credence.tauBenev - 30);
   });
