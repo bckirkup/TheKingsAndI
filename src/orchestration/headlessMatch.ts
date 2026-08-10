@@ -495,6 +495,7 @@ export async function runHeadlessMatch(
         roster = cascade.roster;
         if (cascade.rout) {
           rout = true;
+          turnCompleted = true;
           break;
         }
         ply += 1;
