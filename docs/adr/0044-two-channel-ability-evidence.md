@@ -28,7 +28,7 @@ Ability evidence is split into two deterministic channels:
    `abilityObservationCount`.
 
 The drip magnitude and near-refusal margin remain open calibration decisions
-(D114–D115). This ADR supersedes the every-order scope in ADR 0042; ADR 0042
+(D115–D116). This ADR supersedes the every-order scope in ADR 0042; ADR 0042
 remains proposed for its reciprocal-authority mechanics.
 
 ## Consequences
