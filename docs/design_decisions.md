@@ -670,6 +670,30 @@ observation, at the placeholder `n₀ = 10`). Decide whether ability accretion
 should be allowed to freeze permanently; the freeze is caused by truncation,
 not by the model's intended evidential direction.
 
+### D108 ⚠ What is the per-ply vindication authority gain?
+Every executed order may pay direct ability credence credit to each vindicated
+witness on ADR 0038's obviousness scale; this supersedes override-only credit.
+The mechanism ships behind `ABIL_VINDICATION_GAIN_SCALE`, initially tied to
+`REFUSAL_AUTHORITY_LOSS_SCALE` (20), while the owner calibrates its magnitude.
+
+### D109 ⚠ What is the match-end vindication authority gain?
+Contested, vindicated overrides may credit the roster after a winning match,
+scaled by result and contest count. `ABIL_OUTCOME_VINDICATION_SCALE` defaults
+to zero until the harness calibrates the magnitude.
+
+### D110 ⚠ Are per-ply and match-end vindication channels redundant?
+Measure whether immediate witness credit and match-end roster credit provide
+distinct evidence or merely duplicate the same authority signal before deciding
+whether both channels should remain.
+
+### D111 ⚠ Which baseline should vindication use?
+Vindication may compare the played audit outcome against the piece's own
+pessimistic expectation or against the engine-best oracle. The shipped default
+is `VINDICATION_BASELINE = 'expectation'`, while `'oracle'` remains available
+as the long-term variant. The expectation is
+`deltaV_board - ((1 - w_courage) * P_captured)`, reconciled to mover-side
+absolute cp by adding it to the pre-move audit score.
+
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
 recruitable, and the cost is set by the roster's verdict on his departure rather
@@ -751,7 +775,7 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D107** — with the harness before the crisis-menu transactions ship:
+3. **D100–D111** — with the harness before the crisis-menu transactions ship:
    thresholds, magnitudes, nomination restoration and mark persistence, the
    scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.

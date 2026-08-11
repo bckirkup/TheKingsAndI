@@ -1,11 +1,13 @@
 import type { MoveFeatures } from '../chess';
-import { isObjectivelyGoodMove } from './evaluation';
+import { isObjectivelyGoodMove, isVindicatedMove } from './evaluation';
 import {
   applyAbilityObservation,
+  applyAuthorityGain,
   applyAuthorityLoss,
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
   isWitnessedSacrifice,
   normalizePieceState,
@@ -148,6 +150,56 @@ export function applyPostMoveCredence(
   return normalizePieceState({ ...actor, credence });
 }
 
+export function expectedVindicationDelta(
+  actor: PieceState,
+  moveEval: CandidateMoveEvaluation,
+): number {
+  return (
+    moveEval.deltaV_board - (1 - actor.traits.w_courage) * moveEval.P_captured
+  );
+}
+
+export function applyRosterAbilityObservations(
+  roster: readonly PieceState[],
+  moveEvalByPiece: Readonly<Record<string, CandidateMoveEvaluation>>,
+  playedAuditCp: number,
+  preMoveAuditCp: number,
+  oracleBestAuditCp: number,
+): {
+  readonly roster: PieceState[];
+  readonly vindicatedCount: number;
+} {
+  let vindicatedCount = 0;
+  const next = roster.map((piece) => {
+    const moveEval = moveEvalByPiece[piece.id];
+    if (moveEval === undefined) return piece;
+    const vindicated = isVindicatedMove(
+      playedAuditCp,
+      preMoveAuditCp,
+      oracleBestAuditCp,
+      expectedVindicationDelta(piece, moveEval),
+    );
+    if (vindicated) vindicatedCount += 1;
+    const authorityGain = vindicated
+      ? Math.trunc(
+          justifiedRefusalObviousness(
+            expectedVindicationDelta(piece, moveEval),
+            true,
+          ) * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE,
+        )
+      : 0;
+    let credence = applyAbilityObservation(piece.credence, vindicated);
+    if (authorityGain > 0) {
+      credence = applyAuthorityGain(credence, authorityGain);
+    }
+    return normalizePieceState({
+      ...piece,
+      credence,
+    });
+  });
+  return { roster: next, vindicatedCount };
+}
+
 export function applyRefusalAuthorityCost(
   roster: readonly PieceState[],
   actorId: string,
@@ -169,6 +221,53 @@ export function applyRefusalAuthorityCost(
     ),
     authorityLoss,
   };
+}
+
+export function applyVindicationAuthorityGain(
+  roster: readonly PieceState[],
+  actorId: string,
+  actorView: number,
+  justified: boolean,
+  vindicated: boolean,
+): { readonly roster: PieceState[]; readonly authorityGain: number } {
+  const obviousness = justifiedRefusalObviousness(actorView, justified);
+  const authorityGain =
+    vindicated && obviousness > 0
+      ? Math.trunc(obviousness * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE)
+      : 0;
+  if (authorityGain === 0) {
+    return { roster: [...roster], authorityGain };
+  }
+  return {
+    roster: roster.map((piece) =>
+      piece.id === actorId
+        ? piece
+        : normalizePieceState({
+            ...piece,
+            credence: applyAuthorityGain(piece.credence, authorityGain),
+          }),
+    ),
+    authorityGain,
+  };
+}
+
+export function applyOutcomeVindication(
+  roster: readonly PieceState[],
+  winScore: number,
+  contestedOrders: number,
+): PieceState[] {
+  const matchGain = Math.trunc(
+    (Math.max(0, Math.min(100, winScore)) / 100) *
+      Math.max(0, Math.trunc(contestedOrders)) *
+      ENGINE_CONFIG.ABIL_OUTCOME_VINDICATION_SCALE,
+  );
+  if (matchGain === 0) return roster.map(normalizePieceState);
+  return roster.map((piece) =>
+    normalizePieceState({
+      ...piece,
+      credence: applyAuthorityGain(piece.credence, matchGain),
+    }),
+  );
 }
 
 export function isAvengedCapture(

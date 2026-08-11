@@ -24,7 +24,7 @@ import {
   type PieceState,
 } from '../psychology';
 
-import { insightToEvaluation, isObjectivelyGoodMove } from './evaluation';
+import { insightToEvaluation, isVindicatedMove } from './evaluation';
 import {
   evaluateDismissal,
   selectSuccessorLeader,
@@ -32,17 +32,19 @@ import {
 } from './campaignPolicy';
 import {
   createInsightRoundHandle,
+  resolveBestAuditMoveScore,
   resolveAuditMoveScore,
   resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
 import { chooseKingCommandMove } from './kingCommand';
 import { type OpponentArchetype } from './leaderPolicy';
-import { applyEnemyTurnSync } from './enemyTurn';
+import { applyEnemyTurn } from './enemyTurn';
 import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   applyDeclinedSacrificeSignal,
@@ -70,6 +72,8 @@ export interface PendingVerdict {
   readonly features: MoveFeatures;
   readonly moveEval: CandidateMoveEvaluation;
   readonly orderQualityCp: number;
+  readonly objectivelyGood: boolean;
+  readonly justified: boolean;
   readonly outcome: MoveDecisionOutcome;
   readonly verdict: 'MORAL_REFUSAL' | 'DESERTION_MUTINY';
   readonly desertionTerms: DesertionDecisionTerms;
@@ -292,12 +296,24 @@ export class MatchSession {
       intent,
       this.insight,
     );
+    const bestAuditScore = await resolveBestAuditMoveScore(
+      this.engine,
+      this.board,
+      this.insight,
+    );
+    const justified = moveEval.deltaV_board < 0 && orderQualityCp < 0;
     const desertionContext = desertionContextFor(actor, moveEval);
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,
       this.roster,
       desertionContext,
+    );
+    const objectivelyGood = isVindicatedMove(
+      orderQualityCp,
+      bestAuditScore,
+      bestAuditScore,
+      outcome.perceivedValue,
     );
     if (outcome.verdict === 'MORAL_REFUSAL') {
       const desertionDecision = shouldDesert(
@@ -312,6 +328,8 @@ export class MatchSession {
         features,
         moveEval,
         orderQualityCp,
+        objectivelyGood,
+        justified,
         outcome,
         verdict: 'MORAL_REFUSAL',
         desertionTerms: desertionDecision.terms,
@@ -343,6 +361,8 @@ export class MatchSession {
         features,
         moveEval,
         orderQualityCp,
+        objectivelyGood,
+        justified,
         outcome,
         verdict: 'DESERTION_MUTINY',
         desertionTerms: desertionDecision.terms,
@@ -368,10 +388,13 @@ export class MatchSession {
       outcome,
       moveEval,
       orderQualityCp,
+      objectivelyGood,
       features,
       insights.declinedSacrificeOpportunity,
+      desertionMoveEvals,
+      bestAuditScore,
     );
-    this.runOpponentTurn();
+    await this.runOpponentTurn();
     this.maybeTriggerDismissal();
     if (this.phase === 'thinking') {
       this.phase = 'playing';
@@ -382,9 +405,8 @@ export class MatchSession {
   replanAfterRefusal(): void {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'MORAL_REFUSAL') return;
+    const justified = pending.justified;
 
-    const justified =
-      pending.moveEval.deltaV_board < 0 && pending.orderQualityCp < 0;
     const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
       t: 'REFUSAL',
       ply: this.ply,
@@ -419,7 +441,7 @@ export class MatchSession {
     this.phase = 'playing';
   }
 
-  confirmOverride(): void {
+  async confirmOverride(): Promise<void> {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'MORAL_REFUSAL') return;
 
@@ -431,8 +453,15 @@ export class MatchSession {
       witnesses,
       this.ply,
       pending.san,
+      pending.objectivelyGood,
     );
-    this.events.push(override.event, ...override.witnessEvents);
+    this.events.push(
+      {
+        ...override.event,
+        authorityGain: 0,
+      } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
+      ...override.witnessEvents,
+    );
     this.roster = this.roster.map((piece) => {
       if (piece.id === override.overriddenPiece.id) {
         return normalizePieceState(override.overriddenPiece);
@@ -448,8 +477,11 @@ export class MatchSession {
       { ...pending.outcome, verdict: 'COMPLIANT_EXECUTION' },
       pending.moveEval,
       pending.orderQualityCp,
+      pending.objectivelyGood,
       pending.features,
       pending.declinedSacrificeOpportunity,
+      pending.desertionMoveEvals,
+      pending.orderQualityCp,
     );
     this.pending = null;
     this.phase = 'playing';
@@ -459,11 +491,11 @@ export class MatchSession {
       san: pending.san,
       verdict: 'COMPLIANT_EXECUTION',
     };
-    this.runOpponentTurn();
+    await this.runOpponentTurn();
     this.maybeTriggerDismissal();
   }
 
-  acknowledgeDesertion(): void {
+  async acknowledgeDesertion(): Promise<void> {
     const pending = this.pending;
     if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
 
@@ -508,12 +540,12 @@ export class MatchSession {
       san: pending.san,
       verdict: 'DESERTION_MUTINY',
     };
-    this.runOpponentTurn();
+    await this.runOpponentTurn();
     this.maybeTriggerDismissal();
   }
 
   /** Advance one King command ply under succession (ADR 0022 spectate). */
-  stepSuccession(): void {
+  async stepSuccession(): Promise<void> {
     if (this.phase !== 'succession_spectate' || this.board.isGameOver()) {
       return;
     }
@@ -536,7 +568,7 @@ export class MatchSession {
       this.roster = syncRoster(this.board, this.roster, this.playerSide);
       this.ply += 1;
     } else {
-      this.runOpponentTurn();
+      await this.runOpponentTurn();
     }
     if (this.board.isGameOver()) {
       this.phase = 'game_over';
@@ -544,7 +576,7 @@ export class MatchSession {
   }
 
   /** Fast-forward remainder under the King after dismissal (ADR 0022). */
-  fastForwardSuccession(): void {
+  async fastForwardSuccession(): Promise<void> {
     if (
       !this.dismissed ||
       this.phase === 'rout' ||
@@ -552,7 +584,7 @@ export class MatchSession {
     ) {
       return;
     }
-    this.playUnderKingCommand();
+    await this.playUnderKingCommand();
   }
 
   private maybeTriggerDismissal(): void {
@@ -574,7 +606,7 @@ export class MatchSession {
     };
   }
 
-  private playUnderKingCommand(): void {
+  private async playUnderKingCommand(): Promise<void> {
     while (
       this.phase === 'succession_spectate' &&
       !this.board.isGameOver() &&
@@ -599,7 +631,7 @@ export class MatchSession {
         this.roster = syncRoster(this.board, this.roster, this.playerSide);
         this.ply += 1;
       } else {
-        this.runOpponentTurn();
+        await this.runOpponentTurn();
       }
       if (this.board.isGameOver()) {
         this.phase = 'game_over';
@@ -614,8 +646,11 @@ export class MatchSession {
     outcome: MoveDecisionOutcome,
     moveEval: CandidateMoveEvaluation,
     orderQualityCp: number,
+    objectivelyGood: boolean,
     features?: MoveFeatures,
     declinedSacrificeOpportunity?: PendingVerdict['declinedSacrificeOpportunity'],
+    desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>> = {},
+    bestAuditScore = orderQualityCp,
   ): void {
     const applied = this.board.applyMove(intent);
     this.lastMove = [applied.from, applied.to];
@@ -637,6 +672,9 @@ export class MatchSession {
       applied.capture !== undefined,
       declinedSacrificeOpportunity,
       orderQualityCp,
+      objectivelyGood,
+      desertionMoveEvals,
+      bestAuditScore,
     );
 
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
@@ -689,17 +727,24 @@ export class MatchSession {
     captured: boolean,
     declinedSacrificeOpportunity: PendingVerdict['declinedSacrificeOpportunity'],
     orderQualityCp: number,
+    objectivelyGood: boolean,
+    desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>,
+    bestAuditScore: number,
   ): void {
-    const objectivelyGood = isObjectivelyGoodMove(
-      Math.round(moveEval.deltaV_board * 100),
-      Math.round(moveEval.deltaV_board * 100),
-    );
-    this.roster = updatePiece(this.roster, actor.id, (piece) =>
-      applyPostMoveCredence(
-        { ...piece, engagementFactor: outcome.engagementFactor },
-        moveEval,
-        objectivelyGood,
-      ),
+    this.roster = applyRosterAbilityObservations(
+      this.roster,
+      desertionMoveEvals,
+      orderQualityCp,
+      bestAuditScore,
+      bestAuditScore,
+    ).roster.map((piece) =>
+      piece.id === actor.id
+        ? applyPostMoveCredence(
+            { ...piece, engagementFactor: outcome.engagementFactor },
+            moveEval,
+            objectivelyGood,
+          )
+        : piece,
     );
 
     if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
@@ -763,7 +808,7 @@ export class MatchSession {
     }
   }
 
-  private runOpponentTurn(): void {
+  private async runOpponentTurn(): Promise<void> {
     if (this.phase === 'rout' || this.phase === 'game_over') return;
     if (this.board.turn() === this.playerSide) return;
 
@@ -771,13 +816,15 @@ export class MatchSession {
     const beforeFriendly = new Set(
       this.board.piecesOf(this.playerSide).map((piece) => piece.id),
     );
-    const result = applyEnemyTurnSync({
+    const result = await applyEnemyTurn({
       board: this.board,
       enemyRoster: this.enemyRoster,
       enemySide,
       random: this.random,
       archetype: this.opponentArchetype,
       ply: this.ply,
+      engine: this.engine,
+      insight: this.insight,
       overrideRefusals: this.opponentArchetype === 'tyrannical',
     });
     this.enemyRoster = result.enemyRoster;

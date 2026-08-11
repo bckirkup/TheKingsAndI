@@ -15,6 +15,7 @@ export function applyOverride(
   witnesses: readonly PieceState[],
   ply: number,
   san: string,
+  vindicated = false,
 ): OverrideResult {
   const credence = applyBetrayalSignal(
     piece.credence,
@@ -42,6 +43,7 @@ export function applyOverride(
     san,
     pieceTrustDelta: ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
     traumaGain: ENGINE_CONFIG.OVERRIDE_PIECE_TRAUMA_GAIN,
+    vindicated,
   };
   const witnessEvents: MatchEvent[] = updatedWitnesses.map((witness) => ({
     t: 'PSYCH_DELTA',

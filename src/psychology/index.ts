@@ -12,6 +12,7 @@ export {
 } from './clamp';
 export {
   applyAuthorityLoss,
+  applyAuthorityGain,
   applyAbilityObservation,
   applyBetrayalSignal,
   applyHeardSignal,

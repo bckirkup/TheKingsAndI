@@ -491,3 +491,34 @@ export async function resolveAuditMoveScore(
   }
   return -insight.scoreCp;
 }
+
+/**
+ * Audit-only score of the best line from the side to move. A true evaluation
+ * of the pre-move position is already from the side-to-move's perspective,
+ * matching the mover-side units returned by resolveAuditMoveScore.
+ */
+export async function resolveBestAuditMoveScore(
+  port: EnginePort & {
+    evaluateTrue?: (fen: string) => Promise<{
+      scoreCp: number;
+      pv?: readonly string[];
+    }>;
+  },
+  board: LivingBoard,
+  handle: InsightRoundHandle,
+): Promise<number> {
+  if (port.evaluateTrue !== undefined) {
+    const trueEval = await port.evaluateTrue(board.fen());
+    return trueEval.scoreCp;
+  }
+  const moves = board.legalMoves();
+  if (moves.length === 0) return 0;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const intent of moves) {
+    bestScore = Math.max(
+      bestScore,
+      await resolveAuditMoveScore(port, board, intent, handle),
+    );
+  }
+  return bestScore;
+}

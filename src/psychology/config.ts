@@ -3,6 +3,8 @@
  * Every knob here must have a golden test and a sensitivity probe.
  */
 export const ENGINE_CONFIG = {
+  /** Vindication baseline: the piece's expectation is the shipped default. */
+  VINDICATION_BASELINE: 'expectation' as 'expectation' | 'oracle',
   MIN_SEARCH_DEPTH: 2,
   MAX_SEARCH_DEPTH: 16,
   DEFAULT_BENCHING_SELF_PENALTY: -30,
@@ -45,6 +47,10 @@ export const ENGINE_CONFIG = {
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
   /** Ability-channel authority loss when a justified refusal is accepted. */
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
+  /** Ability-channel credit for executed-order vindication. */
+  ABIL_VINDICATION_GAIN_SCALE: 20,
+  /** Match-end ability credit per contested win, disabled by default. */
+  ABIL_OUTCOME_VINDICATION_SCALE: 0,
   /** Trust-to-refusal threshold slope in board-value units. */
   REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */

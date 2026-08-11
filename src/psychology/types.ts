@@ -167,6 +167,10 @@ export type MatchEvent =
       readonly traumaGain: number;
       /** True when the commander had no unrefused candidate remaining. */
       readonly implicit?: boolean;
+      /** True when the overridden order was vindicated by the audit. */
+      readonly vindicated?: boolean;
+      /** Ability-channel credit applied to the witnesses. */
+      readonly authorityGain?: number;
     }
   | {
       readonly t: 'DESERTION';

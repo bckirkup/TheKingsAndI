@@ -1,6 +1,7 @@
 import type { MoveFeatures } from '../chess';
 import type { EngineEvaluation } from '../engine/types';
 import type { CandidateMoveEvaluation } from '../psychology';
+import { ENGINE_CONFIG } from '../psychology';
 
 /**
  * Map a piece's depth-D_i private order delta (after minus before, in
@@ -55,4 +56,40 @@ export function isObjectivelyGoodMove(
   toleranceCp = 30,
 ): boolean {
   return moveScoreCp >= bestScoreCp - toleranceCp;
+}
+
+/**
+ * Convert the selected vindication baseline to mover-side absolute cp.
+ * `perceivedValue` is the verdict ladder's expected board-value delta in
+ * pawn units; adding it to the pre-move audit score reconciles the delta
+ * and absolute score spaces before comparison.
+ */
+export function resolveVindicationBaselineScore(
+  baseline: 'expectation' | 'oracle',
+  preMoveScoreCp: number,
+  oracleBestScoreCp: number,
+  expectedDelta: number,
+): number {
+  return baseline === 'oracle'
+    ? oracleBestScoreCp
+    : preMoveScoreCp + Math.round(expectedDelta * 100);
+}
+
+export function isVindicatedMove(
+  moveScoreCp: number,
+  preMoveScoreCp: number,
+  oracleBestScoreCp: number,
+  expectedDelta: number,
+  toleranceCp = 30,
+): boolean {
+  return isObjectivelyGoodMove(
+    moveScoreCp,
+    resolveVindicationBaselineScore(
+      ENGINE_CONFIG.VINDICATION_BASELINE,
+      preMoveScoreCp,
+      oracleBestScoreCp,
+      expectedDelta,
+    ),
+    toleranceCp,
+  );
 }
