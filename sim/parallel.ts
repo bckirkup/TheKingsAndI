@@ -395,6 +395,22 @@ export function averageCampaignTrajectoryBands(
       meanRefusalRate: mean((band) => band.meanRefusalRate),
       meanRefusalsPerPly: mean((band) => band.meanRefusalsPerPly),
       meanVindicationRate: mean((band) => band.meanVindicationRate),
+      meanDripEvents: mean((band) => band.meanDripEvents),
+      meanAdjudicationVindicationRate: mean(
+        (band) => band.meanAdjudicationVindicationRate,
+      ),
+      meanFinalTauAbilByRole: Object.fromEntries(
+        [
+          ...new Set(
+            selected.flatMap((band) =>
+              Object.keys(band.meanFinalTauAbilByRole),
+            ),
+          ),
+        ].map((role) => [
+          role,
+          mean((band) => band.meanFinalTauAbilByRole[role] ?? 0),
+        ]),
+      ),
       desertionMatchRate: mean((band) => band.desertionMatchRate),
       desertionAttrition: mean((band) => band.desertionAttrition),
       routRate: mean((band) => band.routRate),

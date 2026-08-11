@@ -13,6 +13,7 @@ export {
 export {
   applyAuthorityLoss,
   applyAuthorityGain,
+  applyAbilityDrip,
   applyAbilityObservation,
   applyBetrayalSignal,
   applyHeardSignal,

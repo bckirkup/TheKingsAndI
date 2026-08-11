@@ -36,6 +36,13 @@ export interface MatchMetrics {
   readonly abilityObservations?: number;
   readonly vindicatedAbilityObservations?: number;
   readonly vindicationRate?: number;
+  readonly dripEvents?: number;
+  readonly adjudicationObservations?: number;
+  readonly adjudicationVindicationRate?: number;
+  readonly dripGainTotal?: number;
+  readonly adjudicationLossTotal?: number;
+  readonly meanAdjudicationLoss?: number;
+  readonly finalTauAbilByRole?: Readonly<Record<string, number>>;
   readonly fieldedPieceIds: readonly PieceId[];
   readonly desertedPieceIds: readonly PieceId[];
   readonly refusalRate: number;
@@ -112,6 +119,9 @@ export interface CampaignTrajectoryBand {
   readonly meanRefusalRate: number;
   readonly meanRefusalsPerPly: number;
   readonly meanVindicationRate: number;
+  readonly meanDripEvents: number;
+  readonly meanAdjudicationVindicationRate: number;
+  readonly meanFinalTauAbilByRole: Readonly<Record<string, number>>;
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly routRate: number;
@@ -157,6 +167,8 @@ export interface CampaignMetrics {
   readonly meanDesertions: number;
   readonly meanSurvivingRosterSize: number;
   readonly meanTauAbil: number;
+  readonly meanDripGainTotal: number;
+  readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
   readonly meanTrustEnd: number;
   readonly meanTrustDelta: number;
@@ -185,6 +197,9 @@ function countEvents(
   orderTerminatedDesertionPlies: number;
   abilityObservations: number;
   vindicatedAbilityObservations: number;
+  dripEvents: number;
+  dripGainTotal: number;
+  adjudicationLossTotal: number;
   desertedPieceIds: ReadonlySet<PieceId>;
 } {
   let refusals = 0;
@@ -195,6 +210,9 @@ function countEvents(
   let executedOrders = 0;
   let abilityObservations = 0;
   let vindicatedAbilityObservations = 0;
+  let dripEvents = 0;
+  let dripGainTotal = 0;
+  let adjudicationLossTotal = 0;
   const orderTerminatedDesertionPlies = new Set<number>();
   const desertedPieceIds = new Set<PieceId>();
   const fieldedIds = new Set<PieceId>(fieldedPieceIds);
@@ -226,6 +244,13 @@ function countEvents(
         if (isCommandedPiece) {
           abilityObservations += 1;
           if (event.vindicated) vindicatedAbilityObservations += 1;
+          if ((event.delta ?? 0) < 0) adjudicationLossTotal -= event.delta ?? 0;
+        }
+        break;
+      case 'ABILITY_DRIP':
+        if (isCommandedPiece) {
+          dripEvents += 1;
+          dripGainTotal += event.gain;
         }
         break;
       default:
@@ -242,6 +267,9 @@ function countEvents(
     orderTerminatedDesertionPlies: orderTerminatedDesertionPlies.size,
     abilityObservations,
     vindicatedAbilityObservations,
+    dripEvents,
+    dripGainTotal,
+    adjudicationLossTotal,
     desertedPieceIds,
   };
 }
@@ -350,6 +378,7 @@ export function metricsFromMatch(
   const vindicationRate =
     counts.vindicatedAbilityObservations /
     Math.max(1, counts.abilityObservations);
+  const adjudicationVindicationRate = vindicationRate;
   const meanTrustStart = meanTrust(rosterStart);
   const meanTrustEnd = meanTrust(result.roster);
   const meanTauAbilStart = meanTauAbil(rosterStart);
@@ -376,6 +405,25 @@ export function metricsFromMatch(
     abilityObservations: counts.abilityObservations,
     vindicatedAbilityObservations: counts.vindicatedAbilityObservations,
     vindicationRate,
+    dripEvents: counts.dripEvents,
+    dripGainTotal: counts.dripGainTotal,
+    adjudicationObservations: counts.abilityObservations,
+    adjudicationVindicationRate,
+    adjudicationLossTotal: counts.adjudicationLossTotal,
+    meanAdjudicationLoss:
+      counts.abilityObservations === 0
+        ? 0
+        : counts.adjudicationLossTotal / counts.abilityObservations,
+    finalTauAbilByRole: Object.fromEntries(
+      [...new Set(result.roster.map((piece) => piece.role))].map((role) => {
+        const pieces = result.roster.filter((piece) => piece.role === role);
+        return [
+          role,
+          pieces.reduce((total, piece) => total + piece.credence.tauAbil, 0) /
+            Math.max(1, pieces.length),
+        ];
+      }),
+    ),
     fieldedPieceIds,
     desertedPieceIds: [...counts.desertedPieceIds],
     refusalRate,
@@ -434,6 +482,22 @@ export function buildTrajectoryBands(
       meanRefusalRate: mean((metric) => metric.refusalRate),
       meanRefusalsPerPly: mean((metric) => metric.refusalsPerPly),
       meanVindicationRate: mean((metric) => metric.vindicationRate ?? 0),
+      meanDripEvents: mean((metric) => metric.dripEvents ?? 0),
+      meanAdjudicationVindicationRate: mean(
+        (metric) => metric.adjudicationVindicationRate ?? 0,
+      ),
+      meanFinalTauAbilByRole: Object.fromEntries(
+        [
+          ...new Set(
+            metrics.flatMap((metric) =>
+              Object.keys(metric.finalTauAbilByRole ?? {}),
+            ),
+          ),
+        ].map((role) => [
+          role,
+          mean((metric) => metric.finalTauAbilByRole?.[role] ?? 0),
+        ]),
+      ),
       desertionMatchRate:
         metrics.filter((metric) => metric.desertions > 0).length /
         Math.max(1, metrics.length),
@@ -503,6 +567,8 @@ function aggregateCampaignCore(
     meanDesertions: mean((metric) => metric.desertions),
     meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
     meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
+    meanDripGainTotal: mean((metric) => metric.dripGainTotal ?? 0),
+    meanAdjudicationLoss: mean((metric) => metric.meanAdjudicationLoss ?? 0),
     meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
     meanTrustEnd: last?.meanTrustEnd ?? 0,
     meanTrustDelta: mean(

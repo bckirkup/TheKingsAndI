@@ -57,6 +57,10 @@ export const ENGINE_CONFIG = {
   ABIL_VINDICATION_GAIN_SCALE: 20,
   /** Match-end ability credit per contested win, disabled by default. */
   ABIL_OUTCOME_VINDICATION_SCALE: 0,
+  /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
+  ABIL_DRIP_SCALE: 4,
+  /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */
+  ABIL_VINDICATION_NEAR_REFUSAL_MARGIN: 0.25,
   /** Trust-to-refusal threshold slope in board-value units. */
   REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */

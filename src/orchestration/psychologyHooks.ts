@@ -1,12 +1,15 @@
 import type { MoveFeatures } from '../chess';
 import { isObjectivelyGoodMove, isVindicatedMove } from './evaluation';
 import {
+  applyAbilityDrip,
   applyAbilityObservation,
   applyAuthorityGain,
   applyAuthorityLoss,
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  desertionContextFor,
+  evaluateMoveResponse,
   justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
   isWitnessedSacrifice,
@@ -142,11 +145,11 @@ export function applyPostMoveCredence(
   moveEval: CandidateMoveEvaluation,
   objectivelyGood: boolean,
 ): PieceState {
+  void objectivelyGood;
   const surrendered =
     moveEval.deltaV_board < 0 &&
     moveEval.vLeaderImplied > moveEval.deltaV_board;
-  let credence = applyHeardSignal(actor.credence, surrendered);
-  credence = applyAbilityObservation(credence, objectivelyGood);
+  const credence = applyHeardSignal(actor.credence, surrendered);
   return normalizePieceState({ ...actor, credence });
 }
 
@@ -176,16 +179,54 @@ export function applyRosterAbilityObservations(
   preMoveAuditCp: number,
   oracleBestAuditCp: number,
   ply = 0,
+  actorId: string | undefined = undefined,
+  actorChallenged = false,
+  safePly = false,
+  dripStreakByPiece: Readonly<Record<string, number>> = {},
 ): {
   readonly roster: PieceState[];
   readonly vindicatedCount: number;
   readonly events: MatchEvent[];
+  readonly dripStreakByPiece: Readonly<Record<string, number>>;
 } {
   let vindicatedCount = 0;
   const events: MatchEvent[] = [];
+  const nextDripStreakByPiece: Record<string, number> = {};
   const next = roster.map((piece) => {
     const moveEval = moveEvalByPiece[piece.id];
-    if (moveEval === undefined) return piece;
+    const streak = safePly ? (dripStreakByPiece[piece.id] ?? 0) + 1 : 0;
+    nextDripStreakByPiece[piece.id] = streak;
+    let credence = piece.credence;
+    if (safePly && streak > 0 && streak % ABILITY_DRIP_STREAK_PLIES === 0) {
+      const gain = calculateAbilityDripGain(piece, moveEval);
+      if (gain > 0) {
+        credence = applyAbilityDrip(credence, gain);
+        events.push({
+          t: 'ABILITY_DRIP',
+          ply,
+          pieceId: piece.id,
+          streak,
+          gain,
+        });
+      }
+    }
+    if (moveEval === undefined) {
+      return normalizePieceState({ ...piece, credence });
+    }
+    const witnessOutcome = evaluateMoveResponse(
+      piece,
+      moveEval,
+      roster,
+      desertionContextFor(piece, moveEval),
+    );
+    const nearRefusal = isNearRefusal(witnessOutcome);
+    const challenged =
+      actorId === undefined ||
+      (piece.id === actorId && actorChallenged) ||
+      nearRefusal;
+    if (!challenged) {
+      return normalizePieceState({ ...piece, credence });
+    }
     const vindicated = isVindicatedMove(
       playedAuditCp,
       preMoveAuditCp,
@@ -193,12 +234,6 @@ export function applyRosterAbilityObservations(
       expectedVindicationDelta(piece, moveEval),
     );
     if (vindicated) vindicatedCount += 1;
-    events.push({
-      t: 'ABILITY_OBSERVATION',
-      ply,
-      pieceId: piece.id,
-      vindicated,
-    });
     const authorityGain = vindicated
       ? Math.trunc(
           justifiedRefusalObviousness(
@@ -207,7 +242,16 @@ export function applyRosterAbilityObservations(
           ) * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE,
         )
       : 0;
-    let credence = applyAbilityObservation(piece.credence, vindicated);
+    const beforeObservationTau = credence.tauAbil;
+    credence = applyAbilityObservation(credence, vindicated);
+    events.push({
+      t: 'ABILITY_OBSERVATION',
+      ply,
+      pieceId: piece.id,
+      vindicated,
+      channel: 'adjudication',
+      delta: credence.tauAbil - beforeObservationTau,
+    });
     if (authorityGain > 0) {
       credence = applyAuthorityGain(credence, authorityGain);
     }
@@ -216,7 +260,43 @@ export function applyRosterAbilityObservations(
       credence,
     });
   });
-  return { roster: next, vindicatedCount, events };
+  return {
+    roster: next,
+    vindicatedCount,
+    events,
+    dripStreakByPiece: nextDripStreakByPiece,
+  };
+}
+
+export function isNearRefusal(
+  outcome: Pick<
+    ReturnType<typeof evaluateMoveResponse>,
+    'utilityScore' | 'refusalThreshold'
+  >,
+  margin: number = ENGINE_CONFIG.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN,
+): boolean {
+  return outcome.utilityScore <= outcome.refusalThreshold + margin;
+}
+
+const ABILITY_DRIP_STREAK_PLIES = 3;
+
+export function calculateAbilityDripGain(
+  piece: PieceState,
+  moveEval: CandidateMoveEvaluation | undefined,
+  scale: number = ENGINE_CONFIG.ABIL_DRIP_SCALE,
+): number {
+  const vulnerability = moveEval?.P_captured ?? 0;
+  const roleValue = Math.max(0, Math.min(80, piece.E_i));
+  const expendability = 100 - Math.trunc((roleValue * 100) / 80);
+  const standing = Math.max(
+    0,
+    Math.min(100, 50 + (piece.classPrestige[piece.role] ?? 0)),
+  );
+  const standingExposure = 100 - standing;
+  const weight = Math.trunc(
+    (vulnerability * 100 + expendability + standingExposure) / 3,
+  );
+  return Math.trunc((scale * weight) / 100);
 }
 
 export function applyRefusalAuthorityCost(

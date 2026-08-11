@@ -26,6 +26,10 @@ export interface SweepPoint {
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
   readonly plainChessWinDelta: number;
+  readonly meanDripGainTotal: number;
+  readonly meanAdjudicationLoss: number;
+  readonly meanTauAbil: number;
+  readonly roleTauAbil: Readonly<Record<string, number>>;
 }
 
 const MUTABLE_CONFIG = ENGINE_CONFIG as unknown as Record<string, number>;
@@ -83,6 +87,11 @@ export async function runCoefficientSweep(options: {
         meanWinScore: campaign.summary.meanWinScore,
         meanTrustDelta: campaign.summary.meanTrustDelta,
         plainChessWinDelta: campaign.summary.meanWinScore - plainWin,
+        meanDripGainTotal: campaign.summary.meanDripGainTotal,
+        meanAdjudicationLoss: campaign.summary.meanAdjudicationLoss,
+        meanTauAbil: campaign.summary.meanTauAbil,
+        roleTauAbil:
+          campaign.summary.trajectoryBands.at(-1)?.meanFinalTauAbilByRole ?? {},
       });
     }
   } finally {
@@ -144,7 +153,7 @@ async function main(): Promise<void> {
     engineKind: options.engine,
   });
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,plain_chess_win_delta',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil',
   );
   for (const point of points) {
     console.log(
@@ -159,6 +168,10 @@ async function main(): Promise<void> {
         point.meanWinScore.toFixed(1),
         point.meanTrustDelta.toFixed(2),
         point.plainChessWinDelta.toFixed(1),
+        point.meanDripGainTotal.toFixed(2),
+        point.meanAdjudicationLoss.toFixed(2),
+        point.meanTauAbil.toFixed(2),
+        JSON.stringify(point.roleTauAbil),
       ].join(','),
     );
   }

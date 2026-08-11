@@ -91,6 +91,16 @@ export function applyAuthorityGain(
   };
 }
 
+export function applyAbilityDrip(
+  credence: CredenceState,
+  gain: number,
+): CredenceState {
+  return {
+    ...credence,
+    tauAbil: clampCredence(credence.tauAbil + Math.max(0, Math.trunc(gain))),
+  };
+}
+
 export function applyAbilityObservation(
   credence: CredenceState,
   vindicated: boolean,
