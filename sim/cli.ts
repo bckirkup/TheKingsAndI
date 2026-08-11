@@ -348,7 +348,7 @@ async function main(): Promise<void> {
   );
   for (const band of result.trajectoryBands) {
     console.log(
-      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} vindication=${band.meanVindicationRate.toFixed(3)} drip_events=${band.meanDripEvents.toFixed(2)} adjudication_vindication=${band.meanAdjudicationVindicationRate.toFixed(3)} refusal=${band.meanRefusalRate.toFixed(3)} refusals_per_ply=${band.meanRefusalsPerPly.toFixed(3)} desertion_match=${band.desertionMatchRate.toFixed(3)} desertion_attrition=${band.desertionAttrition.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+      `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} vindication=${band.meanVindicationRate.toFixed(3)} drip_events=${band.meanDripEvents.toFixed(2)} adjudication_vindication=${band.meanAdjudicationVindicationRate.toFixed(3)} tau_abil_role=${JSON.stringify(band.meanFinalTauAbilByRole)} refusal=${band.meanRefusalRate.toFixed(3)} refusals_per_ply=${band.meanRefusalsPerPly.toFixed(3)} desertion_match=${band.desertionMatchRate.toFixed(3)} desertion_attrition=${band.desertionAttrition.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
     );
   }
   for (const finding of findings) {

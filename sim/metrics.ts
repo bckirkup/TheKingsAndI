@@ -39,6 +39,7 @@ export interface MatchMetrics {
   readonly dripEvents?: number;
   readonly adjudicationObservations?: number;
   readonly adjudicationVindicationRate?: number;
+  readonly finalTauAbilByRole?: Readonly<Record<string, number>>;
   readonly fieldedPieceIds: readonly PieceId[];
   readonly desertedPieceIds: readonly PieceId[];
   readonly refusalRate: number;
@@ -117,6 +118,7 @@ export interface CampaignTrajectoryBand {
   readonly meanVindicationRate: number;
   readonly meanDripEvents: number;
   readonly meanAdjudicationVindicationRate: number;
+  readonly meanFinalTauAbilByRole: Readonly<Record<string, number>>;
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly routRate: number;
@@ -391,6 +393,13 @@ export function metricsFromMatch(
     dripEvents: counts.dripEvents,
     adjudicationObservations: counts.abilityObservations,
     adjudicationVindicationRate,
+    finalTauAbilByRole: result.roster.reduce<Record<string, number>>(
+      (byRole, piece) => {
+        byRole[piece.role] = (byRole[piece.role] ?? 0) + piece.credence.tauAbil;
+        return byRole;
+      },
+      {},
+    ),
     fieldedPieceIds,
     desertedPieceIds: [...counts.desertedPieceIds],
     refusalRate,
@@ -452,6 +461,18 @@ export function buildTrajectoryBands(
       meanDripEvents: mean((metric) => metric.dripEvents ?? 0),
       meanAdjudicationVindicationRate: mean(
         (metric) => metric.adjudicationVindicationRate ?? 0,
+      ),
+      meanFinalTauAbilByRole: Object.fromEntries(
+        [
+          ...new Set(
+            metrics.flatMap((metric) =>
+              Object.keys(metric.finalTauAbilByRole ?? {}),
+            ),
+          ),
+        ].map((role) => [
+          role,
+          mean((metric) => metric.finalTauAbilByRole?.[role] ?? 0),
+        ]),
       ),
       desertionMatchRate:
         metrics.filter((metric) => metric.desertions > 0).length /
