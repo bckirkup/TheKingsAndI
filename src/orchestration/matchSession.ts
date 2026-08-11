@@ -303,7 +303,7 @@ export class MatchSession {
       this.insight,
     );
     const justified = moveEval.deltaV_board < 0 && orderQualityCp < 0;
-    const desertionContext = desertionContextFor(actor, moveEval);
+    const desertionContext = desertionContextFor(actor, moveEval, this.roster);
     const outcome = evaluateMoveResponse(
       actor,
       moveEval,

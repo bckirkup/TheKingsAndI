@@ -790,6 +790,37 @@ before any exec-lab use. Not yet considered by the owner.
 
 ---
 
+### D118 ⚠ Desertion board-loss scale (ADR 0045)
+The centipawn scale `DESERTION_BOARD_LOSS_SCALE_CP` controls how quickly a
+piece's private score saturates the rational board-loss map. Its owner
+calibration remains open.
+
+### D119 ⚠ Desertion board/rumor blend (ADR 0045)
+`DESERTION_BOARD_LOSS_WEIGHT_PERMILLE` controls the balance between private
+board belief and social rumor. Its owner calibration remains open.
+
+### D120 ⚠ Desertion pivotality scale (ADR 0045)
+`DESERTION_PIVOTALITY_SCALE_PERMILLE` controls how strongly a piece's
+non-King material share changes `P_lossIfLeave`. Its owner calibration remains
+open.
+
+### D121 ⚠ Desertion shadow strength (ADR 0045)
+`DESERTION_SHADOW_SCALE_PERMILLE` controls the symmetric attenuation of
+private pain and standing cost as defeat becomes impending. Its owner
+calibration remains open. The default `1_000` is deliberate but provisional
+and unswept: it gives `shadowFactor = 1 - P_lossIfStay`, so the campaigns'
+observed mean loss near `0.6` attenuates roughly 60% of both terms.
+
+### D122 ⚠ Desertion attachment floor (ADR 0045)
+`DESERTION_RESIDUAL_STAKE` is now the strictly positive floor for the
+endogenous residual attachment. Alienation is measured from neutral:
+`T_i = 0` and `tauBenev = 50` contribute zero, while below-neutral distrust,
+benevolence credence, trauma, and negative dyadic affinity erode attachment;
+loyalty resists that erosion. The previous accumulation-from-zero and
+distance-from-perfection formulations were rejected because absent bonds and
+neutral traits are not alienation. Its floor and resulting calibration remain
+open.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is

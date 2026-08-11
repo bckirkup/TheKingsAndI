@@ -169,6 +169,7 @@ export async function resolveMoverInsights(
       desertionMoveEvals[piece.id] = {
         moveNotation: features.san,
         deltaV_board: (terminalScore - beforePrivateInsight.scoreCp) / 100,
+        privateScoreCp: terminalScore,
         vLeaderImplied: terminalScore / 100 + leaderImpliedBias,
         deltaV_capture: features.deltaVCapture,
         P_captured: features.captureRiskByPiece[piece.id] ?? 0,
@@ -373,6 +374,7 @@ export async function resolveMoverInsights(
         (privateInsightForPiece.scoreCp -
           privateBeforeInsightForPiece.scoreCp) /
         100,
+      privateScoreCp: privateInsightForPiece.scoreCp,
       vLeaderImplied: moverLeader.scoreCp / 100 + leaderImpliedBias,
       deltaV_capture: features.deltaVCapture,
       P_captured: features.captureRiskByPiece[piece.id] ?? 0,

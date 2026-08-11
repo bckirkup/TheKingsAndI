@@ -16,6 +16,32 @@ export function calculatePain(piece: PieceState): number {
   );
 }
 
+export function calculateShadowFactor(pLossIfStay: number): number {
+  const lossPermille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(pLossIfStay * 1_000)),
+  );
+  const shadowScale = Math.max(
+    0,
+    Math.min(1_000, ENGINE_CONFIG.DESERTION_SHADOW_SCALE_PERMILLE),
+  );
+  return 1 - Math.trunc((lossPermille * shadowScale) / 1_000) / 1_000;
+}
+
+export function calculatePivotalityPermille(
+  piece: PieceState,
+  activePeers: readonly PieceState[],
+): number {
+  const weights = ENGINE_CONFIG.DESERTION_ROLE_FORCE_WEIGHTS;
+  const pieceWeight = piece.role === 'King' ? 0 : weights[piece.role];
+  let totalWeight = 0;
+  for (const peer of activePeers) {
+    if (peer.role !== 'King') totalWeight += weights[peer.role];
+  }
+  if (pieceWeight === 0 || totalWeight === 0) return 0;
+  return Math.trunc((pieceWeight * 1_000) / totalWeight);
+}
+
 export interface LambdaComponents {
   readonly trust: number;
   readonly morale: number;
@@ -58,12 +84,73 @@ export function calculateLambda(
   return calculateLambdaComponents(piece, activePeers).total;
 }
 
+export function calculateAttachmentPermille(
+  piece: PieceState,
+  activePeers: readonly PieceState[],
+): number {
+  const floorPermille = Math.max(
+    1,
+    Math.min(1_000, Math.trunc(ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE * 1_000)),
+  );
+  const loyaltyPermille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(piece.traits.w_loyalty * 1_000)),
+  );
+  let negativeAffinitySum = 0;
+  let peerCount = 0;
+  for (const peer of activePeers) {
+    if (peer.id === piece.id) continue;
+    negativeAffinitySum += Math.max(
+      0,
+      Math.min(100, -(piece.dyadicAffinity[peer.id] ?? 0)),
+    );
+    peerCount += 1;
+  }
+  const negativeAffinityPermille =
+    peerCount === 0
+      ? 0
+      : Math.trunc((negativeAffinitySum * 1_000) / (peerCount * 100));
+  const distrustPermille = Math.trunc(
+    Math.max(0, Math.min(100, -piece.T_i)) * 10,
+  );
+  const benevolenceGapPermille = Math.max(
+    0,
+    Math.min(1_000, Math.max(0, 50 - piece.credence.tauBenev) * 20),
+  );
+  const traumaPermille = Math.max(0, Math.min(1_000, piece.B_i * 10));
+  const alienationPermille = Math.trunc(
+    (distrustPermille +
+      benevolenceGapPermille +
+      traumaPermille +
+      negativeAffinityPermille) /
+      4,
+  );
+  const effectiveAlienationPermille = Math.trunc(
+    (alienationPermille * (1_000 - loyaltyPermille)) / 1_000,
+  );
+  return Math.max(
+    floorPermille,
+    1_000 -
+      Math.trunc(
+        ((1_000 - floorPermille) * effectiveAlienationPermille) / 1_000,
+      ),
+  );
+}
+
+export function calculateAttachment(
+  piece: PieceState,
+  activePeers: readonly PieceState[],
+): number {
+  return calculateAttachmentPermille(piece, activePeers) / 1_000;
+}
+
 export function calculateUStay(
   piece: PieceState,
   context: DesertionContext,
   lambda: number,
 ): number {
-  const pain = calculatePain(piece);
+  const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
+  const pain = calculatePain(piece) * shadowFactor;
   const collectiveStake =
     context.P_lossIfStay * lambda * ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE;
   const stayCost = -context.P_captured * pain - collectiveStake;
@@ -77,14 +164,16 @@ export function calculateUDesert(
   activePeers: readonly PieceState[],
 ): number {
   const standing = calculateStandingCostComponents(piece, activePeers);
+  const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
+  const attachment = calculateAttachment(piece, activePeers);
   const residualCost =
     -context.P_lossIfLeave *
     lambda *
     ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
-    ENGINE_CONFIG.DESERTION_RESIDUAL_STAKE;
+    attachment;
   const quantizedResidualCost = quantizeBoardValue(residualCost);
   const quantizedStandingCost = quantizeBoardValue(
-    -standing.anticipatedStandingCost,
+    -standing.anticipatedStandingCost * shadowFactor,
   );
   return (quantizedResidualCost + quantizedStandingCost) / 1_000;
 }
@@ -128,6 +217,11 @@ export function shouldDesert(
   const uStay = calculateUStay(piece, context, lambda);
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const standing = calculateStandingCostComponents(piece, activePeers);
+  const attachment = calculateAttachment(piece, activePeers);
+  const pivotality =
+    (calculatePivotalityPermille(piece, activePeers) *
+      ENGINE_CONFIG.DESERTION_PIVOTALITY_SCALE_PERMILLE) /
+    1_000_000;
   const desert =
     uDesert > uStay + ENGINE_CONFIG.DESERTION_HYSTERESIS &&
     piece.role !== 'King';
@@ -140,6 +234,10 @@ export function shouldDesert(
       pain: calculatePain(piece),
       P_lossIfStay: context.P_lossIfStay,
       P_lossIfLeave: context.P_lossIfLeave,
+      pLossBoard: context.pLossBoard,
+      pivotality,
+      shadowFactor: calculateShadowFactor(context.P_lossIfStay),
+      attachment,
       lambda,
       lambdaTrust: lambdaComponents.trust,
       lambdaMorale: lambdaComponents.morale,

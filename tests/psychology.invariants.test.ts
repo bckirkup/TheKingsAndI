@@ -12,9 +12,14 @@ import {
   applyMatchOutcomeTrust,
   applyOverride,
   applyWitnessedSacrificeEvent,
+  calculateAttachment,
+  calculateAttachmentPermille,
   calculatePerceivedValue,
+  calculatePivotalityPermille,
+  calculateShadowFactor,
   calculateUDesert,
   calculateUStay,
+  desertionContextFor,
   defaultCredence,
   defaultRumor,
   evaluateMoveResponse,
@@ -83,6 +88,7 @@ function makeMove(
   return {
     moveNotation: 'Nf3',
     deltaV_board: 0.2,
+    privateScoreCp: 0,
     vLeaderImplied: 0.5,
     deltaV_capture: 0,
     P_captured: 0.1,
@@ -327,6 +333,9 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       P_captured: 1,
       P_lossIfStay: 0.9,
       P_lossIfLeave: 0.1,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     expect(isKingExempt(king.role)).toBe(true);
     expect(shouldDesert(king, context, [king]).desert).toBe(false);
@@ -375,17 +384,203 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
 });
 
 describe('desertion cascade', () => {
+  it('starts attachment near its ceiling and erodes it with alienation (golden)', () => {
+    const peer = makePiece({ id: 'w:R:h1' });
+    const piece = makePiece();
+    expect(calculateAttachmentPermille(piece, [piece, peer])).toBe(1_000);
+    expect(calculateAttachment(piece, [piece, peer])).toBe(1);
+    expect(
+      calculateAttachmentPermille(
+        {
+          ...piece,
+          T_i: 0,
+          B_i: 0,
+          credence: { ...piece.credence, tauBenev: 50 },
+          dyadicAffinity: { [peer.id]: 0 },
+          traits: { ...piece.traits, w_loyalty: 0 },
+        },
+        [piece, peer],
+      ),
+    ).toBe(1_000);
+    expect(
+      calculateAttachmentPermille(
+        {
+          ...piece,
+          T_i: -100,
+          B_i: 100,
+          credence: { ...piece.credence, tauBenev: 0 },
+          dyadicAffinity: { [peer.id]: -100 },
+          traits: { ...piece.traits, w_loyalty: 0 },
+        },
+        [piece, peer],
+      ),
+    ).toBe(300);
+    expect(calculateAttachmentPermille(piece, [])).toBeGreaterThan(0);
+  });
+
+  it('makes alienation raise desertion incentive and loyalty damp it', () => {
+    const peer = makePiece({ id: 'w:R:h1' });
+    const context: DesertionContext = {
+      P_captured: 0.2,
+      P_lossIfStay: 0.5,
+      P_lossIfLeave: 0.8,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
+    };
+    const base = makePiece({
+      traits: { ...neutralTraits, w_loyalty: 0.5 },
+    });
+    const alienated = makePiece({
+      T_i: -80,
+      B_i: 60,
+      credence: { ...defaultCredence(), tauBenev: 10 },
+      dyadicAffinity: { [peer.id]: -100 },
+      traits: { ...neutralTraits, w_loyalty: 0.5 },
+    });
+    const loyalAlienated = makePiece({
+      T_i: -80,
+      B_i: 60,
+      credence: { ...defaultCredence(), tauBenev: 10 },
+      dyadicAffinity: { [peer.id]: -100 },
+      traits: { ...neutralTraits, w_loyalty: 1 },
+    });
+    const baseMargin =
+      calculateUDesert(base, context, 0.6, [base, peer]) -
+      calculateUStay(base, context, 0.6);
+    const alienatedMargin =
+      calculateUDesert(alienated, context, 0.6, [alienated, peer]) -
+      calculateUStay(alienated, context, 0.6);
+    const loyalAlienatedMargin =
+      calculateUDesert(loyalAlienated, context, 0.6, [loyalAlienated, peer]) -
+      calculateUStay(loyalAlienated, context, 0.6);
+    expect(alienatedMargin).toBeGreaterThan(baseMargin);
+    expect(loyalAlienatedMargin).toBeLessThan(alienatedMargin);
+  });
+
+  it('changes the attachment result when its floor knob changes (sensitivity)', () => {
+    const piece = makePiece({
+      T_i: -80,
+      B_i: 60,
+      credence: { ...defaultCredence(), tauBenev: 10 },
+      traits: { ...neutralTraits, w_loyalty: 0 },
+    });
+    const config = ENGINE_CONFIG as { DESERTION_RESIDUAL_STAKE: number };
+    const original = config.DESERTION_RESIDUAL_STAKE;
+    try {
+      const baseline = calculateAttachment(piece, [piece]);
+      config.DESERTION_RESIDUAL_STAKE = 0.6;
+      const higherFloor = calculateAttachment(piece, [piece]);
+      expect(higherFloor).toBeGreaterThan(baseline);
+    } finally {
+      config.DESERTION_RESIDUAL_STAKE = original;
+    }
+  });
+
+  it('maps private board score to a monotone rational loss belief (golden)', () => {
+    const piece = makePiece({
+      rumor: { ...defaultRumor(), pLossTeam: 700 },
+    });
+    const move = {
+      ...makeMove(),
+      privateScoreCp: 500,
+    };
+    const context = desertionContextFor(piece, move, [piece]);
+    expect(context.pLossBoard ?? 0).toBe(0.25);
+    expect(context.P_lossIfStay).toBe(0.475);
+    expect(
+      desertionContextFor(piece, { ...move, privateScoreCp: -500 }, [piece])
+        .pLossBoard ?? 0,
+    ).toBe(0.75);
+    expect(
+      desertionContextFor(piece, { ...move, privateScoreCp: 0 }, [piece])
+        .pLossBoard ?? 0,
+    ).toBe(0.5);
+  });
+
+  it('is sensitive to the board-loss scale and board/rumor blend knobs', () => {
+    const piece = makePiece({
+      rumor: { ...defaultRumor(), pLossTeam: 700 },
+    });
+    const move = { ...makeMove(), privateScoreCp: 500 };
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalScale = config.DESERTION_BOARD_LOSS_SCALE_CP ?? 500;
+    const originalWeight = config.DESERTION_BOARD_LOSS_WEIGHT_PERMILLE ?? 500;
+    try {
+      config.DESERTION_BOARD_LOSS_SCALE_CP = 1_000;
+      const broadMap = desertionContextFor(piece, move, [piece]);
+      config.DESERTION_BOARD_LOSS_WEIGHT_PERMILLE = 0;
+      const rumorOnly = desertionContextFor(piece, move, [piece]);
+      expect(broadMap.pLossBoard ?? 0).toBe(0.334);
+      expect(rumorOnly.P_lossIfStay).toBe(0.7);
+      expect(broadMap.P_lossIfStay).not.toBe(rumorOnly.P_lossIfStay);
+    } finally {
+      config.DESERTION_BOARD_LOSS_SCALE_CP = originalScale;
+      config.DESERTION_BOARD_LOSS_WEIGHT_PERMILLE = originalWeight;
+    }
+  });
+
+  it('makes queen departure more pivotal than pawn departure', () => {
+    const queen = makePiece({ id: 'w:Q:d1', role: 'Queen' });
+    const pawn = makePiece({ id: 'w:P:e2', role: 'Pawn' });
+    const king = makePiece({ id: 'w:K:e1', role: 'King' });
+    const move = { ...makeMove(), privateScoreCp: 0 };
+    const queenContext = desertionContextFor(queen, move, [queen, pawn, king]);
+    const pawnContext = desertionContextFor(pawn, move, [queen, pawn, king]);
+    expect(queenContext.pivotality).toBe(0.45);
+    expect(pawnContext.pivotality).toBe(0.05);
+    expect(queenContext.P_lossIfLeave).toBeGreaterThan(
+      pawnContext.P_lossIfLeave,
+    );
+    expect(
+      calculatePivotalityPermille(queen, [queen, pawn, king]),
+    ).toBeGreaterThan(calculatePivotalityPermille(pawn, [queen, pawn, king]));
+    expect(calculatePivotalityPermille(queen, [queen, king])).toBeGreaterThan(
+      calculatePivotalityPermille(queen, [queen, pawn, king]),
+    );
+  });
+
+  it('attenuates private pain and standing symmetrically in the shadow', () => {
+    const piece = makePiece();
+    const peer = makePiece({
+      id: 'w:R:h1',
+      dyadicAffinity: { [piece.id]: 100 },
+    });
+    const lowLoss: DesertionContext = {
+      P_captured: 0.5,
+      P_lossIfStay: 0,
+      P_lossIfLeave: 0.5,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
+    };
+    const highLoss: DesertionContext = {
+      ...lowLoss,
+      P_lossIfStay: 0.8,
+    };
+    expect(calculateShadowFactor(0.8)).toBeCloseTo(0.2);
+    expect(calculateUStay(piece, highLoss, 0)).toBeCloseTo(
+      calculateUStay(piece, lowLoss, 0) * 0.2,
+    );
+    const lowStanding = calculateUDesert(piece, lowLoss, 0, [piece, peer]);
+    const highStanding = calculateUDesert(piece, highLoss, 0, [piece, peer]);
+    expect(highStanding).toBeCloseTo(lowStanding * 0.2);
+  });
+
   it('uses the configured collective stake in pain units (golden)', () => {
     const piece = makePiece({ T_i: 50, M_i: 80, B_i: 0 });
     const context: DesertionContext = {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const lambda = 0.64;
 
-    expect(calculateUStay(piece, context, lambda)).toBe(-5.7);
-    expect(calculateUDesert(piece, context, lambda, [piece])).toBe(-5.76);
+    expect(calculateUStay(piece, context, lambda)).toBe(-5.45);
+    expect(calculateUDesert(piece, context, lambda, [piece])).toBe(-19.2);
   });
 
   it('charges anticipated standing loss in the desertion utility (golden)', () => {
@@ -398,9 +593,12 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
 
-    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-8.26);
+    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-21.45);
   });
 
   it('makes anticipated standing loss fall with the audience', () => {
@@ -415,6 +613,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
 
     const firstDeserter = calculateUDesert(piece, context, 0.64, [
@@ -426,8 +627,8 @@ describe('desertion cascade', () => {
       ...peers.slice(0, 1),
     ]);
 
-    expect(firstDeserter).toBe(-43.26);
-    expect(lateDeserter).toBe(-8.26);
+    expect(firstDeserter).toBe(-52.95);
+    expect(lateDeserter).toBe(-21.45);
     expect(lateDeserter).toBeGreaterThan(firstDeserter);
   });
 
@@ -437,6 +638,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const config = ENGINE_CONFIG as { DESERTION_COLLECTIVE_STAKE: number };
     const baseline = shouldDesert(piece, context, [piece]);
@@ -462,6 +666,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const config = ENGINE_CONFIG as {
       DESERTION_STANDING_STAKE: number;
@@ -486,6 +693,9 @@ describe('desertion cascade', () => {
       P_captured: 0.9,
       P_lossIfStay: 0.8,
       P_lossIfLeave: 0.2,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const outcome = evaluateMoveResponse(piece, makeMove(), [piece], context);
     expect(outcome.verdict).toBe('DESERTION_MUTINY');
@@ -666,6 +876,7 @@ describe('replay determinism', () => {
             san: 'Nf3',
             moveEval: makeMove({
               deltaV_board: random.nextInt(2000) / 1000 - 1,
+              privateScoreCp: 0,
               vLeaderImplied: random.nextInt(2000) / 1000 - 1,
             }),
           },

@@ -1,5 +1,5 @@
 import type { PieceId } from '../src/chess';
-import type { MatchEvent } from '../src/psychology';
+import { ENGINE_CONFIG, type MatchEvent } from '../src/psychology';
 import type { HeadlessMatchResult } from '../src/orchestration';
 
 import type { Leader } from './cli';
@@ -79,6 +79,12 @@ export interface DesertionSummary {
   readonly meanLambdaLoyalty: number;
   readonly meanLambdaAffinity: number;
   readonly meanStandingCost: number;
+  readonly meanAttachment: number;
+  readonly meanPivotality: number;
+  readonly meanPCapturedPain: number;
+  readonly meanCollectiveTerm: number;
+  readonly attachmentByRole: Readonly<Record<string, number>>;
+  readonly pivotalityByRole: Readonly<Record<string, number>>;
   readonly meanGloryWeight: number;
   readonly meanTauBenev: number;
   readonly meanTauAbil: number;
@@ -99,6 +105,12 @@ export const EMPTY_DESERTION_SUMMARY: DesertionSummary = {
   meanLambdaLoyalty: 0,
   meanLambdaAffinity: 0,
   meanStandingCost: 0,
+  meanAttachment: 0,
+  meanPivotality: 0,
+  meanPCapturedPain: 0,
+  meanCollectiveTerm: 0,
+  attachmentByRole: {},
+  pivotalityByRole: {},
   meanGloryWeight: 0,
   meanTauBenev: 0,
   meanTauAbil: 0,
@@ -306,6 +318,7 @@ function cascadeLength(events: readonly MatchEvent[]): number {
 function summarizeDesertions(
   events: readonly MatchEvent[],
   departureKind: 'first' | 'cascade',
+  roleById: ReadonlyMap<PieceId, string>,
 ): DesertionSummary {
   const departures = events.filter(
     (event): event is Extract<MatchEvent, { t: 'DESERTION' }> =>
@@ -319,6 +332,25 @@ function summarizeDesertions(
   ): number =>
     attributed.reduce((sum, event) => sum + pick(event), 0) /
     Math.max(1, count);
+  const byRole = (
+    pick: (event: Extract<MatchEvent, { t: 'DESERTION' }>) => number,
+  ): Readonly<Record<string, number>> => {
+    const totals = new Map<string, { sum: number; count: number }>();
+    for (const event of attributed) {
+      const role = roleById.get(event.pieceId) ?? 'unknown';
+      const current = totals.get(role) ?? { sum: 0, count: 0 };
+      totals.set(role, {
+        sum: current.sum + pick(event),
+        count: current.count + 1,
+      });
+    }
+    return Object.fromEntries(
+      [...totals.entries()].map(([role, value]) => [
+        role,
+        value.sum / Math.max(1, value.count),
+      ]),
+    );
+  };
   return {
     count,
     unknownCauseCount,
@@ -334,6 +366,19 @@ function summarizeDesertions(
     meanLambdaLoyalty: mean((event) => event.terms?.lambdaLoyalty ?? 0),
     meanLambdaAffinity: mean((event) => event.terms?.lambdaAffinity ?? 0),
     meanStandingCost: mean((event) => event.terms?.standingCost ?? 0),
+    meanAttachment: mean((event) => event.terms?.attachment ?? 0),
+    meanPivotality: mean((event) => event.terms?.pivotality ?? 0),
+    meanPCapturedPain: mean(
+      (event) => (event.terms?.P_captured ?? 0) * (event.terms?.pain ?? 0),
+    ),
+    meanCollectiveTerm: mean(
+      (event) =>
+        (event.terms?.lambda ?? 0) *
+        (event.terms?.P_lossIfStay ?? 0) *
+        ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE,
+    ),
+    attachmentByRole: byRole((event) => event.terms?.attachment ?? 0),
+    pivotalityByRole: byRole((event) => event.terms?.pivotality ?? 0),
     meanGloryWeight: mean((event) => event.terms?.gloryWeight ?? 0),
     meanTauBenev: mean((event) => event.terms?.tauBenev ?? 0),
     meanTauAbil: mean((event) => event.terms?.tauAbil ?? 0),
@@ -399,8 +444,16 @@ export function metricsFromMatch(
     desertions: counts.desertions,
     winningPositionDesertions: result.winningPositionDesertions,
     cascadeLength: cascadeLength(result.events),
-    firstDeparture: summarizeDesertions(result.events, 'first'),
-    cascadeDeparture: summarizeDesertions(result.events, 'cascade'),
+    firstDeparture: summarizeDesertions(
+      result.events,
+      'first',
+      new Map(rosterStart.map((piece) => [piece.id, piece.role])),
+    ),
+    cascadeDeparture: summarizeDesertions(
+      result.events,
+      'cascade',
+      new Map(rosterStart.map((piece) => [piece.id, piece.role])),
+    ),
     refusedGoodMoves,
     abilityObservations: counts.abilityObservations,
     vindicatedAbilityObservations: counts.vindicatedAbilityObservations,

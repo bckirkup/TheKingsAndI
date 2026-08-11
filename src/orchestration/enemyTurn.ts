@@ -138,7 +138,7 @@ function applyTrackedEnemyDecision(input: {
   let enemyRoster = input.enemyRoster;
   const events: MatchEvent[] = [];
   const behaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
-  const desertionContext = desertionContextFor(actor, moveEval);
+  const desertionContext = desertionContextFor(actor, moveEval, enemyRoster);
   const desertionDecision = shouldDesert(actor, desertionContext, enemyRoster);
   let outcome = evaluateMoveResponse(
     actor,

@@ -78,6 +78,23 @@ export const ENGINE_CONFIG = {
   DESERTION_LAMBDA_MORALE_SCALE: 0.3,
   DESERTION_LAMBDA_LOYALTY_SCALE: 0.2,
   DESERTION_LAMBDA_AFFINITY_SCALE: 0.1,
+  /** Board-score scale for the rational private loss map, in centipawns. */
+  DESERTION_BOARD_LOSS_SCALE_CP: 500,
+  /** Weight of the private board loss read in the stay-loss blend, permille. */
+  DESERTION_BOARD_LOSS_WEIGHT_PERMILLE: 500,
+  /** Scale applied to the departing piece's remaining-force share, permille. */
+  DESERTION_PIVOTALITY_SCALE_PERMILLE: 500,
+  /** Strength of the impending-loss shadow on private and standing costs, permille. */
+  DESERTION_SHADOW_SCALE_PERMILLE: 1_000,
+  /** Conventional material weights used for desertion pivotality. */
+  DESERTION_ROLE_FORCE_WEIGHTS: {
+    Pawn: 1,
+    Knight: 3,
+    Bishop: 3,
+    Rook: 5,
+    Queen: 9,
+    King: 0,
+  },
   /** Rumor diffusion (docs/belief_model.md, D42 provisional). */
   RUMOR_P_LOSS_RATE: 0.15,
   RUMOR_LEADER_RATE: 0.1,

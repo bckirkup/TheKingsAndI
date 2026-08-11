@@ -52,6 +52,7 @@ function makePiece(overrides: Partial<PieceState> = {}): PieceState {
 const quietMove: CandidateMoveEvaluation = {
   moveNotation: 'Nf3',
   deltaV_board: 0.2,
+  privateScoreCp: 0,
   vLeaderImplied: 0.3,
   deltaV_capture: 0,
   P_captured: 0.1,
@@ -61,6 +62,7 @@ const quietMove: CandidateMoveEvaluation = {
 const braveMove: CandidateMoveEvaluation = {
   moveNotation: 'Nxf7',
   deltaV_board: 3.0,
+  privateScoreCp: 0,
   vLeaderImplied: 3.5,
   deltaV_capture: 3,
   P_captured: 0.8,
@@ -159,6 +161,7 @@ describe('move utility golden values', () => {
     const moveEval: CandidateMoveEvaluation = {
       moveNotation: 'Nd5',
       deltaV_board: 1.0,
+      privateScoreCp: 0,
       vLeaderImplied: 1.2,
       deltaV_capture: 0,
       P_captured: 0.2,
@@ -189,6 +192,7 @@ describe('verdict ladder', () => {
     const toleratedMove: CandidateMoveEvaluation = {
       ...quietMove,
       deltaV_board: 1.0,
+      privateScoreCp: 0,
       vLeaderImplied: 1.0,
       P_captured: 0.1,
     };
@@ -215,6 +219,7 @@ describe('independent leader view', () => {
     const moveEval: CandidateMoveEvaluation = {
       ...quietMove,
       deltaV_board: 1,
+      privateScoreCp: 0,
       vLeaderImplied: 2,
     };
     expect(moveEval.deltaV_board).toBeGreaterThan(0);
@@ -230,6 +235,7 @@ describe('independent leader view', () => {
     const moveEval: CandidateMoveEvaluation = {
       ...quietMove,
       deltaV_board: -0.1,
+      privateScoreCp: 0,
       vLeaderImplied: 2.0,
     };
     expect(
@@ -245,6 +251,7 @@ describe('independent leader view', () => {
     const disagreement: CandidateMoveEvaluation = {
       ...quietMove,
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 4,
     };
     const tauValues = [0, 25, 50, 75, 100];

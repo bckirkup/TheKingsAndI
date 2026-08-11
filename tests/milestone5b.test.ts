@@ -67,6 +67,7 @@ function makeMove(
   return {
     moveNotation: 'Nf3',
     deltaV_board: 0.5,
+    privateScoreCp: 0,
     vLeaderImplied: 0.5,
     deltaV_capture: 0,
     P_captured: 0.7,

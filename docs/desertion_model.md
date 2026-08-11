@@ -22,7 +22,7 @@ with an expected-cost comparison the piece performs itself:
 U_stay(i)   = -P_capture(i)·pain_i
               - P_loss(team | i stays)  · λ_i · S_collective
 U_desert(i) =            0
-              - P_loss(team | i leaves) · λ_i · S_collective · μ_i
+              - P_loss(team | i leaves) · λ_i · S_collective · attachment_i
               - standing_i · glory_i · S_standing
 
 desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
@@ -38,10 +38,29 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `standing_i` | audience bond at stake: the sum of remaining pieces' non-negative bonds toward `i`, normalized by the standard fifteen-peer roster scale; it falls as the audience leaves and is zero with no peers |
 | `glory_i` | `(w_ambition_i + w_prestige_i) / 2`, the piece's stake in reputation |
 | `S_standing` | anticipated standing-loss stake in pain units (default `100`) |
-| `μ_i` | residual stake after walking away, `0 ≤ μ_i ≤ 1` |
+| `attachment_i` | residual stake after walking away, strictly in `(0, 1]`; it starts at the ceiling and is eroded by below-neutral alienation, resisted by loyalty |
 
 Deserting sets the piece's personal capture risk to zero and raises
-`P_loss(team)`. Everything interesting lives in `λ_i`.
+`P_loss(team)`. The stay estimate combines the piece's own private board read,
+social rumor, and the existing capture-stress term:
+
+```
+pLossBoard = 500 - trunc(500·s/(|s| + K))
+pLossIfStay = blend(pLossBoard, rumor.pLossTeam) + captureStress
+pLossIfLeave = pLossIfStay + pivotalityScale·ownForce/remainingNonKingForce
+```
+
+`s` is the absolute post-move private score in centipawns. `K`, the board/rumor
+blend weight, and the pivotality scale are explicit calibration knobs. Force
+weights are conventional material weights (pawn 1, knight/bishop 3, rook 5,
+queen 9); Kings are excluded from the denominator. As the roster empties,
+each survivor's share rises, so the final pieces are harder to justify leaving.
+
+The impending-loss shadow is a fourth explicit term. The same attenuation
+factor, driven by `P_lossIfStay`, scales both private capture pain and
+anticipated standing cost; the collective term is unchanged. This makes
+honour and pain fade together when defeat is already expected, without adding
+cooldowns, floors, or caps.
 
 ## 2. `λ_i` is where trust does its work
 
@@ -53,6 +72,31 @@ A piece that trusts its leader, has morale, is loyal by trait, or has friends
 still on the board weights the team's defeat heavily and will absorb enormous
 personal risk. A distrusting piece discounts the team's fate toward zero and
 deserts on a much smaller personal danger.
+
+The residual stake is endogenous rather than global. Attachment starts near its
+ceiling and is eroded by alienation:
+
+```
+attachment_i =
+  1 − (1 − floor) · alienation_i · (1 − w_loyalty_i)
+
+alienation_i =
+  mean(
+    below_neutral_distrust_i,
+    below_neutral_benevolence_i,
+    trauma_i,
+    mean_negative_affinity_i
+  )
+```
+
+The existing `DESERTION_RESIDUAL_STAKE` knob is the attachment floor. The
+neutral trust midpoint (`T_i = 0`) and neutral benevolence credence
+(`tauBenev = 50`) contribute zero alienation. An untouched starting roster
+therefore has zero in every alienation component and full attachment, even
+before it has formed any bonds. Only trust below neutral, benevolence credence
+below neutral, accumulated trauma, and negative affinity erode attachment;
+loyalty resists that erosion. The value is quantized to permille and never
+reaches zero.
 
 This is the cleanest statement of the game's thesis anywhere in the design: **a
 leader's trust budget is literally the coefficient on collective interest.**
@@ -172,9 +216,10 @@ intended cascade quietly disappears — tracked as the *costless mutiny* detecto
 
 ## 7. Open
 
-- ~~**D32:** whose evaluation supplies `P_loss`?~~ **Closed by ADR 0013:** the
-  piece's own. A novice may panic in a drawn position or fail to leave a lost
-  one, and both are correct behavior.
+- ~~**D32:** whose evaluation supplies `P_loss`?~~ **Closed by ADR 0013 and
+  refined by ADR 0045:** the piece's own private score supplies the board read,
+  blended with rumor. A novice may panic in a drawn position or fail to leave a
+  lost one, and both are correct behavior.
 - **D33:** Can a deserter be re-recruited in a later match, and at what cost?
 - **D34:** Does the player see the desertion calculation, or only the outcome?
   Legibility of *cause* is required (§3); exposing the arithmetic is optional and

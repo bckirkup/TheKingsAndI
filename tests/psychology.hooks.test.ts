@@ -95,6 +95,7 @@ describe('desertion cascade (live path)', () => {
     const moveEval = {
       moveNotation: 'a4',
       deltaV_board: 0,
+      privateScoreCp: 0,
       vLeaderImplied: 0,
       deltaV_capture: 0,
       P_captured: 0.5,
@@ -110,6 +111,7 @@ describe('desertion cascade (live path)', () => {
     const firstEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.1,
@@ -137,16 +139,17 @@ describe('desertion cascade (live path)', () => {
     const moveEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.9,
       peerSafetyDeltas: {},
     };
-    const decision = shouldDesert(first, desertionContextFor(first, moveEval), [
+    const decision = shouldDesert(
       first,
-      second,
-      king,
-    ]);
+      desertionContextFor(first, moveEval, [first, second]),
+      [first, second, king],
+    );
     const cascade = applyDesertionWithCascade(
       [first, second, king],
       {
@@ -203,6 +206,7 @@ describe('desertion cascade (live path)', () => {
     const actorEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.9,
@@ -211,7 +215,7 @@ describe('desertion cascade (live path)', () => {
     const witnessEval = { ...actorEval, deltaV_board: 2 };
     const decision = shouldDesert(
       actor,
-      desertionContextFor(actor, actorEval),
+      desertionContextFor(actor, actorEval, [actor, witness]),
       [actor, witness],
     );
     const cascade = applyDesertionWithCascade(
@@ -247,6 +251,9 @@ describe('desertion cascade (live path)', () => {
       P_captured: 0.9,
       P_lossIfStay: 0.9,
       P_lossIfLeave: 0.1,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const results = evaluateDesertionCascade([piece], { [piece.id]: context });
     expect(results).toHaveLength(1);
@@ -266,6 +273,7 @@ describe('departure witnessing and positive signals', () => {
       {
         moveNotation: 'a4',
         deltaV_board: -2,
+        privateScoreCp: 0,
         vLeaderImplied: 1,
         deltaV_capture: 0,
         P_captured: 0.5,
@@ -293,6 +301,7 @@ describe('departure witnessing and positive signals', () => {
       {
         moveNotation: 'a4',
         deltaV_board: 2,
+        privateScoreCp: 0,
         vLeaderImplied: 1,
         deltaV_capture: 0,
         P_captured: 0.5,
