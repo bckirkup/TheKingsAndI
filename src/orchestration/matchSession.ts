@@ -184,6 +184,7 @@ export class MatchSession {
   private readonly engine: EnginePort;
   private readonly insight: InsightRoundHandle;
   private lastFriendlyCapturePly: number | undefined;
+  private abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -738,8 +739,13 @@ export class MatchSession {
       bestAuditScore,
       bestAuditScore,
       this.ply,
+      actor.id,
+      false,
+      moveEval.deltaV_board >= 0,
+      this.abilityDripStreakByPiece,
     );
     this.events.push(...abilityObservations.events);
+    this.abilityDripStreakByPiece = abilityObservations.dripStreakByPiece;
     this.roster = abilityObservations.roster.map((piece) =>
       piece.id === actor.id
         ? applyPostMoveCredence(

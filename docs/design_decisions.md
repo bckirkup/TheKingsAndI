@@ -752,6 +752,18 @@ Which costly signals ship (D25), how long the trap runs before collapse (D26),
 cross-campaign roster memory (D27), disclosure vs. discovery (D28), and the
 post-collapse epilogue (D29). See `docs/trust_dynamics.md` §7.
 
+### D115 ⚠ Ability drip magnitude (ADR 0044)
+The magnitude of the frequent safe-play ability drip remains open. The
+implementation exposes `ABIL_DRIP_SCALE` and does not increment the Bayesian
+observation count, so calibration can distinguish frequent reassurance from
+rare adjudication evidence.
+
+### D116 ⚠ Near-refusal margin (ADR 0044)
+The utility margin that classifies a piece as nearly refusing remains open.
+`ABIL_VINDICATION_NEAR_REFUSAL_MARGIN` is the deterministic calibration knob;
+adjudication is restricted to overridden refusals and witnesses within that
+margin.
+
 ### D1 ⚠ Which audience ships first?
 Partially answered by D13: validate the psychology in the lightest distribution,
 then Steam. That implies the tactical/debug skin during development and an indie
@@ -785,7 +797,7 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D113** — with the harness before the crisis-menu transactions ship:
+3. **D100–D116** — with the harness before the crisis-menu transactions ship:
    thresholds, magnitudes, nomination restoration and mark persistence, the
    scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.

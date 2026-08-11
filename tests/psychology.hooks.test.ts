@@ -20,6 +20,8 @@ import {
   applySacrificeWitnesses,
   detectDeclinedSacrificeCostlySignal,
   isAvengedCapture,
+  isNearRefusal,
+  calculateAbilityDripGain,
 } from '../src/orchestration/psychologyHooks';
 import { declinedSacrificePiece } from '../src/orchestration/insight';
 import { LivingBoard } from '../src/chess';
@@ -76,6 +78,32 @@ function makeFeatures(overrides: Partial<MoveFeatures> = {}): MoveFeatures {
 }
 
 describe('desertion cascade (live path)', () => {
+  it('classifies near refusal with the configured margin', () => {
+    expect(isNearRefusal({ utilityScore: -1, refusalThreshold: -1 })).toBe(
+      true,
+    );
+    expect(
+      isNearRefusal({ utilityScore: -0.7, refusalThreshold: -1 }, 0.2),
+    ).toBe(false);
+    expect(
+      isNearRefusal({ utilityScore: -0.7, refusalThreshold: -1 }, 0.3),
+    ).toBe(true);
+  });
+
+  it('changes drip gain when its magnitude changes', () => {
+    const piece = makePiece();
+    const moveEval = {
+      moveNotation: 'a4',
+      deltaV_board: 0,
+      vLeaderImplied: 0,
+      deltaV_capture: 0,
+      P_captured: 0.5,
+      peerSafetyDeltas: {},
+    };
+    const low = calculateAbilityDripGain(piece, moveEval, 2);
+    const high = calculateAbilityDripGain(piece, moveEval, 8);
+    expect(high).toBeGreaterThan(low);
+  });
   it('uses each piece snapshot for capture probability', () => {
     const first = makePiece({ id: 'w:P:a2' });
     const second = makePiece({ id: 'w:P:b2' });

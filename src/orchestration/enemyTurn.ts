@@ -226,6 +226,10 @@ function applyTrackedEnemyDecision(input: {
     bestAuditScore,
     bestAuditScore,
     ply,
+    actor.id,
+    overrideRefusals,
+    moveEval.deltaV_board >= 0,
+    { [actor.id]: ply % 3 },
   );
   events.push(...abilityObservations.events);
   enemyRoster = abilityObservations.roster.map((piece) =>

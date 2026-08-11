@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ENGINE_CONFIG,
+  applyAbilityDrip,
   calculateEngineSearchDepth,
   calculateFaithGap,
   calculateMoveUtility,
@@ -72,6 +73,15 @@ describe('search depth golden values', () => {
     expect(calculateEngineSearchDepth(100, 0.2)).toBe(4);
     expect(calculateEngineSearchDepth(1, 1.0)).toBe(2);
     expect(calculateEngineSearchDepth(50, 0.5)).toBe(5);
+  });
+});
+
+describe('ability drip', () => {
+  it('is integer-clamped and does not consume observations', () => {
+    const before = defaultCredence();
+    const after = applyAbilityDrip(before, 4.9);
+    expect(after.tauAbil).toBe(before.tauAbil + 4);
+    expect(after.abilityObservationCount).toBe(before.abilityObservationCount);
   });
 });
 

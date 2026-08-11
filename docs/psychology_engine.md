@@ -340,3 +340,23 @@ invariant is that no absorbing state exists for a player who changes policy.
     guaranteed. `D_king < D_player_effective` strictly — broad and shallow — or
     the coda teaches chess instead of leadership. Reinstatement is a
     start-of-next-match decision; there is no mid-game recall (ADR 0022).
+
+## 11. Two-channel ability evidence (ADR 0044)
+
+Ability credence receives two distinct forms of evidence. After a per-piece
+three-ply uninterrupted safe stretch (non-negative private board delta and no
+friendly loss), the drip channel applies a small integer gain weighted toward
+high capture risk, low `E_i`, and low class prestige. Drip is per piece,
+resets on blunders, friendly losses, desertion, and match boundaries, and does
+not increment `abilityObservationCount`.
+
+Adjudication retains the expectation/oracle audit comparison and the
+asymmetric reducer, but only fires for an overridden refusal or a witness
+whose utility is within `ABIL_VINDICATION_NEAR_REFUSAL_MARGIN` of its refusal
+threshold:
+
+```text
+utilityScore <= refusalThreshold + nearRefusalMargin
+```
+
+Only adjudication observations increment `abilityObservationCount`.
