@@ -39,14 +39,15 @@ import {
   applyDesertionWithCascade,
   applyOutcomeVindication,
   applyPostMoveCredence,
+  applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   attributeSacrifice,
   detectDeclinedSacrificeCostlySignal,
   desertionContextFor,
   detectKingEndangermentCostlySignal,
+  expectedVindicationDelta,
   isAvengedCapture,
-  applyVindicationAuthorityGain,
 } from './psychologyHooks';
 import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
@@ -120,8 +121,6 @@ function applyPlayerOverride(
   ply: number,
   san: string,
   implicit: boolean,
-  actorView: number,
-  justified: boolean,
   vindicated: boolean,
 ): {
   readonly roster: PieceState[];
@@ -129,19 +128,8 @@ function applyPlayerOverride(
 } {
   const witnesses = roster.filter((piece) => piece.id !== actor.id);
   const override = applyOverride(actor, witnesses, ply, san, vindicated);
-  const gained = applyVindicationAuthorityGain(
-    [override.overriddenPiece, ...override.witnesses],
-    actor.id,
-    actorView,
-    justified,
-    vindicated,
-  );
   return {
     roster: roster.map((piece) => {
-      const updated = gained.roster.find(
-        (candidate) => candidate.id === piece.id,
-      );
-      if (updated !== undefined) return normalizePieceState(updated);
       if (piece.id === override.overriddenPiece.id) {
         return normalizePieceState(override.overriddenPiece);
       }
@@ -154,7 +142,7 @@ function applyPlayerOverride(
       {
         ...override.event,
         ...(implicit ? { implicit: true } : {}),
-        authorityGain: gained.authorityGain,
+        authorityGain: 0,
       } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
       ...override.witnessEvents,
     ],
@@ -174,6 +162,7 @@ function applyPlayerMoveConsequences(input: {
   readonly moverInsights: MoverInsights;
   readonly features: MoveFeatures;
   readonly auditScore: number;
+  readonly bestAuditScore: number;
   readonly objectivelyGood: boolean;
   readonly ply: number;
   readonly roster: PieceState[];
@@ -193,6 +182,7 @@ function applyPlayerMoveConsequences(input: {
     moverInsights,
     features,
     auditScore,
+    bestAuditScore,
     objectivelyGood,
     ply,
     events,
@@ -207,12 +197,20 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
-  roster = updatePiece(roster, actor.id, (piece) =>
-    applyPostMoveCredence(
-      { ...piece, engagementFactor: outcome.engagementFactor },
-      moveEval,
-      objectivelyGood,
-    ),
+  roster = applyRosterAbilityObservations(
+    roster,
+    { ...moverInsights.desertionMoveEvals, [actor.id]: moveEval },
+    auditScore,
+    bestAuditScore,
+    bestAuditScore,
+  ).roster.map((piece) =>
+    piece.id === actor.id
+      ? applyPostMoveCredence(
+          { ...piece, engagementFactor: outcome.engagementFactor },
+          moveEval,
+          objectivelyGood,
+        )
+      : piece,
   );
 
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
@@ -347,6 +345,7 @@ export async function runHeadlessMatch(
           readonly san: string;
           readonly moveEval: CandidateMoveEvaluation;
           readonly auditScore: number;
+          readonly bestAuditScore: number;
           readonly objectivelyGood: boolean;
           readonly outcome: MoveDecisionOutcome;
         }
@@ -416,7 +415,7 @@ export async function runHeadlessMatch(
         auditScore,
         bestAudit,
         bestAudit,
-        outcome.perceivedValue,
+        expectedVindicationDelta(actor, moveEval),
       );
 
       if (outcome.verdict === 'MORAL_REFUSAL') {
@@ -427,8 +426,6 @@ export async function runHeadlessMatch(
             ply,
             choice.san,
             false,
-            moveEval.deltaV_board,
-            justifiedRefusal,
             objectivelyGood,
           );
           events.push(...override.events);
@@ -485,6 +482,7 @@ export async function runHeadlessMatch(
             san: choice.san,
             moveEval,
             auditScore,
+            bestAuditScore: bestAudit,
             objectivelyGood,
             outcome,
           };
@@ -534,6 +532,7 @@ export async function runHeadlessMatch(
         moverInsights,
         features,
         auditScore,
+        bestAuditScore: bestAudit,
         objectivelyGood,
         ply,
         roster,
@@ -562,8 +561,6 @@ export async function runHeadlessMatch(
         ply,
         firstRefused.san,
         true,
-        firstRefused.moveEval.deltaV_board,
-        firstRefused.moveEval.deltaV_board < 0 && firstRefused.auditScore < 0,
         firstRefused.objectivelyGood,
       );
       events.push(...override.events);
@@ -580,6 +577,7 @@ export async function runHeadlessMatch(
         moverInsights: firstRefused.moverInsights,
         features: firstRefused.features,
         auditScore: firstRefused.auditScore,
+        bestAuditScore: firstRefused.bestAuditScore,
         objectivelyGood: firstRefused.objectivelyGood,
         ply,
         roster,

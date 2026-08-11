@@ -68,18 +68,18 @@ export function resolveVindicationBaselineScore(
   baseline: 'expectation' | 'oracle',
   preMoveScoreCp: number,
   oracleBestScoreCp: number,
-  perceivedValue: number,
+  expectedDelta: number,
 ): number {
   return baseline === 'oracle'
     ? oracleBestScoreCp
-    : preMoveScoreCp + Math.round(perceivedValue * 100);
+    : preMoveScoreCp + Math.round(expectedDelta * 100);
 }
 
 export function isVindicatedMove(
   moveScoreCp: number,
   preMoveScoreCp: number,
   oracleBestScoreCp: number,
-  perceivedValue: number,
+  expectedDelta: number,
   toleranceCp = 30,
 ): boolean {
   return isObjectivelyGoodMove(
@@ -88,7 +88,7 @@ export function isVindicatedMove(
       ENGINE_CONFIG.VINDICATION_BASELINE,
       preMoveScoreCp,
       oracleBestScoreCp,
-      perceivedValue,
+      expectedDelta,
     ),
     toleranceCp,
   );

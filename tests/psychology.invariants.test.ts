@@ -35,6 +35,8 @@ import {
   applyOutcomeVindication,
   applyRefusalAuthorityCost,
   applyVindicationAuthorityGain,
+  applyRosterAbilityObservations,
+  expectedVindicationDelta,
 } from '../src/orchestration/psychologyHooks';
 import {
   isVindicatedMove,
@@ -114,14 +116,16 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   });
 
   it('defaults reciprocal vindication gains off (golden)', () => {
-    expect(ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE).toBe(0);
+    expect(ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE).toBe(
+      ENGINE_CONFIG.REFUSAL_AUTHORITY_LOSS_SCALE,
+    );
     expect(ENGINE_CONFIG.ABIL_OUTCOME_VINDICATION_SCALE).toBe(0);
     const actor = makePiece({ id: 'w:N:g1' });
     const witness = makePiece({ id: 'w:B:f1' });
     expect(
       applyVindicationAuthorityGain([actor, witness], actor.id, -1, true, true)
-        .roster,
-    ).toEqual([actor, witness]);
+        .authorityGain,
+    ).toBe(8);
     expect(applyOutcomeVindication([actor, witness], 100, 2)).toEqual([
       actor,
       witness,
@@ -134,6 +138,34 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       50,
     );
     expect(resolveVindicationBaselineScore('oracle', 100, 200, -0.5)).toBe(200);
+  });
+
+  it('uses each witness capture-risk expectation independently', () => {
+    const cautious = makePiece({
+      id: 'w:P:a2',
+      traits: { ...neutralTraits, w_courage: 0 },
+    });
+    const brave = makePiece({
+      id: 'w:Q:d1',
+      traits: { ...neutralTraits, w_courage: 1 },
+    });
+    const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
+    expect(expectedVindicationDelta(cautious, move)).toBe(-0.5);
+    expect(expectedVindicationDelta(brave, move)).toBe(0);
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalGain = config.ABIL_VINDICATION_GAIN_SCALE ?? 20;
+    config.ABIL_VINDICATION_GAIN_SCALE = 0;
+    const observed = applyRosterAbilityObservations(
+      [cautious, brave],
+      { [cautious.id]: move, [brave.id]: move },
+      60,
+      100,
+      200,
+    );
+    config.ABIL_VINDICATION_GAIN_SCALE = originalGain;
+    expect(observed.vindicatedCount).toBe(1);
+    expect(observed.roster[0]?.credence.tauAbil).toBe(60);
+    expect(observed.roster[1]?.credence.tauAbil).toBe(40);
   });
 
   it('changes the vindication baseline when the branch changes', () => {

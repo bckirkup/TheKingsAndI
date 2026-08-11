@@ -22,12 +22,15 @@ import {
   createInsightRoundHandle,
   resolveBestAuditMoveScore,
   resolveAuditMoveScore,
+  resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyRosterAbilityObservations,
+  expectedVindicationDelta,
   desertionContextFor,
 } from './psychologyHooks';
 
@@ -117,6 +120,7 @@ function applyTrackedEnemyDecision(input: {
   readonly overrideRefusals: boolean;
   readonly orderQualityCp?: number;
   readonly objectivelyGood?: boolean;
+  readonly bestAuditScore?: number;
 }): EnemyTurnResult {
   const {
     board,
@@ -129,6 +133,7 @@ function applyTrackedEnemyDecision(input: {
     overrideRefusals,
     objectivelyGood = false,
     orderQualityCp = 0,
+    bestAuditScore = orderQualityCp,
   } = input;
   let enemyRoster = input.enemyRoster;
   const events: MatchEvent[] = [];
@@ -214,7 +219,13 @@ function applyTrackedEnemyDecision(input: {
     behaviours.push('fatalistic');
   }
 
-  enemyRoster = enemyRoster.map((piece) =>
+  enemyRoster = applyRosterAbilityObservations(
+    enemyRoster,
+    desertionMoveEvals,
+    orderQualityCp,
+    bestAuditScore,
+    bestAuditScore,
+  ).roster.map((piece) =>
     piece.id === actor.id
       ? applyPostMoveCredence(
           { ...piece, engagementFactor: outcome.engagementFactor },
@@ -441,6 +452,15 @@ export async function applyEnemyTurn(input: {
     }
 
     const features = extractMoveFeatures(input.board, intent);
+    const moverInsights = await resolveMoverInsights(
+      input.engine,
+      input.board,
+      intent,
+      actor,
+      insight,
+      currentEnemyRoster,
+      features,
+    );
     const moveEval = featuresToEvaluation(features, 0);
     const orderQualityCp = await resolveAuditMoveScore(
       input.engine,
@@ -453,12 +473,11 @@ export async function applyEnemyTurn(input: {
       input.board,
       insight,
     );
-    const outcome = evaluateMoveResponse(actor, moveEval, currentEnemyRoster);
     const objectivelyGood = isVindicatedMove(
       orderQualityCp,
       bestAuditScore,
       bestAuditScore,
-      outcome.perceivedValue,
+      expectedVindicationDelta(actor, moveEval),
     );
     const result = applyTrackedEnemyDecision({
       board: input.board,
@@ -467,13 +486,17 @@ export async function applyEnemyTurn(input: {
       actor,
       san,
       moveEval,
-      desertionMoveEvals: { [actor.id]: moveEval },
+      desertionMoveEvals: {
+        ...moverInsights.desertionMoveEvals,
+        [actor.id]: moveEval,
+      },
       ply: input.ply,
       overrideRefusals:
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,
       objectivelyGood,
+      bestAuditScore,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);

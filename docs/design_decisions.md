@@ -671,10 +671,10 @@ should be allowed to freeze permanently; the freeze is caused by truncation,
 not by the model's intended evidential direction.
 
 ### D108 ⚠ What is the per-ply vindication authority gain?
-When an overridden refusal is vindicated, witnesses may receive direct ability
-credence credit on ADR 0038's obviousness scale, excluding the refuser. The
-mechanism ships behind `ABIL_VINDICATION_GAIN_SCALE`, defaulting to zero until
-the harness calibrates its magnitude.
+Every executed order may pay direct ability credence credit to each vindicated
+witness on ADR 0038's obviousness scale; this supersedes override-only credit.
+The mechanism ships behind `ABIL_VINDICATION_GAIN_SCALE`, initially tied to
+`REFUSAL_AUTHORITY_LOSS_SCALE` (20), while the owner calibrates its magnitude.
 
 ### D109 ⚠ What is the match-end vindication authority gain?
 Contested, vindicated overrides may credit the roster after a winning match,
@@ -690,9 +690,9 @@ whether both channels should remain.
 Vindication may compare the played audit outcome against the piece's own
 pessimistic expectation or against the engine-best oracle. The shipped default
 is `VINDICATION_BASELINE = 'expectation'`, while `'oracle'` remains available
-as the long-term variant. The expectation is the verdict ladder's
-credence-weighted board-value prediction, reconciled to mover-side absolute cp
-by adding it to the pre-move audit score.
+as the long-term variant. The expectation is
+`deltaV_board - ((1 - w_courage) * P_captured)`, reconciled to mover-side
+absolute cp by adding it to the pre-move audit score.
 
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is

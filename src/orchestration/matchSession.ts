@@ -44,7 +44,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
-  applyVindicationAuthorityGain,
+  applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   applyDeclinedSacrificeSignal,
@@ -391,6 +391,8 @@ export class MatchSession {
       objectivelyGood,
       features,
       insights.declinedSacrificeOpportunity,
+      desertionMoveEvals,
+      bestAuditScore,
     );
     await this.runOpponentTurn();
     this.maybeTriggerDismissal();
@@ -453,23 +455,19 @@ export class MatchSession {
       pending.san,
       pending.objectivelyGood,
     );
-    const gained = applyVindicationAuthorityGain(
-      [override.overriddenPiece, ...override.witnesses],
-      pending.actor.id,
-      pending.moveEval.deltaV_board,
-      pending.justified,
-      pending.objectivelyGood,
-    );
     this.events.push(
       {
         ...override.event,
-        authorityGain: gained.authorityGain,
+        authorityGain: 0,
       } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
       ...override.witnessEvents,
     );
     this.roster = this.roster.map((piece) => {
-      const updated = gained.roster.find((w) => w.id === piece.id);
-      return updated === undefined ? piece : normalizePieceState(updated);
+      if (piece.id === override.overriddenPiece.id) {
+        return normalizePieceState(override.overriddenPiece);
+      }
+      const witness = override.witnesses.find((w) => w.id === piece.id);
+      return witness === undefined ? piece : normalizePieceState(witness);
     });
 
     this.commitPlayerMove(
@@ -482,6 +480,8 @@ export class MatchSession {
       pending.objectivelyGood,
       pending.features,
       pending.declinedSacrificeOpportunity,
+      pending.desertionMoveEvals,
+      pending.orderQualityCp,
     );
     this.pending = null;
     this.phase = 'playing';
@@ -649,6 +649,8 @@ export class MatchSession {
     objectivelyGood: boolean,
     features?: MoveFeatures,
     declinedSacrificeOpportunity?: PendingVerdict['declinedSacrificeOpportunity'],
+    desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>> = {},
+    bestAuditScore = orderQualityCp,
   ): void {
     const applied = this.board.applyMove(intent);
     this.lastMove = [applied.from, applied.to];
@@ -671,6 +673,8 @@ export class MatchSession {
       declinedSacrificeOpportunity,
       orderQualityCp,
       objectivelyGood,
+      desertionMoveEvals,
+      bestAuditScore,
     );
 
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
@@ -724,13 +728,23 @@ export class MatchSession {
     declinedSacrificeOpportunity: PendingVerdict['declinedSacrificeOpportunity'],
     orderQualityCp: number,
     objectivelyGood: boolean,
+    desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>,
+    bestAuditScore: number,
   ): void {
-    this.roster = updatePiece(this.roster, actor.id, (piece) =>
-      applyPostMoveCredence(
-        { ...piece, engagementFactor: outcome.engagementFactor },
-        moveEval,
-        objectivelyGood,
-      ),
+    this.roster = applyRosterAbilityObservations(
+      this.roster,
+      desertionMoveEvals,
+      orderQualityCp,
+      bestAuditScore,
+      bestAuditScore,
+    ).roster.map((piece) =>
+      piece.id === actor.id
+        ? applyPostMoveCredence(
+            { ...piece, engagementFactor: outcome.engagementFactor },
+            moveEval,
+            objectivelyGood,
+          )
+        : piece,
     );
 
     if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {

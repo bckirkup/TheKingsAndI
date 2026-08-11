@@ -60,16 +60,16 @@ The owner's ruling on the shape of the fix:
 ### 1. Vindication is measured against the piece's expectation
 
 Vindication is relational rather than oracular. The default comparison uses
-the piece's own expected value of complying, namely the verdict ladder's
-`perceivedValue` term. This is the same credence-weighted, pessimistic
-prediction used when deciding whether to refuse:
+the piece's own pessimistic expected value of complying. The expectation uses
+the same utility risk term as the verdict ladder:
 
 ```text
-expectedAbsoluteCp = preMoveAuditCp + round(perceivedValue * 100)
+expectedDelta = deltaV_board - ((1 - w_courage) * P_captured)
+expectedAbsoluteCp = preMoveAuditCp + round(expectedDelta * 100)
 objectivelyGood = playedAuditCp >= expectedAbsoluteCp - tolerance
 ```
 
-`perceivedValue` is a board-value delta in pawn units; the audit scores are
+`expectedDelta` is a board-value delta in pawn units; the audit scores are
 mover-side absolute centipawns. Adding the expected delta to the pre-move
 absolute audit score puts both sides in the same units without passing the
 audit score into psychology.
@@ -91,21 +91,31 @@ and pieces receive only the resulting per-piece boolean. The interactive and
 enemy paths use the same computation as the headless path rather than a
 substitute. D111 records the open baseline choice.
 
-### 2. Authority lost in public can be won back in public
+### 2. Every executed order is public ability evidence
 
-ADR 0038 charges the commander when a justified refusal is *accepted*. It has no
-counterpart, which is what makes the channel one-directional. When a refusal is
-**overridden** and the audit then vindicates the order, the same witnesses who
-would have debited the commander credit him instead, on the same obviousness
-scale:
+Every executed order produces one shared audit outcome but a separate
+vindication boolean for each active witness. Each witness uses its own
+`CandidateMoveEvaluation` from `resolveMoverInsights`, so the same order may
+vindicate one piece and disappoint another. Psychology receives only these
+booleans; audit scores remain in orchestration.
+
+Ability observation is applied on every executed order, not only when a
+refusal is overridden. Override-only witness credit is superseded by this
+per-witness execution evidence.
+
+### 3. Authority lost in public can be won back in public
+
+ADR 0038 charges the commander when a justified refusal is *accepted*. When an
+executed order vindicates a witness, that witness receives ability credit on
+the same obviousness scale:
 
 ```text
 authorityGain = trunc(obviousness * ABIL_VINDICATION_GAIN_SCALE)
 ```
 
-`obviousness` is the refuser's own private view, exactly as in ADR 0038, so the
-payment is largest for the orders the roster was most confident were wrong. The
-refuser is excluded from the credit, mirroring his exclusion from the debit.
+`obviousness` is the witness's own private expectation, so the payment is
+largest for orders that clear the roster's lowest bars. The separate override
+authority event still excludes the refuser, mirroring the debit.
 
 This is what puts something at stake in overriding. Today an override is a
 private cost (the overridden piece's trust and trauma, ADR 0014) with no public
