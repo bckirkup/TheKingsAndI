@@ -68,6 +68,19 @@ export interface CascadeResult {
   readonly events: MatchEvent[];
   readonly rout: boolean;
   readonly cascadeLength: number;
+  readonly lossEstimateUpdates: readonly LossEstimateUpdate[];
+}
+
+export interface LossEstimateUpdate {
+  readonly departedId: string;
+  readonly before: readonly {
+    readonly pieceId: string;
+    readonly pLossTeam: number;
+  }[];
+  readonly after: readonly {
+    readonly pieceId: string;
+    readonly pLossTeam: number;
+  }[];
 }
 
 /**
@@ -81,6 +94,7 @@ export function applyDesertionWithCascade(
 ): CascadeResult {
   let roster = [...rosterIn];
   const events: MatchEvent[] = [];
+  const lossEstimateUpdates: LossEstimateUpdate[] = [];
   let cascadeLength = 0;
   const queue: DesertionDeparture[] = [departure];
 
@@ -118,15 +132,36 @@ export function applyDesertionWithCascade(
       );
     }
 
-    roster = raiseLossEstimatesAfterDesertion(roster, actor.id).map(
-      normalizePieceState,
-    );
+    const beforeLossEstimates = roster
+      .filter((piece) => piece.id !== actor.id)
+      .map((piece) => ({
+        pieceId: piece.id,
+        pLossTeam: piece.rumor.pLossTeam,
+      }));
+    const raisedRoster = raiseLossEstimatesAfterDesertion(roster, actor.id);
+    lossEstimateUpdates.push({
+      departedId: actor.id,
+      before: beforeLossEstimates,
+      after: raisedRoster
+        .filter((piece) => piece.id !== actor.id)
+        .map((piece) => ({
+          pieceId: piece.id,
+          pLossTeam: piece.rumor.pLossTeam,
+        })),
+    });
+    roster = raisedRoster.map(normalizePieceState);
     roster = applyRumorDiffusion(roster, actor.id).map(normalizePieceState);
     roster = roster.filter((piece) => piece.id !== actor.id);
     cascadeLength += 1;
 
     if (roster.length <= 1) {
-      return { roster, events, rout: true, cascadeLength };
+      return {
+        roster,
+        events,
+        rout: true,
+        cascadeLength,
+        lossEstimateUpdates,
+      };
     }
 
     const refreshed = buildDesertionContexts(roster, next.moveEvalByPiece);
@@ -154,5 +189,6 @@ export function applyDesertionWithCascade(
     events,
     rout: roster.length <= 1,
     cascadeLength,
+    lossEstimateUpdates,
   };
 }

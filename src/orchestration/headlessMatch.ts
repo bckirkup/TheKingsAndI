@@ -17,6 +17,7 @@ import {
   normalizePieceState,
   shouldDesert,
   type CandidateMoveEvaluation,
+  type DesertionDecisionTerms,
   type MoveDecisionOutcome,
   type MatchEvent,
   type PieceState,
@@ -33,6 +34,7 @@ import {
   type MoverInsights,
 } from './insight';
 import type { OpponentArchetype } from './leaderPolicy';
+import type { LossEstimateUpdate } from '../psychology/cascade';
 import {
   applyCostlySignalsToRoster,
   applyDeclinedSacrificeSignal,
@@ -100,9 +102,21 @@ export interface HeadlessMatchResult {
   readonly justifiedRefusalObviousness: readonly number[];
   /** Raw absolute private-view losses for accepted justified refusals. */
   readonly justifiedRefusalPrivateViewLosses: readonly number[];
+  readonly desertionDiagnostics: readonly DesertionDiagnostic[];
+  readonly lossEstimateUpdates: readonly LossEstimateUpdate[];
   readonly determinismId: string;
   /** Observable enemy behaviours — never private gauges (ADR 0025). */
   readonly enemyObservableBehaviours: readonly string[];
+}
+
+export interface DesertionDiagnostic {
+  readonly ply: number;
+  readonly pieceId: string;
+  readonly role: PieceState['role'];
+  readonly deserted: boolean;
+  readonly uStay: number;
+  readonly uDesert: number;
+  readonly terms: DesertionDecisionTerms;
 }
 
 function updatePiece(
@@ -286,6 +300,8 @@ export async function runHeadlessMatch(
   let winningPositionDesertions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
   const justifiedRefusalPrivateViewLosses: number[] = [];
+  const desertionDiagnostics: DesertionDiagnostic[] = [];
+  const lossEstimateUpdates: LossEstimateUpdate[] = [];
   const enemyObservableBehaviours: string[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
@@ -414,6 +430,15 @@ export async function runHeadlessMatch(
         roster,
         desertionContext,
       );
+      desertionDiagnostics.push({
+        ply,
+        pieceId: actor.id,
+        role: actor.role,
+        deserted: outcome.verdict === 'DESERTION_MUTINY',
+        uStay: desertionDecision.uStay,
+        uDesert: desertionDecision.uDesert,
+        terms: desertionDecision.terms,
+      });
       const objectivelyGood = isVindicatedMove(
         auditScore,
         bestAudit,
@@ -509,6 +534,7 @@ export async function runHeadlessMatch(
           },
           ply,
         );
+        lossEstimateUpdates.push(...cascade.lossEstimateUpdates);
         events.push(...cascade.events);
         for (const event of cascade.events) {
           if (event.t === 'DESERTION') {
@@ -620,6 +646,8 @@ export async function runHeadlessMatch(
     justifiedRefusalPrivateViewLosses: Object.freeze(
       justifiedRefusalPrivateViewLosses,
     ),
+    desertionDiagnostics: Object.freeze(desertionDiagnostics),
+    lossEstimateUpdates: Object.freeze(lossEstimateUpdates),
     determinismId: config.engine.determinismId,
     enemyObservableBehaviours: Object.freeze(enemyObservableBehaviours),
   };

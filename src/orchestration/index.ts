@@ -34,4 +34,5 @@ export type {
   HeadlessMatchConfig,
   HeadlessMatchResult,
   HeadlessMoveChoice,
+  DesertionDiagnostic,
 } from './headlessMatch';

@@ -52,6 +52,8 @@ export interface MatchMetrics {
   readonly classContemptStart: number;
   readonly classContemptEnd: number;
   readonly survivingRosterSize: number;
+  readonly desertionDiagnostics?: HeadlessMatchResult['desertionDiagnostics'];
+  readonly lossEstimateUpdates?: HeadlessMatchResult['lossEstimateUpdates'];
   readonly winScore: number;
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
@@ -392,6 +394,8 @@ export function metricsFromMatch(
     classContemptStart,
     classContemptEnd,
     survivingRosterSize: result.roster.length,
+    desertionDiagnostics: result.desertionDiagnostics,
+    lossEstimateUpdates: result.lossEstimateUpdates,
     winScore: result.winScore,
     rout: result.rout,
     archetype: classifyArchetype(
