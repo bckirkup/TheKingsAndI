@@ -807,7 +807,9 @@ open.
 ### D121 ⚠ Desertion shadow strength (ADR 0045)
 `DESERTION_SHADOW_SCALE_PERMILLE` controls the symmetric attenuation of
 private pain and standing cost as defeat becomes impending. Its owner
-calibration remains open.
+calibration remains open. The default `1_000` is deliberate but provisional
+and unswept: it gives `shadowFactor = 1 - P_lossIfStay`, so the campaigns'
+observed mean loss near `0.6` attenuates roughly 60% of both terms.
 
 ### D122 ⚠ Desertion attachment floor (ADR 0045)
 `DESERTION_RESIDUAL_STAKE` is now the strictly positive floor for the

@@ -93,10 +93,9 @@ export interface DesertionContext {
   readonly P_captured: number;
   readonly P_lossIfStay: number;
   readonly P_lossIfLeave: number;
-  readonly pLossBoard?: number;
-  readonly pivotality?: number;
-  readonly shadowFactor?: number;
-  readonly attachment?: number;
+  readonly pLossBoard: number;
+  readonly pivotality: number;
+  readonly shadowFactor: number;
 }
 
 export interface DesertionDecisionTerms {

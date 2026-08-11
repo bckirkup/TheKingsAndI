@@ -43,6 +43,8 @@ export function featuresToEvaluation(
   return {
     moveNotation: features.san,
     deltaV_board,
+    // Enemy pieces have move features but no private insight; level is the
+    // explicit fallback rather than a real private board evaluation.
     privateScoreCp: 0,
     vLeaderImplied: deltaV_board + leaderGap,
     deltaV_capture: features.deltaVCapture,

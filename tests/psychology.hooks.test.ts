@@ -145,11 +145,11 @@ describe('desertion cascade (live path)', () => {
       P_captured: 0.9,
       peerSafetyDeltas: {},
     };
-    const decision = shouldDesert(first, desertionContextFor(first, moveEval), [
+    const decision = shouldDesert(
       first,
-      second,
-      king,
-    ]);
+      desertionContextFor(first, moveEval, [first, second]),
+      [first, second, king],
+    );
     const cascade = applyDesertionWithCascade(
       [first, second, king],
       {
@@ -215,7 +215,7 @@ describe('desertion cascade (live path)', () => {
     const witnessEval = { ...actorEval, deltaV_board: 2 };
     const decision = shouldDesert(
       actor,
-      desertionContextFor(actor, actorEval),
+      desertionContextFor(actor, actorEval, [actor, witness]),
       [actor, witness],
     );
     const cascade = applyDesertionWithCascade(
@@ -251,6 +251,9 @@ describe('desertion cascade (live path)', () => {
       P_captured: 0.9,
       P_lossIfStay: 0.9,
       P_lossIfLeave: 0.1,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const results = evaluateDesertionCascade([piece], { [piece.id]: context });
     expect(results).toHaveLength(1);

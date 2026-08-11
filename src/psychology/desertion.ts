@@ -234,7 +234,7 @@ export function shouldDesert(
       pain: calculatePain(piece),
       P_lossIfStay: context.P_lossIfStay,
       P_lossIfLeave: context.P_lossIfLeave,
-      pLossBoard: context.pLossBoard ?? 0,
+      pLossBoard: context.pLossBoard,
       pivotality,
       shadowFactor: calculateShadowFactor(context.P_lossIfStay),
       attachment,

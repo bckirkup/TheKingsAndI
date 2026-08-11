@@ -1,5 +1,6 @@
 import { applyRumorDiffusion } from './belief';
 import {
+  calculateShadowFactor,
   calculatePivotalityPermille,
   raiseLossEstimatesAfterDesertion,
 } from './desertion';
@@ -18,7 +19,7 @@ import type {
 export function desertionContextFor(
   piece: PieceState,
   moveEval: CandidateMoveEvaluation,
-  activePeers: readonly PieceState[] = [piece],
+  activePeers: readonly PieceState[],
 ): DesertionContext {
   const score = Math.trunc(moveEval.privateScoreCp);
   const scale = Math.max(1, ENGINE_CONFIG.DESERTION_BOARD_LOSS_SCALE_CP);
@@ -56,7 +57,7 @@ export function desertionContextFor(
       Math.min(1_000, pLossIfStayPermille + pivotalityLossPermille) / 1_000,
     pLossBoard: boardLossPermille / 1_000,
     pivotality: pivotalityLossPermille / 1_000,
-    shadowFactor: 1,
+    shadowFactor: calculateShadowFactor(pLossIfStayPermille / 1_000),
   };
 }
 

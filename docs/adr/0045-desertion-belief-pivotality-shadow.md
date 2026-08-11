@@ -46,6 +46,12 @@ neutral, so an untouched piece has zero alienation and full exposure.
 Alienation, rather than unfamiliarity or mere imperfection, is the route to
 detachment. The floor remains reachable by configuration.
 
+Enemy-side turns currently have no per-piece private insight available. Their
+feature-based evaluation path therefore explicitly supplies a zero score,
+meaning a dead-level board read (`pLossBoard = 0.5`) rather than an implicit
+claim of a real private evaluation. Supplying enemy private insight remains a
+known limitation.
+
 ## Consequences
 
 Rumor remains a social channel rather than the sole board belief. A queen's

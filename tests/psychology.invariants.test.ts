@@ -333,6 +333,9 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       P_captured: 1,
       P_lossIfStay: 0.9,
       P_lossIfLeave: 0.1,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     expect(isKingExempt(king.role)).toBe(true);
     expect(shouldDesert(king, context, [king]).desert).toBe(false);
@@ -421,6 +424,9 @@ describe('desertion cascade', () => {
       P_captured: 0.2,
       P_lossIfStay: 0.5,
       P_lossIfLeave: 0.8,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const base = makePiece({
       traits: { ...neutralTraits, w_loyalty: 0.5 },
@@ -544,6 +550,9 @@ describe('desertion cascade', () => {
       P_captured: 0.5,
       P_lossIfStay: 0,
       P_lossIfLeave: 0.5,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const highLoss: DesertionContext = {
       ...lowLoss,
@@ -564,6 +573,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const lambda = 0.64;
 
@@ -581,6 +593,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
 
     expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-21.45);
@@ -598,6 +613,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
 
     const firstDeserter = calculateUDesert(piece, context, 0.64, [
@@ -620,6 +638,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const config = ENGINE_CONFIG as { DESERTION_COLLECTIVE_STAKE: number };
     const baseline = shouldDesert(piece, context, [piece]);
@@ -645,6 +666,9 @@ describe('desertion cascade', () => {
       P_captured: 0.25,
       P_lossIfStay: 0.1,
       P_lossIfLeave: 0.6,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const config = ENGINE_CONFIG as {
       DESERTION_STANDING_STAKE: number;
@@ -669,6 +693,9 @@ describe('desertion cascade', () => {
       P_captured: 0.9,
       P_lossIfStay: 0.8,
       P_lossIfLeave: 0.2,
+      pLossBoard: 0,
+      pivotality: 0,
+      shadowFactor: 1,
     };
     const outcome = evaluateMoveResponse(piece, makeMove(), [piece], context);
     expect(outcome.verdict).toBe('DESERTION_MUTINY');
