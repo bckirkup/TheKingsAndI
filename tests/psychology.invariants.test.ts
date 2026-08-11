@@ -150,7 +150,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       traits: { ...neutralTraits, w_courage: 1 },
     });
     const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
-    expect(expectedVindicationDelta(cautious, move)).toBe(-0.5);
+    expect(expectedVindicationDelta(cautious, move)).toBe(-0.75);
     expect(expectedVindicationDelta(brave, move)).toBe(0);
     const config = ENGINE_CONFIG as unknown as Record<string, number>;
     const originalGain = config.ABIL_VINDICATION_GAIN_SCALE ?? 20;
@@ -166,6 +166,51 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(observed.vindicatedCount).toBe(1);
     expect(observed.roster[0]?.credence.tauAbil).toBe(56);
     expect(observed.roster[1]?.credence.tauAbil).toBe(10);
+  });
+
+  it('raises expectation pessimism as benevolence falls and trauma rises', () => {
+    const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
+    const trusting = makePiece({
+      id: 'w:P:a2',
+      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      B_i: 0,
+    });
+    const distrustful = makePiece({
+      id: 'w:P:a2',
+      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      B_i: 0,
+    });
+    const traumatised = makePiece({
+      id: 'w:P:a2',
+      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      B_i: 100,
+    });
+    expect(expectedVindicationDelta(trusting, move)).toBe(-0.25);
+    expect(expectedVindicationDelta(distrustful, move)).toBe(-0.5);
+    expect(expectedVindicationDelta(traumatised, move)).toBe(-0.5);
+  });
+
+  it('goldens and probes the trust-dependent pessimism knob', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.VINDICATION_PESSIMISM_SCALE ?? 100;
+    const piece = makePiece({
+      id: 'w:P:a2',
+      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      B_i: 0,
+    });
+    const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
+    try {
+      expect(original).toBe(100);
+      config.VINDICATION_PESSIMISM_SCALE = 100;
+      const defaultExpectation = expectedVindicationDelta(piece, move);
+      config.VINDICATION_PESSIMISM_SCALE = 0;
+      const unscaledExpectation = expectedVindicationDelta(piece, move);
+      expect(defaultExpectation).toBe(-0.5);
+      expect(unscaledExpectation).toBe(-0.25);
+      expect(defaultExpectation).not.toBe(unscaledExpectation);
+    } finally {
+      config.VINDICATION_PESSIMISM_SCALE = original;
+    }
   });
 
   it('changes the vindication baseline when the branch changes', () => {

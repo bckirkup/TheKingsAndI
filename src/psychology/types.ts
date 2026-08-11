@@ -142,6 +142,12 @@ export type MatchEvent =
       readonly orderQualityCp?: number;
     }
   | {
+      readonly t: 'ABILITY_OBSERVATION';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly vindicated: boolean;
+    }
+  | {
       readonly t: 'REFUSAL';
       readonly ply: number;
       readonly pieceId: PieceId;

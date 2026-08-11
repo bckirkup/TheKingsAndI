@@ -64,7 +64,9 @@ the piece's own pessimistic expected value of complying. The expectation uses
 the same utility risk term as the verdict ladder:
 
 ```text
-expectedDelta = deltaV_board - ((1 - w_courage) * P_captured)
+expectedDelta =
+  deltaV_board -
+  ((1 - w_courage) * P_captured * pessimismPercent / 100)
 expectedAbsoluteCp = preMoveAuditCp + round(expectedDelta * 100)
 objectivelyGood = playedAuditCp >= expectedAbsoluteCp - tolerance
 ```
@@ -73,6 +75,19 @@ objectivelyGood = playedAuditCp >= expectedAbsoluteCp - tolerance
 mover-side absolute centipawns. Adding the expected delta to the pre-move
 absolute audit score puts both sides in the same units without passing the
 audit score into psychology.
+
+The trust-dependent pessimism term is:
+
+```text
+distrustAndTrauma = clamp(100 - tauBenev + B_i, 0, 200)
+pessimismPercent =
+  100 + trunc(VINDICATION_PESSIMISM_SCALE * distrustAndTrauma / 100)
+```
+
+Thus low benevolence credence and accumulated trauma lower the expectation
+bar by increasing expected harm. `VINDICATION_PESSIMISM_SCALE` remains an open
+calibration decision (D114), and the resulting delta is quantized to
+hundredths of a pawn before audit reconciliation.
 
 The `VINDICATION_BASELINE` configuration knob defaults to `'expectation'`.
 The `'oracle'` branch retains the engine-best comparison:

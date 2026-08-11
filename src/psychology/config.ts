@@ -44,6 +44,8 @@ export const ENGINE_CONFIG = {
   ABIL_VINDICATION_LOSS_MULTIPLIER: 2,
   /** Integer curvature strength for current-level ability steps (ADR 0043). */
   ABIL_VINDICATION_CURVATURE: 2,
+  /** Trust/trauma multiplier for pessimistic vindication expectations (D114). */
+  VINDICATION_PESSIMISM_SCALE: 100,
   /** Override penalties (ADR 0014). */
   OVERRIDE_PIECE_TRUST_PENALTY: -35,
   OVERRIDE_PIECE_TRAUMA_GAIN: 20,

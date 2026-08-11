@@ -673,6 +673,12 @@ ADR 0043 makes gains harder and losses larger as `tauAbil` rises through an
 integer-rational curvature term. The initial calibration value is
 `ABIL_VINDICATION_CURVATURE = 2`; the owner must calibrate the shape.
 
+### D114 ⚠ How strongly should vindication expectations depend on trust and trauma?
+The expectation baseline discounts expected capture harm more heavily when a
+piece has low benevolence credence or high trauma. The initial calibration value
+is `VINDICATION_PESSIMISM_SCALE = 100`; the owner must calibrate this restoring
+force.
+
 ### D108 ⚠ What is the per-ply vindication authority gain?
 Every executed order may pay direct ability credence credit to each vindicated
 witness on ADR 0038's obviousness scale; this supersedes override-only credit.
@@ -694,8 +700,9 @@ Vindication may compare the played audit outcome against the piece's own
 pessimistic expectation or against the engine-best oracle. The shipped default
 is `VINDICATION_BASELINE = 'expectation'`, while `'oracle'` remains available
 as the long-term variant. The expectation is
-`deltaV_board - ((1 - w_courage) * P_captured)`, reconciled to mover-side
-absolute cp by adding it to the pre-move audit score.
+`deltaV_board - ((1 - w_courage) * P_captured * pessimismPercent / 100)`,
+where pessimism rises with low `tauBenev` and trauma; the result is reconciled
+to mover-side absolute cp by adding it to the pre-move audit score.
 
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
