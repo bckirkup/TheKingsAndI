@@ -147,6 +147,7 @@ export type MatchEvent =
       readonly pieceId: PieceId;
       readonly vindicated: boolean;
       readonly channel?: 'adjudication';
+      readonly delta?: number;
     }
   | {
       readonly t: 'ABILITY_DRIP';

@@ -234,13 +234,6 @@ export function applyRosterAbilityObservations(
       expectedVindicationDelta(piece, moveEval),
     );
     if (vindicated) vindicatedCount += 1;
-    events.push({
-      t: 'ABILITY_OBSERVATION',
-      ply,
-      pieceId: piece.id,
-      vindicated,
-      channel: 'adjudication',
-    });
     const authorityGain = vindicated
       ? Math.trunc(
           justifiedRefusalObviousness(
@@ -249,7 +242,16 @@ export function applyRosterAbilityObservations(
           ) * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE,
         )
       : 0;
+    const beforeObservationTau = credence.tauAbil;
     credence = applyAbilityObservation(credence, vindicated);
+    events.push({
+      t: 'ABILITY_OBSERVATION',
+      ply,
+      pieceId: piece.id,
+      vindicated,
+      channel: 'adjudication',
+      delta: credence.tauAbil - beforeObservationTau,
+    });
     if (authorityGain > 0) {
       credence = applyAuthorityGain(credence, authorityGain);
     }
