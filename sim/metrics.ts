@@ -511,6 +511,24 @@ export function buildTrajectoryBands(
   });
 }
 
+export interface CampaignMatchTrajectoryPoint {
+  readonly match: number;
+  readonly meanTauAbil: number;
+  readonly meanTauBenev: number;
+  readonly meanSurvivingRosterSize: number;
+}
+
+export function buildMatchTrajectory(
+  matchMetrics: readonly MatchMetrics[],
+): readonly CampaignMatchTrajectoryPoint[] {
+  return matchMetrics.map((metric) => ({
+    match: metric.match,
+    meanTauAbil: metric.meanTauAbilEnd,
+    meanTauBenev: metric.meanTauBenevEnd,
+    meanSurvivingRosterSize: metric.survivingRosterSize,
+  }));
+}
+
 function aggregateCampaignCore(
   leader: Leader,
   seed: number,
@@ -712,6 +730,18 @@ export function renderCsv(
       ),
     );
   }
+  output.push(
+    '',
+    'trajectory_match,mean_tau_abil_end,mean_tau_benev_end,mean_surviving_roster_size',
+    ...buildMatchTrajectory(metrics).map((point) =>
+      [
+        point.match,
+        point.meanTauAbil.toFixed(2),
+        point.meanTauBenev.toFixed(2),
+        point.meanSurvivingRosterSize,
+      ].join(','),
+    ),
+  );
   if (horizon !== undefined) {
     output.push(
       '',

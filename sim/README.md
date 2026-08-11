@@ -105,10 +105,14 @@ refusals per ply, desertion match rate, desertion attrition, rout rate, mean
 surviving roster size, and mean win score. Match indices are assigned by
 `floor(((match - 1) * 4) / campaignMatches) + 1`; any remainder matches go to
 the earlier quartiles. The CSV appends the channel metrics and roster size to
-each existing match row, then appends a trajectory-band section. It also
-appends a cumulative horizon section with one row for every prefix of the
-campaign; horizon `h` reports the campaign aggregates as if the career ended
-after match `h`.
+each existing match row, then appends an explicit pointwise
+`trajectory_match` section. Its `mean_tau_abil_end` and
+`mean_surviving_roster_size` values describe that match's roster snapshot.
+The trajectory-band section averages those same pointwise match-end values
+within match-index bands. It also appends a cumulative horizon section with
+one row for every prefix of the campaign; horizon `h` reports the campaign
+aggregates as if the career ended after match `h`, so its `mean_tau_abil` is a
+cumulative mean over matches `1..h`, not the value at match `h`.
 
 The first two quartiles are the early-frustration check: desertion attrition and
 rout rates of 80% or more in either early quartile produce an `early-saturation`

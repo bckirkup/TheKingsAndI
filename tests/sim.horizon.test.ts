@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   aggregateCampaign,
+  buildMatchTrajectory,
   buildHorizonSeries,
   buildTrajectoryBands,
   renderCsv,
@@ -110,6 +111,33 @@ describe('campaign horizon series', () => {
     });
   });
 
+  it('keeps pointwise match trajectory distinct from cumulative horizon', () => {
+    const metrics = [metric(1), metric(2), metric(3)];
+    expect(buildMatchTrajectory(metrics)).toEqual([
+      {
+        match: 1,
+        meanTauAbil: 2,
+        meanTauBenev: 3,
+        meanSurvivingRosterSize: 19,
+      },
+      {
+        match: 2,
+        meanTauAbil: 4,
+        meanTauBenev: 6,
+        meanSurvivingRosterSize: 18,
+      },
+      {
+        match: 3,
+        meanTauAbil: 6,
+        meanTauBenev: 9,
+        meanSurvivingRosterSize: 17,
+      },
+    ]);
+    expect(buildHorizonSeries(metrics).map((point) => point.meanTauAbil)).toEqual(
+      [2, 3, 4],
+    );
+  });
+
   it('has one point per match for 16-match and odd-length campaigns', () => {
     expect(buildHorizonSeries([])).toEqual([]);
     const sixteen = buildHorizonSeries(
@@ -127,6 +155,20 @@ describe('campaign horizon series', () => {
     expect(five.map((point) => point.horizon)).toEqual([1, 2, 3, 4, 5]);
     expect(five[1]?.meanWinScore).toBe(15);
     expect(five[4]?.meanWinScore).toBe(30);
+  });
+
+  it('assigns the 20-match fourth quartile to matches 16 through 20', () => {
+    const bands = buildTrajectoryBands(
+      Array.from({ length: 20 }, (_, index) => metric(index + 1)),
+    );
+    expect(
+      bands.map((band) => [band.startMatch, band.endMatch, band.matches]),
+    ).toEqual([
+      [1, 5, 5],
+      [6, 10, 5],
+      [11, 15, 5],
+      [16, 20, 5],
+    ]);
   });
 
   it('averages only campaigns that reach each ragged horizon', () => {
