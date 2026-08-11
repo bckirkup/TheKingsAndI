@@ -164,8 +164,8 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     );
     config.ABIL_VINDICATION_GAIN_SCALE = originalGain;
     expect(observed.vindicatedCount).toBe(1);
-    expect(observed.roster[0]?.credence.tauAbil).toBe(60);
-    expect(observed.roster[1]?.credence.tauAbil).toBe(40);
+    expect(observed.roster[0]?.credence.tauAbil).toBe(56);
+    expect(observed.roster[1]?.credence.tauAbil).toBe(10);
   });
 
   it('changes the vindication baseline when the branch changes', () => {
@@ -452,14 +452,85 @@ describe('credence channel updates', () => {
     expect(ENGINE_CONFIG.ABIL_PRIOR_STRENGTH).toBe(10);
     const initial = defaultCredence();
     const observed = applyAbilityObservation(initial, false);
-    expect(observed.tauAbil).toBe(40);
+    expect(observed.tauAbil).toBe(10);
     expect(observed.abilityObservationCount).toBe(1);
   });
 
-  it('moves the saturation ply when prior strength changes', () => {
+  it('keeps a one-point revision floor after truncation would freeze', () => {
+    let state = { ...defaultCredence(), tauAbil: 0 };
+    for (let ply = 0; ply < 200; ply += 1) {
+      state = applyAbilityObservation(state, false);
+    }
+    expect(state.tauAbil).toBe(0);
+    expect(applyAbilityObservation(state, true).tauAbil).toBe(1);
+  });
+
+  it('makes falsification steeper than vindication and curves with level', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalLoss = config.ABIL_VINDICATION_LOSS_MULTIPLIER ?? 2;
+    const originalCurvature = config.ABIL_VINDICATION_CURVATURE ?? 2;
+    try {
+      config.ABIL_VINDICATION_LOSS_MULTIPLIER = 2;
+      config.ABIL_VINDICATION_CURVATURE = 2;
+      const initial = defaultCredence();
+      expect(applyAbilityObservation(initial, true).tauAbil).toBe(56);
+      expect(applyAbilityObservation(initial, false).tauAbil).toBe(10);
+      const high = { ...initial, tauAbil: 90 };
+      const low = { ...initial, tauAbil: 5 };
+      expect(applyAbilityObservation(high, true).tauAbil).toBe(94);
+      expect(applyAbilityObservation(low, true).tauAbil).toBe(14);
+      config.ABIL_VINDICATION_CURVATURE = 0;
+      expect(applyAbilityObservation(high, true).tauAbil).toBe(100);
+    } finally {
+      config.ABIL_VINDICATION_LOSS_MULTIPLIER = originalLoss;
+      config.ABIL_VINDICATION_CURVATURE = originalCurvature;
+    }
+  });
+
+  it('goldens and probes the loss multiplier knob', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_VINDICATION_LOSS_MULTIPLIER ?? 2;
+    try {
+      expect(original).toBe(2);
+      config.ABIL_VINDICATION_LOSS_MULTIPLIER = 2;
+      const defaultLoss = applyAbilityObservation(defaultCredence(), false);
+      config.ABIL_VINDICATION_LOSS_MULTIPLIER = 1;
+      const reducedLoss = applyAbilityObservation(defaultCredence(), false);
+      expect(defaultLoss.tauAbil).toBe(10);
+      expect(reducedLoss.tauAbil).toBe(30);
+      expect(defaultLoss.tauAbil).not.toBe(reducedLoss.tauAbil);
+    } finally {
+      config.ABIL_VINDICATION_LOSS_MULTIPLIER = original;
+    }
+  });
+
+  it('goldens and probes the curvature strength knob', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_VINDICATION_CURVATURE ?? 2;
+    try {
+      expect(original).toBe(2);
+      config.ABIL_VINDICATION_CURVATURE = 2;
+      const curved = applyAbilityObservation(
+        { ...defaultCredence(), tauAbil: 90 },
+        true,
+      );
+      config.ABIL_VINDICATION_CURVATURE = 0;
+      const linear = applyAbilityObservation(
+        { ...defaultCredence(), tauAbil: 90 },
+        true,
+      );
+      expect(curved.tauAbil).toBe(94);
+      expect(linear.tauAbil).toBe(100);
+      expect(curved.tauAbil).not.toBe(linear.tauAbil);
+    } finally {
+      config.ABIL_VINDICATION_CURVATURE = original;
+    }
+  });
+
+  it('moves the revision timing when prior strength changes', () => {
     const config = ENGINE_CONFIG as unknown as Record<string, number>;
     const original = config.ABIL_PRIOR_STRENGTH ?? 10;
-    const saturationPly = (): number => {
+    const floorPly = (): number => {
       let state = defaultCredence();
       for (let ply = 1; ply <= 150; ply += 1) {
         state = applyAbilityObservation(state, false);
@@ -469,12 +540,12 @@ describe('credence channel updates', () => {
     };
     try {
       config.ABIL_PRIOR_STRENGTH = 10;
-      const defaultSaturation = saturationPly();
+      const defaultSaturation = floorPly();
       config.ABIL_PRIOR_STRENGTH = 20;
-      const changedSaturation = saturationPly();
+      const changedSaturation = floorPly();
       expect(defaultSaturation).toBeGreaterThan(0);
       expect(changedSaturation).toBeGreaterThan(0);
-      expect(defaultSaturation).not.toBe(changedSaturation);
+      expect(changedSaturation).toBeGreaterThan(defaultSaturation);
     } finally {
       config.ABIL_PRIOR_STRENGTH = original;
     }

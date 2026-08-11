@@ -148,6 +148,10 @@ must source the account's strength rather than starting from 0.
 persistence and passport work that ADR 0035 already requires must carry it, and
 a migration must choose a strength for accounts that predate this ADR.
 
+ADR 0043 supersedes the symmetric `trunc(numerator / n)` step with an
+integer-rational, asymmetric reducer. It retains the prior and persistent
+counter but imposes a one-point floor and state-dependent gains/losses.
+
 **Golden fingerprints move.** This changes the first few plies of every
 campaign, so every golden anchor over match output is expected to change in the
 commit that implements it, with the rationale recorded there.

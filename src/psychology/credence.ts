@@ -100,8 +100,30 @@ export function applyAbilityObservation(
     Math.trunc(credence.abilityObservationCount),
   );
   const n = Math.max(1, observationCount + ENGINE_CONFIG.ABIL_PRIOR_STRENGTH);
-  const step = Math.trunc(ENGINE_CONFIG.ABIL_BAYES_NUMERATOR / n);
-  const delta = vindicated ? step : -step;
+  const baseStep = Math.max(
+    1,
+    Math.trunc(ENGINE_CONFIG.ABIL_BAYES_NUMERATOR / n),
+  );
+  const tau = clampCredence(credence.tauAbil);
+  const curvature = Math.max(
+    0,
+    Math.trunc(ENGINE_CONFIG.ABIL_VINDICATION_CURVATURE),
+  );
+  const curvatureDenominator = 100 * (curvature + 1);
+  const gainNumerator = 100 + curvature * (100 - tau);
+  const gainStep = Math.max(
+    1,
+    Math.trunc((baseStep * gainNumerator) / curvatureDenominator),
+  );
+  const lossStep = Math.max(
+    1,
+    Math.trunc((baseStep * (100 + curvature * tau)) / 100),
+  );
+  const lossMultiplier = Math.max(
+    1,
+    Math.trunc(ENGINE_CONFIG.ABIL_VINDICATION_LOSS_MULTIPLIER),
+  );
+  const delta = vindicated ? gainStep : -lossStep * lossMultiplier;
   return {
     ...credence,
     tauAbil: clampCredence(credence.tauAbil + delta),

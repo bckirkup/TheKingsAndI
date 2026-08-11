@@ -40,6 +40,10 @@ export const ENGINE_CONFIG = {
    * The owner will choose the calibrated value.
    */
   ABIL_PRIOR_STRENGTH: 10,
+  /** Multiplier applied to falsified ability observations (ADR 0043). */
+  ABIL_VINDICATION_LOSS_MULTIPLIER: 2,
+  /** Integer curvature strength for current-level ability steps (ADR 0043). */
+  ABIL_VINDICATION_CURVATURE: 2,
   /** Override penalties (ADR 0014). */
   OVERRIDE_PIECE_TRUST_PENALTY: -35,
   OVERRIDE_PIECE_TRAUMA_GAIN: 20,
