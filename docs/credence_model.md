@@ -114,26 +114,29 @@ like people rather than a threshold table.
 
 ## 6. Open questions this creates
 
-- **D36: decided (ADR 0019).** `V_leader_implied` is the **ability** channel,
-  `τ_abil`, accreting Bayesian-style from vindicated and falsified orders — so a
-  reputation for competence builds slowly and is hard to move late in a campaign.
+- **D36: decided (ADR 0019; step shape superseded by ADR 0043).**
+  `V_leader_implied` is the **ability** channel, `τ_abil`, accreting from
+  vindicated and falsified orders through an asymmetric, state-dependent
+  reducer — so a reputation for competence builds slowly and is hard to move
+  late in a campaign.
   ADR 0016 supplies its raw material: what obedience has cost this piece, its
   class, and its friends.
-- **D37–D39: decided (ADR 0019).** `τ` splits into `τ_benev` (fast up on being
-  heard, logistic cliff on betrayal, slow erosion under neglect) and `τ_abil`
-  (slow Bayesian accretion from vindicated orders). The curve question dissolves:
-  benevolence snaps, ability creeps.
+- **D37–D39: decided (ADR 0019; shape superseded by ADR 0043).** `τ` splits
+  into `τ_benev` (fast up on being heard, logistic cliff on betrayal, slow
+  erosion under neglect) and `τ_abil` (curved, asymmetric accretion from
+  vindicated and falsified orders). Benevolence snaps; ability creeps back up
+  and falls more sharply.
 - **D38: decided — yes, `τ` is domain-specific** (ADR 0019), and the two channels
   produce two refusals needing opposite responses: *"he's probably wrong"* (low
   ability, unfixable by kindness) and *"he thinks I'm expendable"* (low
   benevolence, unfixable by winning).
 - **D40:** Does this replace `w_loyalty · T_i` in `U` entirely, or sit alongside
   a smaller residual loyalty term for the purely affective part of trust?
-- **D95–D96: decided (ADR 0039, proposed).** "Slow Bayesian accretion" gives
-  the prior evidential weight: the step is `100 / (n₀ + n)` where `n` is the
-  per-piece observation count and `n₀ > 0` is retained on the relationship
-  account. A world may raise `n₀` with a cohort-uniform training record that
-  grants patience rather than trust.
+- **D95–D96: prior retained (ADR 0039, proposed; shape superseded by ADR
+  0043).** The prior evidential weight remains `100 / (n₀ + n)` before the
+  floor and curvature transform, where `n` is the per-piece observation count
+  and `n₀ > 0` is retained on the relationship account. A world may raise `n₀`
+  with a cohort-uniform training record that grants patience rather than trust.
 
 ## 7. Calibration targets
 

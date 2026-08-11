@@ -731,13 +731,16 @@ export class MatchSession {
     desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>,
     bestAuditScore: number,
   ): void {
-    this.roster = applyRosterAbilityObservations(
+    const abilityObservations = applyRosterAbilityObservations(
       this.roster,
       desertionMoveEvals,
       orderQualityCp,
       bestAuditScore,
       bestAuditScore,
-    ).roster.map((piece) =>
+      this.ply,
+    );
+    this.events.push(...abilityObservations.events);
+    this.roster = abilityObservations.roster.map((piece) =>
       piece.id === actor.id
         ? applyPostMoveCredence(
             { ...piece, engagementFactor: outcome.engagementFactor },

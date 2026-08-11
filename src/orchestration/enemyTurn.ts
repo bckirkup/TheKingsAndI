@@ -219,13 +219,16 @@ function applyTrackedEnemyDecision(input: {
     behaviours.push('fatalistic');
   }
 
-  enemyRoster = applyRosterAbilityObservations(
+  const abilityObservations = applyRosterAbilityObservations(
     enemyRoster,
     desertionMoveEvals,
     orderQualityCp,
     bestAuditScore,
     bestAuditScore,
-  ).roster.map((piece) =>
+    ply,
+  );
+  events.push(...abilityObservations.events);
+  enemyRoster = abilityObservations.roster.map((piece) =>
     piece.id === actor.id
       ? applyPostMoveCredence(
           { ...piece, engagementFactor: outcome.engagementFactor },

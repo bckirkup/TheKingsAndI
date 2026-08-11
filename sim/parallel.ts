@@ -394,6 +394,7 @@ export function averageCampaignTrajectoryBands(
       meanTauBenev: mean((band) => band.meanTauBenev),
       meanRefusalRate: mean((band) => band.meanRefusalRate),
       meanRefusalsPerPly: mean((band) => band.meanRefusalsPerPly),
+      meanVindicationRate: mean((band) => band.meanVindicationRate),
       desertionMatchRate: mean((band) => band.desertionMatchRate),
       desertionAttrition: mean((band) => band.desertionAttrition),
       routRate: mean((band) => band.routRate),

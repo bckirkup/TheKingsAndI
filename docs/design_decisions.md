@@ -178,12 +178,10 @@ authored/placeholder marker for non-measured values.
 ### D95–D96 ✅ How fast a read forms, and what precedes it (ADR 0039, proposed)
 Surfaced from the Milestone 3 calibration failure and the owner's question of
 whether pieces read a weak opening "how fast", and whether a seminar needs a
-mechanics-only game or a required first win. `applyAbilityObservation` steps
-`τ_abil` by `100 / n` with `n` counting observations from zero, so the *first*
-observation moves credence by the entire 0–100 scale — the clamp decides the
-outcome, not the evidence, and the harness duly shows `τ_abil` at 0.00 by the
-second quartile of a supportive campaign. Sweeping `ABIL_BAYES_NUMERATOR` cannot
-reach this, because rescaling every step leaves the first one dominant.
+mechanics-only game or a required first win. The prior-weighted observation
+step no longer lets the first observation move credence by the entire scale.
+ADR 0043 supersedes its symmetric shape with asymmetric, state-dependent
+accretion and a one-point floor.
 
 **Ruling (ADR 0039):** the counter starts from a **prior strength** `n₀ > 0`
 carried on the relationship account (ADR 0035), so a read forms in proportion to
@@ -660,15 +658,26 @@ The interactive path increments `ply` for terminal desertion before handling
 rout, while the headless path does not. Reconcile the accounting without changing
 the meaning of `plies` or the replay contract.
 
-### D107 ⚠ Should ability accretion be allowed to freeze permanently?
-The ability observation step uses `trunc(100 / n)`. With the new per-piece
-observation count persisted across a career, this reaches exactly zero once
-`n` reaches `101`, so a piece can no longer revise its read of a commander.
-For prior strength `n₀`, that occurs on the observation after
-`101 - n₀` prior observations (`91` prior observations, then the 92nd
-observation, at the placeholder `n₀ = 10`). Decide whether ability accretion
-should be allowed to freeze permanently; the freeze is caused by truncation,
-not by the model's intended evidential direction.
+### D107 ✅ Should ability accretion be allowed to freeze permanently?
+**Decided by ADR 0043:** no. Ability observations always have a minimum
+one-point step; the prior observation count remains persistent, but truncation
+must not permanently prevent revision.
+
+### D112 ⚠ What multiplier should falsified ability observations use?
+ADR 0043 makes losses larger than gains through a configurable multiplier.
+The initial calibration value is `ABIL_VINDICATION_LOSS_MULTIPLIER = 2`;
+the owner must calibrate the magnitude.
+
+### D113 ⚠ How strongly should ability revision curve with current credence?
+ADR 0043 makes gains harder and losses larger as `tauAbil` rises through an
+integer-rational curvature term. The initial calibration value is
+`ABIL_VINDICATION_CURVATURE = 2`; the owner must calibrate the shape.
+
+### D114 ⚠ How strongly should vindication expectations depend on trust and trauma?
+The expectation baseline discounts expected capture harm more heavily when a
+piece has low benevolence credence or high trauma. The initial calibration value
+is `VINDICATION_PESSIMISM_SCALE = 100`; the owner must calibrate this restoring
+force.
 
 ### D108 ⚠ What is the per-ply vindication authority gain?
 Every executed order may pay direct ability credence credit to each vindicated
@@ -691,8 +700,9 @@ Vindication may compare the played audit outcome against the piece's own
 pessimistic expectation or against the engine-best oracle. The shipped default
 is `VINDICATION_BASELINE = 'expectation'`, while `'oracle'` remains available
 as the long-term variant. The expectation is
-`deltaV_board - ((1 - w_courage) * P_captured)`, reconciled to mover-side
-absolute cp by adding it to the pre-move audit score.
+`deltaV_board - ((1 - w_courage) * P_captured * pessimismPercent / 100)`,
+where pessimism rises with low `tauBenev` and trauma; the result is reconciled
+to mover-side absolute cp by adding it to the pre-move audit score.
 
 ### D33 ⚠ Can a deserter be re-recruited later, and at what cost?
 **Mechanism settled by ADR 0018, price still open.** Yes, a deserter is
@@ -775,7 +785,7 @@ before any exec-lab use. Not yet considered by the owner.
    (ADR 0019), so its price falls out of that channel's calibration rather than
    being an independent constant. D43's profile schema is settled by ADR 0037;
    its trauma-drift branch remains open.
-3. **D100–D111** — with the harness before the crisis-menu transactions ship:
+3. **D100–D113** — with the harness before the crisis-menu transactions ship:
    thresholds, magnitudes, nomination restoration and mark persistence, the
    scope of the menu on unjustified refusals, and desertion-detector re-ranging.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.

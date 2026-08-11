@@ -197,13 +197,16 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
-  roster = applyRosterAbilityObservations(
+  const abilityObservations = applyRosterAbilityObservations(
     roster,
     { ...moverInsights.desertionMoveEvals, [actor.id]: moveEval },
     auditScore,
     bestAuditScore,
     bestAuditScore,
-  ).roster.map((piece) =>
+    ply,
+  );
+  events.push(...abilityObservations.events);
+  roster = abilityObservations.roster.map((piece) =>
     piece.id === actor.id
       ? applyPostMoveCredence(
           { ...piece, engagementFactor: outcome.engagementFactor },

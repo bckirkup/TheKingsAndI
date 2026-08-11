@@ -154,9 +154,19 @@ export function expectedVindicationDelta(
   actor: PieceState,
   moveEval: CandidateMoveEvaluation,
 ): number {
-  return (
-    moveEval.deltaV_board - (1 - actor.traits.w_courage) * moveEval.P_captured
+  const distrustAndTrauma = Math.max(
+    0,
+    Math.min(200, 100 - actor.credence.tauBenev + actor.B_i),
   );
+  const pessimismPercent =
+    100 +
+    Math.trunc(
+      (ENGINE_CONFIG.VINDICATION_PESSIMISM_SCALE * distrustAndTrauma) / 100,
+    );
+  const expectedHarm =
+    ((1 - actor.traits.w_courage) * moveEval.P_captured * pessimismPercent) /
+    100;
+  return Math.trunc((moveEval.deltaV_board - expectedHarm) * 100) / 100;
 }
 
 export function applyRosterAbilityObservations(
@@ -165,11 +175,14 @@ export function applyRosterAbilityObservations(
   playedAuditCp: number,
   preMoveAuditCp: number,
   oracleBestAuditCp: number,
+  ply = 0,
 ): {
   readonly roster: PieceState[];
   readonly vindicatedCount: number;
+  readonly events: MatchEvent[];
 } {
   let vindicatedCount = 0;
+  const events: MatchEvent[] = [];
   const next = roster.map((piece) => {
     const moveEval = moveEvalByPiece[piece.id];
     if (moveEval === undefined) return piece;
@@ -180,6 +193,12 @@ export function applyRosterAbilityObservations(
       expectedVindicationDelta(piece, moveEval),
     );
     if (vindicated) vindicatedCount += 1;
+    events.push({
+      t: 'ABILITY_OBSERVATION',
+      ply,
+      pieceId: piece.id,
+      vindicated,
+    });
     const authorityGain = vindicated
       ? Math.trunc(
           justifiedRefusalObviousness(
@@ -197,7 +216,7 @@ export function applyRosterAbilityObservations(
       credence,
     });
   });
-  return { roster: next, vindicatedCount };
+  return { roster: next, vindicatedCount, events };
 }
 
 export function applyRefusalAuthorityCost(
