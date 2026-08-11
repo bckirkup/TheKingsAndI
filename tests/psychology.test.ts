@@ -80,8 +80,54 @@ describe('ability drip', () => {
   it('is integer-clamped and does not consume observations', () => {
     const before = defaultCredence();
     const after = applyAbilityDrip(before, 4.9);
-    expect(after.tauAbil).toBe(before.tauAbil + 4);
+    expect(after.tauAbil).toBe(before.tauAbil + 2);
     expect(after.abilityObservationCount).toBe(before.abilityObservationCount);
+  });
+
+  it('uses no satiation when drip curvature is disabled', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_DRIP_CURVATURE ?? 2;
+    try {
+      config.ABIL_DRIP_CURVATURE = 0;
+      const before = { ...defaultCredence(), tauAbil: 90 };
+      expect(applyAbilityDrip(before, 10).tauAbil).toBe(100);
+    } finally {
+      config.ABIL_DRIP_CURVATURE = original;
+    }
+  });
+
+  it('satiates drip gains at high ability credence', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_DRIP_CURVATURE ?? 2;
+    try {
+      config.ABIL_DRIP_CURVATURE = 2;
+      const low = { ...defaultCredence(), tauAbil: 10 };
+      const high = { ...defaultCredence(), tauAbil: 90 };
+      const lowGain = applyAbilityDrip(low, 10).tauAbil - low.tauAbil;
+      const highGain = applyAbilityDrip(high, 10).tauAbil - high.tauAbil;
+      expect(lowGain).toBe(9);
+      expect(highGain).toBe(4);
+      expect(lowGain).toBeGreaterThan(highGain);
+    } finally {
+      config.ABIL_DRIP_CURVATURE = original;
+    }
+  });
+
+  it('is sensitive to the drip curvature knob', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = config.ABIL_DRIP_CURVATURE ?? 2;
+    const before = { ...defaultCredence(), tauAbil: 50 };
+    try {
+      config.ABIL_DRIP_CURVATURE = 0;
+      const unsatiated = applyAbilityDrip(before, 10).tauAbil;
+      config.ABIL_DRIP_CURVATURE = 2;
+      const satiated = applyAbilityDrip(before, 10).tauAbil;
+      expect(unsatiated).toBe(60);
+      expect(satiated).toBe(56);
+      expect(unsatiated).not.toBe(satiated);
+    } finally {
+      config.ABIL_DRIP_CURVATURE = original;
+    }
   });
 });
 

@@ -94,11 +94,32 @@ export function applyAuthorityGain(
 export function applyAbilityDrip(
   credence: CredenceState,
   gain: number,
+  curvature: number = ENGINE_CONFIG.ABIL_DRIP_CURVATURE,
 ): CredenceState {
+  const adjustedGain = calculateCurvedAbilityGain(
+    gain,
+    credence.tauAbil,
+    curvature,
+  );
+  if (adjustedGain === 0) return credence;
   return {
     ...credence,
-    tauAbil: clampCredence(credence.tauAbil + Math.max(0, Math.trunc(gain))),
+    tauAbil: clampCredence(credence.tauAbil + adjustedGain),
   };
+}
+
+function calculateCurvedAbilityGain(
+  rawGain: number,
+  tauAbil: number,
+  curvature: number,
+): number {
+  const gain = Math.max(0, Math.trunc(rawGain));
+  if (gain === 0) return 0;
+  const tau = clampCredence(tauAbil);
+  const strength = Math.max(0, Math.trunc(curvature));
+  const denominator = 100 * (strength + 1);
+  const gainNumerator = 100 + strength * (100 - tau);
+  return Math.max(1, Math.trunc((gain * gainNumerator) / denominator));
 }
 
 export function applyAbilityObservation(
@@ -119,12 +140,7 @@ export function applyAbilityObservation(
     0,
     Math.trunc(ENGINE_CONFIG.ABIL_VINDICATION_CURVATURE),
   );
-  const curvatureDenominator = 100 * (curvature + 1);
-  const gainNumerator = 100 + curvature * (100 - tau);
-  const gainStep = Math.max(
-    1,
-    Math.trunc((baseStep * gainNumerator) / curvatureDenominator),
-  );
+  const gainStep = calculateCurvedAbilityGain(baseStep, tau, curvature);
   const lossStep = Math.max(
     1,
     Math.trunc((baseStep * (100 + curvature * tau)) / 100),

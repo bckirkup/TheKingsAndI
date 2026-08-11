@@ -349,6 +349,15 @@ friendly loss), the drip channel applies a small integer gain weighted toward
 high capture risk, low `E_i`, and low class prestige. Drip is per piece,
 resets on blunders, friendly losses, desertion, and match boundaries, and does
 not increment `abilityObservationCount`.
+The raw drip gain is satiated by current `tauAbil` using the same
+integer-rational curvature discipline as ADR 0043:
+
+```text
+g' = trunc(g * (100 + c * (100 - tauAbil)) / (100 * (c + 1)))
+```
+
+where `c` is `ABIL_DRIP_CURVATURE`; positive raw gains retain a one-point
+minimum after truncation.
 
 Adjudication retains the expectation/oracle audit comparison and the
 asymmetric reducer, but only fires for an overridden refusal or a witness
