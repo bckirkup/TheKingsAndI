@@ -99,7 +99,7 @@ describe('campaign trajectory bands', () => {
     ]);
     expect(bands[0]?.meanTauAbil).toBe(16);
     expect(bands[0]?.meanTauBenev).toBe(32);
-    expect(bands[0]?.meanVindicationRate).toBe(0.15);
+    expect(bands[0]?.meanVindicationRate).toBeCloseTo(0.15);
     expect(bands[0]?.meanSurvivingRosterSize).toBe(1.5);
     expect(bands[0]?.desertionMatchRate).toBe(0.5);
     expect(bands[0]?.desertionAttrition).toBe(1);
