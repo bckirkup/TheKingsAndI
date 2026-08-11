@@ -764,6 +764,13 @@ The utility margin that classifies a piece as nearly refusing remains open.
 adjudication is restricted to overridden refusals and witnesses within that
 margin.
 
+### D117 ⚠ Drip satiation curvature (ADR 0044)
+How strongly should safe-play ability drip diminish as `tauAbil` rises? The
+implementation exposes `ABIL_DRIP_CURVATURE`, initially `2`, and applies the
+same integer-rational current-level curvature discipline as ADR 0043 while
+leaving `abilityObservationCount` unchanged. The magnitude remains open for
+owner calibration.
+
 ### D1 ⚠ Which audience ships first?
 Partially answered by D13: validate the psychology in the lightest distribution,
 then Steam. That implies the tactical/debug skin during development and an indie
