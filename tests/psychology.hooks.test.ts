@@ -95,6 +95,7 @@ describe('desertion cascade (live path)', () => {
     const moveEval = {
       moveNotation: 'a4',
       deltaV_board: 0,
+      privateScoreCp: 0,
       vLeaderImplied: 0,
       deltaV_capture: 0,
       P_captured: 0.5,
@@ -110,6 +111,7 @@ describe('desertion cascade (live path)', () => {
     const firstEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.1,
@@ -137,6 +139,7 @@ describe('desertion cascade (live path)', () => {
     const moveEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.9,
@@ -203,6 +206,7 @@ describe('desertion cascade (live path)', () => {
     const actorEval = {
       moveNotation: 'a4',
       deltaV_board: -2,
+      privateScoreCp: 0,
       vLeaderImplied: 1,
       deltaV_capture: 0,
       P_captured: 0.9,
@@ -266,6 +270,7 @@ describe('departure witnessing and positive signals', () => {
       {
         moveNotation: 'a4',
         deltaV_board: -2,
+        privateScoreCp: 0,
         vLeaderImplied: 1,
         deltaV_capture: 0,
         P_captured: 0.5,
@@ -293,6 +298,7 @@ describe('departure witnessing and positive signals', () => {
       {
         moveNotation: 'a4',
         deltaV_board: 2,
+        privateScoreCp: 0,
         vLeaderImplied: 1,
         deltaV_capture: 0,
         P_captured: 0.5,

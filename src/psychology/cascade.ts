@@ -1,5 +1,9 @@
 import { applyRumorDiffusion } from './belief';
-import { raiseLossEstimatesAfterDesertion } from './desertion';
+import {
+  calculatePivotalityPermille,
+  raiseLossEstimatesAfterDesertion,
+} from './desertion';
+import { ENGINE_CONFIG } from './config';
 import { normalizePieceState } from './reducers';
 import { evaluateDesertionCascade } from './verdict';
 import { appraiseDesertionWitness } from './witness';
@@ -14,14 +18,45 @@ import type {
 export function desertionContextFor(
   piece: PieceState,
   moveEval: CandidateMoveEvaluation,
+  activePeers: readonly PieceState[] = [piece],
 ): DesertionContext {
-  const pLossBase = piece.rumor.pLossTeam / 1000;
-  const captureStress =
-    moveEval.P_captured > 0.35 ? moveEval.P_captured * 0.3 : 0;
+  const score = Math.trunc(moveEval.privateScoreCp);
+  const scale = Math.max(1, ENGINE_CONFIG.DESERTION_BOARD_LOSS_SCALE_CP);
+  const boardLossPermille = Math.max(
+    1,
+    Math.min(999, 500 - Math.trunc((500 * score) / (Math.abs(score) + scale))),
+  );
+  const rumorPermille = Math.max(0, Math.min(1_000, piece.rumor.pLossTeam));
+  const boardWeight = Math.max(
+    0,
+    Math.min(1_000, ENGINE_CONFIG.DESERTION_BOARD_LOSS_WEIGHT_PERMILLE),
+  );
+  const blendedPermille = Math.trunc(
+    (boardLossPermille * boardWeight + rumorPermille * (1_000 - boardWeight)) /
+      1_000,
+  );
+  const captureStressPermille =
+    moveEval.P_captured > 0.35 ? Math.trunc(moveEval.P_captured * 300) : 0;
+  const pLossIfStayPermille = Math.min(
+    1_000,
+    blendedPermille + captureStressPermille,
+  );
+  const pivotalityPermille = calculatePivotalityPermille(piece, activePeers);
+  const pivotalityScale = Math.max(
+    0,
+    Math.min(1_000, ENGINE_CONFIG.DESERTION_PIVOTALITY_SCALE_PERMILLE),
+  );
+  const pivotalityLossPermille = Math.trunc(
+    (pivotalityPermille * pivotalityScale) / 1_000,
+  );
   return {
     P_captured: moveEval.P_captured,
-    P_lossIfStay: Math.min(1, pLossBase + captureStress),
-    P_lossIfLeave: Math.min(1, pLossBase + 0.5),
+    P_lossIfStay: pLossIfStayPermille / 1_000,
+    P_lossIfLeave:
+      Math.min(1_000, pLossIfStayPermille + pivotalityLossPermille) / 1_000,
+    pLossBoard: boardLossPermille / 1_000,
+    pivotality: pivotalityLossPermille / 1_000,
+    shadowFactor: 1,
   };
 }
 
@@ -33,16 +68,21 @@ export function buildDesertionContexts(
   for (const piece of roster) {
     const moveEval = moveEvalByPiece[piece.id];
     if (moveEval === undefined) {
-      contexts[piece.id] = desertionContextFor(piece, {
-        moveNotation: '',
-        deltaV_board: 0,
-        vLeaderImplied: 0,
-        deltaV_capture: 0,
-        P_captured: 0,
-        peerSafetyDeltas: {},
-      });
+      contexts[piece.id] = desertionContextFor(
+        piece,
+        {
+          moveNotation: '',
+          deltaV_board: 0,
+          privateScoreCp: 0,
+          vLeaderImplied: 0,
+          deltaV_capture: 0,
+          P_captured: 0,
+          peerSafetyDeltas: {},
+        },
+        roster,
+      );
     } else {
-      contexts[piece.id] = desertionContextFor(piece, moveEval);
+      contexts[piece.id] = desertionContextFor(piece, moveEval, roster);
     }
   }
   return contexts;

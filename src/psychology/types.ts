@@ -63,6 +63,8 @@ export interface CandidateMoveEvaluation {
   readonly moveNotation: string;
   /** Piece's own depth-D_i board delta (V_own component). */
   readonly deltaV_board: number;
+  /** Piece's own absolute post-move score, in centipawns. */
+  readonly privateScoreCp: number;
   /** Value the piece infers the leader must see (ADR 0015). */
   readonly vLeaderImplied: number;
   readonly deltaV_capture: number;
@@ -91,6 +93,10 @@ export interface DesertionContext {
   readonly P_captured: number;
   readonly P_lossIfStay: number;
   readonly P_lossIfLeave: number;
+  readonly pLossBoard?: number;
+  readonly pivotality?: number;
+  readonly shadowFactor?: number;
+  readonly attachment?: number;
 }
 
 export interface DesertionDecisionTerms {
@@ -98,6 +104,10 @@ export interface DesertionDecisionTerms {
   readonly pain: number;
   readonly P_lossIfStay: number;
   readonly P_lossIfLeave: number;
+  readonly pLossBoard?: number;
+  readonly pivotality?: number;
+  readonly shadowFactor?: number;
+  readonly attachment?: number;
   readonly lambda: number;
   readonly lambdaTrust: number;
   readonly lambdaMorale: number;

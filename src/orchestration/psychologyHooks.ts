@@ -217,7 +217,7 @@ export function applyRosterAbilityObservations(
       piece,
       moveEval,
       roster,
-      desertionContextFor(piece, moveEval),
+      desertionContextFor(piece, moveEval, roster),
     );
     const nearRefusal = isNearRefusal(witnessOutcome);
     const challenged =

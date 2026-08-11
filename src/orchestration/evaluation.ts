@@ -19,6 +19,7 @@ export function insightToEvaluation(
   return {
     moveNotation: features.san,
     deltaV_board,
+    privateScoreCp: privateDeltaInsight.scoreCp,
     vLeaderImplied,
     deltaV_capture: features.deltaVCapture,
     P_captured: features.pCaptured,
@@ -42,6 +43,7 @@ export function featuresToEvaluation(
   return {
     moveNotation: features.san,
     deltaV_board,
+    privateScoreCp: 0,
     vLeaderImplied: deltaV_board + leaderGap,
     deltaV_capture: features.deltaVCapture,
     P_captured: features.pCaptured,

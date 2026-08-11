@@ -14,6 +14,7 @@ export function featuresToEvaluation(
   return {
     moveNotation: features.san,
     deltaV_board,
+    privateScoreCp: 0,
     vLeaderImplied: deltaV_board + leaderGap,
     deltaV_capture: features.deltaVCapture,
     P_captured: features.pCaptured,

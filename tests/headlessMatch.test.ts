@@ -16,6 +16,7 @@ describe('headless player refusal replanning', () => {
     const refusalEvaluation: CandidateMoveEvaluation = {
       moveNotation: 'refused',
       deltaV_board: -1,
+      privateScoreCp: 0,
       vLeaderImplied: -1,
       deltaV_capture: 0,
       P_captured: 0,

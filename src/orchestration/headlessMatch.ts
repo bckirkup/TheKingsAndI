@@ -419,7 +419,7 @@ export async function runHeadlessMatch(
       );
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
-      const desertionContext = desertionContextFor(actor, moveEval);
+      const desertionContext = desertionContextFor(actor, moveEval, roster);
       const desertionDecision = shouldDesert(actor, desertionContext, roster);
       let outcome = evaluateMoveResponse(
         actor,
