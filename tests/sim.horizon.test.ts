@@ -133,9 +133,9 @@ describe('campaign horizon series', () => {
         meanSurvivingRosterSize: 17,
       },
     ]);
-    expect(buildHorizonSeries(metrics).map((point) => point.meanTauAbil)).toEqual(
-      [2, 3, 4],
-    );
+    expect(
+      buildHorizonSeries(metrics).map((point) => point.meanTauAbil),
+    ).toEqual([2, 3, 4]);
   });
 
   it('has one point per match for 16-match and odd-length campaigns', () => {
