@@ -168,10 +168,13 @@ function applyPlayerMoveConsequences(input: {
   readonly roster: PieceState[];
   readonly events: MatchEvent[];
   readonly lastFriendlyCapturePly: number | undefined;
+  readonly abilityDripStreakByPiece: Readonly<Record<string, number>>;
+  readonly actorChallenged: boolean;
 }): {
   readonly roster: PieceState[];
   readonly lastFriendlyCapturePly: number | undefined;
   readonly ply: number;
+  readonly abilityDripStreakByPiece: Readonly<Record<string, number>>;
 } {
   const {
     board,
@@ -186,6 +189,8 @@ function applyPlayerMoveConsequences(input: {
     objectivelyGood,
     ply,
     events,
+    abilityDripStreakByPiece,
+    actorChallenged,
   } = input;
   let roster = input.roster;
   let lastFriendlyCapturePly = input.lastFriendlyCapturePly;
@@ -204,6 +209,10 @@ function applyPlayerMoveConsequences(input: {
     bestAuditScore,
     bestAuditScore,
     ply,
+    actor.id,
+    actorChallenged,
+    moveEval.deltaV_board >= 0,
+    abilityDripStreakByPiece,
   );
   events.push(...abilityObservations.events);
   roster = abilityObservations.roster.map((piece) =>
@@ -264,6 +273,7 @@ function applyPlayerMoveConsequences(input: {
     roster,
     lastFriendlyCapturePly,
     ply: ply + 1,
+    abilityDripStreakByPiece: abilityObservations.dripStreakByPiece,
   };
 }
 
@@ -289,6 +299,7 @@ export async function runHeadlessMatch(
   const enemyObservableBehaviours: string[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
+  let abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
   const opponentArchetype = config.opponentArchetype ?? 'random';
 
   while (ply <= config.maxPlies) {
@@ -331,6 +342,7 @@ export async function runHeadlessMatch(
       for (const id of beforeIds) {
         if (!afterIds.has(id)) {
           lastFriendlyCapturePly = ply - 1;
+          abilityDripStreakByPiece = {};
           break;
         }
       }
@@ -354,6 +366,7 @@ export async function runHeadlessMatch(
         }
       | undefined;
     let turnCompleted = false;
+    let actorChallenged = false;
     for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
       const choice = await leader.chooseMove(
         board,
@@ -423,6 +436,7 @@ export async function runHeadlessMatch(
 
       if (outcome.verdict === 'MORAL_REFUSAL') {
         if (leader.shouldOverride(config.random, ply)) {
+          actorChallenged = true;
           const override = applyPlayerOverride(
             roster,
             actor,
@@ -541,9 +555,12 @@ export async function runHeadlessMatch(
         roster,
         events,
         lastFriendlyCapturePly,
+        abilityDripStreakByPiece,
+        actorChallenged,
       });
       roster = committed.roster;
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
+      abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
       ply = committed.ply;
       turnCompleted = true;
       break;
@@ -586,9 +603,12 @@ export async function runHeadlessMatch(
         roster,
         events,
         lastFriendlyCapturePly,
+        abilityDripStreakByPiece,
+        actorChallenged: true,
       });
       roster = committed.roster;
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
+      abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
       ply = committed.ply;
       continue;
     }

@@ -36,6 +36,9 @@ export interface MatchMetrics {
   readonly abilityObservations?: number;
   readonly vindicatedAbilityObservations?: number;
   readonly vindicationRate?: number;
+  readonly dripEvents?: number;
+  readonly adjudicationObservations?: number;
+  readonly adjudicationVindicationRate?: number;
   readonly fieldedPieceIds: readonly PieceId[];
   readonly desertedPieceIds: readonly PieceId[];
   readonly refusalRate: number;
@@ -112,6 +115,8 @@ export interface CampaignTrajectoryBand {
   readonly meanRefusalRate: number;
   readonly meanRefusalsPerPly: number;
   readonly meanVindicationRate: number;
+  readonly meanDripEvents: number;
+  readonly meanAdjudicationVindicationRate: number;
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly routRate: number;
@@ -185,6 +190,7 @@ function countEvents(
   orderTerminatedDesertionPlies: number;
   abilityObservations: number;
   vindicatedAbilityObservations: number;
+  dripEvents: number;
   desertedPieceIds: ReadonlySet<PieceId>;
 } {
   let refusals = 0;
@@ -195,6 +201,7 @@ function countEvents(
   let executedOrders = 0;
   let abilityObservations = 0;
   let vindicatedAbilityObservations = 0;
+  let dripEvents = 0;
   const orderTerminatedDesertionPlies = new Set<number>();
   const desertedPieceIds = new Set<PieceId>();
   const fieldedIds = new Set<PieceId>(fieldedPieceIds);
@@ -228,6 +235,9 @@ function countEvents(
           if (event.vindicated) vindicatedAbilityObservations += 1;
         }
         break;
+      case 'ABILITY_DRIP':
+        if (isCommandedPiece) dripEvents += 1;
+        break;
       default:
         break;
     }
@@ -242,6 +252,7 @@ function countEvents(
     orderTerminatedDesertionPlies: orderTerminatedDesertionPlies.size,
     abilityObservations,
     vindicatedAbilityObservations,
+    dripEvents,
     desertedPieceIds,
   };
 }
@@ -350,6 +361,7 @@ export function metricsFromMatch(
   const vindicationRate =
     counts.vindicatedAbilityObservations /
     Math.max(1, counts.abilityObservations);
+  const adjudicationVindicationRate = vindicationRate;
   const meanTrustStart = meanTrust(rosterStart);
   const meanTrustEnd = meanTrust(result.roster);
   const meanTauAbilStart = meanTauAbil(rosterStart);
@@ -376,6 +388,9 @@ export function metricsFromMatch(
     abilityObservations: counts.abilityObservations,
     vindicatedAbilityObservations: counts.vindicatedAbilityObservations,
     vindicationRate,
+    dripEvents: counts.dripEvents,
+    adjudicationObservations: counts.abilityObservations,
+    adjudicationVindicationRate,
     fieldedPieceIds,
     desertedPieceIds: [...counts.desertedPieceIds],
     refusalRate,
@@ -434,6 +449,10 @@ export function buildTrajectoryBands(
       meanRefusalRate: mean((metric) => metric.refusalRate),
       meanRefusalsPerPly: mean((metric) => metric.refusalsPerPly),
       meanVindicationRate: mean((metric) => metric.vindicationRate ?? 0),
+      meanDripEvents: mean((metric) => metric.dripEvents ?? 0),
+      meanAdjudicationVindicationRate: mean(
+        (metric) => metric.adjudicationVindicationRate ?? 0,
+      ),
       desertionMatchRate:
         metrics.filter((metric) => metric.desertions > 0).length /
         Math.max(1, metrics.length),

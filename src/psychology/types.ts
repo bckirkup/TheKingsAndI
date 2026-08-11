@@ -146,6 +146,14 @@ export type MatchEvent =
       readonly ply: number;
       readonly pieceId: PieceId;
       readonly vindicated: boolean;
+      readonly channel?: 'adjudication';
+    }
+  | {
+      readonly t: 'ABILITY_DRIP';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly streak: number;
+      readonly gain: number;
     }
   | {
       readonly t: 'REFUSAL';
