@@ -4,14 +4,13 @@
 *The Kings and I* (internal codename: Living Chess): chess where the pieces have
 persistent identities, memory, trust, class prejudice, and the ability to refuse
 orders or walk off the board. Doubles as a leadership-dynamics simulation.
-**Status: Milestones 1–6 substantially landed on `main`.** Chess substrate,
-Stockfish 1.3 pool + shared-search broker, psychology + live cascade/witness/
-sacrifice/costly-signal wiring, headless harness with sweeps, playable UI slice,
-single-player persistence/campaign spine, and authored narration are in tree.
-**Open:** Milestone 3 supportive-desertion calibration; **Milestone 5b** seminar /
-cohort / multi-commander tasks. D49 and D50 are **decided** by ADRs 0035 and 0036
-but not fully wired into live state/persistence — see
-`docs/adr/IMPLEMENTATION_STATUS.md`.
+**Status: Core match, psychology, persistence, narration, and headless
+world/season slices are in tree; the target community/seminar system is not
+fully shipped.** Use `docs/adr/IMPLEMENTATION_STATUS.md` as the authoritative
+decided-versus-shipped matrix. In particular, commander-keyed credence,
+persisted engine audit truth, capture trauma, the shared community/free-agent
+model, and facilitator/cohort host surfaces are not all wired. Do not infer
+implementation status from an ADR or the decision register alone.
 
 ## Read This First
 | Doc | Purpose |
@@ -58,6 +57,10 @@ but not fully wired into live state/persistence — see
    folds over the log, never separately maintained counters.
 6. **Every config knob gets a golden test AND a sensitivity test.** See the
    `ci-test-design` skill. A parsed-but-unwired knob is a review failure.
+   A decision may not be recorded as answered while its governing state has no
+   implementing write: the register entry must carry an implementing
+   `file:line`, or an explicit **not wired** marker, and its status must agree
+   with `docs/adr/IMPLEMENTATION_STATUS.md`.
 7. **Never modify tests to make them pass** — fix the implementation.
 8. **Accepted design invariants** (ADRs 0002–0012). A commanded move is always
    the move played (insight is advice, ADR 0008). Refusal is free to re-plan; it
