@@ -84,6 +84,12 @@ describe('campaign horizon series', () => {
     expect(first).toEqual({
       horizon: 1,
       meanWinScore: firstMetric.winScore,
+      winCount: firstMetric.winScore === 100 ? 1 : 0,
+      drawCount: firstMetric.winScore === 50 ? 1 : 0,
+      lossCount: firstMetric.winScore === 0 ? 1 : 0,
+      winRate: firstMetric.winScore === 100 ? 1 : 0,
+      drawRate: firstMetric.winScore === 50 ? 1 : 0,
+      lossRate: firstMetric.winScore === 0 ? 1 : 0,
       routRate: firstMetric.rout ? 1 : 0,
       meanRefusalRate: firstMetric.refusalRate,
       meanRefusalsPerPly: firstMetric.refusalsPerPly,
@@ -98,6 +104,12 @@ describe('campaign horizon series', () => {
     expect(final).toEqual({
       horizon: summary.matches,
       meanWinScore: summary.meanWinScore,
+      winCount: 0,
+      drawCount: 0,
+      lossCount: 0,
+      winRate: 0,
+      drawRate: 0,
+      lossRate: 0,
       routRate: summary.routCampaignRate,
       meanRefusalRate: summary.meanRefusalRate,
       meanRefusalsPerPly: summary.meanRefusalsPerPly,
@@ -199,14 +211,14 @@ describe('campaign horizon series', () => {
       'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
     );
     expect(csv).toContain(
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,win_count,draw_count,loss_count,win_rate,draw_rate,loss_rate,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
     );
     expect(csv.indexOf('\n\ntrajectory_quartile')).toBeGreaterThan(-1);
     expect(csv.indexOf('\n\nhorizon')).toBeGreaterThan(
       csv.indexOf('\n\ntrajectory_quartile'),
     );
     expect(csv).toContain(
-      '\n1,10.00,0.0000,0.0909,0.1000,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
+      '\n1,10.00,0,0,0,0.0000,0.0000,0.0000,0.0000,0.0909,0.1000,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
     );
   });
 });

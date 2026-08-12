@@ -300,6 +300,7 @@ async function main(): Promise<void> {
     result.campaigns.flatMap((campaign) => campaign.result.metrics),
     result.trajectoryBands,
     result.horizon,
+    result.matchedSkillHorizon,
   );
   if (options.out !== undefined) {
     await mkdir(dirname(options.out), { recursive: true });
@@ -349,6 +350,15 @@ async function main(): Promise<void> {
   for (const band of result.trajectoryBands) {
     console.log(
       `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} vindication=${band.meanVindicationRate.toFixed(3)} drip_events=${band.meanDripEvents.toFixed(2)} adjudication_vindication=${band.meanAdjudicationVindicationRate.toFixed(3)} tau_abil_role=${JSON.stringify(band.meanFinalTauAbilByRole)} refusal=${band.meanRefusalRate.toFixed(3)} refusals_per_ply=${band.meanRefusalsPerPly.toFixed(3)} desertion_match=${band.desertionMatchRate.toFixed(3)} desertion_attrition=${band.desertionAttrition.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,
+    );
+  }
+  for (const point of result.matchedSkillHorizon.filter((entry) =>
+    [3, 5, 10, 20].includes(entry.horizon),
+  )) {
+    const psychological = result.horizon[point.horizon - 1];
+    if (psychological === undefined) continue;
+    console.log(
+      `span=${point.horizon} psychological_win=${psychological.meanWinScore.toFixed(2)} psychological_wdl=${psychological.winCount}/${psychological.drawCount}/${psychological.lossCount} control_win=${point.meanWinScore.toFixed(2)} delta=${(psychological.meanWinScore - point.meanWinScore).toFixed(2)}`,
     );
   }
   for (const finding of findings) {
