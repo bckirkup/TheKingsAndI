@@ -144,6 +144,12 @@ export interface CampaignTrajectoryBand {
 export interface CampaignHorizon {
   readonly horizon: number;
   readonly meanWinScore: number;
+  readonly winCount: number;
+  readonly drawCount: number;
+  readonly lossCount: number;
+  readonly winRate: number;
+  readonly drawRate: number;
+  readonly lossRate: number;
   readonly routRate: number;
   readonly meanRefusalRate: number;
   readonly meanRefusalsPerPly: number;
@@ -154,6 +160,14 @@ export interface CampaignHorizon {
   readonly meanTauAbil: number;
   readonly meanTauBenev: number;
   readonly meanTrustEnd: number;
+}
+
+export interface ControlHorizon {
+  readonly horizon: number;
+  readonly meanWinScore: number;
+  readonly winRate: number;
+  readonly drawRate: number;
+  readonly lossRate: number;
 }
 
 export interface PerRoleCultureMetric {
@@ -658,9 +672,20 @@ function horizonFromSummary(
   horizon: number,
   summary: Omit<CampaignMetrics, 'horizon'>,
 ): CampaignHorizon {
+  const metrics = summary.matchMetrics.slice(0, horizon);
+  const winCount = metrics.filter((metric) => metric.winScore === 100).length;
+  const drawCount = metrics.filter((metric) => metric.winScore === 50).length;
+  const lossCount = metrics.filter((metric) => metric.winScore === 0).length;
+  const count = Math.max(1, metrics.length);
   return {
     horizon,
     meanWinScore: summary.meanWinScore,
+    winCount,
+    drawCount,
+    lossCount,
+    winRate: winCount / count,
+    drawRate: drawCount / count,
+    lossRate: lossCount / count,
     routRate: summary.routCampaignRate,
     meanRefusalRate: summary.meanRefusalRate,
     meanRefusalsPerPly: summary.meanRefusalsPerPly,
@@ -707,6 +732,7 @@ export function renderCsv(
   metrics: readonly MatchMetrics[],
   trajectoryBands?: readonly CampaignTrajectoryBand[],
   horizon?: readonly CampaignHorizon[],
+  controlHorizon?: readonly ControlHorizon[],
 ): string {
   const rows = metrics.map((metric) =>
     [
@@ -798,11 +824,17 @@ export function renderCsv(
   if (horizon !== undefined) {
     output.push(
       '',
-      'horizon,mean_win_score,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,win_count,draw_count,loss_count,win_rate,draw_rate,loss_rate,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
       ...horizon.map((point) =>
         [
           point.horizon,
           point.meanWinScore.toFixed(2),
+          point.winCount,
+          point.drawCount,
+          point.lossCount,
+          point.winRate.toFixed(4),
+          point.drawRate.toFixed(4),
+          point.lossRate.toFixed(4),
           point.routRate.toFixed(4),
           point.meanRefusalRate.toFixed(4),
           point.meanRefusalsPerPly.toFixed(4),
@@ -813,6 +845,21 @@ export function renderCsv(
           point.meanTauAbil.toFixed(2),
           point.meanTauBenev.toFixed(2),
           point.meanTrustEnd.toFixed(2),
+        ].join(','),
+      ),
+    );
+  }
+  if (controlHorizon !== undefined) {
+    output.push(
+      '',
+      'matched_skill_horizon,mean_win_score,win_rate,draw_rate,loss_rate',
+      ...controlHorizon.map((point) =>
+        [
+          point.horizon,
+          point.meanWinScore.toFixed(2),
+          point.winRate.toFixed(4),
+          point.drawRate.toFixed(4),
+          point.lossRate.toFixed(4),
         ].join(','),
       ),
     );

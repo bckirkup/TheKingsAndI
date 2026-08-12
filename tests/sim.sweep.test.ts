@@ -7,7 +7,13 @@ import {
   ENGINE_CONFIG,
   normalizePieceState,
 } from '../src/psychology';
-import { plainChessMeanWinScore } from '../sim/baseline';
+import {
+  plainChessHorizonSeries,
+  plainChessMeanWinScore,
+  runPlainChessMatch,
+  plainChessWinScores,
+} from '../sim/baseline';
+import { matchSeedForCampaign } from '../sim/campaign';
 import { runCoefficientSweep } from '../sim/sweep';
 
 const samplePiece = normalizePieceState({
@@ -52,6 +58,60 @@ describe('plain-chess baseline', () => {
       whiteLeader: 'tyrannical',
     });
     expect(a).toBe(b);
+  });
+
+  it('golden: horizon prefixes use the campaign match seed derivation', () => {
+    const scores = plainChessWinScores({
+      matches: 3,
+      seed: 7,
+      whiteLeader: 'tyrannical',
+    });
+    expect(scores).toEqual(
+      [1, 2, 3].map(
+        (match) =>
+          runPlainChessMatch({
+            seed: matchSeedForCampaign(7, match),
+            whiteLeader: 'tyrannical',
+          }).winScore,
+      ),
+    );
+    expect(
+      plainChessHorizonSeries({
+        matches: 3,
+        seed: 7,
+        whiteLeader: 'tyrannical',
+      }),
+    ).toEqual([
+      { horizon: 1, meanWinScore: 0, winRate: 0, drawRate: 0, lossRate: 1 },
+      {
+        horizon: 2,
+        meanWinScore: 50,
+        winRate: 0.5,
+        drawRate: 0,
+        lossRate: 0.5,
+      },
+      {
+        horizon: 3,
+        meanWinScore: 33.333333333333336,
+        winRate: 1 / 3,
+        drawRate: 0,
+        lossRate: 2 / 3,
+      },
+    ]);
+  });
+
+  it('sensitivity: changing the campaign seed changes control output', () => {
+    const first = plainChessHorizonSeries({
+      matches: 5,
+      seed: 7,
+      whiteLeader: 'supportive',
+    });
+    const second = plainChessHorizonSeries({
+      matches: 5,
+      seed: 8,
+      whiteLeader: 'supportive',
+    });
+    expect(second).not.toEqual(first);
   });
 });
 

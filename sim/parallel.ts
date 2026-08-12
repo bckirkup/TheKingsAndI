@@ -4,6 +4,10 @@ import { canonicalJson } from '../src/core/canonicalJson';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
 
 import {
+  averagePlainChessHorizonSeries,
+  plainChessHorizonSeries,
+} from './baseline';
+import {
   runCampaign,
   type CampaignOptions,
   type CampaignResult,
@@ -18,6 +22,7 @@ import {
   type CampaignTrajectoryBand,
   type CampaignMetrics,
   type MatchMetrics,
+  type ControlHorizon,
 } from './metrics';
 import { type Leader } from './cli';
 import {
@@ -155,17 +160,20 @@ export interface CampaignArtifact {
   readonly campaignIndex: number;
   readonly campaignSeed: number;
   readonly metrics: readonly MatchMetrics[];
+  readonly matchedSkillHorizon?: readonly ControlHorizon[];
 }
 
 export interface ShardArtifact {
   readonly manifest: ShardManifest;
   readonly campaigns: readonly CampaignArtifact[];
+  readonly matchedSkillHorizon?: readonly ControlHorizon[];
 }
 
 export interface ShardCampaignResult {
   readonly campaignIndex: number;
   readonly campaignSeed: number;
   readonly result: CampaignResult;
+  readonly matchedSkillHorizon: readonly ControlHorizon[];
 }
 
 export interface ShardResult {
@@ -174,6 +182,7 @@ export interface ShardResult {
   readonly summary: CampaignMetrics;
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
   readonly horizon: readonly CampaignHorizon[];
+  readonly matchedSkillHorizon: readonly ControlHorizon[];
 }
 
 export function deriveCampaignSeed(
@@ -264,7 +273,16 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
           ? {}
           : { onCheckpoint: options.onCheckpoint }),
       });
-      campaigns.push({ campaignIndex, campaignSeed, result });
+      campaigns.push({
+        campaignIndex,
+        campaignSeed,
+        result,
+        matchedSkillHorizon: plainChessHorizonSeries({
+          matches: result.metrics.length,
+          seed: campaignSeed,
+          whiteLeader: options.leader,
+        }),
+      });
     }
     const allMetrics = campaigns.flatMap((campaign) => campaign.result.metrics);
     const determinismId =
@@ -308,6 +326,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       horizon: averageCampaignHorizonSeries(
         campaigns.map((campaign) => campaign.result.metrics),
       ),
+      matchedSkillHorizon: averagePlainChessHorizonSeries(
+        campaigns.map((campaign) => campaign.matchedSkillHorizon),
+      ),
     };
   } finally {
     if (engine !== undefined) {
@@ -323,7 +344,9 @@ export function artifactFromShard(result: ShardResult): ShardArtifact {
       campaignIndex: campaign.campaignIndex,
       campaignSeed: campaign.campaignSeed,
       metrics: campaign.result.metrics,
+      matchedSkillHorizon: campaign.matchedSkillHorizon,
     })),
+    matchedSkillHorizon: result.matchedSkillHorizon,
   };
 }
 
@@ -365,6 +388,7 @@ export interface AggregatedRun {
   readonly campaigns: readonly CampaignArtifact[];
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
   readonly horizon: readonly CampaignHorizon[];
+  readonly matchedSkillHorizon: readonly ControlHorizon[];
 }
 
 export function averageCampaignTrajectoryBands(
@@ -435,6 +459,12 @@ export function averageCampaignHorizonSeries(
     return {
       horizon: index + 1,
       meanWinScore: mean((point) => point.meanWinScore),
+      winCount: mean((point) => point.winCount),
+      drawCount: mean((point) => point.drawCount),
+      lossCount: mean((point) => point.lossCount),
+      winRate: mean((point) => point.winRate),
+      drawRate: mean((point) => point.drawRate),
+      lossRate: mean((point) => point.lossRate),
       routRate: mean((point) => point.routRate),
       meanRefusalRate: mean((point) => point.meanRefusalRate),
       meanRefusalsPerPly: mean((point) => point.meanRefusalsPerPly),
@@ -566,6 +596,17 @@ export function aggregateShardArtifacts(
     ),
     horizon: averageCampaignHorizonSeries(
       orderedCampaigns.map((campaign) => campaign.metrics),
+    ),
+    matchedSkillHorizon: averagePlainChessHorizonSeries(
+      orderedCampaigns.map(
+        (campaign) =>
+          campaign.matchedSkillHorizon ??
+          plainChessHorizonSeries({
+            matches: campaign.metrics.length,
+            seed: campaign.campaignSeed,
+            whiteLeader: first.leader,
+          }),
+      ),
     ),
   };
 }
