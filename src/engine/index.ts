@@ -30,6 +30,7 @@ export {
   applyPrivateScoring,
 } from './search';
 export type {
+  EngineAuditEntry,
   EngineEvaluation,
   EnginePort,
   EvalProfile,

@@ -202,6 +202,7 @@ export class CareerRepository {
     readonly rosterSnapshot: readonly StoredPieceState[];
     readonly rosterEnd: readonly StoredPieceState[];
     readonly events: MatchRecord['events'];
+    readonly engineAudit?: MatchRecord['engineAudit'];
     readonly result: MatchRecord['result'];
   }): Promise<MatchRecord> {
     const matchId = deterministicId(
@@ -223,6 +224,7 @@ export class CareerRepository {
       rosterSnapshot: input.rosterSnapshot,
       rosterEnd: input.rosterEnd,
       events: input.events,
+      engineAudit: input.engineAudit ?? [],
       result: input.result,
       audit,
       determinismId: DETERMINISM_ID,

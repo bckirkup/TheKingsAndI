@@ -182,7 +182,10 @@ dropped from a shipping save without breaking play.
 evaluations are persisted in a separate, droppable audit stream with no code
 path from the psychology loader. Every audit score carries provenance,
 including `determinismId` and depth for true engine values or an explicit
-authored/placeholder marker for non-measured values.
+authored/placeholder marker for non-measured values. The live implementation
+is `src/engine/types.ts:27-35`, `src/orchestration/headlessMatch.ts:418-421`,
+`src/orchestration/matchSession.ts:190-192`, and
+`src/persistence/repository.ts:217-231`.
 
 ### D95–D96 ✅ How fast a read forms, and what precedes it (ADR 0039, proposed)
 Surfaced from the Milestone 3 calibration failure and the owner's question of
@@ -916,6 +919,39 @@ length remain calibration-open (`src/psychology/trauma.ts:10-42`).
 The defaults for `CAPTURE_TRAUMA_GAIN`, `DREAD_CAPTURE_RISK_THRESHOLD`,
 `DREAD_TRAUMA_GAIN`, and `DREAD_REQUIRED_PLIES` are provisional calibration
 knobs, not settled psychological coefficients.
+
+### D134 ⚠ Heroism decisive threshold (ADR 0050)
+The integer margin that makes a true act decisive is provisional and requires
+calibration. It is wired only as a machine nomination threshold at
+`src/orchestration/heroismConfig.ts:6-10`; it confers no honour and has no
+psychology or fielding effect.
+
+### D135 ⚠ Heroism private-disagreement threshold (ADR 0050)
+The integer private-harm threshold that marks blindness is provisional and
+requires calibration. It is wired only as a machine nomination threshold at
+`src/orchestration/heroismConfig.ts:6-10`; it confers no honour and has no
+psychology or fielding effect.
+
+### D136 ⚠ Headless heroism conferral stand-in (ADR 0050)
+Whether a headless harness may stand in for a human cohort, and what quorum
+means there, remains open. No conferral implementation exists.
+
+### D137 ⚠ Non-selection is the sanction (D129 bearing)
+The owner's ruling is that bad conduct is sanctioned by not being selected,
+not by extending desertion absence. This is not implemented; the current
+absence term remains at `sim/pool.ts:350-399`. Selection state is pool
+bookkeeping and does not reach `PieceState`.
+
+### D138 ⚠ Obsolescence ends a career (D130 bearing)
+The owner's ruling is that a career ends when nobody chooses the piece,
+rather than at a trauma threshold. This is not implemented; current
+trauma-threshold retirement remains at `sim/pool.ts:350-399`.
+
+### D139 ⚠ Selection state is not piece-perceived
+The current `PieceState` has no selection or service fields
+(`src/psychology/types.ts:47-60`), and pool selection remains in
+`sim/pool.ts:26-39` and `sim/season.ts:76-93`. A piece therefore cannot
+currently perceive non-selection; wiring that perception is a future slice.
 
 ## Suggested decision order
 

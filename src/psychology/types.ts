@@ -258,6 +258,13 @@ export type MatchEvent =
       readonly actorId: PieceId;
       readonly witnessId: PieceId;
       readonly trustDelta: number;
+    }
+  | {
+      /** Machine candidate only; a human cohort must confer any honour. */
+      readonly t: 'HEROISM_NOMINATION';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly san: string;
     };
 
 export interface CampaignCultureDriftVector {

@@ -23,6 +23,16 @@ export interface EngineEvaluation {
   readonly pv: readonly string[];
 }
 
+/** Persisted true-evaluation evidence; never passed into psychology. */
+export interface EngineAuditEntry {
+  readonly ply: number;
+  readonly pieceId: PieceId;
+  readonly san: string;
+  readonly preMoveScoreCp: number;
+  readonly scoreCp: number;
+  readonly bestScoreCp: number;
+}
+
 /** The narrow port of ADR 0020. `depth` is fixed; no wall clock, ever. */
 export interface EnginePort {
   /**

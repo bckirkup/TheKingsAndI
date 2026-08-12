@@ -36,5 +36,7 @@ AI commander; desertion and fatalistic costs still apply).
 ## Gaps
 
 - Three-channel reputation transfer (ADR 0035) still averages scalar credence
-- Engine audit stream persistence (ADR 0036) not yet a stored table
+- Engine audit stream persistence (ADR 0036) is stored on
+  `MatchRecord.engineAudit` as a separate, droppable stream; nomination
+  candidates remain event-log records and do not alter psychology or fielding
 - Seminar/cohort host surfaces (Milestone 5b) remain harness/world-sim scoped
