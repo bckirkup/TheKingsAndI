@@ -24,8 +24,10 @@ built. *(Internal codename: Living Chess.)*
 shared-search broker, psychology with live cascade/witness/sacrifice/costly-signal
 wiring, headless harness (including coefficient sweeps), playable UI slice,
 single-player campaign/persistence spine, and authored narration are in tree.
-Still open: supportive-desertion calibration, **Milestone 5b** (seminar/cohort),
-and architecture decisions **D49** / **D50**.
+Still open: supportive-desertion calibration and **Milestone 5b** (seminar/cohort).
+**D49** / **D50** are decided by ADRs 0035/0036 but not yet wired into live
+credence state or the engine audit stream — see
+[docs/adr/IMPLEMENTATION_STATUS.md](docs/adr/IMPLEMENTATION_STATUS.md).
 
 ```bash
 pnpm install
@@ -46,6 +48,8 @@ pnpm sim --matches=20 --leader=tyrannical # Lozza default; --engine=fake for CI
 | [docs/engine_licensing.md](docs/engine_licensing.md) | The engine port, and why the GPL problem binds later than it looks |
 | [docs/data_model.md](docs/data_model.md) | Entities, persistence, identity rules |
 | [docs/development_plan.md](docs/development_plan.md) | Milestones 0–8, exit criteria, estimates |
+| [docs/calibration/2026-08-10-state-of-play.md](docs/calibration/2026-08-10-state-of-play.md) | Current harness numbers (supersedes older calibration reports) |
+| [docs/adr/IMPLEMENTATION_STATUS.md](docs/adr/IMPLEMENTATION_STATUS.md) | ADR 0035–0047 decided vs shipped |
 | [docs/testing_strategy.md](docs/testing_strategy.md) | Golden + sensitivity tests, balance metrics |
 | [docs/llm_integration.md](docs/llm_integration.md) | Narration layer and how personality is authored |
 | [docs/risks_and_open_questions.md](docs/risks_and_open_questions.md) | What is most likely to go wrong |

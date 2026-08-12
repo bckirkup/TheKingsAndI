@@ -254,6 +254,248 @@ describe('learning delta (5.8q)', () => {
     expect(set.learningDelta).not.toBeNull();
     expect(set.learningDelta!.composite).toBeGreaterThan(0);
   });
+
+  it('golden + sensitivity: BEST_OF_BEST_RATIO_MIN', () => {
+    const roster = [
+      makePiece('star', 90),
+      makePiece('a', 10),
+      makePiece('b', 10),
+      makePiece('c', 10),
+    ];
+    const events: MatchEvent[] = [
+      {
+        t: 'MOVE',
+        ply: 1,
+        san: 'Nf3',
+        pieceId: 'star',
+        verdict: 'COMPLIANT_EXECUTION',
+        orderQualityCp: 80,
+      },
+    ];
+    const matches = [makeMatch(1, events, roster)];
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.BEST_OF_BEST_RATIO_MIN ?? 0.75;
+    try {
+      config.BEST_OF_BEST_RATIO_MIN = 0.5;
+      const loose = foldPlayerCommendations(matches);
+      config.BEST_OF_BEST_RATIO_MIN = 0.95;
+      const strict = foldPlayerCommendations(matches);
+      expect(
+        loose.awards.find((a) => a.id === 'best_of_the_best')?.earned,
+      ).toBe(true);
+      expect(
+        strict.awards.find((a) => a.id === 'best_of_the_best')?.earned,
+      ).toBe(false);
+    } finally {
+      config.BEST_OF_BEST_RATIO_MIN = original;
+    }
+  });
+
+  it('golden + sensitivity: NOBODY_DROWNED_CREDENCE_FLOOR', () => {
+    const low = makePiece('a', 40, {
+      credence: { tauBenev: 8, tauAbil: 8, abilityObservationCount: 0 },
+    });
+    const matches = [
+      {
+        ...makeMatch(1, [], [low], {}, 'DRAW'),
+        rosterEnd: [low],
+      },
+    ];
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.NOBODY_DROWNED_CREDENCE_FLOOR ?? 5;
+    try {
+      config.NOBODY_DROWNED_CREDENCE_FLOOR = 5;
+      expect(
+        foldPlayerCommendations(matches).awards.find(
+          (a) => a.id === 'nobody_drowned',
+        )?.earned,
+      ).toBe(true);
+      config.NOBODY_DROWNED_CREDENCE_FLOOR = 20;
+      expect(
+        foldPlayerCommendations(matches).awards.find(
+          (a) => a.id === 'nobody_drowned',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.NOBODY_DROWNED_CREDENCE_FLOOR = original;
+    }
+  });
+
+  it('golden + sensitivity: OVERCOMING_TRAUMA_FLOOR and RECOVERY', () => {
+    const start = makePiece('a', 40, { B_i: 40 });
+    const end = makePiece('a', 40, { B_i: 10 });
+    const match = {
+      ...makeMatch(1, [], [start]),
+      rosterEnd: [end],
+    };
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const originalFloor = config.OVERCOMING_TRAUMA_FLOOR ?? 20;
+    const originalRecovery = config.OVERCOMING_TRAUMA_RECOVERY ?? 15;
+    try {
+      config.OVERCOMING_TRAUMA_FLOOR = 20;
+      config.OVERCOMING_TRAUMA_RECOVERY = 15;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'overcoming_a_weakness',
+        )?.earned,
+      ).toBe(true);
+      config.OVERCOMING_TRAUMA_RECOVERY = 50;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'overcoming_a_weakness',
+        )?.earned,
+      ).toBe(false);
+      config.OVERCOMING_TRAUMA_FLOOR = 60;
+      config.OVERCOMING_TRAUMA_RECOVERY = 15;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'overcoming_a_weakness',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.OVERCOMING_TRAUMA_FLOOR = originalFloor;
+      config.OVERCOMING_TRAUMA_RECOVERY = originalRecovery;
+    }
+  });
+
+  it('golden + sensitivity: GRIT_LOSS_STREAK and GRIT_FIDELITY_FLOOR', () => {
+    const roster = [makePiece('a', 40)];
+    const losses = [
+      makeMatch(1, [], roster, { executionFidelity: 0.7 }, 'LOSS'),
+      makeMatch(2, [], roster, { executionFidelity: 0.7 }, 'LOSS'),
+    ];
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const originalStreak = config.GRIT_LOSS_STREAK ?? 2;
+    const originalFloor = config.GRIT_FIDELITY_FLOOR ?? 0.55;
+    try {
+      config.GRIT_LOSS_STREAK = 2;
+      config.GRIT_FIDELITY_FLOOR = 0.55;
+      expect(
+        foldPlayerCommendations(losses).awards.find(
+          (a) => a.id === 'grit_and_endurance',
+        )?.earned,
+      ).toBe(true);
+      config.GRIT_FIDELITY_FLOOR = 0.9;
+      expect(
+        foldPlayerCommendations(losses).awards.find(
+          (a) => a.id === 'grit_and_endurance',
+        )?.earned,
+      ).toBe(false);
+      config.GRIT_FIDELITY_FLOOR = 0.55;
+      config.GRIT_LOSS_STREAK = 5;
+      expect(
+        foldPlayerCommendations(losses).awards.find(
+          (a) => a.id === 'grit_and_endurance',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.GRIT_LOSS_STREAK = originalStreak;
+      config.GRIT_FIDELITY_FLOOR = originalFloor;
+    }
+  });
+
+  it('sensitivity: OVERALL_IMPROVEMENT_DELTA_MIN gates the award', () => {
+    const roster = [makePiece('a', 40)];
+    const act1 = [
+      makeMatch(1, [], roster, {
+        overrideCount: 5,
+        refusalCount: 5,
+        executionFidelity: 0.3,
+      }),
+    ];
+    const act2 = [
+      makeMatch(1, [], roster, {
+        overrideCount: 0,
+        refusalCount: 5,
+        executionFidelity: 0.95,
+      }),
+    ];
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.OVERALL_IMPROVEMENT_DELTA_MIN ?? 0.05;
+    try {
+      config.OVERALL_IMPROVEMENT_DELTA_MIN = 0.01;
+      expect(
+        foldPlayerCommendations(act1, act2).awards.find(
+          (a) => a.id === 'overall_improvement',
+        )?.earned,
+      ).toBe(true);
+      config.OVERALL_IMPROVEMENT_DELTA_MIN = 10;
+      expect(
+        foldPlayerCommendations(act1, act2).awards.find(
+          (a) => a.id === 'overall_improvement',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.OVERALL_IMPROVEMENT_DELTA_MIN = original;
+    }
+  });
+
+  it('sensitivity: REPAIRED_BREACH_AFFINITY_GAIN gates the award', () => {
+    const start = makePiece('a', -20, {
+      dyadicAffinity: { b: -40 },
+    });
+    const end = makePiece('a', 10, {
+      dyadicAffinity: { b: 20 },
+    });
+    const match = { ...makeMatch(1, [], [start]), rosterEnd: [end] };
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.REPAIRED_BREACH_AFFINITY_GAIN ?? 25;
+    try {
+      config.REPAIRED_BREACH_AFFINITY_GAIN = 20;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'repaired_breach',
+        )?.earned,
+      ).toBe(true);
+      config.REPAIRED_BREACH_AFFINITY_GAIN = 100;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'repaired_breach',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.REPAIRED_BREACH_AFFINITY_GAIN = original;
+    }
+  });
+
+  it('sensitivity: HONEST_SACRIFICE_TRUST_FLOOR gates the award', () => {
+    const hero = makePiece('hero', 40);
+    const match = {
+      ...makeMatch(
+        1,
+        [
+          {
+            t: 'SACRIFICE_WITNESSED',
+            ply: 1,
+            hero: 'hero',
+            beneficiary: 'ally',
+          },
+        ],
+        [hero],
+        {},
+        'WIN',
+      ),
+      rosterEnd: [hero],
+    };
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.HONEST_SACRIFICE_TRUST_FLOOR ?? 0;
+    try {
+      config.HONEST_SACRIFICE_TRUST_FLOOR = 0;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'honest_sacrifice',
+        )?.earned,
+      ).toBe(true);
+      config.HONEST_SACRIFICE_TRUST_FLOOR = 90;
+      expect(
+        foldPlayerCommendations([match]).awards.find(
+          (a) => a.id === 'honest_sacrifice',
+        )?.earned,
+      ).toBe(false);
+    } finally {
+      config.HONEST_SACRIFICE_TRUST_FLOOR = original;
+    }
+  });
 });
 
 describe('consumer pacing (5.8i)', () => {

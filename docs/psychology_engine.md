@@ -17,7 +17,7 @@ while reconciling it (§10) — those are open decisions, not settled design.
 | `E_i` | experience | `1..100` | drives search depth |
 | `T_i` | trust in leader | `-100..100` | dominates utility — see §10.1 |
 | `M_i` | morale & courage | `0..100` | gates mutiny; **no update rule is defined** (§10.4) |
-| `B_i` | betrayal / disillusionment | `0..100` | **stored but unused** in the reference (§10.3) |
+| `B_i` | betrayal / disillusionment | `0..100` | trauma; feeds desertion pain and override paths |
 | `A_{i,j}` | dyadic affinity | `-100..100` | per-peer map, asymmetric |
 | `C_{i,role}` | class prestige | `-100..100` | **per piece**, keyed by role — each piece carries its own prejudices |
 | `η_i` | engagement factor | `0.1..1.0` | `1.0` engaged, `0.2` quiet-quitting, `0.1` deserted |
@@ -37,7 +37,7 @@ Six weights in `[0,1]`, rolled at creation and immutable:
 | `w_ambition` | desire to engage high-value targets | scales `ΔV_capture` |
 | `w_loyalty` | trust vs. self-preservation | scales `T_i` |
 | `w_empathy` | sensitivity to peer safety and fair treatment | scales `Φ` and benching penalties |
-| `w_prestige` | sensitivity to rank and role status | **nowhere — declared but unused** (§10.2) |
+| `w_prestige` | sensitivity to rank and role status | weights `C` inside `Φ`; also standing/glory in desertion |
 
 ## 3. Search depth allocation
 
@@ -239,23 +239,22 @@ position makes every order look bad and the refusal boundary remains
 state-driven. The orchestration barrier collects both positions before
 psychology runs; desertion utility and the authority signal are unchanged.
 
-### 10.2 `w_prestige` is declared but never used
-The trait exists in `PieceTraits` and is documented as "sensitivity to rank and
-role status," but no formula reads it. Class attitude enters utility only through
-`C_{i,role(j)}` inside `Φ`, unweighted by the piece's own prestige sensitivity.
-Intended fix is probably:
+### 10.2 `w_prestige` — RESOLVED in shipping code
+The reference originally left `w_prestige` unread. Shipping `calculateInterPieceProtection`
+uses the intended form:
 
 ```
 Φ = w_empathy · ((A_{i,j} + w_prestige · C_{i,role(j)}) / 200) · ΔSafety_j
 ```
 
-Confirm before implementing — this is exactly the dead-wiring the
-`ci-test-design` skill's sensitivity probes exist to catch.
+Sensitivity coverage lives in `tests/psychology.configCoverage.test.ts`
+(D20 regression). Standing/glory desertion terms also read ambition+prestige.
 
-### 10.3 `B_i` (betrayal / disillusionment) is stored but never read
-No formula consumes it and no event writes it. Either it feeds utility (a
-grief penalty), or it gates mutiny alongside morale, or it is display-only.
-Decide, then add its sensitivity probe.
+### 10.3 `B_i` — RESOLVED in shipping code
+Trauma is written by override and capture paths and read by desertion pain
+(`DESERTION_PAIN_BASE + B_i · DESERTION_PAIN_TRAUMA_SCALE`) and related folds.
+The reference's "stored but unused" claim is historical; keep probes on the
+pain knobs when changing trauma semantics.
 
 ### 10.4 Morale `M_i` has no update rule — downgraded by ADR 0011
 Under the reference, desertion required `M_i == 0` while nothing ever wrote

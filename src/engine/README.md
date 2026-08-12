@@ -57,5 +57,6 @@ Rules this layer enforces rather than documents:
 
 The true `D_max` evaluation may be collected here for the audit path
 (`SharedSearchBroker.evaluateTrue`), and travels to `orchestration/` only —
-never into the bundle psychology reads (ADR 0013). It is not persisted into the
-event log while D50 remains open.
+never into the bundle psychology reads (ADR 0013). ADR 0036 decided a separate
+engine audit stream; that stream is **not yet persisted** — true eval remains
+ephemeral for now (see `docs/adr/IMPLEMENTATION_STATUS.md`).
