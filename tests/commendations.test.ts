@@ -274,7 +274,7 @@ describe('learning delta (5.8q)', () => {
     ];
     const matches = [makeMatch(1, events, roster)];
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const original = config.BEST_OF_BEST_RATIO_MIN;
+    const original = config.BEST_OF_BEST_RATIO_MIN ?? 0.75;
     try {
       config.BEST_OF_BEST_RATIO_MIN = 0.5;
       const loose = foldPlayerCommendations(matches);
@@ -295,10 +295,14 @@ describe('learning delta (5.8q)', () => {
     const low = makePiece('a', 40, {
       credence: { tauBenev: 8, tauAbil: 8, abilityObservationCount: 0 },
     });
-    const matches = [makeMatch(1, [], [low], {}, 'DRAW')];
-    matches[0] = { ...matches[0]!, rosterEnd: [low] };
+    const matches = [
+      {
+        ...makeMatch(1, [], [low], {}, 'DRAW'),
+        rosterEnd: [low],
+      },
+    ];
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const original = config.NOBODY_DROWNED_CREDENCE_FLOOR;
+    const original = config.NOBODY_DROWNED_CREDENCE_FLOOR ?? 5;
     try {
       config.NOBODY_DROWNED_CREDENCE_FLOOR = 5;
       expect(
@@ -325,8 +329,8 @@ describe('learning delta (5.8q)', () => {
       rosterEnd: [end],
     };
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const originalFloor = config.OVERCOMING_TRAUMA_FLOOR;
-    const originalRecovery = config.OVERCOMING_TRAUMA_RECOVERY;
+    const originalFloor = config.OVERCOMING_TRAUMA_FLOOR ?? 20;
+    const originalRecovery = config.OVERCOMING_TRAUMA_RECOVERY ?? 15;
     try {
       config.OVERCOMING_TRAUMA_FLOOR = 20;
       config.OVERCOMING_TRAUMA_RECOVERY = 15;
@@ -361,8 +365,8 @@ describe('learning delta (5.8q)', () => {
       makeMatch(2, [], roster, { executionFidelity: 0.7 }, 'LOSS'),
     ];
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const originalStreak = config.GRIT_LOSS_STREAK;
-    const originalFloor = config.GRIT_FIDELITY_FLOOR;
+    const originalStreak = config.GRIT_LOSS_STREAK ?? 2;
+    const originalFloor = config.GRIT_FIDELITY_FLOOR ?? 0.55;
     try {
       config.GRIT_LOSS_STREAK = 2;
       config.GRIT_FIDELITY_FLOOR = 0.55;
@@ -407,7 +411,7 @@ describe('learning delta (5.8q)', () => {
       }),
     ];
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const original = config.OVERALL_IMPROVEMENT_DELTA_MIN;
+    const original = config.OVERALL_IMPROVEMENT_DELTA_MIN ?? 0.05;
     try {
       config.OVERALL_IMPROVEMENT_DELTA_MIN = 0.01;
       expect(
@@ -435,7 +439,7 @@ describe('learning delta (5.8q)', () => {
     });
     const match = { ...makeMatch(1, [], [start]), rosterEnd: [end] };
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const original = config.REPAIRED_BREACH_AFFINITY_GAIN;
+    const original = config.REPAIRED_BREACH_AFFINITY_GAIN ?? 25;
     try {
       config.REPAIRED_BREACH_AFFINITY_GAIN = 20;
       expect(
@@ -456,25 +460,25 @@ describe('learning delta (5.8q)', () => {
 
   it('sensitivity: HONEST_SACRIFICE_TRUST_FLOOR gates the award', () => {
     const hero = makePiece('hero', 40);
-    const match = makeMatch(
-      1,
-      [
-        {
-          t: 'SACRIFICE_WITNESSED',
-          ply: 1,
-          hero: 'hero',
-          beneficiary: 'ally',
-          removedThreatToPeer: true,
-          enabledForcedWin: false,
-        },
-      ],
-      [hero],
-      {},
-      'WIN',
-    );
-    match.rosterEnd = [hero];
+    const match = {
+      ...makeMatch(
+        1,
+        [
+          {
+            t: 'SACRIFICE_WITNESSED',
+            ply: 1,
+            hero: 'hero',
+            beneficiary: 'ally',
+          },
+        ],
+        [hero],
+        {},
+        'WIN',
+      ),
+      rosterEnd: [hero],
+    };
     const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
-    const original = config.HONEST_SACRIFICE_TRUST_FLOOR;
+    const original = config.HONEST_SACRIFICE_TRUST_FLOOR ?? 0;
     try {
       config.HONEST_SACRIFICE_TRUST_FLOOR = 0;
       expect(

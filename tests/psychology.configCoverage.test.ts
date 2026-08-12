@@ -8,6 +8,7 @@ import {
   ENGINE_CONFIG,
   applyBetrayalSignal,
   applyCostlySignal,
+  costlySignalCredit,
   applyFatalisticComplianceCosts,
   applyHeardSignal,
   applyNeglectSignal,
@@ -74,19 +75,29 @@ function makePiece(overrides: Partial<PieceState> = {}): PieceState {
   });
 }
 
-function mutateConfig<K extends keyof typeof ENGINE_CONFIG>(
-  key: K,
-  value: (typeof ENGINE_CONFIG)[K],
-  run: () => void,
-): void {
+function mutateConfig(key: string, value: unknown, run: () => void): void {
   const config = ENGINE_CONFIG as unknown as Record<string, unknown>;
-  const original = config[key as string];
+  const original = config[key];
   try {
-    config[key as string] = value;
+    config[key] = value;
     run();
   } finally {
-    config[key as string] = original;
+    config[key] = original;
   }
+}
+
+function makeDesertionContext(
+  overrides: Partial<DesertionContext> = {},
+): DesertionContext {
+  return {
+    P_captured: 0.5,
+    P_lossIfStay: 0.5,
+    P_lossIfLeave: 0.5,
+    pLossBoard: 0.5,
+    pivotality: 0,
+    shadowFactor: 1,
+    ...overrides,
+  };
 }
 
 describe('ENGINE_CONFIG coverage — depth & engagement', () => {
@@ -110,13 +121,12 @@ describe('ENGINE_CONFIG coverage — depth & engagement', () => {
       B_i: 90,
       traits: { ...neutralTraits, w_loyalty: 0, w_ambition: 0, w_prestige: 0 },
     });
-    const context: DesertionContext = {
+    const context = makeDesertionContext({
       P_captured: 0.99,
       P_lossIfStay: 0.99,
       P_lossIfLeave: 0.05,
       pLossBoard: 0.99,
-      privateScoreCp: -800,
-    };
+    });
     const peers = [actor, makePiece({ id: 'w:P:a2', role: 'Pawn' })];
     expect(shouldDesert(actor, context, peers).desert).toBe(true);
     mutateConfig('DESERTION_ENGAGEMENT', 0.05, () => {
@@ -168,14 +178,14 @@ describe('ENGINE_CONFIG coverage — benching & leadership', () => {
   it('sensitivity: DEFAULT_BENCHING_SELF_PENALTY scales the benched trust drop', () => {
     const benched = makePiece({ T_i: 40 });
     mutateConfig('DEFAULT_BENCHING_SELF_PENALTY', -5, () => {
-      expect(calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust).toBe(
-        35,
-      );
+      expect(
+        calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust,
+      ).toBe(35);
     });
     mutateConfig('DEFAULT_BENCHING_SELF_PENALTY', -50, () => {
-      expect(calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust).toBe(
-        -10,
-      );
+      expect(
+        calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust,
+      ).toBe(-10);
     });
   });
 
@@ -217,7 +227,7 @@ describe('ENGINE_CONFIG coverage — benching & leadership', () => {
       beta: 0.1,
       gamma: 0.1,
       delta: 0.1,
-    });
+    } as unknown as typeof ENGINE_CONFIG.LEADERSHIP_WEIGHTS);
     expect(tuned).not.toBe(baseline);
   });
 });
@@ -322,17 +332,20 @@ describe('ENGINE_CONFIG coverage — override penalties', () => {
 describe('ENGINE_CONFIG coverage — costly signals', () => {
   it('golden: each COSTLY_SIGNAL_* credit matches config', () => {
     const piece = makePiece({ T_i: 0 });
-    expect(applyCostlySignal(piece, 'king_endangerment', 1).event.trustCredit).toBe(
+    expect(costlySignalCredit('king_endangerment')).toBe(
       ENGINE_CONFIG.COSTLY_SIGNAL_KING_DANGER,
     );
-    expect(
-      applyCostlySignal(piece, 'declined_sacrifice', 1).event.trustCredit,
-    ).toBe(ENGINE_CONFIG.COSTLY_SIGNAL_DECLINED_SACRIFICE);
-    expect(applyCostlySignal(piece, 'retained_piece', 1).event.trustCredit).toBe(
+    expect(costlySignalCredit('declined_sacrifice')).toBe(
+      ENGINE_CONFIG.COSTLY_SIGNAL_DECLINED_SACRIFICE,
+    );
+    expect(costlySignalCredit('retained_piece')).toBe(
       ENGINE_CONFIG.COSTLY_SIGNAL_RETAINED_PIECE,
     );
-    expect(applyCostlySignal(piece, 'avenged_capture', 1).event.trustCredit).toBe(
+    expect(costlySignalCredit('avenged_capture')).toBe(
       ENGINE_CONFIG.COSTLY_SIGNAL_AVENGED_CAPTURE,
+    );
+    expect(applyCostlySignal(piece, 'king_endangerment', 1).piece.T_i).toBe(
+      ENGINE_CONFIG.COSTLY_SIGNAL_KING_DANGER,
     );
   });
 
@@ -341,7 +354,7 @@ describe('ENGINE_CONFIG coverage — costly signals', () => {
     mutateConfig('COSTLY_SIGNAL_KING_DANGER', 0, () => {
       const result = applyCostlySignal(piece, 'king_endangerment', 1);
       expect(result.piece.T_i).toBe(0);
-      expect(result.event.trustCredit).toBe(0);
+      expect(costlySignalCredit('king_endangerment')).toBe(0);
     });
   });
 
@@ -369,9 +382,7 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
   it('golden + sensitivity: BENEV_HEARD_STEP', () => {
     expect(ENGINE_CONFIG.BENEV_HEARD_STEP).toBe(15);
     const before = defaultCredence();
-    expect(applyHeardSignal(before, true).tauBenev).toBe(
-      before.tauBenev + 15,
-    );
+    expect(applyHeardSignal(before, true).tauBenev).toBe(before.tauBenev + 15);
     mutateConfig('BENEV_HEARD_STEP', 5, () => {
       expect(applyHeardSignal(before, true).tauBenev).toBe(before.tauBenev + 5);
     });
@@ -497,16 +508,20 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
       T_i: -80,
       M_i: 10,
       B_i: 80,
-      traits: { ...neutralTraits, w_loyalty: 0.1, w_ambition: 0, w_prestige: 0 },
+      traits: {
+        ...neutralTraits,
+        w_loyalty: 0.1,
+        w_ambition: 0,
+        w_prestige: 0,
+      },
     });
     const peers = [piece, makePiece({ id: 'w:P:a2', role: 'Pawn' })];
-    const context: DesertionContext = {
+    const context = makeDesertionContext({
       P_captured: 0.95,
       P_lossIfStay: 0.9,
       P_lossIfLeave: 0.2,
       pLossBoard: 0.9,
-      privateScoreCp: -600,
-    };
+    });
     mutateConfig('DESERTION_HYSTERESIS', 0, () => {
       const eager = shouldDesert(piece, context, peers);
       mutateConfig('DESERTION_HYSTERESIS', 1_000, () => {
@@ -527,17 +542,7 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
     ];
     const raw = calculatePivotalityPermille(piece, peers);
     mutateConfig('DESERTION_PIVOTALITY_SCALE_PERMILLE', 0, () => {
-      const decision = shouldDesert(
-        piece,
-        {
-          P_captured: 0.5,
-          P_lossIfStay: 0.5,
-          P_lossIfLeave: 0.5,
-          pLossBoard: 0.5,
-          privateScoreCp: 0,
-        },
-        peers,
-      );
+      const decision = shouldDesert(piece, makeDesertionContext(), peers);
       expect(decision.terms.pivotality).toBe(0);
       expect(raw).toBeGreaterThan(0);
     });
@@ -565,13 +570,12 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
 
   it('sensitivity: DESERTION_SHADOW_SCALE_PERMILLE changes stay utility', () => {
     const piece = makePiece({ B_i: 40 });
-    const context: DesertionContext = {
+    const context = makeDesertionContext({
       P_captured: 0.8,
       P_lossIfStay: 0.8,
       P_lossIfLeave: 0.5,
       pLossBoard: 0.8,
-      privateScoreCp: -200,
-    };
+    });
     const peers = [piece];
     const baseline = shouldDesert(piece, context, peers).uStay;
     mutateConfig('DESERTION_SHADOW_SCALE_PERMILLE', 0, () => {
@@ -727,9 +731,9 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
         actor.id,
         1,
       );
-      expect(result.roster.find((p) => p.id === actor.id)?.engagementFactor).toBe(
-        0.5,
-      );
+      expect(
+        result.roster.find((p) => p.id === actor.id)?.engagementFactor,
+      ).toBe(0.5);
     });
   });
 });
@@ -778,9 +782,7 @@ describe('PieceTraits sensitivity (testing_strategy §3)', () => {
     );
     expect(
       calculateMoveUtility(warm, protectiveMove, [warm, peer]),
-    ).toBeGreaterThan(
-      calculateMoveUtility(cold, protectiveMove, [cold, peer]),
-    );
+    ).toBeGreaterThan(calculateMoveUtility(cold, protectiveMove, [cold, peer]));
   });
 
   it('sensitivity: w_honor and w_ambition change utility terms', () => {
