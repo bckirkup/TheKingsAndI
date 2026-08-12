@@ -60,6 +60,7 @@ export interface MatchScreenProps {
     readonly rosterEnd: StoredPieceState[];
     readonly result: MatchResult;
     readonly winScore: number;
+    readonly engineAudit: MatchSessionSnapshot['engineAudit'];
   }) => void;
 }
 
@@ -124,6 +125,7 @@ export function MatchScreen({
       rosterEnd,
       result,
       winScore: snapshot.winScore,
+      engineAudit: snapshot.engineAudit,
     });
   }, [
     onMatchFinished,

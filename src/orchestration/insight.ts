@@ -6,6 +6,7 @@ import {
 } from '../engine/barrier';
 import { createEvaluationCache, type EvaluationCache } from '../engine/cache';
 import { buildInsightRound } from '../engine/round';
+import { SHARED_SEARCH_D_MAX } from '../engine/search';
 import type { EngineEvaluation, EnginePort, Insight } from '../engine/types';
 import {
   calculateEngineSearchDepth,
@@ -523,4 +524,47 @@ export async function resolveBestAuditMoveScore(
     );
   }
   return bestScore;
+}
+
+/** True score for the position before a move, kept on the audit path only. */
+export async function resolveAuditPositionScore(
+  port: EnginePort & {
+    evaluateTrue?: (fen: string) => Promise<{ scoreCp: number }>;
+  },
+  board: LivingBoard,
+  handle: InsightRoundHandle,
+): Promise<number> {
+  const evaluateTrue = port.evaluateTrue;
+  const auditPort: EnginePort =
+    evaluateTrue === undefined
+      ? port
+      : {
+          ...port,
+          evaluate: async (fen: string) => {
+            const evaluation = await evaluateTrue(fen);
+            return { scoreCp: evaluation.scoreCp, pv: [] };
+          },
+        };
+  const bundle = requireComplete(
+    await resolveInsightRound(
+      auditPort,
+      buildInsightRound({
+        fen: board.fen(),
+        seats: [
+          {
+            pieceId: 'audit:position',
+            depth: SHARED_SEARCH_D_MAX,
+            evalProfile: {},
+          },
+        ],
+      }),
+      { round: handle.round, cache: handle.cache },
+    ),
+  );
+  handle.round += 1;
+  const insight = bundle.insights[0];
+  if (insight === undefined) {
+    throw new Error('Missing audit position insight');
+  }
+  return insight.scoreCp;
 }

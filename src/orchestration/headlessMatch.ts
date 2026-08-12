@@ -10,7 +10,8 @@ import {
 } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
-import type { EnginePort } from '../engine/types';
+import { SHARED_SEARCH_D_MAX } from '../engine';
+import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyFatalisticComplianceCosts,
   applyMatchOutcomeTrust,
@@ -28,8 +29,10 @@ import {
 
 import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
+import { engineAuditEntry, heroismNomination } from './heroism';
 import {
   createInsightRoundHandle,
+  resolveAuditPositionScore,
   resolveBestAuditMoveScore,
   resolveAuditMoveScore,
   resolveMoverInsights,
@@ -120,6 +123,7 @@ export interface HeadlessMatchConfig {
 
 export interface HeadlessMatchResult {
   readonly events: readonly MatchEvent[];
+  readonly engineAudit?: readonly EngineAuditEntry[];
   readonly roster: readonly PieceState[];
   readonly departedRoster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
@@ -244,6 +248,7 @@ function applyPlayerMoveConsequences(input: {
   readonly features: MoveFeatures;
   readonly auditScore: number;
   readonly bestAuditScore: number;
+  readonly audit: EngineAuditEntry;
   readonly objectivelyGood: boolean;
   readonly ply: number;
   readonly roster: PieceState[];
@@ -288,6 +293,8 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
+  const nomination = heroismNomination(events, moveEval, input.audit);
+  if (nomination !== undefined) events.push(nomination);
   const abilityObservations = applyRosterAbilityObservations(
     roster,
     { ...moverInsights.desertionMoveEvals, [actor.id]: moveEval },
@@ -413,6 +420,7 @@ export async function runHeadlessMatch(
   const justifiedRefusalObviousnessValues: number[] = [];
   const justifiedRefusalPrivateViewLosses: number[] = [];
   const enemyObservableBehaviours: string[] = [];
+  const engineAudit: EngineAuditEntry[] = [];
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
   let abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
@@ -459,6 +467,7 @@ export async function runHeadlessMatch(
         dreadExposureByPiece: enemyDreadExposureByPiece,
       });
       enemyRoster = enemyTurn.enemyRoster;
+      engineAudit.push(...(enemyTurn.engineAudit ?? []));
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
       roster = applyCapturedPieceInjury(
         roster,
@@ -500,6 +509,7 @@ export async function runHeadlessMatch(
           readonly moveEval: CandidateMoveEvaluation;
           readonly auditScore: number;
           readonly bestAuditScore: number;
+          readonly audit: EngineAuditEntry;
           readonly objectivelyGood: boolean;
           readonly outcome: MoveDecisionOutcome;
         }
@@ -556,6 +566,23 @@ export async function runHeadlessMatch(
         board,
         insight,
       );
+      const preMoveAuditScore = await resolveAuditPositionScore(
+        config.engine,
+        board,
+        insight,
+      );
+      const audit = engineAuditEntry({
+        ply,
+        pieceId: actor.id,
+        san: choice.san,
+        preMoveScoreCp: preMoveAuditScore,
+        scoreCp: auditScore,
+        bestScoreCp: bestAudit,
+        preMoveDepth: SHARED_SEARCH_D_MAX,
+        scoreDepth: 8,
+        bestScoreDepth: SHARED_SEARCH_D_MAX,
+      });
+      engineAudit.push(audit);
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
       const desertionContext = desertionContextFor(actor, moveEval, roster);
@@ -639,6 +666,7 @@ export async function runHeadlessMatch(
             moveEval,
             auditScore,
             bestAuditScore: bestAudit,
+            audit,
             objectivelyGood,
             outcome,
           };
@@ -690,6 +718,7 @@ export async function runHeadlessMatch(
         features,
         auditScore,
         bestAuditScore: bestAudit,
+        audit,
         objectivelyGood,
         ply,
         roster,
@@ -746,6 +775,7 @@ export async function runHeadlessMatch(
         features: firstRefused.features,
         auditScore: firstRefused.auditScore,
         bestAuditScore: firstRefused.bestAuditScore,
+        audit: firstRefused.audit,
         objectivelyGood: firstRefused.objectivelyGood,
         ply,
         roster,
@@ -782,6 +812,7 @@ export async function runHeadlessMatch(
 
   return {
     events: Object.freeze(events),
+    engineAudit: Object.freeze(engineAudit),
     roster: roster.map(normalizePieceState),
     departedRoster: departedRoster.map(normalizePieceState),
     enemyRoster: enemyRoster.map(normalizePieceState),

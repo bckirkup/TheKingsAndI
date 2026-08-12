@@ -9,7 +9,7 @@ Dexie-backed local storage for careers, campaigns, rosters, and match records.
 | `careers` | Top-level career with seed and act list |
 | `acts` | King appointment within a career (schema carries three) |
 | `campaigns` | Match loop within an act |
-| `matches` | Full event log + audit fold per match |
+| `matches` | Full event log + audit fold + separate true-engine stream per match |
 | `pieceIdentities` | Persistent piece names and provenance |
 | `pieceStates` | Current roster psychology + status |
 | `settings` | Schema version stamp |
@@ -23,6 +23,9 @@ transcript folds).
 
 Commendation thresholds live in `commendationConfig.ts` and must keep golden +
 sensitivity coverage (`tests/commendations.test.ts`).
+
+`MatchRecord.engineAudit` is immutable true-engine evidence for ADR 0036. It is
+kept separate from `events` and is never loaded by psychology reducers.
 
 ## World types
 

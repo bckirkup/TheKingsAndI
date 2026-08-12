@@ -11,6 +11,8 @@ export {
   insightToEvaluation,
   isObjectivelyGoodMove,
 } from './evaluation';
+export { HEROISM_CONFIG } from './heroismConfig';
+export { heroismNomination } from './heroism';
 export {
   applyEnemyTurn,
   applyEnemyTurnSync,

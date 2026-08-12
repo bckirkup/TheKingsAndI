@@ -105,11 +105,26 @@ describe('persistence repository', () => {
           verdict: 'COMPLIANT_EXECUTION',
         },
       ],
+      engineAudit: [
+        {
+          ply: 1,
+          pieceId: created.roster[8]?.id ?? 'w:P:e2',
+          san: 'e4',
+          preMoveScoreCp: 0,
+          scoreCp: 25,
+          bestScoreCp: 30,
+          preMoveDepth: 16,
+          scoreDepth: 8,
+          bestScoreDepth: 16,
+        },
+      ],
       result: 'DRAW',
     });
 
     const loaded = await repo.loadActiveCampaign();
     expect(loaded?.matchCount).toBe(1);
+    const stored = await getDatabase().matches.toArray();
+    expect(stored[0]?.engineAudit).toHaveLength(1);
 
     const debrief = await repo.buildDebrief(created.campaign.id);
     expect(debrief.matches).toHaveLength(1);

@@ -122,6 +122,7 @@ export function App(): JSX.Element {
                 rosterSnapshot: screen.roster,
                 rosterEnd: result.rosterEnd,
                 events,
+                engineAudit: result.engineAudit,
                 result: result.result,
               });
               const matches = await repo.listMatches(screen.campaign.id);

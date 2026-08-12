@@ -7,7 +7,8 @@ import {
   type Square,
 } from '../chess';
 import { createSeededRandom, type SeededRandom } from '../core/random';
-import type { EnginePort } from '../engine/types';
+import { SHARED_SEARCH_D_MAX } from '../engine';
+import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyNeglectSignal,
   applyCaptureInjury,
@@ -26,6 +27,7 @@ import {
 } from '../psychology';
 
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
+import { engineAuditEntry, heroismNomination } from './heroism';
 import {
   evaluateDismissal,
   selectSuccessorLeader,
@@ -33,6 +35,7 @@ import {
 } from './campaignPolicy';
 import {
   createInsightRoundHandle,
+  resolveAuditPositionScore,
   resolveBestAuditMoveScore,
   resolveAuditMoveScore,
   resolveMoverInsights,
@@ -74,6 +77,7 @@ export interface PendingVerdict {
   readonly features: MoveFeatures;
   readonly moveEval: CandidateMoveEvaluation;
   readonly orderQualityCp: number;
+  readonly audit: EngineAuditEntry;
   readonly objectivelyGood: boolean;
   readonly justified: boolean;
   readonly outcome: MoveDecisionOutcome;
@@ -128,6 +132,7 @@ export interface MatchSessionSnapshot {
   readonly successorLeaderId: string | null;
   readonly kingTauAbil: number;
   readonly determinismId: string;
+  readonly engineAudit: readonly EngineAuditEntry[];
 }
 
 export interface MatchSessionConfig {
@@ -189,6 +194,7 @@ export class MatchSession {
   private abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
   private dreadExposureByPiece: DreadExposureByPiece = {};
   private enemyDreadExposureByPiece: DreadExposureByPiece = {};
+  private readonly engineAudit: EngineAuditEntry[] = [];
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -247,6 +253,7 @@ export class MatchSession {
       successorLeaderId: this.successorLeaderId,
       kingTauAbil: this.kingTauAbil,
       determinismId: this.engine.determinismId,
+      engineAudit: [...this.engineAudit],
     };
   }
 
@@ -306,6 +313,22 @@ export class MatchSession {
       this.board,
       this.insight,
     );
+    const audit = engineAuditEntry({
+      ply: this.ply,
+      pieceId: actor.id,
+      san: features.san,
+      preMoveScoreCp: await resolveAuditPositionScore(
+        this.engine,
+        this.board,
+        this.insight,
+      ),
+      scoreCp: orderQualityCp,
+      bestScoreCp: bestAuditScore,
+      preMoveDepth: SHARED_SEARCH_D_MAX,
+      scoreDepth: 8,
+      bestScoreDepth: SHARED_SEARCH_D_MAX,
+    });
+    this.engineAudit.push(audit);
     const justified = moveEval.deltaV_board < 0 && orderQualityCp < 0;
     const desertionContext = desertionContextFor(actor, moveEval, this.roster);
     const outcome = evaluateMoveResponse(
@@ -333,6 +356,7 @@ export class MatchSession {
         features,
         moveEval,
         orderQualityCp,
+        audit,
         objectivelyGood,
         justified,
         outcome,
@@ -366,6 +390,7 @@ export class MatchSession {
         features,
         moveEval,
         orderQualityCp,
+        audit,
         objectivelyGood,
         justified,
         outcome,
@@ -393,6 +418,7 @@ export class MatchSession {
       outcome,
       moveEval,
       orderQualityCp,
+      audit,
       objectivelyGood,
       features,
       insights.declinedSacrificeOpportunity,
@@ -482,6 +508,7 @@ export class MatchSession {
       { ...pending.outcome, verdict: 'COMPLIANT_EXECUTION' },
       pending.moveEval,
       pending.orderQualityCp,
+      pending.audit,
       pending.objectivelyGood,
       pending.features,
       pending.declinedSacrificeOpportunity,
@@ -651,6 +678,7 @@ export class MatchSession {
     outcome: MoveDecisionOutcome,
     moveEval: CandidateMoveEvaluation,
     orderQualityCp: number,
+    audit: EngineAuditEntry,
     objectivelyGood: boolean,
     features?: MoveFeatures,
     declinedSacrificeOpportunity?: PendingVerdict['declinedSacrificeOpportunity'],
@@ -667,6 +695,8 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp,
     });
+    const nomination = heroismNomination(this.events, moveEval, audit);
+    if (nomination !== undefined) this.events.push(nomination);
     if (applied.capture !== undefined) {
       this.enemyRoster = this.enemyRoster.map((piece) => {
         if (piece.id !== applied.capture?.pieceId) return piece;
@@ -873,6 +903,7 @@ export class MatchSession {
     });
     this.enemyRoster = result.enemyRoster;
     this.enemyDreadExposureByPiece = result.dreadExposureByPiece;
+    this.engineAudit.push(...(result.engineAudit ?? []));
     if (result.capturedPieceId !== undefined) {
       this.roster = this.roster.map((piece) => {
         if (piece.id !== result.capturedPieceId) return piece;

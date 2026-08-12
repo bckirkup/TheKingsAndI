@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0049)
+# ADR implementation status (0035–0050)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -12,7 +12,7 @@ the discrepancy is corrected.
 | ADR | Topic | Decision | Live code |
 |---|---|---|---|
 | 0035 | Three-channel keyed credence (D49) | Accepted | **Not wired** — `CredenceState` is still `{tauBenev, tauAbil, abilityObservationCount}`; reputation transfer averages scalars |
-| 0036 | Separate engine audit stream (D50) | Accepted | **Not persisted** — true `D_max` eval is ephemeral on the orchestration path |
+| 0036 | Separate engine audit stream (D50) | Accepted | **Shipped** — `src/engine/types.ts:27-35`, `src/orchestration/headlessMatch.ts:418-421`, `src/orchestration/matchSession.ts:190-192`, `src/persistence/repository.ts:217-231` |
 | 0037 | Private evaluation profiles | Accepted | **Shipped** — `privateEvaluation.ts` on both match paths |
 | 0038 | Justified refusal authority | Accepted | **Shipped** — authority loss/gain hooks |
 | 0039 | Credence prior strength / first match | Proposed (provisional defaults) | Knobs live (`ABIL_PRIOR_STRENGTH`); magnitudes still calibration-open |
@@ -25,6 +25,7 @@ the discrepancy is corrected.
 | 0046 | Release before resignation | Proposed | **Not shipped** |
 | 0047 | World-persistent commanders | Accepted | **Sim/world layer shipped**; full seminar host surfaces still Milestone 5b |
 | 0049 | Trauma is injury; capture and sustained dread write `B_i` | Accepted for the injury slice; calibration remains open | **Shipped** — `src/psychology/trauma.ts:10-42`, `src/orchestration/headlessMatch.ts:336-358`, `src/orchestration/headlessMatch.ts:442-454`, `src/orchestration/enemyTurn.ts:265-286` |
+| 0050 | Machine heroism nomination / human conferral | Accepted for nomination records; thresholds and conferral stand-in open | **Shipped** — `src/orchestration/heroism.ts:16-73`, `src/psychology/types.ts:254-270`, `src/persistence/types.ts:120-123` |
 
 ## Confirmed implementation gaps
 

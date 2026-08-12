@@ -5,7 +5,9 @@ import {
   type Square,
 } from '../chess';
 import type { SeededRandom } from '../core/random';
+import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EnginePort } from '../engine/types';
+import type { EngineAuditEntry } from '../engine';
 import {
   applyFatalisticComplianceCosts,
   evaluateMoveResponse,
@@ -20,11 +22,13 @@ import { CAMPAIGN_CONFIG } from './campaignConfig';
 import { featuresToEvaluation, isVindicatedMove } from './evaluation';
 import {
   createInsightRoundHandle,
+  resolveAuditPositionScore,
   resolveBestAuditMoveScore,
   resolveAuditMoveScore,
   resolveMoverInsights,
   type InsightRoundHandle,
 } from './insight';
+import { engineAuditEntry } from './heroism';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import {
   applyDesertionWithCascade,
@@ -71,6 +75,7 @@ export interface EnemyTurnResult {
     | 'quiet_quit'
     | 'fatalistic'
   )[];
+  readonly engineAudit?: readonly EngineAuditEntry[];
 }
 
 function resolveIntent(
@@ -128,6 +133,7 @@ function applyTrackedEnemyDecision(input: {
   readonly orderQualityCp?: number;
   readonly objectivelyGood?: boolean;
   readonly bestAuditScore?: number;
+  readonly preMoveAuditScore?: number;
 }): EnemyTurnResult {
   const {
     board,
@@ -141,10 +147,22 @@ function applyTrackedEnemyDecision(input: {
     objectivelyGood = false,
     orderQualityCp = 0,
     bestAuditScore = orderQualityCp,
+    preMoveAuditScore = bestAuditScore,
   } = input;
   let enemyRoster = input.enemyRoster;
   const events: MatchEvent[] = [];
   const behaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  const audit = engineAuditEntry({
+    ply,
+    pieceId: actor.id,
+    san,
+    preMoveScoreCp: preMoveAuditScore,
+    scoreCp: orderQualityCp,
+    bestScoreCp: bestAuditScore,
+    preMoveDepth: SHARED_SEARCH_D_MAX,
+    scoreDepth: 8,
+    bestScoreDepth: SHARED_SEARCH_D_MAX,
+  });
   const desertionContext = desertionContextFor(actor, moveEval, enemyRoster);
   const desertionDecision = shouldDesert(actor, desertionContext, enemyRoster);
   let outcome = evaluateMoveResponse(
@@ -171,6 +189,7 @@ function applyTrackedEnemyDecision(input: {
         departedRoster: [],
         dreadExposureByPiece: input.dreadExposureByPiece ?? {},
         events,
+        engineAudit: [audit],
         ply,
         enemyRout: false,
         lastMove: null,
@@ -208,6 +227,7 @@ function applyTrackedEnemyDecision(input: {
       departedRoster: cascade.departed,
       dreadExposureByPiece: input.dreadExposureByPiece ?? {},
       events,
+      engineAudit: [audit],
       ply: ply + 1,
       enemyRout: cascade.rout,
       lastMove: null,
@@ -285,6 +305,7 @@ function applyTrackedEnemyDecision(input: {
       ? {}
       : { capturedPieceId: applied.capture.pieceId }),
     events,
+    engineAudit: [audit],
     ply: ply + 1,
     enemyRout: false,
     lastMove: [applied.from, applied.to],
@@ -515,6 +536,11 @@ export async function applyEnemyTurn(input: {
       input.board,
       insight,
     );
+    const preMoveAuditScore = await resolveAuditPositionScore(
+      input.engine,
+      input.board,
+      insight,
+    );
     const objectivelyGood = isVindicatedMove(
       orderQualityCp,
       bestAuditScore,
@@ -539,6 +565,7 @@ export async function applyEnemyTurn(input: {
       orderQualityCp,
       objectivelyGood,
       bestAuditScore,
+      preMoveAuditScore,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);

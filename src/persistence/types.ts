@@ -3,6 +3,7 @@ import type {
   MatchEvent,
   PieceState,
 } from '../psychology';
+import type { EngineAuditEntry } from '../engine';
 
 export const SCHEMA_VERSION = 1;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
@@ -121,6 +122,8 @@ export interface MatchRecord {
   readonly rosterSnapshot: readonly StoredPieceState[];
   readonly rosterEnd: readonly StoredPieceState[];
   readonly events: readonly MatchEvent[];
+  /** True engine evaluations, separate from psychology state (ADR 0036). */
+  readonly engineAudit?: readonly EngineAuditEntry[];
   readonly result: MatchResult;
   readonly audit: MatchAudit;
   readonly determinismId: string;
