@@ -37,17 +37,19 @@ Required goldens at Milestone 3:
 - `calculateMoveUtility` for a fixed `(piece, move, board)` triple.
 - `calculateEngineSearchDepth`: `(E=100, η=1)→16`, `(E=100, η=0.2)→4`,
   `(E=1, η=1)→2`, `(E=1, η=0.1)→2`.
-- `calculateRefusalThreshold`: `T=+100→-50`, `T=0→0`, `T=-100→+50`.
+- `calculateRefusalThreshold`: `T=+100→-3`, `T=0→0`, `T=-100→+3`
+  (`Θ = -3 + (100 - T) · REFUSAL_THRESHOLD_TRUST_SCALE`).
 - Verdict at each boundary of the state machine, in evaluation order:
-  `T=-75 & M=0` → `DESERTION_MUTINY`; `U` just under/over `Θ_refusal` →
-  `MORAL_REFUSAL` / next rung; `T=0` → `QUIET_QUITTING`; `T=51` with
-  `P_captured=0.51` → `HEROIC_EXECUTION`; `T=51` with a quiet move →
-  `COMPLIANT_EXECUTION`.
-- Clamping: affinity and prestige saturate at ±100 after repeated `+50` / `+20`
-  sacrifice events.
-- Full 40-ply match event-log fingerprint per scripted leader style.
-- Campaign debrief archetype classification for 4 hand-built 10-match legacy
-  regression examples.
+  desertion via `U_desert` vs `U_stay`; `U` just under/over `Θ_refusal` →
+  `MORAL_REFUSAL` / next rung; `T=0` → `QUIET_QUITTING`; heroic when
+  `T > HEROIC_TRUST_FLOOR` with capture risk or board delta above configured
+  floors; otherwise `COMPLIANT_EXECUTION`.
+- Clamping: affinity and prestige saturate at ±100 after repeated heroic
+  sacrifice events (`DEFAULT_*_HEROIC_SACRIFICE` shifts).
+- Same-seed replay self-consistency and checkpoint/resume equivalence (the
+  retired per-leader 40-ply fingerprint golden was replaced deliberately —
+  see §7).
+- Campaign debrief / commendation folds for hand-built match logs.
 
 ## 3. Sensitivity probes (anti-dead-wiring)
 
@@ -308,11 +310,13 @@ only the matched-skill interpretation decides the detector.
 
 ## 6. What we deliberately do NOT test
 
-- LLM prose content (non-deterministic). We test the *contract*: schema
-  validation, sanitization of user-supplied piece names, timeout, and silent
-  fallback to templates. A snapshot suite over a recorded-response cassette is
-  the only prose-level testing worth doing.
-- Visual pixel diffs across four themes (high maintenance, low value at MVP).
+- Authored prose content as golden strings beyond coverage/trait-leakage
+  contracts. We test the *contract*: situation-key coverage
+  (`pnpm dialogue:check`), trait-leakage (`pnpm trait-leakage:check`), and
+  sanitization of user-supplied piece names. Those package scripts are local
+  developer gates today; they are not yet separate CI jobs in
+  `.github/workflows/ci.yml` (coverage + fake-engine smoke still run there).
+- Visual pixel diffs across themes (high maintenance, low value at MVP).
   Test the token provider and accessibility encodings instead.
 
 ## 7. Who runs what (agent-free verification)

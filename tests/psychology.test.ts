@@ -74,6 +74,7 @@ describe('search depth golden values', () => {
     expect(calculateEngineSearchDepth(100, 1.0)).toBe(16);
     expect(calculateEngineSearchDepth(100, 0.2)).toBe(4);
     expect(calculateEngineSearchDepth(1, 1.0)).toBe(2);
+    expect(calculateEngineSearchDepth(1, 0.1)).toBe(2);
     expect(calculateEngineSearchDepth(50, 0.5)).toBe(5);
   });
 });

@@ -153,7 +153,14 @@ See `docs/testing_strategy.md` §7.
 | `degeneracy.ts` | Non-degeneracy smoke detectors |
 | `parallel.ts` | Campaign planning, sharding, manifests, and run aggregation |
 | `aggregate.ts` | Shard-artifact aggregation CLI |
+| `world.ts` | World-persistent commanders (ADR 0047) — pairing, enemy rosters, checkpoints |
 
 Depth-`D_i` insights feed psychology through the ADR 0034 barrier. Both
 player and opposing tracked identities run the verdict ladder (Milestone 5b /
 ADR 0025); enemy private gauges stay off player-facing surfaces.
+
+## World layer (ADR 0047)
+
+`sim/world.ts` keeps commanders and pieces across campaigns inside one world
+curriculum. It is the harness counterpart to seminar persistence — not a
+replacement for Dexie careers, and not yet a host/facilitator product surface.

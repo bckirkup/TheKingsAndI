@@ -1,8 +1,12 @@
 # Data Model & Persistence
 
-_Planning document. Types are illustrative TypeScript, not yet implemented.
-Field names and ranges follow `docs/spec/psychology-engine.reference.ts`, which
-is normative; this document adds the persistence and identity layers around it._
+_Status: partially implemented. Dexie careers/acts/campaigns/matches/piece
+tables are live in `src/persistence/`. Field names and ranges follow
+`docs/spec/psychology-engine.reference.ts`, which is normative. Sections below
+that describe ADR 0035 three-channel credence or an engine audit stream are
+**target schema**, not the current on-disk shape — see
+`docs/adr/IMPLEMENTATION_STATUS.md`. Prefer `src/persistence/types.ts` and
+`src/persistence/db.ts` when answering “what ships today.”_
 
 ---
 

@@ -9,7 +9,9 @@ Stockfish 1.3 pool + shared-search broker, psychology + live cascade/witness/
 sacrifice/costly-signal wiring, headless harness with sweeps, playable UI slice,
 single-player persistence/campaign spine, and authored narration are in tree.
 **Open:** Milestone 3 supportive-desertion calibration; **Milestone 5b** seminar /
-cohort / multi-commander tasks. D49 and D50 are resolved by ADRs 0035 and 0036.
+cohort / multi-commander tasks. D49 and D50 are **decided** by ADRs 0035 and 0036
+but not fully wired into live state/persistence — see
+`docs/adr/IMPLEMENTATION_STATUS.md`.
 
 ## Read This First
 | Doc | Purpose |
@@ -26,7 +28,9 @@ cohort / multi-commander tasks. D49 and D50 are resolved by ADRs 0035 and 0036.
 | `docs/engine_licensing.md` | `EnginePort`, engine swap strategy, verified permissive candidates |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
-| `docs/calibration/milestone-3-engine-wired.md` | Post-wiring calibration report |
+| `docs/calibration/2026-08-10-state-of-play.md` | Current harness numbers (supersedes older M3 reports) |
+| `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
+| `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0047 decided vs shipped |
 | `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
 | `docs/risks_and_open_questions.md` | Known hazards |

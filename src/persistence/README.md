@@ -16,8 +16,19 @@ Dexie-backed local storage for careers, campaigns, rosters, and match records.
 
 ## Folds
 
-Audits and culture drift are **never stored as authoritative counters** — they are
-recomputed from the event log via `foldMatchAudit` and `foldCampaignCultureDrift`.
+Audits, culture drift, commendations, learning delta, and certificates are
+**never stored as authoritative counters** — they are recomputed from the event
+log (`foldMatchAudit`, `foldCampaignCultureDrift`, `foldPlayerCommendations`,
+transcript folds).
+
+Commendation thresholds live in `commendationConfig.ts` and must keep golden +
+sensitivity coverage (`tests/commendations.test.ts`).
+
+## World types
+
+`worldTypes.ts` scaffolds ADR 0047 persistent commanders. The headless world
+loop lives under `sim/world.ts`; Dexie does not yet own a full seminar host
+schema.
 
 ## Usage
 

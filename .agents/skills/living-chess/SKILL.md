@@ -22,8 +22,10 @@ Milestones 1–6 are substantially in tree: chess substrate; Stockfish 1.3 pool 
 shared-search broker (`src/engine/`); psychology + orchestration with live
 cascade/witness/sacrifice/costly-signal wiring; sim harness with sweeps;
 playable UI; single-player persistence/campaign; authored narration. **Not**
-done: Milestone 5b seminar/cohort tasks; supportive desertion calibration; open
-**D49** / **D50**. If a task asks to "fix" or "extend" a component, first
+done: Milestone 5b seminar/cohort tasks; supportive desertion calibration. **D49** /
+**D50** are decided (ADRs 0035/0036) but not fully shipped in live state — check
+`docs/adr/IMPLEMENTATION_STATUS.md` before assuming three-channel credence or an
+engine audit stream exists. If a task asks to "fix" or "extend" a component, first
 verify current behaviour — stubs are rarer than the old Milestone-1 banner
 implied.
 

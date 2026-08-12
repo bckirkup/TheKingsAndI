@@ -1,7 +1,10 @@
 # The Kings and I — System Architecture
 
-_Status: planning. No implementation exists yet. This document is the target
-architecture that `docs/development_plan.md` builds toward._
+_Status: target architecture for a codebase where Milestones 1–6 are substantially
+landed. Treat layer boundaries and the move pipeline as normative; treat any
+remaining “not yet built” notes as gaps against that target, not as a greenfield
+plan. Implementation status for recent ADRs:
+`docs/adr/IMPLEMENTATION_STATUS.md`._
 
 Sources of record: `docs/spec/living-chess-srs.md` (requirements) and
 `docs/spec/psychology-engine.reference.ts` (equations, thresholds, coefficients).
@@ -26,18 +29,18 @@ single most important architectural constraint in the project:
                                     │ read-only projection
                                     ▼
                  ┌──────────────────────────────────────┐
-                 │   NARRATION (best-effort, optional)  │
-                 │   templates → optional LLM rewrite   │
+                 │   NARRATION (presentation only)      │
+                 │   authored dialogue / audit / debrief│
                  └──────────────────────────────────────┘
 ```
 
 Consequences:
 
-- The game is fully playable offline with zero API keys (templates only).
-- A dropped/slow/hallucinating LLM response can never corrupt a save file,
-  change a refusal verdict, or desync a replay.
-- The headless balance harness (1,000+ self-play matches) runs with the LLM
-  layer switched off, at full speed, in CI.
+- The game is fully playable offline with zero API keys (authored packs only).
+- Narration can never corrupt a save file, change a refusal verdict, or desync
+  a replay (ADR 0001 / ADR 0004).
+- The headless balance harness runs with narration switched off, at full speed,
+  in CI.
 
 ## 2. Layers
 
