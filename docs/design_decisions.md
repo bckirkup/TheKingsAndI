@@ -821,6 +821,24 @@ distance-from-perfection formulations were rejected because absent bonds and
 neutral traits are not alienation. Its floor and resulting calibration remain
 open.
 
+### D123 ⚠ The enemy roster does not persist across a campaign
+`sim/match.ts` never passes `initialEnemyRoster`, and `sim/campaign.ts` carries
+only the player roster, so the opposing commander meets every match with a fresh
+army holding no memory of him. Enemy psychology still evolves *within* a match.
+Two consequences for reading the enemy-side metrics:
+
+- `enemyDesertionAttrition` is a union over piece IDs that are reused every
+  match (`b:K:e8` and friends), so it is a repeated per-match measure, **not**
+  the career attrition the player-side quantity of the same shape reports. The
+  two are not directly comparable and a differential between them is not a
+  like-for-like comparison; `meanEnemyDesertions` per match is the honest
+  enemy-side quantity.
+- Any leadership advantage measured against this opponent is inflated by the
+  fact that our roster accumulates trust across a career and his cannot. ADR
+  0025 asks for a real opposing commander with a real roster, and ADR 0026 makes
+  pieces community entities; persisting the enemy roster is the open work that
+  would make the differential mean what it appears to mean.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
