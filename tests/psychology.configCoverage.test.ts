@@ -4,6 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { LivingBoard } from '../src/chess';
+import { evalProfileFor } from '../src/orchestration/privateEvaluation';
 import {
   ENGINE_CONFIG,
   applyBetrayalSignal,
@@ -735,6 +737,29 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
         result.roster.find((p) => p.id === actor.id)?.engagementFactor,
       ).toBe(0.5);
     });
+  });
+});
+
+describe('ENGINE_CONFIG coverage — private evaluation', () => {
+  it('golden: PRIVATE_EVAL_TRAUMA_DRIFT export keeps drift off by default', () => {
+    const piece = makePiece({ B_i: 40 });
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/6N1/4K3 w - - 0 1');
+    expect(ENGINE_CONFIG.PRIVATE_EVAL_TRAUMA_DRIFT).toBe(false);
+    expect(evalProfileFor(piece, board)['weight:ownSafety']).toBe(675);
+  });
+
+  it('sensitivity: PRIVATE_EVAL_TRAUMA_DRIFT export changes the profile', () => {
+    const piece = makePiece({ B_i: 40 });
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/6N1/4K3 w - - 0 1');
+    const baseline = evalProfileFor(piece, board);
+    let drifted: ReturnType<typeof evalProfileFor> | undefined;
+    mutateConfig('PRIVATE_EVAL_TRAUMA_DRIFT', true, () => {
+      drifted = evalProfileFor(piece, board);
+    });
+    expect(drifted?.['weight:ownSafety']).toBe(945);
+    expect(drifted?.['weight:ownSafety']).not.toBe(
+      baseline['weight:ownSafety'],
+    );
   });
 });
 

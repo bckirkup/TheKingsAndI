@@ -45,10 +45,16 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 
 Downgraded to ordinary implementation wiring by owner ruling — to be settled in
 code review during Milestones 1–3, each with a sensitivity probe:
-**D20** (`w_prestige` unused), **D21** (`B_i` unused — now answered in substance
-by ADR 0009: it is capture trauma), **D22** (morale update rule — no longer
-load-bearing since ADR 0011 removed the morale trip-wire), **D23** (`S(P_j, P_benched)`
-undefined).
+**D20** (`w_prestige` unused), **D21** (`B_i` unused — decided in substance by
+ADR 0009 as capture trauma, but still **not wired**), **D22** (morale update
+rule — no longer load-bearing since ADR 0011 removed the morale trip-wire),
+**D23** (`S(P_j, P_benched)` undefined).
+
+This block is a provenance warning. A decision being downgraded to ordinary
+implementation wiring does not make it implemented: D21 remains decided but
+unwired because no capture path writes `B_i` (`src/psychology/override.ts:24-28`;
+`docs/design_decisions.md:899-905`). The authoritative shipped/not-shipped
+status is `docs/adr/IMPLEMENTATION_STATUS.md`.
 
 ---
 

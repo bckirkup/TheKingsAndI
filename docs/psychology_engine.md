@@ -250,29 +250,39 @@ uses the intended form:
 Sensitivity coverage lives in `tests/psychology.configCoverage.test.ts`
 (D20 regression). Standing/glory desertion terms also read ambition+prestige.
 
-### 10.3 `B_i` — RESOLVED in shipping code
-Trauma is written by override and capture paths and read by desertion pain
-(`DESERTION_PAIN_BASE + B_i · DESERTION_PAIN_TRAUMA_SCALE`) and related folds.
-The reference's "stored but unused" claim is historical; keep probes on the
-pain knobs when changing trauma semantics.
+### 10.3 `B_i` — DECIDED, but capture wiring is not shipped
+`B_i` is initialized and written by the override reducer
+(`src/psychology/override.ts:24-28`) and read by desertion pain and the
+optional private-evaluation drift
+(`src/psychology/desertion.ts:12-16`,
+`src/orchestration/privateEvaluation.ts:221-223`). The current capture path
+does not write victim-side trauma; the season fold only preserves the final
+state of a captured identity (`docs/design_decisions.md:899-905`). ADR 0009
+therefore records a decision whose capture mechanism remains **not wired**.
+Do not treat this as resolved until the capture and sustained-dread semantics
+have an implementing source location.
 
-### 10.4 Morale `M_i` has no update rule — downgraded by ADR 0011
+### 10.4 Morale `M_i` — trip-wire removed, ordinary wiring still incomplete
 Under the reference, desertion required `M_i == 0` while nothing ever wrote
-morale, making it unreachable. ADR 0011 replaces that gate with an expected-cost
-comparison in which morale is one input to `λ_i`, so morale is no longer
-load-bearing for reachability. It still needs sources (losses, exposure, peers
-lost, victories) and a recovery rule — ordinary wiring, not a blocker. The exact
-float comparison disappears with the gate.
+morale, making it unreachable. ADR 0011 replaces that gate with an
+expected-cost comparison in which morale is one input to `λ_i`, so morale is no
+longer load-bearing for reachability. Shipping code writes it for override and
+witnessed-desertion effects and reads it in `λ_i`
+(`src/psychology/override.ts:28`, `src/psychology/desertion.ts:57-60`,
+`src/psychology/desertion.ts:264-273`). General loss, exposure, victory, and
+recovery sources remain absent. This is partially wired, not a complete morale
+update rule.
 
-### 10.5 `S(P_j, P_benched)` is undefined
-The benching penalty needs a "shared bond" scalar in `[0,1]` that no other part
-of the spec produces. Natural derivation:
-`S = max(0, (A_{j,benched} + C_{j,role(benched)}) / 200)`, i.e. reuse the same
-relationship coefficient as `Φ`. Confirm rather than assume.
+### 10.5 `S(P_j, P_benched)` — RESOLVED in shipping code
+`sharedBondScalar` implements
+`S = max(0, (A_{j,benched} + C_{j,role(benched)}) / 200)` and the benching
+penalty consumes it (`src/psychology/witness.ts:56-63`,
+`src/psychology/events.ts:56-64`). The former undefined-scalar warning is stale.
 
-### 10.6 `loyaltyStabilityScore` can exceed its documented range
-`max(0, 100 - burnout + max(0, ΔT))` reaches 200 when trust grew and burnout was
-zero, though the type documents `0..100`. Clamp, or widen the documented range.
+### 10.6 `loyaltyStabilityScore` — RESOLVED in shipping code
+The implementation clamps the score to `[0,100]` after applying the
+longitudinal-trust term (`src/psychology/events.ts:96-103`). The former
+range-overflow warning is stale.
 
 ### 10.7 `engagementFactor` is stored on `PieceState` *and* recomputed per verdict
 Two sources of truth. Recommendation: treat it as derived-only (a function of the
