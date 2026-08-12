@@ -7,6 +7,7 @@ import {
 import type { EnginePort } from '../src/engine/types';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
 import type { PieceState } from '../src/psychology';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 import type { Leader } from './cli';
 import { capEngineDepth, createSimEngine, type SimEngineKind } from './engine';
@@ -22,6 +23,8 @@ import { createStartingRoster, mergeCampaignRoster } from './roster';
 export interface CampaignOptions {
   readonly matches: number;
   readonly leader: Leader;
+  readonly opponent?: OpponentArchetype;
+  readonly enemyTrackedIdentities?: number;
   readonly seed: number;
   readonly initialTrust?: number;
   readonly engine?: EnginePort;
@@ -35,15 +38,19 @@ export interface CampaignOptions {
 }
 
 export interface CampaignCheckpoint {
+  readonly checkpointVersion: number;
   readonly schemaVersion: number;
   readonly psychConfigVersion: string;
   readonly determinismId: string;
   readonly seed: number;
   readonly leader: Leader;
+  readonly opponent: OpponentArchetype;
+  readonly enemyTrackedIdentities: number;
   readonly initialTrust: number;
   readonly nextMatch: number;
   readonly randomState: RandomState;
   readonly roster: readonly PieceState[];
+  readonly enemyRoster: readonly PieceState[];
   readonly completedMetrics: readonly MatchMetrics[];
 }
 
@@ -51,6 +58,7 @@ export interface CampaignResult {
   readonly metrics: readonly MatchMetrics[];
   readonly summary: CampaignMetrics;
   readonly finalRoster: readonly PieceState[];
+  readonly finalEnemyRoster: readonly PieceState[];
   readonly determinismId: string;
   readonly checkpoint: CampaignCheckpoint;
   readonly justifiedRefusalObviousness: readonly number[];
@@ -87,14 +95,18 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
     throw new Error('Campaign checkpoint randomState is missing.');
   }
   const requiredKeys = [
+    'checkpointVersion',
     'schemaVersion',
     'psychConfigVersion',
     'determinismId',
     'seed',
     'leader',
+    'opponent',
+    'enemyTrackedIdentities',
     'initialTrust',
     'nextMatch',
     'roster',
+    'enemyRoster',
     'completedMetrics',
   ] as const;
   for (const key of requiredKeys) {
@@ -107,22 +119,31 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
       throw new Error(`Campaign checkpoint randomState is missing ${key}.`);
     }
   }
-  if (!Array.isArray(value.roster) || !Array.isArray(value.completedMetrics)) {
+  if (
+    !Array.isArray(value.roster) ||
+    !Array.isArray(value.enemyRoster) ||
+    !Array.isArray(value.completedMetrics)
+  ) {
     throw new Error(
       'Campaign checkpoint roster and completedMetrics must be arrays.',
     );
   }
-  value.roster.forEach((piece, index) => {
-    if (
-      !isPlainRecord(piece) ||
-      typeof piece.id !== 'string' ||
-      typeof piece.role !== 'string'
-    ) {
-      throw new Error(
-        `Campaign checkpoint roster[${index}] must be a plain object with string id and role.`,
-      );
-    }
-  });
+  for (const [rosterName, roster] of [
+    ['roster', value.roster],
+    ['enemyRoster', value.enemyRoster],
+  ] as const) {
+    roster.forEach((piece, index) => {
+      if (
+        !isPlainRecord(piece) ||
+        typeof piece.id !== 'string' ||
+        typeof piece.role !== 'string'
+      ) {
+        throw new Error(
+          `Campaign checkpoint ${rosterName}[${index}] must be a plain object with string id and role.`,
+        );
+      }
+    });
+  }
   return value as unknown as CampaignCheckpoint;
 }
 
@@ -148,22 +169,29 @@ function createCampaignCheckpoint(options: {
   readonly determinismId: string;
   readonly seed: number;
   readonly leader: Leader;
+  readonly opponent: OpponentArchetype;
+  readonly enemyTrackedIdentities: number;
   readonly initialTrust: number;
   readonly nextMatch: number;
   readonly randomState: RandomState;
   readonly roster: readonly PieceState[];
+  readonly enemyRoster: readonly PieceState[];
   readonly completedMetrics: readonly MatchMetrics[];
 }): CampaignCheckpoint {
   return {
+    checkpointVersion: 2,
     schemaVersion: SCHEMA_VERSION,
     psychConfigVersion: PSYCH_CONFIG_VERSION,
     determinismId: options.determinismId,
     seed: options.seed,
     leader: options.leader,
+    opponent: options.opponent,
+    enemyTrackedIdentities: options.enemyTrackedIdentities,
     initialTrust: options.initialTrust,
     nextMatch: options.nextMatch,
     randomState: options.randomState,
     roster: [...options.roster],
+    enemyRoster: [...options.enemyRoster],
     completedMetrics: [...options.completedMetrics],
   };
 }
@@ -176,6 +204,9 @@ export async function runCampaign(
     options.engine ?? (await createSimEngine(options.engineKind ?? 'lozza'));
   const engine = capEngineDepth(baseEngine, options.depthCap);
   const initialTrust = options.initialTrust ?? leaderTrustBias(options.leader);
+  const opponent = options.opponent ?? 'random';
+  const enemyTrackedIdentities = options.enemyTrackedIdentities ?? 16;
+  const enemyInitialTrust = leaderTrustBias(opponent);
   const checkpoint = options.checkpoint;
   if (checkpoint !== undefined) {
     validateCheckpoint(checkpoint, options, engine.determinismId, initialTrust);
@@ -193,6 +224,15 @@ export async function runCampaign(
           random.nextInt(10_000) / 10_000,
         )
       : [...checkpoint.roster];
+  let enemyRoster =
+    checkpoint === undefined
+      ? createStartingRoster(
+          board,
+          'b',
+          enemyInitialTrust,
+          random.nextInt(10_000) / 10_000,
+        )
+      : [...checkpoint.enemyRoster];
   const metrics: MatchMetrics[] =
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
   const justifiedRefusalObviousness: number[] = [];
@@ -208,6 +248,13 @@ export async function runCampaign(
       initialTrust,
       random.nextInt(10_000) / 10_000,
     );
+    enemyRoster = mergeCampaignRoster(
+      board,
+      'b',
+      enemyRoster,
+      enemyInitialTrust,
+      random.nextInt(10_000) / 10_000,
+    );
     const rosterStart = roster;
     const result = await runMatch({
       seed: matchSeed,
@@ -215,6 +262,9 @@ export async function runCampaign(
       matchIndex: match,
       campaignMatch: match,
       roster,
+      enemyRoster,
+      opponent,
+      enemyTrackedIdentities,
       engine,
     });
     const metric = metricsFromMatch(
@@ -227,6 +277,7 @@ export async function runCampaign(
     );
     metrics.push(metric);
     roster = [...result.roster];
+    enemyRoster = [...result.enemyRoster];
     justifiedRefusalObviousness.push(...result.justifiedRefusalObviousness);
     justifiedRefusalPrivateViewLosses.push(
       ...result.justifiedRefusalPrivateViewLosses,
@@ -235,10 +286,13 @@ export async function runCampaign(
       determinismId: engine.determinismId,
       seed: options.seed,
       leader: options.leader,
+      opponent,
+      enemyTrackedIdentities,
       initialTrust,
       nextMatch: match + 1,
       randomState: random.snapshot(),
       roster,
+      enemyRoster,
       completedMetrics: metrics,
     });
     await options.onCheckpoint?.(checkpointAtBoundary);
@@ -248,16 +302,20 @@ export async function runCampaign(
     determinismId: engine.determinismId,
     seed: options.seed,
     leader: options.leader,
+    opponent,
+    enemyTrackedIdentities,
     initialTrust,
     nextMatch: options.matches + 1,
     randomState: random.snapshot(),
     roster,
+    enemyRoster,
     completedMetrics: metrics,
   });
   return {
     metrics,
     summary: aggregateCampaign(options.leader, options.seed, metrics),
     finalRoster: roster,
+    finalEnemyRoster: enemyRoster,
     determinismId: engine.determinismId,
     checkpoint: resultCheckpoint,
     justifiedRefusalObviousness: Object.freeze(justifiedRefusalObviousness),
@@ -273,6 +331,11 @@ function validateCheckpoint(
   determinismId: string,
   initialTrust: number,
 ): void {
+  if (checkpoint.checkpointVersion !== 2) {
+    throw new Error(
+      `Checkpoint checkpointVersion mismatch: checkpoint=${checkpoint.checkpointVersion}, run=2.`,
+    );
+  }
   if (checkpoint.schemaVersion !== SCHEMA_VERSION) {
     throw new Error(
       `Checkpoint schemaVersion mismatch: checkpoint=${checkpoint.schemaVersion}, run=${SCHEMA_VERSION}.`,
@@ -291,6 +354,18 @@ function validateCheckpoint(
   if (checkpoint.leader !== options.leader) {
     throw new Error(
       `Checkpoint leader mismatch: checkpoint=${checkpoint.leader}, run=${options.leader}.`,
+    );
+  }
+  if (checkpoint.opponent !== (options.opponent ?? 'random')) {
+    throw new Error(
+      `Checkpoint opponent mismatch: checkpoint=${checkpoint.opponent}, run=${options.opponent ?? 'random'}.`,
+    );
+  }
+  if (
+    checkpoint.enemyTrackedIdentities !== (options.enemyTrackedIdentities ?? 16)
+  ) {
+    throw new Error(
+      `Checkpoint enemyTrackedIdentities mismatch: checkpoint=${checkpoint.enemyTrackedIdentities}, run=${options.enemyTrackedIdentities ?? 16}.`,
     );
   }
   if (checkpoint.seed !== options.seed) {

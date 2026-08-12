@@ -11,6 +11,7 @@ import type { PieceState } from '../src/psychology';
 import type { Leader } from './cli';
 import { leaderPolicy, legalScoredMoves, type LeaderContext } from './leaders';
 import { createStartingRoster } from './roster';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 const MAX_PLIES = 200;
 const REDEEMER_SWITCH_MATCH = 10;
@@ -50,6 +51,9 @@ export interface RunMatchOptions {
   readonly matchIndex: number;
   readonly campaignMatch: number;
   readonly roster: readonly PieceState[];
+  readonly enemyRoster?: readonly PieceState[];
+  readonly opponent?: OpponentArchetype;
+  readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
 }
 
@@ -67,10 +71,16 @@ export async function runMatch(
     maxPlies: MAX_PLIES,
     playerSide: 'w',
     leader: leaderPort(options.leader, contextBase),
-    opponent: leaderPort('random', contextBase),
+    opponent: leaderPort(options.opponent ?? 'random', contextBase),
     initialRoster: options.roster,
     engine: options.engine,
-    opponentArchetype: 'random',
+    opponentArchetype: options.opponent ?? 'random',
+    ...(options.enemyRoster === undefined
+      ? {}
+      : { initialEnemyRoster: options.enemyRoster }),
+    ...(options.enemyTrackedIdentities === undefined
+      ? {}
+      : { enemyTrackedIdentities: options.enemyTrackedIdentities }),
   });
 }
 

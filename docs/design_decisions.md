@@ -839,6 +839,28 @@ Two consequences for reading the enemy-side metrics:
   pieces community entities; persisting the enemy roster is the open work that
   would make the differential mean what it appears to mean.
 
+### D124 ⚠ Symmetric enemy identity tracking
+The default `ENEMY_TRACKED_IDENTITIES = 8` remains available for engine-cost
+controlled runs, but world and campaign comparisons request all 16 enemy
+identities. The old top-8-by-`E_i` selection is not neutral because it
+systematically excludes pawns. The tracking cap and its cost/coverage tradeoff
+remain open for calibration under ADR 0047.
+
+### D125 ⚠ World pairing duration and schedule calibration
+ADR 0047 settles deterministic style-vs-style pairing and persistent
+commander rosters, but the number of matches per pairing, whether both
+directions are required, and how matrix cells are summarized remain open
+calibration questions. The first implementation uses a seeded schedule and
+reuses the existing match metrics and horizon machinery.
+
+### D126 ⚠ Opposing commander style selection
+The opposing commander is selected explicitly from the five
+`OpponentArchetype` styles and the selected style drives both tactical policy
+and enemy psychology. Harness-only leader styles without a counterpart
+(`pure_tactician`, `redeemer`, `cold_winner`, and `rebuilder`) fail loudly
+instead of silently becoming `random`. The balance of style matchups remains
+an open calibration question.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is

@@ -25,6 +25,7 @@ import {
   type ControlHorizon,
 } from './metrics';
 import { type Leader } from './cli';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import {
   createSimEngine,
   disposeSimEngine,
@@ -125,6 +126,7 @@ export function resolveRunPlan(values: RunFlagValues): CampaignRunPlan {
 export interface ShardOptions {
   readonly plan: CampaignRunPlan;
   readonly leader: Leader;
+  readonly opponent?: OpponentArchetype;
   readonly masterSeed: number;
   readonly engineKind: SimEngineKind;
   readonly depthCap: number | undefined;
@@ -265,6 +267,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       const result = await campaignRunner({
         matches: options.plan.campaignLength,
         leader: options.leader,
+        ...(options.opponent === undefined
+          ? {}
+          : { opponent: options.opponent }),
         seed: campaignSeed,
         ...(engine === undefined ? {} : { engine }),
         depthCap: options.depthCap,

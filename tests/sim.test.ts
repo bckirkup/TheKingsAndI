@@ -91,15 +91,19 @@ describe('simulation harness determinism', () => {
 
   it('preserves the last checkpoint when a sibling write is truncated', async () => {
     const checkpoint: CampaignCheckpoint = {
+      checkpointVersion: 2,
       schemaVersion: 1,
       psychConfigVersion: 'psychology-v1',
       determinismId: 'sim-fake/depth-fixed',
       seed: 12,
       leader: 'supportive',
+      opponent: 'random',
+      enemyTrackedIdentities: 16,
       initialTrust: 40,
       nextMatch: 2,
       randomState: { s0: 1, s1: 2, s2: 3, s3: 4 },
       roster: [],
+      enemyRoster: [],
       completedMetrics: [],
     };
     const path = `${process.cwd()}/.tmp-checkpoint-${process.pid}.json`;
@@ -295,6 +299,7 @@ describe('simulation harness argument parsing', () => {
       campaigns: 1,
       campaignLength: 20,
       leader: 'tyrannical',
+      opponent: 'random',
       seed: 7,
       engine: 'lozza',
       depthCap: 4,

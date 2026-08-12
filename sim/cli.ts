@@ -16,6 +16,7 @@ import {
   writeShardArtifact,
 } from './parallel';
 import { plainChessMeanWinScore } from './baseline';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import { canonicalJson } from '../src/core/canonicalJson';
 
 export async function writeAtomicCheckpoint(
@@ -44,13 +45,44 @@ export const LEADERS = [
   'rebuilder',
 ] as const;
 
+export const OPPONENT_ARCHETYPES = [
+  'tyrannical',
+  'supportive',
+  'volatile',
+  'servant',
+  'random',
+] as const;
+
 export type Leader = (typeof LEADERS)[number];
+
+export function opponentArchetypeForLeader(leader: Leader): OpponentArchetype {
+  switch (leader) {
+    case 'tyrannical':
+    case 'supportive':
+    case 'volatile':
+    case 'servant':
+    case 'random':
+      return leader;
+    case 'pure_tactician':
+    case 'redeemer':
+    case 'cold_winner':
+    case 'rebuilder':
+      throw new Error(
+        `Leader "${leader}" has no opposing commander archetype.`,
+      );
+    default: {
+      const exhaustive: never = leader;
+      throw new Error(`Unknown leader: ${exhaustive}`);
+    }
+  }
+}
 
 export const ENGINES = ['fake', 'lozza', 'stockfish'] as const;
 
 export interface SimulationOptions {
   readonly matches: number;
   readonly leader: Leader;
+  readonly opponent: OpponentArchetype;
   readonly seed: number;
   readonly campaign: number;
   readonly campaigns: number;
@@ -93,6 +125,7 @@ function parseArguments(
   const supportedFlags = new Set([
     'matches',
     'leader',
+    'opponent',
     'seed',
     'campaign',
     'campaign-length',
@@ -151,6 +184,13 @@ function parseArguments(
   if (!LEADERS.includes(leaderValue as Leader)) {
     throw new Error(`--leader must be one of: ${LEADERS.join(', ')}.`);
   }
+  const opponentValue = values.get('opponent') ?? 'random';
+  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentArchetype)) {
+    throw new Error(
+      `--opponent must be one of: ${OPPONENT_ARCHETYPES.join(', ')}.`,
+    );
+  }
+  const opponent = opponentArchetypeForLeader(opponentValue as Leader);
   const seed = Number(values.get('seed') ?? 0);
   if (!Number.isSafeInteger(seed)) {
     throw new Error('--seed must be an integer.');
@@ -212,6 +252,7 @@ function parseArguments(
     campaigns: plan.campaigns,
     campaignLength: plan.campaignLength,
     leader: leaderValue as Leader,
+    opponent,
     seed,
     engine: engineValue as SimEngineKind,
     depthCap: depthCapValue,
@@ -286,6 +327,7 @@ async function main(): Promise<void> {
       campaigns: options.campaigns,
     },
     leader: options.leader,
+    opponent: options.opponent,
     masterSeed: options.seed,
     engineKind: options.engine,
     depthCap: options.depthCap,
