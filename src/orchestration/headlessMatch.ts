@@ -4,6 +4,9 @@ import {
   type MoveFeatures,
   type MoveIntent,
   type PieceId,
+  type PieceIdFactory,
+  type Role,
+  type Square,
 } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
@@ -80,7 +83,13 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  /**
+   * Optional fielded lineup whose IDs must be installed on the standard
+   * position. When omitted, the historical starting-square IDs are used.
+   */
+  readonly initialLineup?: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
+  readonly initialEnemyLineup?: readonly PieceState[];
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
   readonly opponentArchetype?: OpponentArchetype;
@@ -89,7 +98,9 @@ export interface HeadlessMatchConfig {
 export interface HeadlessMatchResult {
   readonly events: readonly MatchEvent[];
   readonly roster: readonly PieceState[];
+  readonly departedRoster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
+  readonly departedEnemyRoster: readonly PieceState[];
   readonly enemyFieldedPieceIds: readonly PieceId[];
   readonly plies: number;
   readonly winScore: number;
@@ -115,6 +126,42 @@ function updatePiece(
   return roster.map((piece) =>
     piece.id === pieceId ? normalizePieceState(updater(piece)) : piece,
   );
+}
+
+function lineupPieceIdFactory(
+  lineups: Readonly<Partial<Record<Side, readonly PieceState[]>>>,
+): PieceIdFactory {
+  const counts: Record<string, number> = {};
+  return ({
+    side,
+    role,
+    square,
+  }: {
+    readonly side: Side;
+    readonly role: Role;
+    readonly square: Square;
+  }) => {
+    const key = `${side}:${role}`;
+    const index = counts[key] ?? 0;
+    counts[key] = index + 1;
+    const lineup = lineups[side];
+    const roleName =
+      role === 'P'
+        ? 'Pawn'
+        : role === 'N'
+          ? 'Knight'
+          : role === 'B'
+            ? 'Bishop'
+            : role === 'R'
+              ? 'Rook'
+              : role === 'Q'
+                ? 'Queen'
+                : 'King';
+    const candidates = lineup?.filter((piece) => piece.role === roleName) ?? [];
+    const piece = candidates[index];
+    if (piece !== undefined) return piece.id;
+    return `${side}:${role}:${square}`;
+  };
 }
 
 function applyPlayerOverride(
@@ -153,6 +200,15 @@ function applyPlayerOverride(
 
 function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
   return board.piecesOf(playerSide).map((piece) => piece.id);
+}
+
+function appendDeparted(
+  existing: readonly PieceState[],
+  departed: readonly PieceState[],
+): PieceState[] {
+  const byId = new Map(existing.map((piece) => [piece.id, piece]));
+  for (const piece of departed) byId.set(piece.id, piece);
+  return [...byId.values()];
 }
 
 function applyPlayerMoveConsequences(input: {
@@ -282,14 +338,26 @@ function applyPlayerMoveConsequences(input: {
 export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
 ): Promise<HeadlessMatchResult> {
-  const board = LivingBoard.standard();
+  const lineups: Partial<Record<Side, readonly PieceState[]>> = {};
+  if (config.initialLineup !== undefined) {
+    lineups[config.playerSide] = config.initialLineup;
+  }
+  if (config.initialEnemyLineup !== undefined) {
+    lineups[config.playerSide === 'w' ? 'b' : 'w'] = config.initialEnemyLineup;
+  }
+  const board =
+    Object.keys(lineups).length === 0
+      ? LivingBoard.standard()
+      : LivingBoard.standard(lineupPieceIdFactory(lineups));
   let roster = config.initialRoster.map(normalizePieceState);
+  let departedRoster: PieceState[] = [];
   const enemySide = config.playerSide === 'w' ? 'b' : 'w';
   let enemyRoster = trackEnemyIdentities(
     config.initialEnemyRoster?.map(normalizePieceState) ??
       createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
     config.enemyTrackedIdentities,
   );
+  let departedEnemyRoster: PieceState[] = [];
   const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];
   let ply = 1;
@@ -310,10 +378,19 @@ export async function runHeadlessMatch(
     const side = board.turn();
     const leader = side === config.playerSide ? config.leader : config.opponent;
     const playerActiveIds = activePlayerPieceIds(board, config.playerSide);
-    roster = roster.filter((piece) => playerActiveIds.includes(piece.id));
-    enemyRoster = enemyRoster.filter((piece) =>
-      board.piecesOf(enemySide).some((onBoard) => onBoard.id === piece.id),
+    departedRoster = appendDeparted(
+      departedRoster,
+      roster.filter((piece) => !playerActiveIds.includes(piece.id)),
     );
+    roster = roster.filter((piece) => playerActiveIds.includes(piece.id));
+    const enemyActiveIds = new Set(
+      board.piecesOf(enemySide).map((piece) => piece.id),
+    );
+    departedEnemyRoster = appendDeparted(
+      departedEnemyRoster,
+      enemyRoster.filter((piece) => !enemyActiveIds.has(piece.id)),
+    );
+    enemyRoster = enemyRoster.filter((piece) => enemyActiveIds.has(piece.id));
 
     if (playerActiveIds.length <= 1) {
       rout = true;
@@ -334,6 +411,10 @@ export async function runHeadlessMatch(
         overrideRefusals: opponentArchetype === 'tyrannical',
       });
       enemyRoster = enemyTurn.enemyRoster;
+      departedEnemyRoster = appendDeparted(
+        departedEnemyRoster,
+        enemyTurn.departedRoster,
+      );
       events.push(...enemyTurn.events);
       enemyObservableBehaviours.push(...enemyTurn.observableBehaviours);
       ply = enemyTurn.ply;
@@ -533,6 +614,7 @@ export async function runHeadlessMatch(
           }
         }
         roster = cascade.roster;
+        departedRoster = appendDeparted(departedRoster, cascade.departed);
         if (cascade.rout) {
           rout = true;
           turnCompleted = true;
@@ -630,7 +712,9 @@ export async function runHeadlessMatch(
   return {
     events: Object.freeze(events),
     roster: roster.map(normalizePieceState),
+    departedRoster: departedRoster.map(normalizePieceState),
     enemyRoster: enemyRoster.map(normalizePieceState),
+    departedEnemyRoster: departedEnemyRoster.map(normalizePieceState),
     enemyFieldedPieceIds,
     plies: ply - 1,
     winScore,

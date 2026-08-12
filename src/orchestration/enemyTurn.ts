@@ -56,6 +56,7 @@ function syncSideRoster(
 
 export interface EnemyTurnResult {
   readonly enemyRoster: PieceState[];
+  readonly departedRoster: readonly PieceState[];
   readonly events: readonly MatchEvent[];
   readonly ply: number;
   readonly enemyRout: boolean;
@@ -89,6 +90,7 @@ function finishUntrackedMove(
   const applied = board.applySan(san);
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
+    departedRoster: [],
     events: [
       {
         t: 'MOVE',
@@ -161,6 +163,7 @@ function applyTrackedEnemyDecision(input: {
       });
       return {
         enemyRoster,
+        departedRoster: [],
         events,
         ply,
         enemyRout: false,
@@ -196,6 +199,7 @@ function applyTrackedEnemyDecision(input: {
     }
     return {
       enemyRoster: syncSideRoster(board, cascade.roster, enemySide),
+      departedRoster: cascade.departed,
       events,
       ply: ply + 1,
       enemyRout: cascade.rout,
@@ -254,6 +258,7 @@ function applyTrackedEnemyDecision(input: {
 
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
+    departedRoster: [],
     events,
     ply: ply + 1,
     enemyRout: false,
@@ -296,6 +301,7 @@ export function applyEnemyTurnSync(input: {
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
       enemyRoster,
+      departedRoster: [],
       events: [],
       ply: input.ply,
       enemyRout: true,
@@ -402,6 +408,7 @@ export async function applyEnemyTurn(input: {
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
       enemyRoster,
+      departedRoster: [],
       events: [],
       ply: input.ply,
       enemyRout: true,

@@ -18,6 +18,15 @@ const ROLE_MAP: Record<Role, PieceRole> = {
   K: 'King',
 };
 
+const CHESS_ROLE_MAP: Record<PieceRole, Role> = {
+  Pawn: 'P',
+  Knight: 'N',
+  Bishop: 'B',
+  Rook: 'R',
+  Queen: 'Q',
+  King: 'K',
+};
+
 function traitsForRole(role: Role, randomUnit: number): PieceTraits {
   const jitter = (base: number): number =>
     Math.max(0.1, Math.min(1, base + (randomUnit - 0.5) * 0.2));
@@ -45,28 +54,45 @@ function classPrestigeFor(role: Role): PieceState['classPrestige'] {
   };
 }
 
+export function createFreshPieceState(
+  id: PieceId,
+  role: PieceRole,
+  initialTrust: number,
+  randomUnit: number,
+): PieceState {
+  const chessRole = CHESS_ROLE_MAP[role];
+  return normalizePieceState({
+    id,
+    role,
+    traits: traitsForRole(chessRole, randomUnit),
+    E_i: chessRole === 'P' ? 20 : chessRole === 'K' ? 80 : 55,
+    T_i: initialTrust,
+    M_i: 70,
+    B_i: 0,
+    dyadicAffinity: {},
+    classPrestige: classPrestigeFor(chessRole),
+    engagementFactor: 1,
+    credence: defaultCredence(),
+    rumor: defaultRumor(),
+  });
+}
+
 export function createStartingRoster(
   board: LivingBoard,
   side: Side,
   initialTrust: number,
   randomUnit: number,
 ): PieceState[] {
-  return board.piecesOf(side).map((piece) =>
-    normalizePieceState({
-      id: piece.id,
-      role: ROLE_MAP[piece.role],
-      traits: traitsForRole(piece.role, randomUnit),
-      E_i: piece.role === 'P' ? 20 : piece.role === 'K' ? 80 : 55,
-      T_i: initialTrust,
-      M_i: 70,
-      B_i: 0,
-      dyadicAffinity: {},
-      classPrestige: classPrestigeFor(piece.role),
-      engagementFactor: 1,
-      credence: defaultCredence(),
-      rumor: defaultRumor(),
-    }),
-  );
+  return board
+    .piecesOf(side)
+    .map((piece) =>
+      createFreshPieceState(
+        piece.id,
+        ROLE_MAP[piece.role],
+        initialTrust,
+        randomUnit,
+      ),
+    );
 }
 
 /** Restore a full starting lineup while preserving carried psychological state. */
