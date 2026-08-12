@@ -7,6 +7,7 @@ import {
   createCommanderPool,
   fieldPool,
   foldMatchIntoPools,
+  poolSnapshot,
   poolRoleCounts,
   type CommanderPool,
 } from '../sim/pool';
@@ -16,11 +17,15 @@ function emptyResult(
   roster: readonly PieceState[],
   enemyRoster: readonly PieceState[],
   events: readonly MatchEvent[] = [],
+  departedRoster: readonly PieceState[] = [],
+  departedEnemyRoster: readonly PieceState[] = [],
 ): HeadlessMatchResult {
   return {
     events,
     roster,
+    departedRoster,
     enemyRoster,
+    departedEnemyRoster,
     enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
     plies: 1,
     winScore: 0,
@@ -125,6 +130,13 @@ describe('scarce season pools', () => {
     });
     expect(baseline.members).toHaveLength(31);
     expect(shallow.members).not.toHaveLength(baseline.members.length);
+    const pawnTraits = baseline.members
+      .filter((member) => member.state.role === 'Pawn')
+      .map((member) => member.state.traits);
+    expect(
+      new Set(pawnTraits.map((traits) => JSON.stringify(traits))).size,
+    ).toBeGreaterThan(1);
+    expect(poolSnapshot(baseline, fieldPool(baseline, 1)).total).toBe(31);
   });
 
   it('threads the pool-depth config through season output', async () => {
@@ -162,6 +174,7 @@ describe('scarce season pools', () => {
     expect('aggregateSeasonScore' in first).toBe(false);
     expect(first.whiteSnapshots[0]).toMatchObject({
       available: expect.any(Number),
+      total: 31,
       recovering: expect.any(Number),
       retired: expect.any(Number),
       conscriptsFielded: 0,
@@ -209,6 +222,12 @@ describe('scarce season pools', () => {
     expect(conscript?.state.id).toContain(':conscript:1:');
     expect(conscript?.state.credence.tauAbil).toBe(12);
     expect(conscript?.state.credence.tauBenev).toBe(88);
+    expect(conscript?.state.T_i).toBe(40);
+    expect(conscript?.state.M_i).toBe(70);
+    expect(conscript?.state.B_i).toBe(0);
+    expect(conscript?.state.dyadicAffinity).toEqual({});
+    expect(conscript?.state.rumor).toEqual(firstPawn.state.rumor);
+    expect(conscript?.state.traits).not.toEqual(firstPawn.state.traits);
     expect(conscript?.state.credence.tauAbil).not.toBe(
       firstPawn.state.credence.tauAbil,
     );
@@ -248,6 +267,7 @@ describe('scarce season pools', () => {
         .filter((state) => state.id !== target.state.id),
       fieldPool(black, 1).lineup.map((member) => member.state),
       [desertion],
+      [{ ...target.state, B_i: 33 }],
     );
     const folded = foldMatchIntoPools({
       white,
@@ -268,7 +288,7 @@ describe('scarce season pools', () => {
     );
     expect(returned?.status).toBe('recovering');
     expect(returned?.availableAtMatch).toBe(4);
-    expect(returned?.state.B_i).toBe(target.state.B_i);
+    expect(returned?.state.B_i).toBe(33);
     const shortAbsence = foldMatchIntoPools({
       white,
       black,
@@ -290,10 +310,13 @@ describe('scarce season pools', () => {
           .map((member) => member.state)
           .filter((state) => state.id !== target.state.id),
         fieldPool(black, 1).lineup.map((member) => member.state),
+        [],
+        [{ ...target.state, B_i: 44 }],
       ),
       match: 1,
     }).white.members.find((member) => member.state.id === target.state.id);
     expect(captured?.service.captures).toBe(1);
+    expect(captured?.state.B_i).toBe(44);
     expect(captured?.status).toBe('available');
     expect(captured?.availableAtMatch).toBe(2);
 

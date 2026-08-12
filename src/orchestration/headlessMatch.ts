@@ -98,7 +98,9 @@ export interface HeadlessMatchConfig {
 export interface HeadlessMatchResult {
   readonly events: readonly MatchEvent[];
   readonly roster: readonly PieceState[];
+  readonly departedRoster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
+  readonly departedEnemyRoster: readonly PieceState[];
   readonly enemyFieldedPieceIds: readonly PieceId[];
   readonly plies: number;
   readonly winScore: number;
@@ -198,6 +200,15 @@ function applyPlayerOverride(
 
 function activePlayerPieceIds(board: LivingBoard, playerSide: Side): string[] {
   return board.piecesOf(playerSide).map((piece) => piece.id);
+}
+
+function appendDeparted(
+  existing: readonly PieceState[],
+  departed: readonly PieceState[],
+): PieceState[] {
+  const byId = new Map(existing.map((piece) => [piece.id, piece]));
+  for (const piece of departed) byId.set(piece.id, piece);
+  return [...byId.values()];
 }
 
 function applyPlayerMoveConsequences(input: {
@@ -339,12 +350,14 @@ export async function runHeadlessMatch(
       ? LivingBoard.standard()
       : LivingBoard.standard(lineupPieceIdFactory(lineups));
   let roster = config.initialRoster.map(normalizePieceState);
+  let departedRoster: PieceState[] = [];
   const enemySide = config.playerSide === 'w' ? 'b' : 'w';
   let enemyRoster = trackEnemyIdentities(
     config.initialEnemyRoster?.map(normalizePieceState) ??
       createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
     config.enemyTrackedIdentities,
   );
+  let departedEnemyRoster: PieceState[] = [];
   const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];
   let ply = 1;
@@ -365,10 +378,19 @@ export async function runHeadlessMatch(
     const side = board.turn();
     const leader = side === config.playerSide ? config.leader : config.opponent;
     const playerActiveIds = activePlayerPieceIds(board, config.playerSide);
-    roster = roster.filter((piece) => playerActiveIds.includes(piece.id));
-    enemyRoster = enemyRoster.filter((piece) =>
-      board.piecesOf(enemySide).some((onBoard) => onBoard.id === piece.id),
+    departedRoster = appendDeparted(
+      departedRoster,
+      roster.filter((piece) => !playerActiveIds.includes(piece.id)),
     );
+    roster = roster.filter((piece) => playerActiveIds.includes(piece.id));
+    const enemyActiveIds = new Set(
+      board.piecesOf(enemySide).map((piece) => piece.id),
+    );
+    departedEnemyRoster = appendDeparted(
+      departedEnemyRoster,
+      enemyRoster.filter((piece) => !enemyActiveIds.has(piece.id)),
+    );
+    enemyRoster = enemyRoster.filter((piece) => enemyActiveIds.has(piece.id));
 
     if (playerActiveIds.length <= 1) {
       rout = true;
@@ -389,6 +411,10 @@ export async function runHeadlessMatch(
         overrideRefusals: opponentArchetype === 'tyrannical',
       });
       enemyRoster = enemyTurn.enemyRoster;
+      departedEnemyRoster = appendDeparted(
+        departedEnemyRoster,
+        enemyTurn.departedRoster,
+      );
       events.push(...enemyTurn.events);
       enemyObservableBehaviours.push(...enemyTurn.observableBehaviours);
       ply = enemyTurn.ply;
@@ -588,6 +614,7 @@ export async function runHeadlessMatch(
           }
         }
         roster = cascade.roster;
+        departedRoster = appendDeparted(departedRoster, cascade.departed);
         if (cascade.rout) {
           rout = true;
           turnCompleted = true;
@@ -685,7 +712,9 @@ export async function runHeadlessMatch(
   return {
     events: Object.freeze(events),
     roster: roster.map(normalizePieceState),
+    departedRoster: departedRoster.map(normalizePieceState),
     enemyRoster: enemyRoster.map(normalizePieceState),
+    departedEnemyRoster: departedEnemyRoster.map(normalizePieceState),
     enemyFieldedPieceIds,
     plies: ply - 1,
     winScore,

@@ -885,13 +885,24 @@ work; the season default is only a deterministic starting point.
 ### D130 ⚠ Permanent retirement threshold
 Trauma at or above a configurable threshold permanently retires a non-King
 identity within a season. The threshold is intentionally open because lowering
-it changes the recovery-versus-burn tradeoff.
+it changes the recovery-versus-burn tradeoff. The default `100` did bind in
+the 20-match tyrannical-versus-supportive calibration (one retirement at each
+of seeds 1 and 7), while the supportive-versus-supportive runs observed no
+retirements. This is calibration evidence, not a settled threshold ruling.
 
 ### D131 ⚠ Fielding policy by leadership style
 The season has explicit strongest-available, rest-traumatised, and veteran-first
 policies. Which command style should own which policy is open calibration work;
 the initial mapping is a testable implementation choice, not a settled
 leadership claim.
+
+### D132 ⚠ Capture trauma semantics
+The season fold now preserves the final state of captured identities, so
+captures no longer silently discard state accumulated before removal. The
+current cascade does not apply a victim-side trauma mutation at the instant a
+piece is captured, however. Whether capture itself should add trauma, and if
+so how that trauma differs from witnessed loss, remains open; this slice does
+not invent a new coefficient or mutation.
 
 ## Suggested decision order
 

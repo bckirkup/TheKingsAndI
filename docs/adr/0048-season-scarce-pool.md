@@ -20,17 +20,21 @@ ADR 0029.
 
 A season commander owns a persistent pool of square-independent identities.
 Pool members have a fixed role, persistent psychological state, provenance,
-and service history. Each match fields sixteen members from that pool. Pool
+traits, and service history. Departed identities return their final state
+alongside the active roster so desertion and match learning are not silently
+lost at the fold boundary. Each match fields sixteen members from that pool. Pool
 depth is a season configuration knob based on the starting lineup's role
 counts; the King is exactly one, always fields, and is never retired or
 replaced.
 
 Fielding is an explicit leadership act separate from move selection. Named
 deterministic policies select available members by role with stable identity
-tiebreaks. Shortfalls are filled by conscripts. Conscripts receive ability
+tiebreaks. Shortfalls are filled by fresh conscripts. Conscripts receive ability
 credence from the commander's record and benevolence credence from the current
 appraisal of the existing pool; recruitment is therefore not a
-trust-laundering reset. In this slice, both quantities are deterministic means
+trust-laundering reset. All other conscript state is freshly constructed, and
+pool traits are deterministically varied at initialization and then carried
+with identity. In this slice, both quantities are deterministic means
 over the non-retired pool record; this is an explicit implementation
 interpretation pending calibration.
 
@@ -67,4 +71,13 @@ lineups.
 - unifying Dexie persistence and `worldTypes` with season records.
 
 The fielding-policy mapping, scarcity ratio, desertion absence term, and
-retirement threshold remain open calibration decisions in the register.
+retirement threshold remain open calibration decisions in the register. A
+captured piece is returned on the next match, but the current capture path does
+not apply a victim-side capture-trauma mutation at the instant of removal;
+whether capture should contribute such trauma is an explicit open design
+decision rather than an inferred fold behavior.
+
+The provisional threshold of 100 bound in the tyrannical-versus-supportive
+20-match calibration at seeds 1 and 7, while supportive-versus-supportive
+did not retire a member in those runs. This is calibration evidence only; the
+threshold remains open.

@@ -10,7 +10,7 @@ import type {
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
 import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
-import { createStartingRoster } from './roster';
+import { createFreshPieceState } from './roster';
 
 export type FieldingPolicy =
   | 'strongest_available'
@@ -53,6 +53,7 @@ export interface FieldedPool {
 }
 
 export interface PoolSnapshot {
+  readonly total: number;
   readonly available: number;
   readonly recovering: number;
   readonly retired: number;
@@ -98,21 +99,39 @@ function initialPoolMembers(
   }
   const board = LivingBoard.standard();
   const trust = leaderTrustBias(style);
+  const roleTemplates = new Map<PieceRole, PieceState['id']>();
+  for (const piece of board.piecesOf(side)) {
+    const role =
+      piece.role === 'P'
+        ? 'Pawn'
+        : piece.role === 'N'
+          ? 'Knight'
+          : piece.role === 'B'
+            ? 'Bishop'
+            : piece.role === 'R'
+              ? 'Rook'
+              : piece.role === 'Q'
+                ? 'Queen'
+                : 'King';
+    if (!roleTemplates.has(role)) roleTemplates.set(role, piece.id);
+  }
   const members: PoolMember[] = [];
   let sequence = 0;
   for (const role of Object.keys(STARTING_ROLE_COUNTS) as PieceRole[]) {
     const count =
       role === 'King' ? 1 : STARTING_ROLE_COUNTS[role] * depthFactor;
     for (let index = 0; index < count; index += 1) {
-      const template = createStartingRoster(
-        board,
-        side,
-        trust,
-        Math.min(0.9999, randomUnit + sequence * 0.0001),
-      ).find((piece) => piece.role === role);
-      if (template === undefined) {
+      const templateId = roleTemplates.get(role);
+      if (templateId === undefined) {
         throw new Error(`Unable to create pool template for role ${role}.`);
       }
+      const memberUnit = unitForIndex(randomUnit, sequence);
+      const template = createFreshPieceState(
+        templateId,
+        role,
+        trust,
+        memberUnit,
+      );
       members.push({
         state: stateWithId(
           template,
@@ -132,6 +151,18 @@ function initialPoolMembers(
     }
   }
   return members;
+}
+
+function unitForIndex(base: number, index: number): number {
+  let value = index + 1;
+  let denominator = 1;
+  let reflected = 0;
+  while (value > 0) {
+    denominator *= 2;
+    reflected += (value % 2) / denominator;
+    value = Math.floor(value / 2);
+  }
+  return (base + reflected) % 1;
 }
 
 export function createCommanderPool(options: {
@@ -212,15 +243,25 @@ function conscriptMember(
   match: number,
   sequence: number,
 ): PoolMember {
-  const template = pool.members.find((member) => member.state.role === role);
-  if (template === undefined) throw new Error(`No template for ${role}.`);
   const appraisal = meanCredence(pool.members);
+  const existingIds = new Set(pool.members.map((member) => member.state.id));
+  let suffix = sequence;
+  let id = `${pool.side}:${role}:conscript:${match}:${pool.members.length}:${String(suffix).padStart(2, '0')}`;
+  while (existingIds.has(id)) {
+    suffix += 1;
+    id = `${pool.side}:${role}:conscript:${match}:${pool.members.length}:${String(suffix).padStart(2, '0')}`;
+  }
+  const fresh = createFreshPieceState(
+    id,
+    role,
+    leaderTrustBias(pool.style),
+    unitForIndex(match * 0.173 + pool.members.length * 0.011, sequence),
+  );
   return {
     state: {
-      ...template.state,
-      id: `${pool.side}:${role}:conscript:${match}:${String(sequence).padStart(2, '0')}`,
+      ...fresh,
       credence: {
-        ...template.state.credence,
+        ...fresh.credence,
         tauAbil: appraisal.tauAbil,
         tauBenev: appraisal.tauBenev,
       },
@@ -290,19 +331,23 @@ function foldSide(
   pool: CommanderPool,
   fielded: FieldedPool,
   resultRoster: readonly PieceState[],
+  departedRoster: readonly PieceState[],
   desertions: ReadonlySet<PieceId>,
   refusals: ReadonlyMap<PieceId, number>,
   fieldedIds: ReadonlySet<PieceId>,
   match: number,
   config: SeasonConfig,
 ): CommanderPool {
-  const resultById = new Map(resultRoster.map((piece) => [piece.id, piece]));
+  const resultById = new Map(
+    [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
+  );
+  const activeIds = new Set(resultRoster.map((piece) => piece.id));
   const members = pool.members.map((member) => {
     const wasFielded = fieldedIds.has(member.state.id);
     if (!wasFielded) return member;
     const state = resultById.get(member.state.id) ?? member.state;
     const desertion = desertions.has(member.state.id);
-    const captured = !desertion && !resultById.has(member.state.id);
+    const captured = !desertion && !activeIds.has(member.state.id);
     const service: PoolService = {
       matchesPlayed: member.service.matchesPlayed + 1,
       desertions: member.service.desertions + (desertion ? 1 : 0),
@@ -336,6 +381,8 @@ function foldSide(
     (member) => member.provenance === 'conscript',
   );
   for (const conscript of conscripts) {
+    if (members.some((member) => member.state.id === conscript.state.id))
+      continue;
     const state = resultById.get(conscript.state.id) ?? conscript.state;
     members.push({
       ...conscript,
@@ -408,6 +455,7 @@ export function foldMatchIntoPools(input: {
       input.white,
       input.whiteFielded,
       input.result.roster,
+      input.result.departedRoster,
       playerDesertions,
       playerRefusals,
       playerIds,
@@ -418,6 +466,7 @@ export function foldMatchIntoPools(input: {
       input.black,
       input.blackFielded,
       input.result.enemyRoster,
+      input.result.departedEnemyRoster,
       enemyDesertions,
       enemyRefusals,
       enemyIds,
@@ -432,6 +481,7 @@ export function poolSnapshot(
   fielded: FieldedPool,
 ): PoolSnapshot {
   return {
+    total: pool.members.length,
     available: pool.members.filter((member) => member.status === 'available')
       .length,
     recovering: pool.members.filter((member) => member.status === 'recovering')

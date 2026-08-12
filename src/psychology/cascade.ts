@@ -106,6 +106,7 @@ export interface DesertionDeparture {
 
 export interface CascadeResult {
   readonly roster: PieceState[];
+  readonly departed: PieceState[];
   readonly events: MatchEvent[];
   readonly rout: boolean;
   readonly cascadeLength: number;
@@ -122,6 +123,7 @@ export function applyDesertionWithCascade(
 ): CascadeResult {
   let roster = [...rosterIn];
   const events: MatchEvent[] = [];
+  const departed: PieceState[] = [];
   let cascadeLength = 0;
   const queue: DesertionDeparture[] = [departure];
 
@@ -163,11 +165,13 @@ export function applyDesertionWithCascade(
       normalizePieceState,
     );
     roster = applyRumorDiffusion(roster, actor.id).map(normalizePieceState);
+    const departedState = roster.find((piece) => piece.id === actor.id);
+    if (departedState !== undefined) departed.push(departedState);
     roster = roster.filter((piece) => piece.id !== actor.id);
     cascadeLength += 1;
 
     if (roster.length <= 1) {
-      return { roster, events, rout: true, cascadeLength };
+      return { roster, departed, events, rout: true, cascadeLength };
     }
 
     const refreshed = buildDesertionContexts(roster, next.moveEvalByPiece);
@@ -192,6 +196,7 @@ export function applyDesertionWithCascade(
 
   return {
     roster,
+    departed,
     events,
     rout: roster.length <= 1,
     cascadeLength,
