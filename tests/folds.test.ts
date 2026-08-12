@@ -127,7 +127,6 @@ describe('foldMatchAudit', () => {
         pieceId: 'w:B:c1',
         san: 'Bc4',
         pieceTrustDelta: -35,
-        traumaGain: 20,
       },
       {
         t: 'MOVE',

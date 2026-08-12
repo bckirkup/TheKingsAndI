@@ -250,17 +250,17 @@ uses the intended form:
 Sensitivity coverage lives in `tests/psychology.configCoverage.test.ts`
 (D20 regression). Standing/glory desertion terms also read ambition+prestige.
 
-### 10.3 `B_i` — DECIDED, but capture wiring is not shipped
-`B_i` is initialized and written by the override reducer
-(`src/psychology/override.ts:24-28`) and read by desertion pain and the
-optional private-evaluation drift
-(`src/psychology/desertion.ts:12-16`,
-`src/orchestration/privateEvaluation.ts:221-223`). The current capture path
-does not write victim-side trauma; the season fold only preserves the final
-state of a captured identity (`docs/design_decisions.md:899-905`). ADR 0009
-therefore records a decision whose capture mechanism remains **not wired**.
-Do not treat this as resolved until the capture and sustained-dread semantics
-have an implementing source location.
+### 10.3 `B_i` — injury, not grievance (ADR 0049)
+`B_i` is injury. Capture applies a flat victim-side injury before roster
+synchronization, and sustained serious private capture risk applies a small
+injury after the commander has had a chance to relieve it
+(`src/psychology/trauma.ts:10-42`;
+`src/orchestration/headlessMatch.ts:336-358`;
+`src/orchestration/headlessMatch.ts:442-454`;
+`src/orchestration/enemyTurn.ts:265-286`). Override is grievance: it changes
+trust and morale but does not write `B_i` (`src/psychology/override.ts:24-29`).
+The capture magnitude, dread threshold, increment, and run length remain open
+calibration decisions; there is no decay term.
 
 ### 10.4 Morale `M_i` — trip-wire removed, ordinary wiring still incomplete
 Under the reference, desertion required `M_i == 0` while nothing ever wrote

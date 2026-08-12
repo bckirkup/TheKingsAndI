@@ -188,7 +188,6 @@ export type MatchEvent =
       readonly pieceId: PieceId;
       readonly san: string;
       readonly pieceTrustDelta: number;
-      readonly traumaGain: number;
       /** True when the commander had no unrefused candidate remaining. */
       readonly implicit?: boolean;
       /** True when the overridden order was vindicated by the audit. */

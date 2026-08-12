@@ -45,16 +45,19 @@ Legend: **✅ decided** · **⛔ blocks Milestone 1–2 code** · **⚠ blocks M
 
 Downgraded to ordinary implementation wiring by owner ruling — to be settled in
 code review during Milestones 1–3, each with a sensitivity probe:
-**D20** (`w_prestige` unused), **D21** (`B_i` unused — decided in substance by
-ADR 0009 as capture trauma, but still **not wired**), **D22** (morale update
+**D20** (`w_prestige` unused), **D21** (`B_i` capture injury and sustained
+dread — decided in substance by ADR 0009 and now wired), **D22** (morale update
 rule — no longer load-bearing since ADR 0011 removed the morale trip-wire),
 **D23** (`S(P_j, P_benched)` undefined).
 
 This block is a provenance warning. A decision being downgraded to ordinary
-implementation wiring does not make it implemented: D21 remains decided but
-unwired because no capture path writes `B_i` (`src/psychology/override.ts:24-28`;
-`docs/design_decisions.md:899-905`). The authoritative shipped/not-shipped
-status is `docs/adr/IMPLEMENTATION_STATUS.md`.
+implementation wiring does not make it implemented: each entry still needs
+evidence. D21 is now wired by the trauma reducer and both orchestration capture
+hooks (`src/psychology/trauma.ts:10-42`;
+`src/orchestration/headlessMatch.ts:336-358`;
+`src/orchestration/headlessMatch.ts:442-454`;
+`src/orchestration/enemyTurn.ts:265-286`). The authoritative
+shipped/not-shipped status is `docs/adr/IMPLEMENTATION_STATUS.md`.
 
 ---
 
@@ -902,13 +905,17 @@ policies. Which command style should own which policy is open calibration work;
 the initial mapping is a testable implementation choice, not a settled
 leadership claim.
 
-### D132 ⚠ Capture trauma semantics
-The season fold now preserves the final state of captured identities, so
-captures no longer silently discard state accumulated before removal. The
-current cascade does not apply a victim-side trauma mutation at the instant a
-piece is captured, however. Whether capture itself should add trauma, and if
-so how that trauma differs from witnessed loss, remains open; this slice does
-not invent a new coefficient or mutation.
+### D132 ✅ Capture trauma semantics
+Superseded by ADR 0049. A captured victim receives flat injury before roster
+synchronization, and sustained serious private capture risk adds a small injury
+after the commander has had an opportunity to relieve it. Override grievance
+changes trust and morale but not `B_i`. The magnitudes and dread threshold/run
+length remain calibration-open (`src/psychology/trauma.ts:10-42`).
+
+### D133 ⚠ ADR 0049 injury magnitudes and dread thresholds
+The defaults for `CAPTURE_TRAUMA_GAIN`, `DREAD_CAPTURE_RISK_THRESHOLD`,
+`DREAD_TRAUMA_GAIN`, and `DREAD_REQUIRED_PLIES` are provisional calibration
+knobs, not settled psychological coefficients.
 
 ## Suggested decision order
 

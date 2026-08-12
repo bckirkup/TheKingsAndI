@@ -33,6 +33,7 @@ import {
   expectedVindicationDelta,
   desertionContextFor,
 } from './psychologyHooks';
+import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],
@@ -57,6 +58,8 @@ function syncSideRoster(
 export interface EnemyTurnResult {
   readonly enemyRoster: PieceState[];
   readonly departedRoster: readonly PieceState[];
+  readonly dreadExposureByPiece: DreadExposureByPiece;
+  readonly capturedPieceId?: string;
   readonly events: readonly MatchEvent[];
   readonly ply: number;
   readonly enemyRout: boolean;
@@ -91,6 +94,7 @@ function finishUntrackedMove(
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
     departedRoster: [],
+    dreadExposureByPiece: {},
     events: [
       {
         t: 'MOVE',
@@ -120,6 +124,7 @@ function applyTrackedEnemyDecision(input: {
   >;
   readonly ply: number;
   readonly overrideRefusals: boolean;
+  readonly dreadExposureByPiece?: DreadExposureByPiece;
   readonly orderQualityCp?: number;
   readonly objectivelyGood?: boolean;
   readonly bestAuditScore?: number;
@@ -164,6 +169,7 @@ function applyTrackedEnemyDecision(input: {
       return {
         enemyRoster,
         departedRoster: [],
+        dreadExposureByPiece: input.dreadExposureByPiece ?? {},
         events,
         ply,
         enemyRout: false,
@@ -200,6 +206,7 @@ function applyTrackedEnemyDecision(input: {
     return {
       enemyRoster: syncSideRoster(board, cascade.roster, enemySide),
       departedRoster: cascade.departed,
+      dreadExposureByPiece: input.dreadExposureByPiece ?? {},
       events,
       ply: ply + 1,
       enemyRout: cascade.rout,
@@ -255,10 +262,28 @@ function applyTrackedEnemyDecision(input: {
     enemyRoster = fatalistic.roster;
     events.push(...fatalistic.events);
   }
+  const trauma = applyMoveTrauma(
+    enemyRoster,
+    input.dreadExposureByPiece ?? {},
+    Object.fromEntries(
+      Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
+        id,
+        evaluation.P_captured,
+      ]),
+    ),
+    applied.capture?.pieceId,
+    ply,
+  );
+  enemyRoster = trauma.roster;
+  events.push(...trauma.events);
 
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
     departedRoster: [],
+    dreadExposureByPiece: trauma.exposure,
+    ...(applied.capture === undefined
+      ? {}
+      : { capturedPieceId: applied.capture.pieceId }),
     events,
     ply: ply + 1,
     enemyRout: false,
@@ -302,6 +327,7 @@ export function applyEnemyTurnSync(input: {
     return {
       enemyRoster,
       departedRoster: [],
+      dreadExposureByPiece: {},
       events: [],
       ply: input.ply,
       enemyRout: true,
@@ -397,6 +423,7 @@ export async function applyEnemyTurn(input: {
   readonly engine: EnginePort;
   readonly insight?: InsightRoundHandle;
   readonly overrideRefusals?: boolean;
+  readonly dreadExposureByPiece?: DreadExposureByPiece;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
   const enemyRoster = syncSideRoster(
@@ -409,6 +436,7 @@ export async function applyEnemyTurn(input: {
     return {
       enemyRoster,
       departedRoster: [],
+      dreadExposureByPiece: input.dreadExposureByPiece ?? {},
       events: [],
       ply: input.ply,
       enemyRout: true,

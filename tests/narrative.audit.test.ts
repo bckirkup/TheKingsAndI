@@ -25,7 +25,6 @@ const EVENTS: readonly MatchEvent[] = [
     pieceId: 'w:R:h1',
     san: 'Rh4',
     pieceTrustDelta: -30,
-    traumaGain: 10,
   },
   { t: 'SACRIFICE_WITNESSED', ply: 7, hero: 'w:B:f1', beneficiary: 'w:K:e1' },
   { t: 'CAPTURE', ply: 9, victim: 'w:Q:d1', by: 'b:N:g8' },

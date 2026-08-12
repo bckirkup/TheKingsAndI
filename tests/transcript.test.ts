@@ -73,7 +73,6 @@ describe('transcript fold', () => {
             pieceId: 'w:N:g1',
             san: 'Nf3',
             pieceTrustDelta: -20,
-            traumaGain: 5,
           },
           { t: 'ROSTER_FIRE', pieceId: 'w:P:e2' },
         ],

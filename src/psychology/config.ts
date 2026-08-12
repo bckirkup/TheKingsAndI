@@ -50,9 +50,16 @@ export const ENGINE_CONFIG = {
   VINDICATION_PESSIMISM_SCALE: 100,
   /** Override penalties (ADR 0014). */
   OVERRIDE_PIECE_TRUST_PENALTY: -35,
-  OVERRIDE_PIECE_TRAUMA_GAIN: 20,
   OVERRIDE_WITNESS_TRUST_PENALTY: -8,
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
+  /** Flat injury from being captured (ADR 0049). */
+  CAPTURE_TRAUMA_GAIN: 20,
+  /** Capture-risk threshold for sustained dread injury (ADR 0049). */
+  DREAD_CAPTURE_RISK_THRESHOLD: 0.75,
+  /** Small injury applied after sustained serious capture risk (ADR 0049). */
+  DREAD_TRAUMA_GAIN: 5,
+  /** Consecutive private-risk observations required for dread injury (ADR 0049). */
+  DREAD_REQUIRED_PLIES: 2,
   /** Ability-channel authority loss when a justified refusal is accepted. */
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
   /** Ability-channel credit for executed-order vindication. */
