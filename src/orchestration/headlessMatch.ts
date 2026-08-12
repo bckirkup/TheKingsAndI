@@ -23,7 +23,6 @@ import {
   type PieceState,
 } from '../psychology';
 
-import { CAMPAIGN_CONFIG } from './campaignConfig';
 import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
 import {
@@ -82,6 +81,7 @@ export interface HeadlessMatchConfig {
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
+  readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
   readonly opponentArchetype?: OpponentArchetype;
 }
@@ -288,7 +288,7 @@ export async function runHeadlessMatch(
   let enemyRoster = trackEnemyIdentities(
     config.initialEnemyRoster?.map(normalizePieceState) ??
       createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
-    CAMPAIGN_CONFIG.ENEMY_TRACKED_IDENTITIES,
+    config.enemyTrackedIdentities,
   );
   const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];

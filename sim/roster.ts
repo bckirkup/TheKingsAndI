@@ -84,6 +84,7 @@ export function mergeCampaignRoster(
       if (previous === undefined) return piece;
       return normalizePieceState({
         ...piece,
+        traits: previous.traits,
         T_i: previous.T_i,
         M_i: previous.M_i,
         B_i: previous.B_i,

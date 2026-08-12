@@ -107,3 +107,30 @@ describe('headless player refusal replanning', () => {
     expect(repeated.winScore).toBe(result.winScore);
   });
 });
+
+describe('headless enemy tracking configuration', () => {
+  it('uses the default cap and honors an explicit symmetric override', async () => {
+    const board = LivingBoard.standard();
+    const leader: HeadlessLeaderPort = {
+      chooseMove: () => undefined,
+      shouldOverride: () => false,
+    };
+    const enemyRoster = createStartingRoster(board, 'b', 0, 0.5);
+    const run = (enemyTrackedIdentities: number | undefined) =>
+      runHeadlessMatch({
+        random: createSeededRandom(19),
+        maxPlies: 0,
+        playerSide: 'w',
+        leader,
+        opponent: leader,
+        initialRoster: createStartingRoster(board, 'w', 0, 0.5),
+        initialEnemyRoster: enemyRoster,
+        ...(enemyTrackedIdentities === undefined
+          ? {}
+          : { enemyTrackedIdentities }),
+        engine: createFakeEnginePort(),
+      });
+    await expect((await run(undefined)).enemyFieldedPieceIds).toHaveLength(8);
+    await expect((await run(16)).enemyFieldedPieceIds).toHaveLength(16);
+  });
+});
