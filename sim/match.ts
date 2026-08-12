@@ -51,7 +51,9 @@ export interface RunMatchOptions {
   readonly matchIndex: number;
   readonly campaignMatch: number;
   readonly roster: readonly PieceState[];
+  readonly initialLineup?: readonly PieceState[];
   readonly enemyRoster?: readonly PieceState[];
+  readonly initialEnemyLineup?: readonly PieceState[];
   readonly opponent?: OpponentArchetype;
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
@@ -73,11 +75,17 @@ export async function runMatch(
     leader: leaderPort(options.leader, contextBase),
     opponent: leaderPort(options.opponent ?? 'random', contextBase),
     initialRoster: options.roster,
+    ...(options.initialLineup === undefined
+      ? {}
+      : { initialLineup: options.initialLineup }),
     engine: options.engine,
     opponentArchetype: options.opponent ?? 'random',
     ...(options.enemyRoster === undefined
       ? {}
       : { initialEnemyRoster: options.enemyRoster }),
+    ...(options.initialEnemyLineup === undefined
+      ? {}
+      : { initialEnemyLineup: options.initialEnemyLineup }),
     ...(options.enemyTrackedIdentities === undefined
       ? {}
       : { enemyTrackedIdentities: options.enemyTrackedIdentities }),

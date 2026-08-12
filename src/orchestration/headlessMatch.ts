@@ -4,6 +4,9 @@ import {
   type MoveFeatures,
   type MoveIntent,
   type PieceId,
+  type PieceIdFactory,
+  type Role,
+  type Square,
 } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
@@ -80,7 +83,13 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  /**
+   * Optional fielded lineup whose IDs must be installed on the standard
+   * position. When omitted, the historical starting-square IDs are used.
+   */
+  readonly initialLineup?: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
+  readonly initialEnemyLineup?: readonly PieceState[];
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
   readonly opponentArchetype?: OpponentArchetype;
@@ -115,6 +124,42 @@ function updatePiece(
   return roster.map((piece) =>
     piece.id === pieceId ? normalizePieceState(updater(piece)) : piece,
   );
+}
+
+function lineupPieceIdFactory(
+  lineups: Readonly<Partial<Record<Side, readonly PieceState[]>>>,
+): PieceIdFactory {
+  const counts: Record<string, number> = {};
+  return ({
+    side,
+    role,
+    square,
+  }: {
+    readonly side: Side;
+    readonly role: Role;
+    readonly square: Square;
+  }) => {
+    const key = `${side}:${role}`;
+    const index = counts[key] ?? 0;
+    counts[key] = index + 1;
+    const lineup = lineups[side];
+    const roleName =
+      role === 'P'
+        ? 'Pawn'
+        : role === 'N'
+          ? 'Knight'
+          : role === 'B'
+            ? 'Bishop'
+            : role === 'R'
+              ? 'Rook'
+              : role === 'Q'
+                ? 'Queen'
+                : 'King';
+    const candidates = lineup?.filter((piece) => piece.role === roleName) ?? [];
+    const piece = candidates[index];
+    if (piece !== undefined) return piece.id;
+    return `${side}:${role}:${square}`;
+  };
 }
 
 function applyPlayerOverride(
@@ -282,7 +327,17 @@ function applyPlayerMoveConsequences(input: {
 export async function runHeadlessMatch(
   config: HeadlessMatchConfig,
 ): Promise<HeadlessMatchResult> {
-  const board = LivingBoard.standard();
+  const lineups: Partial<Record<Side, readonly PieceState[]>> = {};
+  if (config.initialLineup !== undefined) {
+    lineups[config.playerSide] = config.initialLineup;
+  }
+  if (config.initialEnemyLineup !== undefined) {
+    lineups[config.playerSide === 'w' ? 'b' : 'w'] = config.initialEnemyLineup;
+  }
+  const board =
+    Object.keys(lineups).length === 0
+      ? LivingBoard.standard()
+      : LivingBoard.standard(lineupPieceIdFactory(lineups));
   let roster = config.initialRoster.map(normalizePieceState);
   const enemySide = config.playerSide === 'w' ? 'b' : 'w';
   let enemyRoster = trackEnemyIdentities(

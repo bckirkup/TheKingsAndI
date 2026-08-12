@@ -871,6 +871,28 @@ expecting a different kind of leader. Separating “the leader a roster
 expects” from “the leader it gets” is open calibration work; this slice leaves
 the values untouched.
 
+### D128 ⚠ Season scarcity ratio
+The season pool depth factor controls whether preserving identities can be
+rationally traded against winning the current match. Its default is provisional
+and requires a match-budget-relative calibration; this slice exposes the knob
+without treating the default as settled.
+
+### D129 ⚠ Desertion absence term
+A deserter is unavailable for a configurable number of subsequent matches and
+then returns without psychological decay. The term length is open calibration
+work; the season default is only a deterministic starting point.
+
+### D130 ⚠ Permanent retirement threshold
+Trauma at or above a configurable threshold permanently retires a non-King
+identity within a season. The threshold is intentionally open because lowering
+it changes the recovery-versus-burn tradeoff.
+
+### D131 ⚠ Fielding policy by leadership style
+The season has explicit strongest-available, rest-traumatised, and veteran-first
+policies. Which command style should own which policy is open calibration work;
+the initial mapping is a testable implementation choice, not a settled
+leadership claim.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
