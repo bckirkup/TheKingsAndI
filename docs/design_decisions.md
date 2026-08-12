@@ -861,6 +861,16 @@ and enemy psychology. Harness-only leader styles without a counterpart
 instead of silently becoming `random`. The balance of style matchups remains
 an open calibration question.
 
+### D127 ⚠ Initial-trust/style confound
+`leaderTrustBias` initializes servant and supportive rosters at `40`,
+tyrannical rosters at `-10`, volatile rosters at `10`, and random rosters at
+`20`. These preexisting values are part of roster initialization, not a change
+made by ADR 0047. They confound style comparisons and especially the
+style-vs-style round-robin matrix: a roster may enter a pairing already
+expecting a different kind of leader. Separating “the leader a roster
+expects” from “the leader it gets” is open calibration work; this slice leaves
+the values untouched.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is

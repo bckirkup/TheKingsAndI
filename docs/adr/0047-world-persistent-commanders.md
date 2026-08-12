@@ -1,7 +1,7 @@
 # ADR 0047 — The world is the unit of simulation
 
 - **Status:** accepted
-- **Date:** 2026-08-02
+- **Date:** 2026-08-10
 
 ## Decision
 
@@ -15,9 +15,20 @@ different commander, and it does not model free agency, cross-commander
 credence, shared trauma, retirement, or persistence through the Dexie/world
 tables. Those remain ADR 0026 and future-world work.
 
+Commander identities are side-fixed: `w:servant` and `b:servant` are distinct
+commanders because piece IDs are side-scoped, so changing a roster's colour
+would require an identity and dyadic-affinity remap. The consequence is that a
+style's career is represented by two commanders, one per side, rather than by
+one commander switching colours.
+
 The campaign checkpoint now stores both rosters and an explicit checkpoint
 version. Checkpoints from the pre-world format are rejected rather than
 silently interpreting a missing enemy roster.
+
+Persistent careers also preserve each carried piece's traits, not only its
+memories and credence. Newly restored pieces receive their initial traits;
+existing identities do not have their dispositions randomly re-rolled between
+matches.
 
 ## Symmetric enemy tracking
 
@@ -43,7 +54,8 @@ than silently falling back to `random`.
 
 The world seed deterministically creates commanders and shuffles the
 style-pairing schedule with the seeded PRNG. Pairing seeds derive from the
-world seed and pairing index. Replaying a world with the same seed, style set,
+world seed and a multiplicative pairing/match sequence. Replaying a world with
+the same seed, style set,
 and engine determinism ID produces the same schedule and event stream.
 
 ## Deferred

@@ -147,7 +147,7 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
   return value as unknown as CampaignCheckpoint;
 }
 
-function leaderTrustBias(leader: Leader): number {
+export function leaderTrustBias(leader: Leader): number {
   switch (leader) {
     case 'supportive':
     case 'servant':

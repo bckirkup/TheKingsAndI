@@ -18,6 +18,7 @@ import {
   disposeSimEngine,
   type SimEngineKind,
 } from './engine';
+import { leaderTrustBias, matchSeedForCampaign } from './campaign';
 
 export const WORLD_COMMANDER_STYLES = [
   'servant',
@@ -54,6 +55,10 @@ export interface WorldPairingResult {
   readonly pairing: WorldPairing;
   readonly metrics: readonly MatchMetrics[];
   readonly horizon: readonly CampaignHorizon[];
+  readonly startingWhiteRosters: readonly (readonly PieceState[])[];
+  readonly startingBlackRosters: readonly (readonly PieceState[])[];
+  readonly endingWhiteRosters: readonly (readonly PieceState[])[];
+  readonly endingBlackRosters: readonly (readonly PieceState[])[];
 }
 
 export interface WorldRoundRobinResult {
@@ -64,6 +69,33 @@ export interface WorldRoundRobinResult {
 
 function commanderId(side: 'w' | 'b', style: WorldCommanderStyle): string {
   return `${side}:${style}`;
+}
+
+const WORLD_MATCH_INDEX_STRIDE = 10_000;
+
+/**
+ * Derive a stable seed for one world pairing and match.
+ * The stride keeps pairing and match coordinates distinct before the
+ * campaign's multiplicative seed derivation is applied.
+ */
+export function matchSeedForWorldPairing(
+  worldSeed: number,
+  pairingIndex: number,
+  match: number,
+): number {
+  if (
+    !Number.isSafeInteger(pairingIndex) ||
+    pairingIndex < 0 ||
+    !Number.isSafeInteger(match) ||
+    match < 1 ||
+    match >= WORLD_MATCH_INDEX_STRIDE
+  ) {
+    throw new Error('World pairing and match coordinates are out of range.');
+  }
+  return matchSeedForCampaign(
+    worldSeed,
+    (pairingIndex + 1) * WORLD_MATCH_INDEX_STRIDE + match,
+  );
 }
 
 function deterministicOrder(
@@ -83,10 +115,6 @@ function deterministicOrder(
     ordered[swap] = current;
   }
   return ordered;
-}
-
-function initialTrustForStyle(style: WorldCommanderStyle): number {
-  return style === 'supportive' || style === 'servant' ? 40 : -10;
 }
 
 export function pairingSchedule(
@@ -119,7 +147,7 @@ export function createWorld(
       roster: createStartingRoster(
         board,
         side,
-        initialTrustForStyle(style),
+        leaderTrustBias(style),
         random.nextInt(10_000) / 10_000,
       ),
     })),
@@ -151,6 +179,10 @@ export async function runWorldRoundRobin(options: {
   try {
     for (const pairing of world.pairingSchedule) {
       const metrics: MatchMetrics[] = [];
+      const startingWhiteRosters: PieceState[][] = [];
+      const startingBlackRosters: PieceState[][] = [];
+      const endingWhiteRosters: PieceState[][] = [];
+      const endingBlackRosters: PieceState[][] = [];
       for (
         let match = 1;
         match <= (options.matchesPerPairing ?? 1);
@@ -167,18 +199,23 @@ export async function runWorldRoundRobin(options: {
           board,
           'w',
           white.roster,
-          initialTrustForStyle(white.style),
+          leaderTrustBias(white.style),
           0.5,
         );
         const blackRoster = mergeCampaignRoster(
           board,
           'b',
           black.roster,
-          initialTrustForStyle(black.style),
+          leaderTrustBias(black.style),
           0.5,
         );
-        const matchSeed =
-          options.seed ^ ((pairing.index + 1) * 1_000_003) ^ match;
+        const matchSeed = matchSeedForWorldPairing(
+          options.seed,
+          pairing.index,
+          match,
+        );
+        startingWhiteRosters.push(whiteRoster.map((piece) => ({ ...piece })));
+        startingBlackRosters.push(blackRoster.map((piece) => ({ ...piece })));
         const result = await runMatch({
           seed: matchSeed,
           leader: white.style,
@@ -208,11 +245,19 @@ export async function runWorldRoundRobin(options: {
           ...black,
           roster: result.enemyRoster,
         });
+        endingWhiteRosters.push(result.roster.map((piece) => ({ ...piece })));
+        endingBlackRosters.push(
+          result.enemyRoster.map((piece) => ({ ...piece })),
+        );
       }
       pairings.push({
         pairing,
         metrics,
         horizon: buildHorizonSeries(metrics),
+        startingWhiteRosters,
+        startingBlackRosters,
+        endingWhiteRosters,
+        endingBlackRosters,
       });
     }
   } finally {
