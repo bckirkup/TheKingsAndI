@@ -35,7 +35,10 @@ the candidate record. The audit stream has no import or input path into
 
 - `HEROISM_CONFIG.DECISIVE_MARGIN_CP` requires calibration.
 - `HEROISM_CONFIG.PRIVATE_DISAGREEMENT_THRESHOLD_CP` requires calibration.
-- A headless-conferral stand-in, if any, remains open and is not implemented.
+- `HEROISM_CONFIG.NEAR_BEST_TOLERANCE_CP` requires calibration.
+- The future headless-conferral stand-in is an explicitly labelled LLM quorum;
+  it must never be a deterministic rule pretending to be a cohort or be quoted
+  as a human finding. It remains unimplemented.
 - Non-selection as the sanction rather than a longer absence term (D129
   bearing), obsolescence rather than trauma-threshold retirement (D130
   bearing), and piece perception of selection state are future slices.

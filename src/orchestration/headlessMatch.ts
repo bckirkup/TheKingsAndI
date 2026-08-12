@@ -10,6 +10,7 @@ import {
 } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
+import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyFatalisticComplianceCosts,
@@ -577,6 +578,9 @@ export async function runHeadlessMatch(
         preMoveScoreCp: preMoveAuditScore,
         scoreCp: auditScore,
         bestScoreCp: bestAudit,
+        preMoveDepth: SHARED_SEARCH_D_MAX,
+        scoreDepth: 8,
+        bestScoreDepth: SHARED_SEARCH_D_MAX,
       });
       engineAudit.push(audit);
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;

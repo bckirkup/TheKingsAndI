@@ -923,18 +923,26 @@ knobs, not settled psychological coefficients.
 ### D134 ⚠ Heroism decisive threshold (ADR 0050)
 The integer margin that makes a true act decisive is provisional and requires
 calibration. It is wired only as a machine nomination threshold at
-`src/orchestration/heroismConfig.ts:6-10`; it confers no honour and has no
+`src/orchestration/heroismConfig.ts:6-13`; it confers no honour and has no
 psychology or fielding effect.
 
 ### D135 ⚠ Heroism private-disagreement threshold (ADR 0050)
 The integer private-harm threshold that marks blindness is provisional and
 requires calibration. It is wired only as a machine nomination threshold at
-`src/orchestration/heroismConfig.ts:6-10`; it confers no honour and has no
+`src/orchestration/heroismConfig.ts:6-13`; it confers no honour and has no
+psychology or fielding effect.
+
+### D140 ⚠ Heroism near-best tolerance (ADR 0050)
+The integer tolerance between a nominated move's true score and the best
+available true move remains provisional and requires calibration. It is wired
+only as the second machine nomination condition at
+`src/orchestration/heroismConfig.ts:6-13`; it confers no honour and has no
 psychology or fielding effect.
 
 ### D136 ⚠ Headless heroism conferral stand-in (ADR 0050)
-Whether a headless harness may stand in for a human cohort, and what quorum
-means there, remains open. No conferral implementation exists.
+The stand-in, if built, must be an explicitly labelled **LLM quorum**. It must
+never be a deterministic rule pretending to be a cohort and must never be
+quoted as a human finding. No conferral implementation exists.
 
 ### D137 ⚠ Non-selection is the sanction (D129 bearing)
 The owner's ruling is that bad conduct is sanctioned by not being selected,

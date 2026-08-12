@@ -534,12 +534,20 @@ export async function resolveAuditPositionScore(
   board: LivingBoard,
   handle: InsightRoundHandle,
 ): Promise<number> {
-  if (port.evaluateTrue !== undefined) {
-    return (await port.evaluateTrue(board.fen())).scoreCp;
-  }
+  const evaluateTrue = port.evaluateTrue;
+  const auditPort: EnginePort =
+    evaluateTrue === undefined
+      ? port
+      : {
+          ...port,
+          evaluate: async (fen: string) => {
+            const evaluation = await evaluateTrue(fen);
+            return { scoreCp: evaluation.scoreCp, pv: [] };
+          },
+        };
   const bundle = requireComplete(
     await resolveInsightRound(
-      port,
+      auditPort,
       buildInsightRound({
         fen: board.fen(),
         seats: [

@@ -31,6 +31,9 @@ export interface EngineAuditEntry {
   readonly preMoveScoreCp: number;
   readonly scoreCp: number;
   readonly bestScoreCp: number;
+  readonly preMoveDepth: number;
+  readonly scoreDepth: number;
+  readonly bestScoreDepth: number;
 }
 
 /** The narrow port of ADR 0020. `depth` is fixed; no wall clock, ever. */

@@ -20,6 +20,9 @@ export function engineAuditEntry(input: {
   readonly scoreCp: number;
   readonly bestScoreCp: number;
   readonly preMoveScoreCp: number;
+  readonly preMoveDepth: number;
+  readonly scoreDepth: number;
+  readonly bestScoreDepth: number;
 }): EngineAuditEntry {
   return Object.freeze({ ...input });
 }
@@ -63,8 +66,8 @@ export function heroismNomination(
     privateConcern >= HEROISM_CONFIG.PRIVATE_DISAGREEMENT_THRESHOLD_CP;
   const trueGainCp = audit.scoreCp - audit.preMoveScoreCp;
   const trueDecisive =
-    trueGainCp >= HEROISM_CONFIG.DECISIVE_MARGIN_CP ||
-    audit.scoreCp - audit.bestScoreCp >= HEROISM_CONFIG.DECISIVE_MARGIN_CP;
+    trueGainCp >= HEROISM_CONFIG.DECISIVE_MARGIN_CP &&
+    audit.bestScoreCp - audit.scoreCp <= HEROISM_CONFIG.NEAR_BEST_TOLERANCE_CP;
   if (!privateDisagreed || !trueDecisive) return undefined;
 
   return {

@@ -18,9 +18,12 @@ const audit: EngineAuditEntry = {
   ply: 7,
   pieceId: 'w:Q:d1',
   san: 'Qh5',
-  preMoveScoreCp: 0,
-  scoreCp: 200,
+  preMoveScoreCp: -100,
+  scoreCp: 80,
   bestScoreCp: 100,
+  preMoveDepth: 16,
+  scoreDepth: 8,
+  bestScoreDepth: 16,
 };
 
 const move: Extract<MatchEvent, { t: 'MOVE' }> = {
@@ -63,6 +66,16 @@ describe('heroism nomination', () => {
       expect(heroismNomination([move], moveEval, audit)).toBeUndefined();
     } finally {
       mutateConfig('DECISIVE_MARGIN_CP', original);
+    }
+  });
+
+  it('sensitivity: near-best tolerance suppresses a non-near-best act', () => {
+    const original = HEROISM_CONFIG.NEAR_BEST_TOLERANCE_CP;
+    try {
+      mutateConfig('NEAR_BEST_TOLERANCE_CP', 10);
+      expect(heroismNomination([move], moveEval, audit)).toBeUndefined();
+    } finally {
+      mutateConfig('NEAR_BEST_TOLERANCE_CP', original);
     }
   });
 

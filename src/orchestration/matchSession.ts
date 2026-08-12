@@ -7,6 +7,7 @@ import {
   type Square,
 } from '../chess';
 import { createSeededRandom, type SeededRandom } from '../core/random';
+import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyNeglectSignal,
@@ -323,6 +324,9 @@ export class MatchSession {
       ),
       scoreCp: orderQualityCp,
       bestScoreCp: bestAuditScore,
+      preMoveDepth: SHARED_SEARCH_D_MAX,
+      scoreDepth: 8,
+      bestScoreDepth: SHARED_SEARCH_D_MAX,
     });
     this.engineAudit.push(audit);
     const justified = moveEval.deltaV_board < 0 && orderQualityCp < 0;

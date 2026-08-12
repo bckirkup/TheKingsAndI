@@ -5,6 +5,7 @@ import {
   type Square,
 } from '../chess';
 import type { SeededRandom } from '../core/random';
+import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EnginePort } from '../engine/types';
 import type { EngineAuditEntry } from '../engine';
 import {
@@ -158,6 +159,9 @@ function applyTrackedEnemyDecision(input: {
     preMoveScoreCp: preMoveAuditScore,
     scoreCp: orderQualityCp,
     bestScoreCp: bestAuditScore,
+    preMoveDepth: SHARED_SEARCH_D_MAX,
+    scoreDepth: 8,
+    bestScoreDepth: SHARED_SEARCH_D_MAX,
   });
   const desertionContext = desertionContextFor(actor, moveEval, enemyRoster);
   const desertionDecision = shouldDesert(actor, desertionContext, enemyRoster);
