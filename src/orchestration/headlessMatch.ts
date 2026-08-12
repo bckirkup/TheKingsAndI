@@ -3,6 +3,7 @@ import {
   LivingBoard,
   type MoveFeatures,
   type MoveIntent,
+  type PieceId,
 } from '../chess';
 import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
@@ -89,6 +90,7 @@ export interface HeadlessMatchResult {
   readonly events: readonly MatchEvent[];
   readonly roster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
+  readonly enemyFieldedPieceIds: readonly PieceId[];
   readonly plies: number;
   readonly winScore: number;
   readonly rout: boolean;
@@ -288,6 +290,7 @@ export async function runHeadlessMatch(
       createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
     CAMPAIGN_CONFIG.ENEMY_TRACKED_IDENTITIES,
   );
+  const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];
   let ply = 1;
   let rout = false;
@@ -628,6 +631,7 @@ export async function runHeadlessMatch(
     events: Object.freeze(events),
     roster: roster.map(normalizePieceState),
     enemyRoster: enemyRoster.map(normalizePieceState),
+    enemyFieldedPieceIds,
     plies: ply - 1,
     winScore,
     rout,
