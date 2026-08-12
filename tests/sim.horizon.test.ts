@@ -46,6 +46,21 @@ function metric(
     classContemptStart: 0,
     classContemptEnd: 0,
     survivingRosterSize: 20 - match,
+    enemyAttrition: 0,
+    enemyFieldedPieceIds: [
+      'b:p1',
+      'b:p2',
+      'b:p3',
+      'b:p4',
+      'b:p5',
+      'b:p6',
+      'b:p7',
+      'b:p8',
+    ],
+    enemySurvivingRosterSize: 16 - match,
+    enemyDesertions: 0,
+    enemyDesertedPieceIds: [],
+    enemyRefusalRate: 0,
     winScore: match * 10,
     rout: match % 2 === 0,
     archetype: 'caretaker',
@@ -60,6 +75,21 @@ describe('campaign horizon series', () => {
         fieldedPieceIds: ['a', 'b'],
         desertedPieceIds: ['a'],
         desertions: 1,
+        enemyAttrition: 0.25,
+        enemyFieldedPieceIds: [
+          'b:p1',
+          'b:p2',
+          'b:p3',
+          'b:p4',
+          'b:p5',
+          'b:p6',
+          'b:p7',
+          'b:p8',
+        ],
+        enemySurvivingRosterSize: 12,
+        enemyDesertions: 2,
+        enemyDesertedPieceIds: ['b:p1', 'b:p2'],
+        enemyRefusalRate: 0.2,
       }),
       metric(2, {
         fieldedPieceIds: ['a', 'b'],
@@ -69,6 +99,15 @@ describe('campaign horizon series', () => {
     const summary = aggregateCampaign('supportive', 1, metrics);
     expect(summary.desertionMatchRate).toBe(0.5);
     expect(summary.desertionAttrition).toBe(0.5);
+    expect(summary.enemyDesertionAttrition).toBe(0.25);
+    expect(summary.meanEnemySurvivingRosterSize).toBe(13);
+    expect(summary.meanEnemyDesertions).toBe(1);
+    expect(summary.meanEnemyRefusalRate).toBe(0.1);
+    expect(summary.meanAttritionDifferential).toBeCloseTo(0.125);
+    expect(summary.meanSurvivingRosterDifferential).toBe(5.5);
+    expect(summary.meanDesertionDifferential).toBe(-0.5);
+    expect(summary.meanRefusalRateDifferential).toBeCloseTo(0.0288, 3);
+    expect(summary.horizon[1]?.attritionDifferential).toBeCloseTo(0.25);
   });
 
   it('uses cumulative prefixes and matches the campaign summary at full length', () => {
@@ -97,6 +136,17 @@ describe('campaign horizon series', () => {
       desertionAttrition: 0,
       meanDesertions: firstMetric.desertions,
       meanSurvivingRosterSize: firstMetric.survivingRosterSize,
+      enemyDesertionAttrition: 0,
+      meanEnemySurvivingRosterSize: firstMetric.enemySurvivingRosterSize,
+      meanEnemyDesertions: firstMetric.enemyDesertions,
+      meanEnemyRefusalRate: firstMetric.enemyRefusalRate,
+      attritionDifferential: 0,
+      survivingRosterDifferential:
+        firstMetric.survivingRosterSize - firstMetric.enemySurvivingRosterSize,
+      desertionDifferential:
+        firstMetric.desertions - firstMetric.enemyDesertions,
+      refusalRateDifferential:
+        firstMetric.refusalRate - firstMetric.enemyRefusalRate,
       meanTauAbil: firstMetric.meanTauAbilEnd,
       meanTauBenev: firstMetric.meanTauBenevEnd,
       meanTrustEnd: firstMetric.meanTrustEnd,
@@ -117,6 +167,18 @@ describe('campaign horizon series', () => {
       desertionAttrition: summary.desertionAttrition,
       meanDesertions: summary.meanDesertions,
       meanSurvivingRosterSize: summary.meanSurvivingRosterSize,
+      enemyDesertionAttrition: summary.enemyDesertionAttrition,
+      meanEnemySurvivingRosterSize: summary.meanEnemySurvivingRosterSize,
+      meanEnemyDesertions: summary.meanEnemyDesertions,
+      meanEnemyRefusalRate: summary.meanEnemyRefusalRate,
+      attritionDifferential:
+        summary.desertionAttrition - summary.enemyDesertionAttrition,
+      survivingRosterDifferential:
+        summary.meanSurvivingRosterSize - summary.meanEnemySurvivingRosterSize,
+      desertionDifferential:
+        summary.meanDesertions - summary.meanEnemyDesertions,
+      refusalRateDifferential:
+        summary.meanRefusalRate - summary.meanEnemyRefusalRate,
       meanTauAbil: summary.meanTauAbil,
       meanTauBenev: summary.meanTauBenev,
       meanTrustEnd: summary.meanTrustEnd,
@@ -208,17 +270,17 @@ describe('campaign horizon series', () => {
 
     expect(bands[0]?.meanWinScore).toBe(10);
     expect(csv).toContain(
-      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,mean_win_score',
+      'trajectory_quartile,start_match,end_match,matches,mean_tau_abil,mean_tau_benev,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,rout_rate,mean_surviving_roster_size,enemy_desertion_attrition,mean_enemy_surviving_roster_size,mean_enemy_desertions,mean_enemy_refusal_rate,mean_attrition_differential,mean_surviving_roster_differential,mean_desertion_differential,mean_refusal_rate_differential,mean_win_score',
     );
     expect(csv).toContain(
-      'horizon,mean_win_score,win_count,draw_count,loss_count,win_rate,draw_rate,loss_rate,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,mean_tau_abil,mean_tau_benev,mean_trust_end',
+      'horizon,mean_win_score,win_count,draw_count,loss_count,win_rate,draw_rate,loss_rate,rout_rate,mean_refusal_rate,mean_refusals_per_ply,desertion_match_rate,desertion_attrition,mean_desertions,mean_surviving_roster_size,enemy_desertion_attrition,mean_enemy_surviving_roster_size,mean_enemy_desertions,mean_enemy_refusal_rate,attrition_differential,surviving_roster_differential,desertion_differential,refusal_rate_differential,mean_tau_abil,mean_tau_benev,mean_trust_end',
     );
     expect(csv.indexOf('\n\ntrajectory_quartile')).toBeGreaterThan(-1);
     expect(csv.indexOf('\n\nhorizon')).toBeGreaterThan(
       csv.indexOf('\n\ntrajectory_quartile'),
     );
     expect(csv).toContain(
-      '\n1,10.00,0,0,0,0.0000,0.0000,0.0000,0.0000,0.0909,0.1000,1.0000,0.0000,1.00,19.00,2.00,3.00,1.00\n',
+      '\n1,10.00,0,0,0,0.0000,0.0000,0.0000,0.0000,0.0909,0.1000,1.0000,0.0000,1.00,19.00,0.0000,15.00,0.00,0.0000,0.0000,4.00,1.00,0.0909,2.00,3.00,1.00\n',
     );
   });
 });

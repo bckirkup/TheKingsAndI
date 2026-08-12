@@ -166,6 +166,8 @@ export interface CampaignArtifact {
 export interface ShardArtifact {
   readonly manifest: ShardManifest;
   readonly campaigns: readonly CampaignArtifact[];
+  readonly trajectoryBands?: readonly CampaignTrajectoryBand[];
+  readonly horizon?: readonly CampaignHorizon[];
   readonly matchedSkillHorizon?: readonly ControlHorizon[];
 }
 
@@ -346,6 +348,8 @@ export function artifactFromShard(result: ShardResult): ShardArtifact {
       metrics: campaign.result.metrics,
       matchedSkillHorizon: campaign.matchedSkillHorizon,
     })),
+    trajectoryBands: result.trajectoryBands,
+    horizon: result.horizon,
     matchedSkillHorizon: result.matchedSkillHorizon,
   };
 }
@@ -439,6 +443,20 @@ export function averageCampaignTrajectoryBands(
       desertionAttrition: mean((band) => band.desertionAttrition),
       routRate: mean((band) => band.routRate),
       meanSurvivingRosterSize: mean((band) => band.meanSurvivingRosterSize),
+      enemyDesertionAttrition: mean((band) => band.enemyDesertionAttrition),
+      meanEnemySurvivingRosterSize: mean(
+        (band) => band.meanEnemySurvivingRosterSize,
+      ),
+      meanEnemyDesertions: mean((band) => band.meanEnemyDesertions),
+      meanEnemyRefusalRate: mean((band) => band.meanEnemyRefusalRate),
+      meanAttritionDifferential: mean((band) => band.meanAttritionDifferential),
+      meanSurvivingRosterDifferential: mean(
+        (band) => band.meanSurvivingRosterDifferential,
+      ),
+      meanDesertionDifferential: mean((band) => band.meanDesertionDifferential),
+      meanRefusalRateDifferential: mean(
+        (band) => band.meanRefusalRateDifferential,
+      ),
       meanWinScore: mean((band) => band.meanWinScore),
     };
   });
@@ -472,6 +490,18 @@ export function averageCampaignHorizonSeries(
       desertionAttrition: mean((point) => point.desertionAttrition),
       meanDesertions: mean((point) => point.meanDesertions),
       meanSurvivingRosterSize: mean((point) => point.meanSurvivingRosterSize),
+      enemyDesertionAttrition: mean((point) => point.enemyDesertionAttrition),
+      meanEnemySurvivingRosterSize: mean(
+        (point) => point.meanEnemySurvivingRosterSize,
+      ),
+      meanEnemyDesertions: mean((point) => point.meanEnemyDesertions),
+      meanEnemyRefusalRate: mean((point) => point.meanEnemyRefusalRate),
+      attritionDifferential: mean((point) => point.attritionDifferential),
+      survivingRosterDifferential: mean(
+        (point) => point.survivingRosterDifferential,
+      ),
+      desertionDifferential: mean((point) => point.desertionDifferential),
+      refusalRateDifferential: mean((point) => point.refusalRateDifferential),
       meanTauAbil: mean((point) => point.meanTauAbil),
       meanTauBenev: mean((point) => point.meanTauBenev),
       meanTrustEnd: mean((point) => point.meanTrustEnd),
