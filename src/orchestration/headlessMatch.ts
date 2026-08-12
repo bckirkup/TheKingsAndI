@@ -57,6 +57,27 @@ import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
 
+function applyCapturedPieceInjury(
+  roster: PieceState[],
+  capturedPieceId: string | undefined,
+  events: MatchEvent[],
+  ply: number,
+): PieceState[] {
+  if (capturedPieceId === undefined) return roster;
+  return roster.map((piece) => {
+    if (piece.id !== capturedPieceId) return piece;
+    const injured = applyCaptureInjury(piece);
+    events.push({
+      t: 'PSYCH_DELTA',
+      ply,
+      pieceId: piece.id,
+      field: 'B_i',
+      delta: injured.B_i - piece.B_i,
+    });
+    return injured;
+  });
+}
+
 export interface HeadlessMoveChoice {
   readonly moverId: string;
   readonly intent: MoveIntent;
@@ -439,20 +460,12 @@ export async function runHeadlessMatch(
       });
       enemyRoster = enemyTurn.enemyRoster;
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
-      if (enemyTurn.capturedPieceId !== undefined) {
-        roster = roster.map((piece) => {
-          if (piece.id !== enemyTurn.capturedPieceId) return piece;
-          const injured = applyCaptureInjury(piece);
-          events.push({
-            t: 'PSYCH_DELTA',
-            ply: enemyTurn.ply - 1,
-            pieceId: piece.id,
-            field: 'B_i',
-            delta: injured.B_i - piece.B_i,
-          });
-          return injured;
-        });
-      }
+      roster = applyCapturedPieceInjury(
+        roster,
+        enemyTurn.capturedPieceId,
+        events,
+        enemyTurn.ply - 1,
+      );
       departedEnemyRoster = appendDeparted(
         departedEnemyRoster,
         enemyTurn.departedRoster,
@@ -687,20 +700,12 @@ export async function runHeadlessMatch(
         actorChallenged,
       });
       roster = committed.roster;
-      if (committed.capturedPieceId !== undefined) {
-        enemyRoster = enemyRoster.map((piece) => {
-          if (piece.id !== committed.capturedPieceId) return piece;
-          const injured = applyCaptureInjury(piece);
-          events.push({
-            t: 'PSYCH_DELTA',
-            ply: committed.ply - 1,
-            pieceId: piece.id,
-            field: 'B_i',
-            delta: injured.B_i - piece.B_i,
-          });
-          return injured;
-        });
-      }
+      enemyRoster = applyCapturedPieceInjury(
+        enemyRoster,
+        committed.capturedPieceId,
+        events,
+        committed.ply - 1,
+      );
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
       dreadExposureByPiece = committed.dreadExposureByPiece;
@@ -751,20 +756,12 @@ export async function runHeadlessMatch(
         actorChallenged: true,
       });
       roster = committed.roster;
-      if (committed.capturedPieceId !== undefined) {
-        enemyRoster = enemyRoster.map((piece) => {
-          if (piece.id !== committed.capturedPieceId) return piece;
-          const injured = applyCaptureInjury(piece);
-          events.push({
-            t: 'PSYCH_DELTA',
-            ply: committed.ply - 1,
-            pieceId: piece.id,
-            field: 'B_i',
-            delta: injured.B_i - piece.B_i,
-          });
-          return injured;
-        });
-      }
+      enemyRoster = applyCapturedPieceInjury(
+        enemyRoster,
+        committed.capturedPieceId,
+        events,
+        committed.ply - 1,
+      );
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
       dreadExposureByPiece = committed.dreadExposureByPiece;
