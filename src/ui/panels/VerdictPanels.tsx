@@ -72,7 +72,6 @@ export function OverridePanel({
         <h3>Override cost preview</h3>
         <ul>
           <li>Trust to piece: {ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY}</li>
-          <li>Trauma to piece: +{ENGINE_CONFIG.OVERRIDE_PIECE_TRAUMA_GAIN}</li>
           <li>
             Witness trust: {ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY} each
           </li>

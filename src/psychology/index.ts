@@ -55,6 +55,11 @@ export {
 } from './events';
 export { applyOverride } from './override';
 export {
+  applyCaptureInjury,
+  applySustainedDread,
+  type DreadExposure,
+} from './trauma';
+export {
   defaultCredence,
   defaultRumor,
   normalizePieceState,

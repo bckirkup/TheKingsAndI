@@ -1,4 +1,4 @@
-import { clampMorale, clampTrauma, clampTrust } from './clamp';
+import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import { applyBetrayalSignal } from './credence';
 import type { MatchEvent, PieceState } from './types';
@@ -24,7 +24,6 @@ export function applyOverride(
   const overriddenPiece: PieceState = {
     ...piece,
     T_i: clampTrust(piece.T_i + ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY),
-    B_i: clampTrauma(piece.B_i + ENGINE_CONFIG.OVERRIDE_PIECE_TRAUMA_GAIN),
     M_i: clampMorale(piece.M_i - 10),
     credence,
   };
@@ -42,7 +41,6 @@ export function applyOverride(
     pieceId: piece.id,
     san,
     pieceTrustDelta: ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
-    traumaGain: ENGINE_CONFIG.OVERRIDE_PIECE_TRAUMA_GAIN,
     vindicated,
   };
   const witnessEvents: MatchEvent[] = updatedWitnesses.map((witness) => ({

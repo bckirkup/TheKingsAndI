@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { HeadlessMatchResult } from '../src/orchestration';
-import type { MatchEvent, PieceState } from '../src/psychology';
+import {
+  applyCaptureInjury,
+  type MatchEvent,
+  type PieceState,
+} from '../src/psychology';
 import { SEASON_CONFIG } from '../sim/seasonConfig';
 import {
   createCommanderPool,
@@ -311,12 +315,12 @@ describe('scarce season pools', () => {
           .filter((state) => state.id !== target.state.id),
         fieldPool(black, 1).lineup.map((member) => member.state),
         [],
-        [{ ...target.state, B_i: 44 }],
+        [applyCaptureInjury({ ...target.state, B_i: 44 })],
       ),
       match: 1,
     }).white.members.find((member) => member.state.id === target.state.id);
     expect(captured?.service.captures).toBe(1);
-    expect(captured?.state.B_i).toBe(44);
+    expect(captured?.state.B_i).toBe(64);
     expect(captured?.status).toBe('available');
     expect(captured?.availableAtMatch).toBe(2);
 

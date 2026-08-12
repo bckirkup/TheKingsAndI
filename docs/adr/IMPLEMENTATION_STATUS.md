@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0047)
+# ADR implementation status (0035–0049)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -24,17 +24,19 @@ the discrepancy is corrected.
 | 0045 | Desertion belief / pivotality / shadow | Proposed | Board-loss / pivotality / shadow / attachment **shipped**; magnitudes open |
 | 0046 | Release before resignation | Proposed | **Not shipped** |
 | 0047 | World-persistent commanders | Accepted | **Sim/world layer shipped**; full seminar host surfaces still Milestone 5b |
+| 0049 | Trauma is injury; capture and sustained dread write `B_i` | Accepted for the injury slice; calibration remains open | **Shipped** — `src/psychology/trauma.ts:10-42`, `src/orchestration/headlessMatch.ts:336-358`, `src/orchestration/headlessMatch.ts:442-454`, `src/orchestration/enemyTurn.ts:265-286` |
 
 ## Confirmed implementation gaps
 
 These are status distinctions, not new design decisions:
 
-- **Capture trauma is not wired.** `B_i` is initialized and changed by override
-  (`src/psychology/override.ts:24-28`), then consumed by desertion pain and
-  private-evaluation drift (`src/psychology/desertion.ts:12-16`,
-  `src/orchestration/privateEvaluation.ts:221-223`). No capture path currently
-  writes victim-side trauma; the season fold preserves the final captured state
-  without adding a capture mutation (`docs/design_decisions.md:899-905`).
+- **Capture injury and sustained dread are wired.** Flat capture injury and
+  private-risk dread are reduced in `src/psychology/trauma.ts:10-42` and
+  applied before roster synchronization in
+  `src/orchestration/headlessMatch.ts:336-358` and
+  `src/orchestration/headlessMatch.ts:442-454`; the enemy turn returns its
+  captured identity from `src/orchestration/enemyTurn.ts:265-286`. Retirement consumes the preserved
+  injured state in `sim/pool.ts:350-399`; the King exemption remains there.
 - **Morale is only partially wired.** `M_i` is changed by override and
   witnessed-desertion effects and read by the desertion lambda, but there is no
   general loss, exposure, victory, or recovery update
@@ -59,3 +61,7 @@ harness work — do not silently close them by changing defaults without a
 report in `docs/calibration/`.
 
 Current balance numbers: `docs/calibration/2026-08-10-state-of-play.md`.
+
+ADR 0049 leaves the flat capture magnitude, serious-risk threshold, dread
+increment, and required run length open for calibration. No decay term is
+introduced.

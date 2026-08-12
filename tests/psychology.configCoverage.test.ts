@@ -9,12 +9,14 @@ import { evalProfileFor } from '../src/orchestration/privateEvaluation';
 import {
   ENGINE_CONFIG,
   applyBetrayalSignal,
+  applyCaptureInjury,
   applyCostlySignal,
   costlySignalCredit,
   applyFatalisticComplianceCosts,
   applyHeardSignal,
   applyNeglectSignal,
   applyOverride,
+  applySustainedDread,
   applyWitnessedSacrificeEvent,
   appraiseDesertionWitness,
   attentionWeight,
@@ -265,16 +267,14 @@ describe('ENGINE_CONFIG coverage — sacrifice & clamp', () => {
 });
 
 describe('ENGINE_CONFIG coverage — override penalties', () => {
-  it('golden: override applies configured trust/trauma/witness deltas', () => {
+  it('golden: override applies configured trust/witness deltas, not trauma', () => {
     const piece = makePiece({ T_i: 50, B_i: 10 });
     const witness = makePiece({ id: 'w:P:a2', role: 'Pawn', T_i: 50 });
     const result = applyOverride(piece, [witness], 1, 'Nf3');
     expect(result.overriddenPiece.T_i).toBe(
       50 + ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
     );
-    expect(result.overriddenPiece.B_i).toBe(
-      10 + ENGINE_CONFIG.OVERRIDE_PIECE_TRAUMA_GAIN,
-    );
+    expect(result.overriddenPiece.B_i).toBe(10);
     expect(result.witnesses[0]?.T_i).toBe(
       50 + ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY,
     );
@@ -287,16 +287,6 @@ describe('ENGINE_CONFIG coverage — override penalties', () => {
     });
     mutateConfig('OVERRIDE_PIECE_TRUST_PENALTY', -70, () => {
       expect(applyOverride(piece, [], 1, 'Nf3').overriddenPiece.T_i).toBe(-20);
-    });
-  });
-
-  it('sensitivity: OVERRIDE_PIECE_TRAUMA_GAIN changes trauma', () => {
-    const piece = makePiece({ B_i: 0 });
-    mutateConfig('OVERRIDE_PIECE_TRAUMA_GAIN', 5, () => {
-      expect(applyOverride(piece, [], 1, 'Nf3').overriddenPiece.B_i).toBe(5);
-    });
-    mutateConfig('OVERRIDE_PIECE_TRAUMA_GAIN', 40, () => {
-      expect(applyOverride(piece, [], 1, 'Nf3').overriddenPiece.B_i).toBe(40);
     });
   });
 
@@ -327,6 +317,66 @@ describe('ENGINE_CONFIG coverage — override penalties', () => {
           .credence.tauBenev;
         expect(harsh).toBeLessThan(mild);
       });
+    });
+  });
+});
+
+describe('ENGINE_CONFIG coverage — injury and dread', () => {
+  it('golden: capture and sustained dread use shipped defaults', () => {
+    const piece = makePiece({ B_i: 0 });
+    expect(ENGINE_CONFIG.CAPTURE_TRAUMA_GAIN).toBe(20);
+    expect(applyCaptureInjury(piece).B_i).toBe(20);
+    expect(ENGINE_CONFIG.DREAD_CAPTURE_RISK_THRESHOLD).toBe(0.75);
+    expect(ENGINE_CONFIG.DREAD_TRAUMA_GAIN).toBe(5);
+    expect(ENGINE_CONFIG.DREAD_REQUIRED_PLIES).toBe(2);
+    const first = applySustainedDread(piece, undefined, 0.8);
+    const second = applySustainedDread(piece, first.exposure, 0.8);
+    expect(first.piece.B_i).toBe(0);
+    expect(second.piece.B_i).toBe(5);
+  });
+
+  it('sensitivity: capture magnitude changes capture injury', () => {
+    const piece = makePiece({ B_i: 0 });
+    mutateConfig('CAPTURE_TRAUMA_GAIN', 7, () => {
+      expect(applyCaptureInjury(piece).B_i).toBe(7);
+    });
+  });
+
+  it('golden: capture injury does not scale with role or sacrifice meaning', () => {
+    const pawn = makePiece({ role: 'Pawn', B_i: 10 });
+    const queen = makePiece({
+      role: 'Queen',
+      B_i: 10,
+      traits: { ...neutralTraits, w_honor: 1, w_courage: 1 },
+    });
+    expect(applyCaptureInjury(pawn).B_i).toBe(30);
+    expect(applyCaptureInjury(queen).B_i).toBe(30);
+  });
+
+  it('sensitivity: dread threshold changes which risks qualify', () => {
+    const piece = makePiece({ B_i: 0 });
+    let first = applySustainedDread(piece, undefined, 0.8);
+    mutateConfig('DREAD_CAPTURE_RISK_THRESHOLD', 0.9, () => {
+      first = applySustainedDread(piece, undefined, 0.8);
+    });
+    expect(first.exposure.streak).toBe(0);
+  });
+
+  it('sensitivity: dread increment changes sustained injury', () => {
+    const piece = makePiece({ B_i: 0 });
+    const first = applySustainedDread(piece, undefined, 0.8);
+    mutateConfig('DREAD_TRAUMA_GAIN', 9, () => {
+      expect(applySustainedDread(piece, first.exposure, 0.8).piece.B_i).toBe(9);
+    });
+  });
+
+  it('sensitivity: dread run length delays injury', () => {
+    const piece = makePiece({ B_i: 0 });
+    const first = applySustainedDread(piece, undefined, 0.8);
+    mutateConfig('DREAD_REQUIRED_PLIES', 3, () => {
+      expect(applySustainedDread(piece, first.exposure, 0.8).injured).toBe(
+        false,
+      );
     });
   });
 });

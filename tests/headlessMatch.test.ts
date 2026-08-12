@@ -64,7 +64,6 @@ describe('headless player refusal replanning', () => {
     if (overrides[0]?.t === 'OVERRIDE') {
       expect(overrides[0].implicit).toBe(true);
       expect(overrides[0].pieceTrustDelta).toBe(-35);
-      expect(overrides[0].traumaGain).toBe(20);
     }
     expect(moves).toHaveLength(1);
     expect(result.plies).toBe(1);
@@ -74,7 +73,7 @@ describe('headless player refusal replanning', () => {
         (piece) => piece.id === override.pieceId,
       );
       expect(overridden?.T_i).toBeLessThanOrEqual(-35);
-      expect(overridden?.B_i).toBe(20);
+      expect(overridden?.B_i).toBe(0);
     }
     expect(
       new Set(refusals.map((event) => event.t === 'REFUSAL' && event.san)),

@@ -10,6 +10,7 @@ import { createSeededRandom, type SeededRandom } from '../core/random';
 import type { EnginePort } from '../engine/types';
 import {
   applyNeglectSignal,
+  applyCaptureInjury,
   applyFatalisticComplianceCosts,
   evaluateMoveResponse,
   normalizePieceState,
@@ -40,6 +41,7 @@ import {
 import { chooseKingCommandMove } from './kingCommand';
 import { type OpponentArchetype } from './leaderPolicy';
 import { applyEnemyTurn } from './enemyTurn';
+import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
@@ -185,6 +187,8 @@ export class MatchSession {
   private readonly insight: InsightRoundHandle;
   private lastFriendlyCapturePly: number | undefined;
   private abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
+  private dreadExposureByPiece: DreadExposureByPiece = {};
+  private enemyDreadExposureByPiece: DreadExposureByPiece = {};
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -663,6 +667,20 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp,
     });
+    if (applied.capture !== undefined) {
+      this.enemyRoster = this.enemyRoster.map((piece) => {
+        if (piece.id !== applied.capture?.pieceId) return piece;
+        const injured = applyCaptureInjury(piece);
+        this.events.push({
+          t: 'PSYCH_DELTA',
+          ply: this.ply,
+          pieceId: piece.id,
+          field: 'B_i',
+          delta: injured.B_i - piece.B_i,
+        });
+        return injured;
+      });
+    }
 
     const moveFeatures = features;
     void this.applyPostCommitPsychology(
@@ -810,6 +828,22 @@ export class MatchSession {
       this.events.push(...costly.events);
     }
 
+    const trauma = applyMoveTrauma(
+      this.roster,
+      this.dreadExposureByPiece,
+      Object.fromEntries(
+        Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
+          id,
+          evaluation.P_captured,
+        ]),
+      ),
+      undefined,
+      this.ply,
+    );
+    this.roster = trauma.roster;
+    this.dreadExposureByPiece = trauma.exposure;
+    this.events.push(...trauma.events);
+
     if (captured) {
       // Opponent captured on prior ply is tracked when we lose a piece; here
       // a player capture may avenge. Friendly loss is recorded on opponent turn.
@@ -835,8 +869,24 @@ export class MatchSession {
       engine: this.engine,
       insight: this.insight,
       overrideRefusals: this.opponentArchetype === 'tyrannical',
+      dreadExposureByPiece: this.enemyDreadExposureByPiece,
     });
     this.enemyRoster = result.enemyRoster;
+    this.enemyDreadExposureByPiece = result.dreadExposureByPiece;
+    if (result.capturedPieceId !== undefined) {
+      this.roster = this.roster.map((piece) => {
+        if (piece.id !== result.capturedPieceId) return piece;
+        const injured = applyCaptureInjury(piece);
+        this.events.push({
+          t: 'PSYCH_DELTA',
+          ply: result.ply - 1,
+          pieceId: piece.id,
+          field: 'B_i',
+          delta: injured.B_i - piece.B_i,
+        });
+        return injured;
+      });
+    }
     this.events.push(...result.events);
     this.ply = result.ply;
     if (result.lastMove !== null) {

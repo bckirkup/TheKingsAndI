@@ -204,7 +204,6 @@ describe('learning delta (5.8q)', () => {
             pieceId: 'a',
             san: 'Nf3',
             pieceTrustDelta: -20,
-            traumaGain: 5,
           },
         ],
         roster,
