@@ -1,6 +1,6 @@
 /**
- * Commendation thresholds (ADR 0031). Every knob has golden + sensitivity tests.
- * Awards are computed at debrief only — never surfaced during play (D93).
+ * Commendation thresholds (ADR 0031). Every knob has a wiring (sensitivity)
+ * probe. Awards are computed at debrief only — never surfaced during play (D93).
  */
 export const COMMENDATION_CONFIG = {
   /** Attention Gini at or below this earns evenness. */

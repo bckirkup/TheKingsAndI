@@ -58,9 +58,11 @@ implied.
 ## Common tasks
 
 **Adding a psychological mechanic:** update `docs/psychology_engine.md` first
-(the math is the spec), add the reducer + event type, add a golden test at the
-new mechanic's boundary values, add a sensitivity probe for its weight, then run
-the harness and report metric deltas in the PR.
+(the math is the spec), add the reducer + event type, add unit tests at the
+new mechanic's boundaries, add a **wiring (sensitivity) probe** for its weight,
+then run the harness and report metric deltas in the PR. Defer exact golden
+number pins until the coefficient is intentionally frozen
+(`docs/testing_strategy.md`).
 
 **Touching the chess layer:** remember chess.js has no piece identity. Any change
 to move application must preserve the square→`PieceId` map through captures,
