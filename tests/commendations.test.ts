@@ -255,7 +255,7 @@ describe('learning delta (5.8q)', () => {
     expect(set.learningDelta!.composite).toBeGreaterThan(0);
   });
 
-  it('golden + sensitivity: BEST_OF_BEST_RATIO_MIN', () => {
+  it('wiring: BEST_OF_BEST_RATIO_MIN', () => {
     const roster = [
       makePiece('star', 90),
       makePiece('a', 10),
@@ -291,7 +291,7 @@ describe('learning delta (5.8q)', () => {
     }
   });
 
-  it('golden + sensitivity: NOBODY_DROWNED_CREDENCE_FLOOR', () => {
+  it('wiring: NOBODY_DROWNED_CREDENCE_FLOOR', () => {
     const low = makePiece('a', 40, {
       credence: { tauBenev: 8, tauAbil: 8, abilityObservationCount: 0 },
     });
@@ -321,7 +321,7 @@ describe('learning delta (5.8q)', () => {
     }
   });
 
-  it('golden + sensitivity: OVERCOMING_TRAUMA_FLOOR and RECOVERY', () => {
+  it('wiring: OVERCOMING_TRAUMA_FLOOR and RECOVERY', () => {
     const start = makePiece('a', 40, { B_i: 40 });
     const end = makePiece('a', 40, { B_i: 10 });
     const match = {
@@ -358,7 +358,7 @@ describe('learning delta (5.8q)', () => {
     }
   });
 
-  it('golden + sensitivity: GRIT_LOSS_STREAK and GRIT_FIDELITY_FLOOR', () => {
+  it('wiring: GRIT_LOSS_STREAK and GRIT_FIDELITY_FLOOR', () => {
     const roster = [makePiece('a', 40)];
     const losses = [
       makeMatch(1, [], roster, { executionFidelity: 0.7 }, 'LOSS'),

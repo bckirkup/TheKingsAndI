@@ -31,7 +31,7 @@ but not fully wired into live state/persistence — see
 | `docs/calibration/2026-08-10-state-of-play.md` | Current harness numbers (supersedes older M3 reports) |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0047 decided vs shipped |
-| `docs/testing_strategy.md` | Golden + sensitivity testing, balance metrics |
+| `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
 | `docs/risks_and_open_questions.md` | Known hazards |
 | `docs/adr/` | Recorded decisions (immutable) |
@@ -56,8 +56,11 @@ but not fully wired into live state/persistence — see
    app composition root may import `engine/` (barrier + port construction).
 5. **Event log is the source of truth.** Audits, debriefs, and culture drift are
    folds over the log, never separately maintained counters.
-6. **Every config knob gets a golden test AND a sensitivity test.** See the
-   `ci-test-design` skill. A parsed-but-unwired knob is a review failure.
+6. **Every config knob gets a wiring (sensitivity) probe** — changing the knob
+   must change a quantitative output. Prefer unit tests + wiring probes while
+   coefficients are still moving; pin exact golden numbers only for settled
+   surfaces (see `docs/testing_strategy.md`). A parsed-but-unwired knob is a
+   review failure. See the `ci-test-design` skill.
 7. **Never modify tests to make them pass** — fix the implementation.
 8. **Accepted design invariants** (ADRs 0002–0012). A commanded move is always
    the move played (insight is advice, ADR 0008). Refusal is free to re-plan; it
@@ -154,6 +157,7 @@ constraint — see `LICENSING.md`. Contributions require the grant in
 
 ## PR Requirements
 - Lint, typecheck, tests, and headless sim smoke all pass.
-- New config keys ship with a golden test and a sensitivity probe.
+- New config keys ship with a wiring (sensitivity) probe; add a golden only
+  when the surface is intentionally frozen.
 - Decisions that are expensive to reverse ship with an ADR.
 - Balance-affecting changes include before/after harness metrics in the PR body.

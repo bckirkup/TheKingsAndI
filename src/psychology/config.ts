@@ -1,6 +1,7 @@
 /**
  * Normative coefficients from docs/spec/psychology-engine.reference.ts and ADRs.
- * Every knob here must have a golden test and a sensitivity probe.
+ * Every knob here must have a wiring (sensitivity) probe; pin a golden only
+ * once the default is intentionally frozen (docs/testing_strategy.md).
  */
 export const ENGINE_CONFIG = {
   /** Vindication baseline: the piece's expectation is the shipped default. */
