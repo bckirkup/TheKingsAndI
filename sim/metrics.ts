@@ -68,6 +68,10 @@ export interface MatchMetrics {
   readonly winScore: number;
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
+  readonly passedOverDistribution?: Readonly<Record<string, number>>;
+  readonly enemyPassedOverDistribution?: Readonly<Record<string, number>>;
+  readonly obsolescenceCount?: number;
+  readonly enemyObsolescenceCount?: number;
 }
 
 export interface DesertionSummary {
