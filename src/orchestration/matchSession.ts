@@ -61,6 +61,7 @@ import {
   isAvengedCapture,
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
+import { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
 
 export type MatchPhase =
   | 'playing'
@@ -125,6 +126,8 @@ export interface MatchSessionSnapshot {
   readonly seed: number;
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
+  readonly terminalLoss: boolean;
+  readonly enemyRout: boolean;
   readonly winScore: number;
   readonly lastMove: readonly [Square, Square] | null;
   readonly dismissed: boolean;
@@ -181,6 +184,8 @@ export class MatchSession {
   private readonly playerSide: Side;
   private selectedPieceId: string | null = null;
   private rout = false;
+  private terminalLoss = false;
+  private enemyRout = false;
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
   private dismissalCause: DismissalCause | null = null;
@@ -246,6 +251,8 @@ export class MatchSession {
       seed: this.matchSeed,
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
+      terminalLoss: this.terminalLoss,
+      enemyRout: this.enemyRout,
       winScore: this.winScore(),
       lastMove: this.lastMove,
       dismissed: this.dismissed,
@@ -258,7 +265,12 @@ export class MatchSession {
   }
 
   winScore(): number {
-    return scoreMatchOutcome(this.board, this.playerSide, this.rout);
+    return scoreMatchOutcome(
+      this.board,
+      this.playerSide,
+      this.rout || this.terminalLoss,
+      this.enemyRout,
+    );
   }
 
   selectPiece(pieceId: string | null): void {
@@ -550,11 +562,31 @@ export class MatchSession {
         this.board.withdrawPiece(event.pieceId);
       }
     }
+    const abandonment = kingAbandonmentAfterWithdrawals(
+      this.board,
+      this.playerSide,
+    );
+    if (abandonment !== undefined) {
+      this.events.push({
+        t: 'KING_ABANDONED',
+        ply: this.ply,
+        abandonedSide: abandonment.abandonedSide,
+        attackerSide: abandonment.attackerSide,
+        kingId: abandonment.kingId,
+      });
+      this.terminalLoss = abandonment.abandonedSide === this.playerSide;
+      this.enemyRout = abandonment.abandonedSide !== this.playerSide;
+    }
     this.roster = cascade.roster;
     this.pending = null;
     this.phase = 'playing';
     this.ply += 1;
 
+    if (abandonment !== undefined) {
+      if (cascade.rout) this.rout = true;
+      this.phase = 'game_over';
+      return;
+    }
     if (cascade.rout) {
       this.rout = true;
       this.phase = 'rout';
@@ -565,7 +597,6 @@ export class MatchSession {
       };
       return;
     }
-
     this.dialogueCue = {
       eventKind: 'desertion',
       pieceId: pending.actor.id,
@@ -920,6 +951,12 @@ export class MatchSession {
     }
     this.events.push(...result.events);
     this.ply = result.ply;
+    this.enemyRout = result.enemyRout;
+    if (result.playerTerminalLoss === true) {
+      this.terminalLoss = true;
+      this.phase = 'game_over';
+      return;
+    }
     if (result.lastMove !== null) {
       this.lastMove = result.lastMove;
     }

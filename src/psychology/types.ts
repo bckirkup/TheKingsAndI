@@ -214,6 +214,13 @@ export type MatchEvent =
       readonly witnessOwnValue: number;
     }
   | {
+      readonly t: 'KING_ABANDONED';
+      readonly ply: number;
+      readonly abandonedSide: 'w' | 'b';
+      readonly attackerSide: 'w' | 'b';
+      readonly kingId: PieceId;
+    }
+  | {
       readonly t: 'PSYCH_DELTA';
       readonly ply: number;
       readonly pieceId: PieceId;

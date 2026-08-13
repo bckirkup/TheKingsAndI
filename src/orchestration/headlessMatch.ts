@@ -59,6 +59,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
+import { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -420,6 +421,7 @@ export async function runHeadlessMatch(
   let ply = 1;
   let rout = false;
   let enemyRout = false;
+  let terminalLoss = false;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
@@ -489,6 +491,10 @@ export async function runHeadlessMatch(
       ply = enemyTurn.ply;
       if (enemyTurn.enemyRout) {
         enemyRout = true;
+        break;
+      }
+      if (enemyTurn.playerTerminalLoss === true) {
+        terminalLoss = true;
         break;
       }
       const afterIds = new Set(activePlayerPieceIds(board, config.playerSide));
@@ -701,6 +707,21 @@ export async function runHeadlessMatch(
             board.withdrawPiece(event.pieceId);
           }
         }
+        const abandonment = kingAbandonmentAfterWithdrawals(board, side);
+        if (abandonment !== undefined) {
+          events.push({
+            t: 'KING_ABANDONED',
+            ply,
+            abandonedSide: abandonment.abandonedSide,
+            attackerSide: abandonment.attackerSide,
+            kingId: abandonment.kingId,
+          });
+          if (abandonment.abandonedSide === config.playerSide) {
+            terminalLoss = true;
+          } else {
+            enemyRout = true;
+          }
+        }
         roster = cascade.roster;
         departedRoster = appendDeparted(departedRoster, cascade.departed);
         if (cascade.rout) {
@@ -804,9 +825,15 @@ export async function runHeadlessMatch(
       continue;
     }
     if (!turnCompleted) break;
+    if (terminalLoss || enemyRout) break;
   }
 
-  const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);
+  const winScore = scoreMatchOutcome(
+    board,
+    config.playerSide,
+    rout || terminalLoss,
+    enemyRout,
+  );
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);

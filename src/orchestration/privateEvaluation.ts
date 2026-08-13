@@ -88,6 +88,12 @@ function positionScore(
   actor: PieceState,
   profile: EvalProfile,
 ): number {
+  if (
+    board.piecesOf('w').some((piece) => piece.role === 'K') === false ||
+    board.piecesOf('b').some((piece) => piece.role === 'K') === false
+  ) {
+    return -1;
+  }
   const side = board.pieceOf(actor.id)?.side;
   if (side === undefined) return -1;
   const threatMap = extractThreatMap(board, side);
@@ -146,6 +152,12 @@ function mobilityFor(
   side: 'w' | 'b',
   square: Square,
 ): number {
+  if (
+    board.piecesOf('w').some((piece) => piece.role === 'K') === false ||
+    board.piecesOf('b').some((piece) => piece.role === 'K') === false
+  ) {
+    return 0;
+  }
   const fields = board.fen().split(' ');
   fields[1] = side;
   fields[3] = '-';
@@ -156,7 +168,7 @@ function mobilityFor(
   );
 }
 
-function endpointFor(
+export function endpointFor(
   board: LivingBoard,
   pv: readonly string[],
 ):
@@ -178,6 +190,12 @@ function endpointFor(
       };
       const applied = endpoint.applyMove(intent);
       movedIds.add(applied.moverId);
+      if (
+        endpoint.piecesOf('w').some((piece) => piece.role === 'K') === false ||
+        endpoint.piecesOf('b').some((piece) => piece.role === 'K') === false
+      ) {
+        return undefined;
+      }
     }
   } catch {
     return undefined;

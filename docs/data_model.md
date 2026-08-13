@@ -58,6 +58,11 @@ interface MatchRecord {
   schemaVersion: number;
 }
 
+`KING_ABANDONED` is appended when a desertion withdrawal leaves the
+non-moving side's King attacked by the side to move. The abandoned side loses
+immediately; this event records the terminal cause without changing rout
+semantics.
+
 /**
  * The replay-triage record of ADR 0034 §8. On a divergence, matching digests
  * with diverging events say the psychology diverged; a diverging digest says the
