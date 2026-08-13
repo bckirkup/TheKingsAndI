@@ -51,16 +51,45 @@ The transition is one commit, not a gradual drift. So the collapse arrived with
 the ADR 0045 desertion redesign — the ADR whose magnitudes were recorded as
 "open for calibration", shipped with defaults that make desertion unconditional.
 
-The term-level mechanism is **not yet confirmed**. One candidate is visible in
-the code and is being checked: `desertionContextFor`
-(`src/psychology/cascade.ts:24-30`) reads `privateScoreCp` as an absolute
-position evaluation, but the field carries two different quantities on the same
-ply — non-actor pieces get an absolute score (`insight.ts:379`) while the acting
-piece gets a before/after **delta** (`evaluation.ts:22`). A delta sits near zero
-even in a won position, which would pin
-`boardLossPermille = 500 − 500·score/(|score|+scale)` at ~500 — a flat 50%
-belief that the team is losing — for whichever piece is acting. Treat that as a
-hypothesis until the per-departure decomposition names the dominant term.
+### The mechanism: departures now happen at a knife-edge margin
+
+Per-departure decomposition of one deterministic match
+(`--matches=1 --leader=tyrannical --seed=7 --engine=fake`), current `main`
+versus the good parent, at the first mass departure wave:
+
+| Term | `main` (ply 47, 8 departures) | `182713a2` (ply 29, 14 departures) |
+|---|---:|---:|
+| `U_desert − U_stay` | **+0.493** | **+3.868** |
+| collective stay-loss `P_lossIfStay·λ·50` | +3.707 | +4.853 |
+| residual leave / attachment | −3.214 | −3.110 |
+| pain `P_captured·pain·shadow` | **+0.000** | +3.429 |
+| standing | −0.000 | −1.303 |
+
+with `pLossBoard 0.356`, `P_lossIfStay 0.253`, `pivotality 0.013`,
+`shadowFactor 0.747`, `attachment 0.825`, `λ 0.293`.
+
+No single new term dominates. The wave is the difference between two large
+opposing terms, and it starts with **no capture pain and no standing cost at
+all** — where the parent's first wave was initiated by capture pain (+48.0 on
+`w:R:a1`, `ΔU = +45.256`). Desertion has become a low-margin decision driven by a
+*belief about losing the board* rather than by anything that happened to the
+piece, and ADR 0011's undamped cascade then takes over from a +0.49 margin.
+Pivotality (~0.16 utility points) and attachment are not the pressure;
+attachment currently **resists** desertion (−3.214 versus the old fixed 0.3
+residual stake) and merely fails to offset the new collective stake.
+
+A wiring defect sits underneath this and should be fixed before any magnitude is
+touched: `desertionContextFor` (`src/psychology/cascade.ts:24-30`) applies the
+absolute-score board-loss formula to `privateScoreCp`, but that field carries two
+different quantities on the same ply — non-actor pieces get an absolute post-move
+score (`insight.ts:379`) while the acting piece gets a before/after **delta**
+(`evaluation.ts:22`). Measured actor deltas range −316…+442 cp with mixed signs,
+and three refusal retries at one ply produced actor values of −85, +2 and +208,
+so the acting piece's `P_lossIfStay` is not commensurable with its peers' and
+moves with the retry. (This is narrower than first supposed: the deltas do *not*
+sit near zero, so there is no universal flat 50% belief.) Its exact contribution
+to the collapse is separable only by a replay that feeds the actor its absolute
+score with all other terms held fixed.
 
 ## 2. The nightly calibration pipeline has produced nothing since 2026-08-11
 
