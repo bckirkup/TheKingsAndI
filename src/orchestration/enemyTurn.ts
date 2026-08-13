@@ -38,7 +38,7 @@ import {
   desertionContextFor,
 } from './psychologyHooks';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
-import { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingAbandonment';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],
@@ -68,7 +68,6 @@ export interface EnemyTurnResult {
   readonly events: readonly MatchEvent[];
   readonly ply: number;
   readonly enemyRout: boolean;
-  readonly playerTerminalLoss?: boolean;
   readonly lastMove: readonly [Square, Square] | null;
   readonly observableBehaviours: readonly (
     | 'move'
@@ -224,15 +223,15 @@ function applyTrackedEnemyDecision(input: {
         behaviours.push('desertion');
       }
     }
-    const abandonment = kingAbandonmentAfterWithdrawals(board, enemySide);
-    if (abandonment !== undefined) {
+    const exposure = kingExposureAfterWithdrawals(board, enemySide);
+    if (exposure !== undefined) {
       events.push({
-        t: 'KING_ABANDONED',
+        t: 'KING_EXPOSED_TURN_CEDED',
         ply,
-        abandonedSide: abandonment.abandonedSide,
-        attackerSide: abandonment.attackerSide,
-        kingId: abandonment.kingId,
+        exposedKingId: exposure.kingId,
+        attackerSide: exposure.attackerSide,
       });
+      board.cedeTurn();
     }
     return {
       enemyRoster: syncSideRoster(board, cascade.roster, enemySide),
@@ -242,9 +241,6 @@ function applyTrackedEnemyDecision(input: {
       engineAudit: [audit],
       ply: ply + 1,
       enemyRout: cascade.rout,
-      ...(abandonment?.abandonedSide === 'w'
-        ? { playerTerminalLoss: true }
-        : {}),
       lastMove: null,
       observableBehaviours: behaviours,
     };

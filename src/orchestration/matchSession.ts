@@ -61,7 +61,7 @@ import {
   isAvengedCapture,
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
-import { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingAbandonment';
 
 export type MatchPhase =
   | 'playing'
@@ -126,7 +126,6 @@ export interface MatchSessionSnapshot {
   readonly seed: number;
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
-  readonly terminalLoss: boolean;
   readonly enemyRout: boolean;
   readonly winScore: number;
   readonly lastMove: readonly [Square, Square] | null;
@@ -184,7 +183,6 @@ export class MatchSession {
   private readonly playerSide: Side;
   private selectedPieceId: string | null = null;
   private rout = false;
-  private terminalLoss = false;
   private enemyRout = false;
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
@@ -251,7 +249,6 @@ export class MatchSession {
       seed: this.matchSeed,
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
-      terminalLoss: this.terminalLoss,
       enemyRout: this.enemyRout,
       winScore: this.winScore(),
       lastMove: this.lastMove,
@@ -268,7 +265,7 @@ export class MatchSession {
     return scoreMatchOutcome(
       this.board,
       this.playerSide,
-      this.rout || this.terminalLoss,
+      this.rout,
       this.enemyRout,
     );
   }
@@ -562,31 +559,21 @@ export class MatchSession {
         this.board.withdrawPiece(event.pieceId);
       }
     }
-    const abandonment = kingAbandonmentAfterWithdrawals(
-      this.board,
-      this.playerSide,
-    );
-    if (abandonment !== undefined) {
+    const exposure = kingExposureAfterWithdrawals(this.board, this.playerSide);
+    if (exposure !== undefined) {
       this.events.push({
-        t: 'KING_ABANDONED',
+        t: 'KING_EXPOSED_TURN_CEDED',
         ply: this.ply,
-        abandonedSide: abandonment.abandonedSide,
-        attackerSide: abandonment.attackerSide,
-        kingId: abandonment.kingId,
+        exposedKingId: exposure.kingId,
+        attackerSide: exposure.attackerSide,
       });
-      this.terminalLoss = abandonment.abandonedSide === this.playerSide;
-      this.enemyRout = abandonment.abandonedSide !== this.playerSide;
+      this.board.cedeTurn();
     }
     this.roster = cascade.roster;
     this.pending = null;
     this.phase = 'playing';
     this.ply += 1;
 
-    if (abandonment !== undefined) {
-      if (cascade.rout) this.rout = true;
-      this.phase = 'game_over';
-      return;
-    }
     if (cascade.rout) {
       this.rout = true;
       this.phase = 'rout';
@@ -951,12 +938,7 @@ export class MatchSession {
     }
     this.events.push(...result.events);
     this.ply = result.ply;
-    this.enemyRout = result.enemyRout;
-    if (result.playerTerminalLoss === true) {
-      this.terminalLoss = true;
-      this.phase = 'game_over';
-      return;
-    }
+    this.enemyRout ||= result.enemyRout;
     if (result.lastMove !== null) {
       this.lastMove = result.lastMove;
     }

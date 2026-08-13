@@ -1,5 +1,5 @@
 export { runHeadlessMatch } from './headlessMatch';
-export { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
+export { kingExposureAfterWithdrawals } from './kingAbandonment';
 export { endpointFor } from './privateEvaluation';
 export { MatchSession } from './matchSession';
 export type {

@@ -58,11 +58,6 @@ interface MatchRecord {
   schemaVersion: number;
 }
 
-`KING_ABANDONED` is appended when a desertion withdrawal leaves the
-non-moving side's King attacked by the side to move. The abandoned side loses
-immediately; this event records the terminal cause without changing rout
-semantics.
-
 /**
  * The replay-triage record of ADR 0034 §8. On a divergence, matching digests
  * with diverging events say the psychology diverged; a diverging digest says the
@@ -81,6 +76,12 @@ interface CampaignRecord {
   firings: { pieceId: PieceId; matchIndex: number }[];
 }
 ```
+
+`KING_EXPOSED_TURN_CEDED` is appended when a desertion withdrawal unblocks the
+deserting side's own attacker, leaving the opposing King attacked while that
+side remains to move. The deserting side cedes the remainder of its turn so the
+exposed side can answer the discovered check; the event records the cause
+without changing rout semantics.
 
 **Class prestige is per piece, not per roster.** The reference implementation
 stores `classPrestige` on each `PieceState` keyed by role, so every piece holds

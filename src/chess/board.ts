@@ -107,7 +107,7 @@ function isCastle(move: Move): boolean {
 }
 
 export class LivingBoard {
-  private readonly chess: Chess;
+  private chess: Chess;
   private readonly idBySquare: Map<Square, PieceId>;
   private readonly squareById: Map<PieceId, Square>;
   private readonly roleById: Map<PieceId, Role>;
@@ -185,6 +185,14 @@ export class LivingBoard {
 
   turn(): Side {
     return this.chess.turn();
+  }
+
+  /** Cede the current turn without making a chess move. */
+  cedeTurn(): void {
+    const fields = this.chess.fen().split(' ');
+    fields[1] = fields[1] === 'w' ? 'b' : 'w';
+    fields[3] = '-';
+    this.chess = new Chess(fields.join(' '));
   }
 
   ply(): number {

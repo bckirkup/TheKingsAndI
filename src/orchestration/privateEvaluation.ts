@@ -40,6 +40,13 @@ function quantizeSigned(value: number): number {
   return Math.max(-PROFILE_SCALE, Math.min(PROFILE_SCALE, quantize(value)));
 }
 
+function hasBothKings(board: LivingBoard): boolean {
+  return (
+    board.piecesOf('w').some((piece) => piece.role === 'K') &&
+    board.piecesOf('b').some((piece) => piece.role === 'K')
+  );
+}
+
 function coordinates(square: Square): readonly [number, number] {
   return [square.charCodeAt(0) - 97, square.charCodeAt(1) - 49];
 }
@@ -88,10 +95,7 @@ function positionScore(
   actor: PieceState,
   profile: EvalProfile,
 ): number {
-  if (
-    board.piecesOf('w').some((piece) => piece.role === 'K') === false ||
-    board.piecesOf('b').some((piece) => piece.role === 'K') === false
-  ) {
+  if (!hasBothKings(board)) {
     return -1;
   }
   const side = board.pieceOf(actor.id)?.side;
@@ -152,10 +156,7 @@ function mobilityFor(
   side: 'w' | 'b',
   square: Square,
 ): number {
-  if (
-    board.piecesOf('w').some((piece) => piece.role === 'K') === false ||
-    board.piecesOf('b').some((piece) => piece.role === 'K') === false
-  ) {
+  if (!hasBothKings(board)) {
     return 0;
   }
   const fields = board.fen().split(' ');
@@ -174,6 +175,7 @@ export function endpointFor(
 ):
   | { readonly board: LivingBoard; readonly movedIds: ReadonlySet<string> }
   | undefined {
+  if (!hasBothKings(board)) return undefined;
   const endpoint = board.clone();
   const movedIds = new Set<string>();
   try {
@@ -190,10 +192,7 @@ export function endpointFor(
       };
       const applied = endpoint.applyMove(intent);
       movedIds.add(applied.moverId);
-      if (
-        endpoint.piecesOf('w').some((piece) => piece.role === 'K') === false ||
-        endpoint.piecesOf('b').some((piece) => piece.role === 'K') === false
-      ) {
+      if (!hasBothKings(endpoint)) {
         return undefined;
       }
     }

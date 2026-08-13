@@ -62,6 +62,17 @@ anticipated standing cost; the collective term is unchanged. This makes
 honour and pain fade together when defeat is already expected, without adding
 cooldowns, floors, or caps.
 
+### 1.1 Discovered check cedes the turn
+
+If the withdrawal cascade exposes the opposing King to an attack while the
+deserting side still has the chess turn, the desertion cedes the remainder of
+that turn. The exposed side receives the next move and must answer the
+discovered check under normal chess rules. This is a cost of desertion, not a
+desertion cap or cooldown; the cascade remains undamped. The event log records
+the exposure, and the ordinary chess outcome path handles checkmate or
+stalemate. The King is never captured by a withdrawal or by evaluation of a
+kingless candidate.
+
 ## 2. `λ_i` is where trust does its work
 
 ```

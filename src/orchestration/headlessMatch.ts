@@ -59,7 +59,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
-import { kingAbandonmentAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingAbandonment';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -110,6 +110,7 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  readonly initialBoard?: LivingBoard;
   /**
    * Optional fielded lineup whose IDs must be installed on the standard
    * position. When omitted, the historical starting-square IDs are used.
@@ -404,9 +405,10 @@ export async function runHeadlessMatch(
     lineups[config.playerSide === 'w' ? 'b' : 'w'] = config.initialEnemyLineup;
   }
   const board =
-    Object.keys(lineups).length === 0
+    config.initialBoard?.clone() ??
+    (Object.keys(lineups).length === 0
       ? LivingBoard.standard()
-      : LivingBoard.standard(lineupPieceIdFactory(lineups));
+      : LivingBoard.standard(lineupPieceIdFactory(lineups)));
   let roster = config.initialRoster.map(normalizePieceState);
   let departedRoster: PieceState[] = [];
   const enemySide = config.playerSide === 'w' ? 'b' : 'w';
@@ -421,7 +423,6 @@ export async function runHeadlessMatch(
   let ply = 1;
   let rout = false;
   let enemyRout = false;
-  let terminalLoss = false;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
@@ -491,10 +492,6 @@ export async function runHeadlessMatch(
       ply = enemyTurn.ply;
       if (enemyTurn.enemyRout) {
         enemyRout = true;
-        break;
-      }
-      if (enemyTurn.playerTerminalLoss === true) {
-        terminalLoss = true;
         break;
       }
       const afterIds = new Set(activePlayerPieceIds(board, config.playerSide));
@@ -707,20 +704,15 @@ export async function runHeadlessMatch(
             board.withdrawPiece(event.pieceId);
           }
         }
-        const abandonment = kingAbandonmentAfterWithdrawals(board, side);
-        if (abandonment !== undefined) {
+        const exposure = kingExposureAfterWithdrawals(board, side);
+        if (exposure !== undefined) {
           events.push({
-            t: 'KING_ABANDONED',
+            t: 'KING_EXPOSED_TURN_CEDED',
             ply,
-            abandonedSide: abandonment.abandonedSide,
-            attackerSide: abandonment.attackerSide,
-            kingId: abandonment.kingId,
+            exposedKingId: exposure.kingId,
+            attackerSide: exposure.attackerSide,
           });
-          if (abandonment.abandonedSide === config.playerSide) {
-            terminalLoss = true;
-          } else {
-            enemyRout = true;
-          }
+          board.cedeTurn();
         }
         roster = cascade.roster;
         departedRoster = appendDeparted(departedRoster, cascade.departed);
@@ -825,15 +817,10 @@ export async function runHeadlessMatch(
       continue;
     }
     if (!turnCompleted) break;
-    if (terminalLoss || enemyRout) break;
+    if (enemyRout) break;
   }
 
-  const winScore = scoreMatchOutcome(
-    board,
-    config.playerSide,
-    rout || terminalLoss,
-    enemyRout,
-  );
+  const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);
   roster =
     config.leader.onMatchEnd?.(roster, winScore) ??
     applyMatchOutcomeTrust(roster, winScore);
