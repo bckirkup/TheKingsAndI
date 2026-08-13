@@ -37,6 +37,31 @@ coefficient that needs nudging.
 `no-dilemma` still fires on supportive (win 55.0 with no rout), so finding 1 of
 the 08-10 report is unresolved as well — but it is now the *second* problem.
 
+### Bisected to `686298b8` (PR #78, ADR 0045's grounded desertion loss)
+
+`git bisect` from `ac21192` to `main`, discriminating on
+`--matches=8 --campaign-length=8 --campaigns=1 --leader=tyrannical --seed=7 --engine=fake`:
+
+| Revision | Rout (campaign) | Surviving roster (Q1–Q4) | Win | Δtrust |
+|---|---:|---|---:|---:|
+| `182713a2` (parent, PR #77) | 0.375 | 8.50 / 8.50 / 8.00 / 16.00 | 62.5 | −43.59 |
+| `686298b8` (PR #78) | 1.000 | 1.00 / 1.00 / 1.00 / 1.00 | 0.0 | −85.08 |
+
+The transition is one commit, not a gradual drift. So the collapse arrived with
+the ADR 0045 desertion redesign — the ADR whose magnitudes were recorded as
+"open for calibration", shipped with defaults that make desertion unconditional.
+
+The term-level mechanism is **not yet confirmed**. One candidate is visible in
+the code and is being checked: `desertionContextFor`
+(`src/psychology/cascade.ts:24-30`) reads `privateScoreCp` as an absolute
+position evaluation, but the field carries two different quantities on the same
+ply — non-actor pieces get an absolute score (`insight.ts:379`) while the acting
+piece gets a before/after **delta** (`evaluation.ts:22`). A delta sits near zero
+even in a won position, which would pin
+`boardLossPermille = 500 − 500·score/(|score|+scale)` at ~500 — a flat 50%
+belief that the team is losing — for whichever piece is acting. Treat that as a
+hypothesis until the per-departure decomposition names the dominant term.
+
 ## 2. The nightly calibration pipeline has produced nothing since 2026-08-11
 
 `nightly.yml` runs the tyrannical Lozza campaign with
@@ -87,9 +112,10 @@ recruitment all still wait on it.
 1. **Restore measurability before anything else.** Fix the supportive 40/2 FEN
    crash and the servant hang; move `--enforce-calibration` behind data
    collection in `nightly.yml` so a degenerate model still uploads its numbers.
-2. **Treat §1 as a regression and bisect it** across #70–#94 rather than
-   re-tuning coefficients around it. Desertion mechanics changed in that window
-   (ADR 0045 shadow/pivotality, ADR 0048/0051 pool and non-selection).
+2. **Treat §1 as a regression in `686298b8` (PR #78)**, not as a coefficient to
+   re-tune around. Settle the term-level mechanism first — including the
+   `privateScoreCp` delta-versus-absolute inconsistency above — before changing
+   any ADR 0045 magnitude.
 3. Re-run the full cross-style table and replace the 08-10 numbers.
 4. Only then return to the dilemma (08-10 finding 1) and the coefficient sweep,
    with the per-match cost of §4 reduced first.
