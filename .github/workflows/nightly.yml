@@ -64,9 +64,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: pnpm
@@ -133,7 +133,7 @@ jobs:
             | tee artifacts/nightly/sweep-outcome-trust-loss.csv
 
       - name: Upload metrics artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nightly-lozza-metrics
           path: artifacts/nightly/
@@ -148,9 +148,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: pnpm
@@ -188,9 +188,9 @@ jobs:
     # Production-depth Stockfish was measured at >251 s per match.
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: pnpm
@@ -198,9 +198,8 @@ jobs:
 
       - name: Stockfish budgeted run
         env:
-          STOCKFISH_MATCHES: ${{ inputs.stockfish_matches }}
+          MATCHES: ${{ inputs.stockfish_matches }}
         run: |
-          MATCHES="$STOCKFISH_MATCHES"
           mkdir -p artifacts/nightly
           echo "Stockfish budget: ${MATCHES} match(es) at uncapped production depth."
           pnpm --silent sim \
@@ -211,7 +210,7 @@ jobs:
             --out=artifacts/nightly/stockfish-tyrannical.csv
 
       - name: Upload Stockfish metrics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nightly-stockfish-metrics
           path: artifacts/nightly/
