@@ -560,7 +560,9 @@ export function aggregateShardArtifacts(
     seenShards.add(artifact.manifest.shardIndex);
     if (
       JSON.stringify(
-        [...artifact.manifest.campaignIndices].sort((a, b) => a - b),
+        [...artifact.manifest.campaignIndices].sort(
+          (left, right) => left - right,
+        ),
       ) !==
       JSON.stringify(
         artifact.campaigns

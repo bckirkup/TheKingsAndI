@@ -41,22 +41,22 @@ export function PieceOverlay({
       aria-label={`${piece.role} trust ${piece.T_i} morale ${piece.M_i}`}
       onClick={onSelect}
     >
-      <div
+      <span
         className="piece-overlay__aura"
         style={{
           boxShadow: `0 0 0 ${trustRing}px ${trustHue(piece.T_i)}`,
         }}
       />
-      <div className="piece-overlay__morale" title={`Morale ${piece.M_i}`}>
-        <div
+      <span className="piece-overlay__morale" title={`Morale ${piece.M_i}`}>
+        <span
           className="piece-overlay__morale-fill"
           style={{ height: `${moraleHeight}px` }}
         />
-      </div>
+      </span>
       {betrayal ? (
-        <div className="piece-overlay__betrayal" title={`Trauma ${piece.B_i}`}>
+        <span className="piece-overlay__betrayal" title={`Trauma ${piece.B_i}`}>
           !
-        </div>
+        </span>
       ) : null}
     </button>
   );

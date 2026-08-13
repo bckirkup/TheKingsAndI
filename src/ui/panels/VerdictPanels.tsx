@@ -61,7 +61,7 @@ export function OverridePanel({
   onReplan,
 }: OverridePanelProps): JSX.Element {
   return (
-    <dialog open className="override-panel" aria-modal="true">
+    <dialog open className="override-panel">
       <h2>Refusal — override available</h2>
       <p>
         <strong>{pending.actor.role}</strong> refused <code>{pending.san}</code>{' '}

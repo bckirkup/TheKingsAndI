@@ -131,8 +131,10 @@ export interface TrustTrajectoryBin {
   readonly meanTrustEnd: number;
 }
 
-export type CampaignTrajectoryBand = {
-  readonly quartile: 1 | 2 | 3 | 4;
+export type Quartile = 1 | 2 | 3 | 4;
+
+export interface CampaignTrajectoryBand {
+  readonly quartile: Quartile;
   readonly startMatch: number;
   readonly endMatch: number;
   readonly matches: number;
@@ -157,7 +159,7 @@ export type CampaignTrajectoryBand = {
   readonly meanDesertionDifferential: number;
   readonly meanRefusalRateDifferential: number;
   readonly meanWinScore: number;
-};
+}
 
 export interface CampaignHorizon {
   readonly horizon: number;
@@ -614,12 +616,8 @@ export function metricsFromMatch(
   };
 }
 
-function quartileForMatch(match: number, matches: number): 1 | 2 | 3 | 4 {
-  return Math.min(4, Math.floor(((match - 1) * 4) / matches) + 1) as
-    | 1
-    | 2
-    | 3
-    | 4;
+function quartileForMatch(match: number, matches: number): Quartile {
+  return Math.min(4, Math.floor(((match - 1) * 4) / matches) + 1) as Quartile;
 }
 
 export function buildTrajectoryBands(
