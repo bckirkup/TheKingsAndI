@@ -1,7 +1,9 @@
 # Testing & Balance Strategy
 
-_Planning document. Applies the repo-wide `ci-test-design` skill (golden values
-+ configuration sensitivity) to a stochastic, agent-driven game._
+_Applies the repo-wide `ci-test-design` skill with a Living Chess timing rule:
+while coefficients and mechanics are still under active calibration, **unit
+tests and wiring (sensitivity) probes are mandatory**; exact golden anchors are
+optional and should not block retunes._
 
 ---
 
@@ -9,49 +11,49 @@ _Planning document. Applies the repo-wide `ci-test-design` skill (golden values
 
 | Layer | Scope | Runtime budget |
 |---|---|---|
-| Unit (Vitest) | reducers, utility function, verdict ladder, feature extraction | <10 s |
-| Golden regression | fixed position + fixed roster + fixed seed → exact event log fingerprint | <30 s |
-| Sensitivity probes | one config key changed → fingerprint must differ | <30 s |
-| Replay determinism | 100 recorded matches replay byte-identically | <60 s |
+| Unit (Vitest) | reducers, utility, verdict gates, clamps, feature extraction | <10 s |
+| Wiring / sensitivity | one input or config key changed → output must differ | <30 s |
+| Golden regression (settled surfaces only) | fixed inputs → exact reference | <30 s |
+| Replay determinism | same seed / checkpoint → byte-identical | <60 s |
 | Migration | fixture DBs at each schema version load and upgrade | <10 s |
 | Headless sim smoke (CI) | 20 matches × 2 leader styles, assert metric bounds | <3 min |
 | Headless calibration (nightly GHA) | Lozza depth-cap-4, N≈100 × leader styles + one-knob sweep | minutes |
 | Headless calibration (on-demand) | Stockfish production depth via `workflow_dispatch` only | minutes–hours |
 
-## 2. Golden anchors
+## 2. What to assert while the model is moving
 
-Every golden asserts a *quantity*, never "no crash":
+**Required for every new knob or reducer path:**
+
+1. **Unit behaviour** — clamps, gates, monotone relations, discriminant branches
+   (e.g. higher trauma → higher pain; zero shift → frozen affinity).
+2. **Wiring** — change exactly one config key or trait; assert a quantitative
+   output differs (`not.toBe`, `toBeGreaterThan`, gate flips). This is the
+   anti-dead-wiring check.
+
+**Defer exact goldens** (`expect(x).toBe(12)`) until a surface is intentionally
+frozen (depth formula, PRNG digests, schema migrations, replay self-consistency).
+Campaign-scale fingerprints were already retired for this reason (§7).
 
 ```ts
-// Deterministic fingerprint over the canonical event log.
-const fp = fingerprint(runMatch({ roster: FIXTURE_ROSTER, seed: 42, leader: 'tyrannical' }));
-expect(fp).toBe('9f31c2…');                 // exact
-expect(metrics.refusals).toBe(7);           // exact count
-expect(metrics.finalAvgTrust).toBeCloseTo(-23.4, 1);
+// Preferred during calibration — wiring, not a magic number.
+mutateConfig('OUTCOME_TRUST_LOSS_SCALE', 6, () => { /* … */ });
+expect(trustAfterLoss).not.toBe(baselineTrust);
+
+// Reserve exact goldens for settled contracts.
+expect(calculateEngineSearchDepth(100, 1.0)).toBe(16);
 ```
 
-Required goldens at Milestone 3:
+Settled-surface goldens worth keeping:
 
-- Threat map for 6 canonical positions (start, Sicilian midgame, back-rank
-  mate-in-1, pin, fork, endgame K+P).
-- `calculateMoveUtility` for a fixed `(piece, move, board)` triple.
-- `calculateEngineSearchDepth`: `(E=100, η=1)→16`, `(E=100, η=0.2)→4`,
-  `(E=1, η=1)→2`, `(E=1, η=0.1)→2`.
-- `calculateRefusalThreshold`: `T=+100→-3`, `T=0→0`, `T=-100→+3`
-  (`Θ = -3 + (100 - T) · REFUSAL_THRESHOLD_TRUST_SCALE`).
-- Verdict at each boundary of the state machine, in evaluation order:
-  desertion via `U_desert` vs `U_stay`; `U` just under/over `Θ_refusal` →
-  `MORAL_REFUSAL` / next rung; `T=0` → `QUIET_QUITTING`; heroic when
-  `T > HEROIC_TRUST_FLOOR` with capture risk or board delta above configured
-  floors; otherwise `COMPLIANT_EXECUTION`.
-- Clamping: affinity and prestige saturate at ±100 after repeated heroic
-  sacrifice events (`DEFAULT_*_HEROIC_SACRIFICE` shifts).
-- Same-seed replay self-consistency and checkpoint/resume equivalence (the
-  retired per-leader 40-ply fingerprint golden was replaced deliberately —
-  see §7).
-- Campaign debrief / commendation folds for hand-built match logs.
+- Seeded PRNG / canonical digest identities.
+- `calculateEngineSearchDepth` boundary table (once D_min/D_max policy is fixed).
+- Same-seed replay self-consistency and checkpoint/resume equivalence.
+- Schema migration fixtures.
 
-## 3. Sensitivity probes (anti-dead-wiring)
+Not required while retuning: per-leader 40-ply event-log fingerprints, exact
+refusal counts, exact commendation score literals.
+
+## 3. Sensitivity / wiring probes (anti-dead-wiring)
 
 One probe per config key, each changing **exactly one** parameter:
 
@@ -60,22 +62,23 @@ Keys are the coefficients in `ENGINE_CONFIG` and `PieceTraits`
 
 | Key | Probe assertion |
 |---|---|
-| `w_courage` | `0` vs `1` → refusal count strictly decreases as courage rises |
-| `w_empathy` | `0` vs default → protective refusals disappear |
-| `w_loyalty` | vary → verdict distribution shifts (and see D19: today it dominates) |
-| `w_honor`, `w_ambition` | vary one → fingerprint differs |
-| `w_prestige` | vary → **currently no effect** — this probe is the D20 regression test |
-| `MAX_SEARCH_DEPTH` | 16 vs 4 → match fingerprint differs |
-| `MIN_SEARCH_DEPTH` | 2 vs 6 → rookie-piece depth and fingerprint differ |
-| `DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE` | `0` → `classPrestige` unchanged after a witnessed sacrifice |
+| `w_courage` | `0` vs `1` → utility / refusal pressure moves |
+| `w_empathy` | `0` vs default → protective term disappears |
+| `w_loyalty` | vary → desertion λ / attachment shifts |
+| `w_honor`, `w_ambition` | vary one → utility differs |
+| `w_prestige` | vary → protection term differs (D20 wiring) |
+| `MAX_SEARCH_DEPTH` | 16 vs 4 → depth differs |
+| `MIN_SEARCH_DEPTH` | 2 vs 6 → rookie depth differs |
+| `DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE` | `0` → `classPrestige` unchanged |
 | `DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE` | `0` → `dyadicAffinity` unchanged |
-| `DEFAULT_BENCHING_SELF_PENALTY` | ×10 → benched piece's trust drop strictly larger |
-| `DEFAULT_BENCHING_PEER_BASE_PENALTY` | ×10 → peer trust drop strictly larger |
-| `LEADERSHIP_WEIGHTS.{alpha,beta,gamma,delta}` | vary one → leadership index differs |
-| `Θ_refusal` slope/intercept | more permissive → refusal count strictly decreases |
+| `DEFAULT_BENCHING_SELF_PENALTY` | harsh vs mild → trust drop differs |
+| `DEFAULT_BENCHING_PEER_BASE_PENALTY` | harsh vs mild → peer trust differs |
+| `LEADERSHIP_WEIGHTS.{alpha,beta,gamma,delta}` | vary one → index differs |
+| `Θ_refusal` slope/intercept | more permissive → refusal threshold moves |
 
-Rule: adding a knob without a probe fails review. A parsed-but-unwired knob is
-the most likely silent bug in a system this parameter-heavy.
+Rule: adding a knob without a wiring probe fails review. A parsed-but-unwired
+knob is the most likely silent bug in a system this parameter-heavy. Exact
+golden pairs for knobs are welcome *after* calibration locks a default.
 
 ## 4. Balance metrics & acceptance bands
 
@@ -346,11 +349,13 @@ behavior while the model is deliberately changing; it moved in five consecutive
 PRs for legitimate reasons and therefore repeated information already visible
 in each behavior-changing diff. Its determinism role is replaced by the
 cheaper same-seed self-consistency and checkpoint/resume equivalence tests.
-This does **not** remove configuration coverage: the knob-level golden and
-sensitivity tests in `tests/psychology.invariants.test.ts` remain in the fast
-tier, as required by `AGENTS.md` rule 6. The distinction is intentional:
-campaign behavior is measured nightly, while reducer/configuration correctness
-and reproducibility remain per-PR gates.
+This does **not** remove configuration coverage: the knob-level wiring
+(sensitivity) tests in `tests/psychology.invariants.test.ts` and
+`tests/psychology.configCoverage.test.ts` remain in the fast tier, as required
+by `AGENTS.md` rule 6. The distinction is intentional: campaign behaviour is
+measured nightly, while reducer/configuration wiring and reproducibility remain
+per-PR gates. Exact golden fingerprints of campaign behaviour stay out of CI
+while the model is still being calibrated.
 
 **Developer machine.** Targeted Vitest while iterating; full local gate once
 before push. For status questions, read committed numbers in

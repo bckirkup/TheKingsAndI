@@ -1,6 +1,10 @@
 /**
- * Golden anchors + configuration sensitivity probes for ENGINE_CONFIG knobs
- * that were previously uncovered (AGENTS.md rule 6 / ci-test-design skill).
+ * Unit + wiring (sensitivity) probes for ENGINE_CONFIG knobs.
+ *
+ * While psychology is still under active calibration, prefer:
+ *   - unit behaviour (clamps, gates, monotone relations)
+ *   - wiring: change one input → output must differ
+ * over brittle exact-number goldens that churn with every retune.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -104,21 +108,42 @@ function makeDesertionContext(
   };
 }
 
-describe('ENGINE_CONFIG coverage — depth & engagement', () => {
-  it('golden: (E=1, η=0.1) floors at MIN_SEARCH_DEPTH', () => {
-    expect(calculateEngineSearchDepth(1, 0.1)).toBe(2);
+function bondedPeer(overrides: Partial<PieceState> = {}): PieceState {
+  return makePiece({
+    id: 'w:P:e2',
+    role: 'Pawn',
+    T_i: 40,
+    dyadicAffinity: { 'w:N:g1': 100 },
+    classPrestige: {
+      Pawn: 0,
+      Knight: 100,
+      Bishop: 0,
+      Rook: 0,
+      Queen: 0,
+      King: 0,
+    },
+    traits: { ...neutralTraits, w_empathy: 0 },
+    ...overrides,
+  });
+}
+
+describe('wiring — depth & engagement', () => {
+  it('unit: search depth rises with experience and engagement', () => {
+    expect(calculateEngineSearchDepth(1, 0.1)).toBeLessThan(
+      calculateEngineSearchDepth(100, 1.0),
+    );
+    expect(calculateEngineSearchDepth(100, 0.2)).toBeLessThan(
+      calculateEngineSearchDepth(100, 1.0),
+    );
   });
 
-  it('sensitivity: MIN_SEARCH_DEPTH changes rookie depth', () => {
-    const baseline = calculateEngineSearchDepth(1, 1.0);
-    const tuned = calculateEngineSearchDepth(1, 1.0, 6, 16);
-    expect(baseline).toBe(2);
-    expect(tuned).toBe(6);
-    expect(tuned).not.toBe(baseline);
+  it('wiring: MIN_SEARCH_DEPTH changes rookie depth', () => {
+    const lowFloor = calculateEngineSearchDepth(1, 1.0, 2, 16);
+    const highFloor = calculateEngineSearchDepth(1, 1.0, 6, 16);
+    expect(highFloor).toBeGreaterThan(lowFloor);
   });
 
-  it('golden + sensitivity: DESERTION_ENGAGEMENT is the mutiny engagement factor', () => {
-    expect(ENGINE_CONFIG.DESERTION_ENGAGEMENT).toBe(0.1);
+  it('wiring: DESERTION_ENGAGEMENT reaches mutiny engagementFactor', () => {
     const actor = makePiece({
       T_i: -90,
       M_i: 5,
@@ -133,99 +158,61 @@ describe('ENGINE_CONFIG coverage — depth & engagement', () => {
     });
     const peers = [actor, makePiece({ id: 'w:P:a2', role: 'Pawn' })];
     expect(shouldDesert(actor, context, peers).desert).toBe(true);
+    const move: CandidateMoveEvaluation = {
+      moveNotation: 'Nxh7',
+      deltaV_board: -2,
+      privateScoreCp: -800,
+      vLeaderImplied: 1,
+      deltaV_capture: 0,
+      P_captured: 0.99,
+      peerSafetyDeltas: {},
+    };
+    let low = 0;
+    let high = 0;
     mutateConfig('DESERTION_ENGAGEMENT', 0.05, () => {
-      const outcome = evaluateMoveResponse(
-        actor,
-        {
-          moveNotation: 'Nxh7',
-          deltaV_board: -2,
-          privateScoreCp: -800,
-          vLeaderImplied: 1,
-          deltaV_capture: 0,
-          P_captured: 0.99,
-          peerSafetyDeltas: {},
-        },
-        peers,
-        context,
-      );
-      expect(outcome.verdict).toBe('DESERTION_MUTINY');
-      expect(outcome.engagementFactor).toBe(0.05);
+      low = evaluateMoveResponse(actor, move, peers, context).engagementFactor;
     });
+    mutateConfig('DESERTION_ENGAGEMENT', 0.2, () => {
+      high = evaluateMoveResponse(actor, move, peers, context).engagementFactor;
+    });
+    expect(high).toBeGreaterThan(low);
   });
 });
 
-describe('ENGINE_CONFIG coverage — benching & leadership', () => {
-  it('golden: default benching penalties match ENGINE_CONFIG', () => {
-    expect(ENGINE_CONFIG.DEFAULT_BENCHING_SELF_PENALTY).toBe(-30);
-    expect(ENGINE_CONFIG.DEFAULT_BENCHING_PEER_BASE_PENALTY).toBe(-10);
+describe('wiring — benching & leadership', () => {
+  it('wiring: DEFAULT_BENCHING_SELF_PENALTY scales the trust drop', () => {
     const benched = makePiece({ T_i: 40 });
-    const peer = makePiece({
-      id: 'w:P:e2',
-      role: 'Pawn',
-      T_i: 40,
-      dyadicAffinity: { 'w:N:g1': 100 },
-      classPrestige: {
-        Pawn: 0,
-        Knight: 100,
-        Bishop: 0,
-        Rook: 0,
-        Queen: 0,
-        King: 0,
-      },
-      traits: { ...neutralTraits, w_empathy: 1 },
-    });
-    const result = calculateBenchingTrustPenalties(benched, [peer]);
-    expect(result.benchedPieceNewTrust).toBe(10);
-    expect(result.updatedPeers[0]?.T_i).toBe(20);
-  });
-
-  it('sensitivity: DEFAULT_BENCHING_SELF_PENALTY scales the benched trust drop', () => {
-    const benched = makePiece({ T_i: 40 });
+    let mild = 0;
+    let harsh = 0;
     mutateConfig('DEFAULT_BENCHING_SELF_PENALTY', -5, () => {
-      expect(
-        calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust,
-      ).toBe(35);
+      mild = calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust;
     });
     mutateConfig('DEFAULT_BENCHING_SELF_PENALTY', -50, () => {
-      expect(
-        calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust,
-      ).toBe(-10);
+      harsh = calculateBenchingTrustPenalties(benched, []).benchedPieceNewTrust;
     });
+    expect(harsh).toBeLessThan(mild);
   });
 
-  it('sensitivity: DEFAULT_BENCHING_PEER_BASE_PENALTY scales peer trust drop', () => {
+  it('wiring: DEFAULT_BENCHING_PEER_BASE_PENALTY scales peer trust drop', () => {
     const benched = makePiece({ T_i: 40 });
-    const peer = makePiece({
-      id: 'w:P:e2',
-      role: 'Pawn',
-      T_i: 40,
-      dyadicAffinity: { 'w:N:g1': 100 },
-      classPrestige: {
-        Pawn: 0,
-        Knight: 100,
-        Bishop: 0,
-        Rook: 0,
-        Queen: 0,
-        King: 0,
-      },
-      traits: { ...neutralTraits, w_empathy: 0 },
-    });
+    const peer = bondedPeer();
+    let mild = 0;
+    let harsh = 0;
     mutateConfig('DEFAULT_BENCHING_PEER_BASE_PENALTY', -1, () => {
-      expect(
-        calculateBenchingTrustPenalties(benched, [peer]).updatedPeers[0]?.T_i,
-      ).toBe(39);
+      mild =
+        calculateBenchingTrustPenalties(benched, [peer]).updatedPeers[0]?.T_i ??
+        0;
     });
     mutateConfig('DEFAULT_BENCHING_PEER_BASE_PENALTY', -40, () => {
-      expect(
-        calculateBenchingTrustPenalties(benched, [peer]).updatedPeers[0]?.T_i,
-      ).toBe(0);
+      harsh =
+        calculateBenchingTrustPenalties(benched, [peer]).updatedPeers[0]?.T_i ??
+        0;
     });
+    expect(harsh).toBeLessThan(mild);
   });
 
-  it('golden + sensitivity: LEADERSHIP_WEIGHTS change the index', () => {
-    expect(ENGINE_CONFIG.LEADERSHIP_WEIGHTS.alpha).toBe(0.4);
+  it('wiring: LEADERSHIP_WEIGHTS change the index', () => {
     const baseline = calculateSingleMatchLeadershipIndex(50, 100, 10, 5);
-    expect(baseline).toBeCloseTo(0.4 * 50 + 0.3 * 100 - 0.2 * 10 - 0.1 * 5, 5);
     const tuned = calculateSingleMatchLeadershipIndex(50, 100, 10, 5, {
       alpha: 0.1,
       beta: 0.1,
@@ -236,8 +223,8 @@ describe('ENGINE_CONFIG coverage — benching & leadership', () => {
   });
 });
 
-describe('ENGINE_CONFIG coverage — sacrifice & clamp', () => {
-  it('golden: repeated heroic sacrifice clamps affinity and prestige at ±100', () => {
+describe('wiring — sacrifice & clamp', () => {
+  it('unit: repeated sacrifice saturates affinity and prestige', () => {
     let observer = makePiece({ id: 'w:P:a2', role: 'Pawn' });
     const hero = makePiece();
     for (let i = 0; i < 5; i += 1) {
@@ -247,65 +234,69 @@ describe('ENGINE_CONFIG coverage — sacrifice & clamp', () => {
     expect(observer.classPrestige.Knight).toBe(100);
   });
 
-  it('sensitivity: DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE=0 freezes affinity', () => {
+  it('wiring: zero affinity shift freezes dyadic affinity', () => {
     const observer = makePiece({ id: 'w:P:a2', role: 'Pawn' });
     const hero = makePiece();
+    const baseline = applyWitnessedSacrificeEvent(observer, hero);
     mutateConfig('DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE', 0, () => {
       const next = applyWitnessedSacrificeEvent(observer, hero);
       expect(next.dyadicAffinity[hero.id] ?? 0).toBe(0);
+      expect(next.dyadicAffinity[hero.id]).not.toBe(
+        baseline.dyadicAffinity[hero.id],
+      );
     });
   });
 
-  it('sensitivity: DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE=0 freezes class prestige', () => {
+  it('wiring: zero class shift freezes class prestige', () => {
     const observer = makePiece({ id: 'w:P:a2', role: 'Pawn' });
     const hero = makePiece();
+    const baseline = applyWitnessedSacrificeEvent(observer, hero);
     mutateConfig('DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE', 0, () => {
       const next = applyWitnessedSacrificeEvent(observer, hero);
       expect(next.classPrestige.Knight).toBe(0);
+      expect(next.classPrestige.Knight).not.toBe(baseline.classPrestige.Knight);
     });
   });
 });
 
-describe('ENGINE_CONFIG coverage — override penalties', () => {
-  it('golden: override applies configured trust/witness deltas, not trauma', () => {
+describe('wiring — override penalties', () => {
+  it('unit: override hurts actor and witness trust, not trauma', () => {
     const piece = makePiece({ T_i: 50, B_i: 10 });
     const witness = makePiece({ id: 'w:P:a2', role: 'Pawn', T_i: 50 });
     const result = applyOverride(piece, [witness], 1, 'Nf3');
-    expect(result.overriddenPiece.T_i).toBe(
-      50 + ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
-    );
-    expect(result.overriddenPiece.B_i).toBe(10);
-    expect(result.witnesses[0]?.T_i).toBe(
-      50 + ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY,
-    );
+    expect(result.overriddenPiece.T_i).toBeLessThan(piece.T_i);
+    expect(result.overriddenPiece.B_i).toBe(piece.B_i);
+    expect(result.witnesses[0]?.T_i).toBeLessThan(witness.T_i);
   });
 
-  it('sensitivity: OVERRIDE_PIECE_TRUST_PENALTY changes the actor trust drop', () => {
+  it('wiring: OVERRIDE_PIECE_TRUST_PENALTY scales actor trust drop', () => {
     const piece = makePiece({ T_i: 50 });
+    let mild = 0;
+    let harsh = 0;
     mutateConfig('OVERRIDE_PIECE_TRUST_PENALTY', -10, () => {
-      expect(applyOverride(piece, [], 1, 'Nf3').overriddenPiece.T_i).toBe(40);
+      mild = applyOverride(piece, [], 1, 'Nf3').overriddenPiece.T_i;
     });
     mutateConfig('OVERRIDE_PIECE_TRUST_PENALTY', -70, () => {
-      expect(applyOverride(piece, [], 1, 'Nf3').overriddenPiece.T_i).toBe(-20);
+      harsh = applyOverride(piece, [], 1, 'Nf3').overriddenPiece.T_i;
     });
+    expect(harsh).toBeLessThan(mild);
   });
 
-  it('sensitivity: OVERRIDE_WITNESS_TRUST_PENALTY changes witness trust', () => {
+  it('wiring: OVERRIDE_WITNESS_TRUST_PENALTY scales witness trust', () => {
     const piece = makePiece();
     const witness = makePiece({ id: 'w:P:a2', role: 'Pawn', T_i: 50 });
+    let mild = 0;
+    let harsh = 0;
     mutateConfig('OVERRIDE_WITNESS_TRUST_PENALTY', -2, () => {
-      expect(applyOverride(piece, [witness], 1, 'Nf3').witnesses[0]?.T_i).toBe(
-        48,
-      );
+      mild = applyOverride(piece, [witness], 1, 'Nf3').witnesses[0]?.T_i ?? 0;
     });
     mutateConfig('OVERRIDE_WITNESS_TRUST_PENALTY', -20, () => {
-      expect(applyOverride(piece, [witness], 1, 'Nf3').witnesses[0]?.T_i).toBe(
-        30,
-      );
+      harsh = applyOverride(piece, [witness], 1, 'Nf3').witnesses[0]?.T_i ?? 0;
     });
+    expect(harsh).toBeLessThan(mild);
   });
 
-  it('sensitivity: OVERRIDE_BENEV_CLIFF_INPUT changes benevolence drop', () => {
+  it('wiring: OVERRIDE_BENEV_CLIFF_INPUT changes benevolence drop', () => {
     const piece = makePiece({
       credence: { tauBenev: 80, tauAbil: 50, abilityObservationCount: 0 },
     });
@@ -321,56 +312,65 @@ describe('ENGINE_CONFIG coverage — override penalties', () => {
   });
 });
 
-describe('ENGINE_CONFIG coverage — injury and dread', () => {
-  it('golden: capture and sustained dread use shipped defaults', () => {
+describe('wiring — injury and dread', () => {
+  it('unit: capture injury raises trauma; dread needs a sustained run', () => {
     const piece = makePiece({ B_i: 0 });
-    expect(ENGINE_CONFIG.CAPTURE_TRAUMA_GAIN).toBe(20);
-    expect(applyCaptureInjury(piece).B_i).toBe(20);
-    expect(ENGINE_CONFIG.DREAD_CAPTURE_RISK_THRESHOLD).toBe(0.75);
-    expect(ENGINE_CONFIG.DREAD_TRAUMA_GAIN).toBe(5);
-    expect(ENGINE_CONFIG.DREAD_REQUIRED_PLIES).toBe(2);
+    expect(applyCaptureInjury(piece).B_i).toBeGreaterThan(piece.B_i);
     const first = applySustainedDread(piece, undefined, 0.8);
     const second = applySustainedDread(piece, first.exposure, 0.8);
-    expect(first.piece.B_i).toBe(0);
-    expect(second.piece.B_i).toBe(5);
+    expect(first.piece.B_i).toBe(piece.B_i);
+    expect(second.piece.B_i).toBeGreaterThan(first.piece.B_i);
   });
 
-  it('sensitivity: capture magnitude changes capture injury', () => {
+  it('wiring: CAPTURE_TRAUMA_GAIN scales capture injury', () => {
     const piece = makePiece({ B_i: 0 });
+    let mild = 0;
+    let harsh = 0;
     mutateConfig('CAPTURE_TRAUMA_GAIN', 7, () => {
-      expect(applyCaptureInjury(piece).B_i).toBe(7);
+      mild = applyCaptureInjury(piece).B_i;
     });
+    mutateConfig('CAPTURE_TRAUMA_GAIN', 25, () => {
+      harsh = applyCaptureInjury(piece).B_i;
+    });
+    expect(harsh).toBeGreaterThan(mild);
   });
 
-  it('golden: capture injury does not scale with role or sacrifice meaning', () => {
+  it('unit: capture injury does not scale with role or traits', () => {
     const pawn = makePiece({ role: 'Pawn', B_i: 10 });
     const queen = makePiece({
       role: 'Queen',
       B_i: 10,
       traits: { ...neutralTraits, w_honor: 1, w_courage: 1 },
     });
-    expect(applyCaptureInjury(pawn).B_i).toBe(30);
-    expect(applyCaptureInjury(queen).B_i).toBe(30);
+    expect(applyCaptureInjury(pawn).B_i).toBe(applyCaptureInjury(queen).B_i);
   });
 
-  it('sensitivity: dread threshold changes which risks qualify', () => {
+  it('wiring: DREAD_CAPTURE_RISK_THRESHOLD changes which risks qualify', () => {
     const piece = makePiece({ B_i: 0 });
-    let first = applySustainedDread(piece, undefined, 0.8);
+    const qualifying = applySustainedDread(piece, undefined, 0.8);
+    expect(qualifying.exposure.streak).toBeGreaterThan(0);
     mutateConfig('DREAD_CAPTURE_RISK_THRESHOLD', 0.9, () => {
-      first = applySustainedDread(piece, undefined, 0.8);
+      expect(applySustainedDread(piece, undefined, 0.8).exposure.streak).toBe(
+        0,
+      );
     });
-    expect(first.exposure.streak).toBe(0);
   });
 
-  it('sensitivity: dread increment changes sustained injury', () => {
+  it('wiring: DREAD_TRAUMA_GAIN scales sustained injury', () => {
     const piece = makePiece({ B_i: 0 });
     const first = applySustainedDread(piece, undefined, 0.8);
-    mutateConfig('DREAD_TRAUMA_GAIN', 9, () => {
-      expect(applySustainedDread(piece, first.exposure, 0.8).piece.B_i).toBe(9);
+    let mild = 0;
+    let harsh = 0;
+    mutateConfig('DREAD_TRAUMA_GAIN', 3, () => {
+      mild = applySustainedDread(piece, first.exposure, 0.8).piece.B_i;
     });
+    mutateConfig('DREAD_TRAUMA_GAIN', 9, () => {
+      harsh = applySustainedDread(piece, first.exposure, 0.8).piece.B_i;
+    });
+    expect(harsh).toBeGreaterThan(mild);
   });
 
-  it('sensitivity: dread run length delays injury', () => {
+  it('wiring: DREAD_REQUIRED_PLIES delays injury', () => {
     const piece = makePiece({ B_i: 0 });
     const first = applySustainedDread(piece, undefined, 0.8);
     mutateConfig('DREAD_REQUIRED_PLIES', 3, () => {
@@ -381,46 +381,41 @@ describe('ENGINE_CONFIG coverage — injury and dread', () => {
   });
 });
 
-describe('ENGINE_CONFIG coverage — costly signals', () => {
-  it('golden: each COSTLY_SIGNAL_* credit matches config', () => {
-    const piece = makePiece({ T_i: 0 });
-    expect(costlySignalCredit('king_endangerment')).toBe(
-      ENGINE_CONFIG.COSTLY_SIGNAL_KING_DANGER,
-    );
-    expect(costlySignalCredit('declined_sacrifice')).toBe(
-      ENGINE_CONFIG.COSTLY_SIGNAL_DECLINED_SACRIFICE,
-    );
-    expect(costlySignalCredit('retained_piece')).toBe(
-      ENGINE_CONFIG.COSTLY_SIGNAL_RETAINED_PIECE,
-    );
-    expect(costlySignalCredit('avenged_capture')).toBe(
-      ENGINE_CONFIG.COSTLY_SIGNAL_AVENGED_CAPTURE,
-    );
-    expect(applyCostlySignal(piece, 'king_endangerment', 1).piece.T_i).toBe(
-      ENGINE_CONFIG.COSTLY_SIGNAL_KING_DANGER,
-    );
+describe('wiring — costly signals', () => {
+  it('wiring: each COSTLY_SIGNAL_* credit reaches trust', () => {
+    const kinds = [
+      'king_endangerment',
+      'declined_sacrifice',
+      'retained_piece',
+      'avenged_capture',
+    ] as const;
+    for (const kind of kinds) {
+      const piece = makePiece({ T_i: 0 });
+      expect(applyCostlySignal(piece, kind, 1).piece.T_i).toBe(
+        costlySignalCredit(kind),
+      );
+      expect(costlySignalCredit(kind)).toBeGreaterThan(0);
+    }
   });
 
-  it('sensitivity: zeroing COSTLY_SIGNAL_KING_DANGER removes the credit', () => {
+  it('wiring: zeroing COSTLY_SIGNAL_KING_DANGER removes the credit', () => {
     const piece = makePiece({ T_i: 0 });
+    const baseline = applyCostlySignal(piece, 'king_endangerment', 1).piece.T_i;
     mutateConfig('COSTLY_SIGNAL_KING_DANGER', 0, () => {
-      const result = applyCostlySignal(piece, 'king_endangerment', 1);
-      expect(result.piece.T_i).toBe(0);
-      expect(costlySignalCredit('king_endangerment')).toBe(0);
+      expect(applyCostlySignal(piece, 'king_endangerment', 1).piece.T_i).toBe(
+        0,
+      );
+      expect(costlySignalCredit('king_endangerment')).not.toBe(baseline);
     });
   });
 
-  it('sensitivity: COSTLY_SIGNAL_DECLINED_SACRIFICE scales the credit', () => {
+  it('wiring: COSTLY_SIGNAL_DECLINED_SACRIFICE / RETAINED / AVENGED scale', () => {
     const piece = makePiece({ T_i: 0 });
     mutateConfig('COSTLY_SIGNAL_DECLINED_SACRIFICE', 40, () => {
       expect(applyCostlySignal(piece, 'declined_sacrifice', 1).piece.T_i).toBe(
         40,
       );
     });
-  });
-
-  it('sensitivity: COSTLY_SIGNAL_RETAINED_PIECE and AVENGED_CAPTURE scale', () => {
-    const piece = makePiece({ T_i: 0 });
     mutateConfig('COSTLY_SIGNAL_RETAINED_PIECE', 0, () => {
       expect(applyCostlySignal(piece, 'retained_piece', 1).piece.T_i).toBe(0);
     });
@@ -430,17 +425,21 @@ describe('ENGINE_CONFIG coverage — costly signals', () => {
   });
 });
 
-describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
-  it('golden + sensitivity: BENEV_HEARD_STEP', () => {
-    expect(ENGINE_CONFIG.BENEV_HEARD_STEP).toBe(15);
+describe('wiring — benevolence & ability knobs', () => {
+  it('wiring: BENEV_HEARD_STEP changes heard-signal gain', () => {
     const before = defaultCredence();
-    expect(applyHeardSignal(before, true).tauBenev).toBe(before.tauBenev + 15);
+    let small = 0;
+    let large = 0;
     mutateConfig('BENEV_HEARD_STEP', 5, () => {
-      expect(applyHeardSignal(before, true).tauBenev).toBe(before.tauBenev + 5);
+      small = applyHeardSignal(before, true).tauBenev;
     });
+    mutateConfig('BENEV_HEARD_STEP', 20, () => {
+      large = applyHeardSignal(before, true).tauBenev;
+    });
+    expect(large).toBeGreaterThan(small);
   });
 
-  it('sensitivity: BENEV_BETRAYAL_CLIFF_SCALE and DROP change betrayal drop', () => {
+  it('wiring: BENEV_BETRAYAL_CLIFF_SCALE and DROP change betrayal drop', () => {
     const before = { ...defaultCredence(), tauBenev: 80 };
     mutateConfig('BENEV_BETRAYAL_CLIFF_SCALE', 0, () => {
       const soft = applyBetrayalSignal(before, 6).tauBenev;
@@ -453,16 +452,20 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
     });
   });
 
-  it('golden + sensitivity: BENEV_NEGLECT_EROSION', () => {
-    expect(ENGINE_CONFIG.BENEV_NEGLECT_EROSION).toBe(3);
+  it('wiring: BENEV_NEGLECT_EROSION changes neglect drop', () => {
     const before = { ...defaultCredence(), tauBenev: 50 };
-    expect(applyNeglectSignal(before).tauBenev).toBe(47);
-    mutateConfig('BENEV_NEGLECT_EROSION', 10, () => {
-      expect(applyNeglectSignal(before).tauBenev).toBe(40);
+    let mild = 0;
+    let harsh = 0;
+    mutateConfig('BENEV_NEGLECT_EROSION', 1, () => {
+      mild = applyNeglectSignal(before).tauBenev;
     });
+    mutateConfig('BENEV_NEGLECT_EROSION', 10, () => {
+      harsh = applyNeglectSignal(before).tauBenev;
+    });
+    expect(harsh).toBeLessThan(mild);
   });
 
-  it('sensitivity: BENEV_EXPENDABLE_FLOOR and GAP gate expendable refusal', () => {
+  it('wiring: BENEV_EXPENDABLE_FLOOR and GAP gate expendable refusal', () => {
     mutateConfig('BENEV_EXPENDABLE_FLOOR', 10, () => {
       mutateConfig('BENEV_EXPENDABLE_GAP', 3, () => {
         expect(isExpendableRefusal(-1, 2.5, 5)).toBe(false);
@@ -471,7 +474,7 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
     });
   });
 
-  it('sensitivity: ABIL_BAYES_NUMERATOR changes observation step size', () => {
+  it('wiring: ABIL_BAYES_NUMERATOR changes observation step size', () => {
     const before = {
       ...defaultCredence(),
       tauAbil: 50,
@@ -486,7 +489,7 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
     });
   });
 
-  it('sensitivity: ABIL_DRIP_SCALE changes drip gain magnitude', () => {
+  it('wiring: ABIL_DRIP_SCALE changes drip gain magnitude', () => {
     const piece = makePiece({ E_i: 40 });
     const move: CandidateMoveEvaluation = {
       moveNotation: 'Nxh7',
@@ -504,7 +507,7 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
     });
   });
 
-  it('sensitivity: ABIL_VINDICATION_NEAR_REFUSAL_MARGIN changes near-refusal gate', () => {
+  it('wiring: ABIL_VINDICATION_NEAR_REFUSAL_MARGIN changes near-refusal gate', () => {
     const outcome = { utilityScore: 0.4, refusalThreshold: 0 };
     mutateConfig('ABIL_VINDICATION_NEAR_REFUSAL_MARGIN', 0.1, () => {
       expect(isNearRefusal(outcome)).toBe(false);
@@ -515,24 +518,27 @@ describe('ENGINE_CONFIG coverage — benevolence & ability knobs', () => {
   });
 });
 
-describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotality', () => {
-  it('golden: pain uses DESERTION_PAIN_BASE and trauma scale', () => {
-    expect(ENGINE_CONFIG.DESERTION_PAIN_BASE).toBe(10);
-    expect(ENGINE_CONFIG.DESERTION_PAIN_TRAUMA_SCALE).toBe(0.5);
-    expect(calculatePain(makePiece({ B_i: 20 }))).toBe(20);
+describe('wiring — desertion λ / pain / hysteresis / pivotality', () => {
+  it('unit: trauma increases desertion pain', () => {
+    expect(calculatePain(makePiece({ B_i: 40 }))).toBeGreaterThan(
+      calculatePain(makePiece({ B_i: 0 })),
+    );
   });
 
-  it('sensitivity: DESERTION_PAIN_BASE and TRAUMA_SCALE change pain', () => {
+  it('wiring: DESERTION_PAIN_BASE and TRAUMA_SCALE change pain', () => {
     const piece = makePiece({ B_i: 20 });
+    let baseZero = 0;
+    let traumaHeavy = 0;
     mutateConfig('DESERTION_PAIN_BASE', 0, () => {
-      expect(calculatePain(piece)).toBe(10);
+      baseZero = calculatePain(piece);
     });
     mutateConfig('DESERTION_PAIN_TRAUMA_SCALE', 1, () => {
-      expect(calculatePain(piece)).toBe(30);
+      traumaHeavy = calculatePain(piece);
     });
+    expect(traumaHeavy).toBeGreaterThan(baseZero);
   });
 
-  it('sensitivity: each DESERTION_LAMBDA_* scale changes λ', () => {
+  it('wiring: each DESERTION_LAMBDA_* scale changes λ', () => {
     const piece = makePiece({
       T_i: 100,
       M_i: 100,
@@ -541,21 +547,19 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
     });
     const peers = [piece, makePiece({ id: 'w:P:a2', role: 'Pawn' })];
     const baseline = calculateLambda(piece, peers);
-    mutateConfig('DESERTION_LAMBDA_TRUST_SCALE', 0, () => {
-      expect(calculateLambda(piece, peers)).toBeLessThan(baseline);
-    });
-    mutateConfig('DESERTION_LAMBDA_MORALE_SCALE', 0, () => {
-      expect(calculateLambda(piece, peers)).toBeLessThan(baseline);
-    });
-    mutateConfig('DESERTION_LAMBDA_LOYALTY_SCALE', 0, () => {
-      expect(calculateLambda(piece, peers)).toBeLessThan(baseline);
-    });
-    mutateConfig('DESERTION_LAMBDA_AFFINITY_SCALE', 0, () => {
-      expect(calculateLambda(piece, peers)).toBeLessThan(baseline);
-    });
+    for (const key of [
+      'DESERTION_LAMBDA_TRUST_SCALE',
+      'DESERTION_LAMBDA_MORALE_SCALE',
+      'DESERTION_LAMBDA_LOYALTY_SCALE',
+      'DESERTION_LAMBDA_AFFINITY_SCALE',
+    ] as const) {
+      mutateConfig(key, 0, () => {
+        expect(calculateLambda(piece, peers)).toBeLessThan(baseline);
+      });
+    }
   });
 
-  it('sensitivity: DESERTION_HYSTERESIS can suppress a borderline desertion', () => {
+  it('wiring: DESERTION_HYSTERESIS can suppress a borderline desertion', () => {
     const piece = makePiece({
       T_i: -80,
       M_i: 10,
@@ -585,7 +589,7 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
     });
   });
 
-  it('sensitivity: DESERTION_PIVOTALITY_SCALE_PERMILLE scales reported pivotality', () => {
+  it('wiring: DESERTION_PIVOTALITY_SCALE_PERMILLE scales reported pivotality', () => {
     const piece = makePiece({ role: 'Queen' });
     const peers = [
       piece,
@@ -600,7 +604,7 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
     });
   });
 
-  it('sensitivity: DESERTION_ROLE_FORCE_WEIGHTS change pivotality', () => {
+  it('wiring: DESERTION_ROLE_FORCE_WEIGHTS change pivotality', () => {
     const piece = makePiece({ role: 'Queen' });
     const peers = [piece, makePiece({ id: 'w:P:a2', role: 'Pawn' })];
     const baseline = calculatePivotalityPermille(piece, peers);
@@ -620,7 +624,7 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
     );
   });
 
-  it('sensitivity: DESERTION_SHADOW_SCALE_PERMILLE changes stay utility', () => {
+  it('wiring: DESERTION_SHADOW_SCALE_PERMILLE changes stay utility', () => {
     const piece = makePiece({ B_i: 40 });
     const context = makeDesertionContext({
       P_captured: 0.8,
@@ -636,8 +640,8 @@ describe('ENGINE_CONFIG coverage — desertion λ / pain / hysteresis / pivotali
   });
 });
 
-describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalistic', () => {
-  it('sensitivity: RUMOR_P_LOSS_RATE and RUMOR_LEADER_RATE change diffusion', () => {
+describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
+  it('wiring: RUMOR_P_LOSS_RATE and RUMOR_LEADER_RATE change diffusion', () => {
     const speaker = makePiece({
       id: 'w:R:a1',
       role: 'Rook',
@@ -670,16 +674,15 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
     });
   });
 
-  it('golden + sensitivity: ATTENTION_DISTANCE_DECAY', () => {
-    expect(ENGINE_CONFIG.ATTENTION_DISTANCE_DECAY).toBe(0.15);
-    expect(attentionWeight(0)).toBe(1);
-    expect(attentionWeight(4)).toBeCloseTo(0.4, 5);
+  it('unit + wiring: attention decays with distance and ATTENTION_DISTANCE_DECAY', () => {
+    expect(attentionWeight(0)).toBeGreaterThan(attentionWeight(4));
+    const baseline = attentionWeight(2);
     mutateConfig('ATTENTION_DISTANCE_DECAY', 0.5, () => {
-      expect(attentionWeight(2)).toBe(0.1);
+      expect(attentionWeight(2)).toBeLessThan(baseline);
     });
   });
 
-  it('sensitivity: WITNESS_BRAVE_TRUST_LOSS and WITNESS_COWARD_AFFINITY_LOSS', () => {
+  it('wiring: WITNESS_BRAVE_TRUST_LOSS and WITNESS_COWARD_AFFINITY_LOSS', () => {
     const witness = makePiece({ T_i: 50, dyadicAffinity: { 'w:N:b8': 40 } });
     const deserter = makePiece({ id: 'w:N:b8' });
     const braveMove: CandidateMoveEvaluation = {
@@ -695,20 +698,34 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
       ...braveMove,
       deltaV_board: 1,
     };
+    let mildTrust = 0;
+    let harshTrust = 0;
+    mutateConfig('WITNESS_BRAVE_TRUST_LOSS', 5, () => {
+      mildTrust = appraiseDesertionWitness(witness, deserter, braveMove, 1)
+        .witness.T_i;
+    });
     mutateConfig('WITNESS_BRAVE_TRUST_LOSS', 25, () => {
-      expect(
-        appraiseDesertionWitness(witness, deserter, braveMove, 1).witness.T_i,
-      ).toBe(25);
+      harshTrust = appraiseDesertionWitness(witness, deserter, braveMove, 1)
+        .witness.T_i;
     });
-    mutateConfig('WITNESS_COWARD_AFFINITY_LOSS', 10, () => {
-      expect(
+    expect(harshTrust).toBeLessThan(mildTrust);
+
+    let mildAff = 0;
+    let harshAff = 0;
+    mutateConfig('WITNESS_COWARD_AFFINITY_LOSS', 5, () => {
+      mildAff =
         appraiseDesertionWitness(witness, deserter, cowardMove, 1).witness
-          .dyadicAffinity['w:N:b8'],
-      ).toBe(30);
+          .dyadicAffinity['w:N:b8'] ?? 0;
     });
+    mutateConfig('WITNESS_COWARD_AFFINITY_LOSS', 30, () => {
+      harshAff =
+        appraiseDesertionWitness(witness, deserter, cowardMove, 1).witness
+          .dyadicAffinity['w:N:b8'] ?? 0;
+    });
+    expect(harshAff).toBeLessThan(mildAff);
   });
 
-  it('sensitivity: HEROIC_CAPTURE_RISK and HEROIC_BOARD_DELTA change classification', () => {
+  it('wiring: HEROIC_CAPTURE_RISK and HEROIC_BOARD_DELTA change classification', () => {
     const actor = makePiece({ T_i: 80 });
     const risky: CandidateMoveEvaluation = {
       moveNotation: 'Nxh7',
@@ -740,7 +757,7 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
     });
   });
 
-  it('sensitivity: FATALISTIC_TAU_ABIL_CEILING gates fatalistic compliance', () => {
+  it('wiring: FATALISTIC_TAU_ABIL_CEILING gates fatalistic compliance', () => {
     const actor = makePiece({
       T_i: 0,
       credence: { tauBenev: 50, tauAbil: 40, abilityObservationCount: 0 },
@@ -766,39 +783,57 @@ describe('ENGINE_CONFIG coverage — rumor, attention, witness, heroic, fatalist
     });
   });
 
-  it('sensitivity: FATALISTIC witness/actor penalties change costs', () => {
+  it('wiring: FATALISTIC witness/actor penalties change costs', () => {
     const actor = makePiece({ id: 'w:N:g1', engagementFactor: 1 });
     const witness = makePiece({ id: 'w:P:a2', role: 'Pawn', T_i: 50 });
+    let mildTrust = 0;
+    let harshTrust = 0;
+    mutateConfig('FATALISTIC_WITNESS_TRUST_PENALTY', -5, () => {
+      mildTrust =
+        applyFatalisticComplianceCosts(
+          [actor, witness],
+          actor.id,
+          1,
+        ).roster.find((p) => p.id === witness.id)?.T_i ?? 0;
+    });
     mutateConfig('FATALISTIC_WITNESS_TRUST_PENALTY', -30, () => {
-      const result = applyFatalisticComplianceCosts(
-        [actor, witness],
-        actor.id,
-        1,
-      );
-      expect(result.roster.find((p) => p.id === witness.id)?.T_i).toBe(20);
+      harshTrust =
+        applyFatalisticComplianceCosts(
+          [actor, witness],
+          actor.id,
+          1,
+        ).roster.find((p) => p.id === witness.id)?.T_i ?? 0;
+    });
+    expect(harshTrust).toBeLessThan(mildTrust);
+
+    let mildEng = 0;
+    let harshEng = 0;
+    mutateConfig('FATALISTIC_ACTOR_ENGAGEMENT_PENALTY', 0.1, () => {
+      mildEng =
+        applyFatalisticComplianceCosts(
+          [actor, witness],
+          actor.id,
+          1,
+        ).roster.find((p) => p.id === actor.id)?.engagementFactor ?? 0;
     });
     mutateConfig('FATALISTIC_ACTOR_ENGAGEMENT_PENALTY', 0.5, () => {
-      const result = applyFatalisticComplianceCosts(
-        [actor, witness],
-        actor.id,
-        1,
-      );
-      expect(
-        result.roster.find((p) => p.id === actor.id)?.engagementFactor,
-      ).toBe(0.5);
+      harshEng =
+        applyFatalisticComplianceCosts(
+          [actor, witness],
+          actor.id,
+          1,
+        ).roster.find((p) => p.id === actor.id)?.engagementFactor ?? 0;
     });
+    expect(harshEng).toBeLessThan(mildEng);
   });
 });
 
-describe('ENGINE_CONFIG coverage — private evaluation', () => {
-  it('golden: PRIVATE_EVAL_TRAUMA_DRIFT export keeps drift off by default', () => {
-    const piece = makePiece({ B_i: 40 });
-    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/6N1/4K3 w - - 0 1');
+describe('wiring — private evaluation', () => {
+  it('unit: PRIVATE_EVAL_TRAUMA_DRIFT stays off by default', () => {
     expect(ENGINE_CONFIG.PRIVATE_EVAL_TRAUMA_DRIFT).toBe(false);
-    expect(evalProfileFor(piece, board)['weight:ownSafety']).toBe(675);
   });
 
-  it('sensitivity: PRIVATE_EVAL_TRAUMA_DRIFT export changes the profile', () => {
+  it('wiring: PRIVATE_EVAL_TRAUMA_DRIFT changes the profile', () => {
     const piece = makePiece({ B_i: 40 });
     const board = LivingBoard.fromFen('4k3/8/8/8/8/8/6N1/4K3 w - - 0 1');
     const baseline = evalProfileFor(piece, board);
@@ -806,14 +841,16 @@ describe('ENGINE_CONFIG coverage — private evaluation', () => {
     mutateConfig('PRIVATE_EVAL_TRAUMA_DRIFT', true, () => {
       drifted = evalProfileFor(piece, board);
     });
-    expect(drifted?.['weight:ownSafety']).toBe(945);
     expect(drifted?.['weight:ownSafety']).not.toBe(
       baseline['weight:ownSafety'],
+    );
+    expect(drifted?.['weight:ownSafety'] ?? 0).toBeGreaterThan(
+      baseline['weight:ownSafety'] ?? 0,
     );
   });
 });
 
-describe('PieceTraits sensitivity (testing_strategy §3)', () => {
+describe('wiring — PieceTraits', () => {
   const protectiveMove: CandidateMoveEvaluation = {
     moveNotation: 'Nd5',
     deltaV_board: 0.2,
@@ -825,13 +862,9 @@ describe('PieceTraits sensitivity (testing_strategy §3)', () => {
   };
   const peer = makePiece({ id: 'w:P:e2', role: 'Pawn' });
 
-  it('sensitivity: w_courage reduces risk penalty in utility', () => {
-    const timid = makePiece({
-      traits: { ...neutralTraits, w_courage: 0 },
-    });
-    const brave = makePiece({
-      traits: { ...neutralTraits, w_courage: 1 },
-    });
+  it('wiring: w_courage reduces risk penalty in utility', () => {
+    const timid = makePiece({ traits: { ...neutralTraits, w_courage: 0 } });
+    const brave = makePiece({ traits: { ...neutralTraits, w_courage: 1 } });
     expect(
       calculateMoveUtility(brave, protectiveMove, [brave, peer]),
     ).toBeGreaterThan(
@@ -839,7 +872,7 @@ describe('PieceTraits sensitivity (testing_strategy §3)', () => {
     );
   });
 
-  it('sensitivity: w_empathy enables protective term', () => {
+  it('wiring: w_empathy enables protective term', () => {
     const cold = makePiece({
       traits: { ...neutralTraits, w_empathy: 0 },
       dyadicAffinity: { 'w:P:e2': 100 },
@@ -848,23 +881,14 @@ describe('PieceTraits sensitivity (testing_strategy §3)', () => {
       traits: { ...neutralTraits, w_empathy: 1 },
       dyadicAffinity: { 'w:P:e2': 100 },
     });
-    expect(calculateMoveUtility(cold, protectiveMove, [cold, peer])).toBe(
-      calculateMoveUtility(
-        makePiece({ traits: { ...neutralTraits, w_empathy: 0 } }),
-        { ...protectiveMove, peerSafetyDeltas: {} },
-        [cold],
-      ),
-    );
     expect(
       calculateMoveUtility(warm, protectiveMove, [warm, peer]),
     ).toBeGreaterThan(calculateMoveUtility(cold, protectiveMove, [cold, peer]));
   });
 
-  it('sensitivity: w_honor and w_ambition change utility terms', () => {
+  it('wiring: w_honor and w_ambition change utility terms', () => {
     const base = makePiece();
-    const honorable = makePiece({
-      traits: { ...neutralTraits, w_honor: 1 },
-    });
+    const honorable = makePiece({ traits: { ...neutralTraits, w_honor: 1 } });
     const ambitious = makePiece({
       traits: { ...neutralTraits, w_ambition: 1 },
     });
@@ -876,14 +900,13 @@ describe('PieceTraits sensitivity (testing_strategy §3)', () => {
     ).not.toBe(calculateMoveUtility(base, protectiveMove, [base, peer]));
   });
 
-  it('sensitivity: w_prestige wires into inter-piece protection (D20 regression)', () => {
+  it('wiring: w_prestige reaches inter-piece protection (D20)', () => {
     const without = calculateInterPieceProtection(1, 0, 0, 100, 1);
     const withPrestige = calculateInterPieceProtection(1, 1, 0, 100, 1);
     expect(withPrestige).toBeGreaterThan(without);
-    expect(withPrestige).toBeCloseTo(0.5, 5);
   });
 
-  it('sensitivity: w_loyalty changes desertion λ', () => {
+  it('wiring: w_loyalty changes desertion λ', () => {
     const peers = [makePiece({ id: 'w:P:a2', role: 'Pawn' })];
     const loyal = makePiece({ traits: { ...neutralTraits, w_loyalty: 1 } });
     const disloyal = makePiece({ traits: { ...neutralTraits, w_loyalty: 0 } });

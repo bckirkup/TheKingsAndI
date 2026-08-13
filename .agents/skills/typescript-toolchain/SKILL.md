@@ -103,8 +103,9 @@ Corollaries not expressible as lint rules, so they are on you:
 - `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are on: indexing a
   record by `PieceId` yields `T | undefined` and you must handle it.
 - Pure functions in `psychology/`: no I/O, no clock, no ambient RNG.
-- Every config knob ships with a golden test **and** a sensitivity probe — see
-  the `ci-test-design` skill. A parsed-but-unwired knob is a review failure.
+- Every config knob ships with a **wiring (sensitivity) probe** — see the
+  `ci-test-design` skill and `docs/testing_strategy.md`. Exact goldens are for
+  settled surfaces; a parsed-but-unwired knob is a review failure.
 
 ## Dependencies are a licensing gate
 

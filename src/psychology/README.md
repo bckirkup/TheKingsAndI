@@ -6,9 +6,9 @@ state after a psychology decision.
 
 ## Landed
 
-- `ENGINE_CONFIG` — every knob is expected to ship with a golden **and** a
-  sensitivity probe (`tests/psychology*.test.ts`,
-  `tests/psychology.configCoverage.test.ts`)
+- `ENGINE_CONFIG` — every knob ships with a wiring (sensitivity) probe
+  (`tests/psychology*.test.ts`, `tests/psychology.configCoverage.test.ts`);
+  exact goldens only for settled surfaces
 - Deterministic math via `src/core/math.ts` (ADR 0032 §4)
 - Search-depth allocation, tactical utility (no additive trust — ADR 0015)
 - Two-channel credence (`τ_benev`, `τ_abil`) with heard/betrayal/neglect,
