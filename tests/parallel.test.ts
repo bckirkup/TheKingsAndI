@@ -236,6 +236,31 @@ describe('parallel campaign sharding', () => {
     );
   });
 
+  it('validates shard manifests numerically across two-digit campaign indices', async () => {
+    const options = {
+      plan: { totalMatches: 12, campaignLength: 1, campaigns: 12 },
+      leader: 'supportive' as const,
+      masterSeed: 9,
+      engineKind: 'fake' as const,
+      depthCap: undefined,
+      campaignRunner: cannedCampaignRunner,
+      campaignRunnerDeterminismId: 'canned-campaign-runner',
+    };
+    const shards = await Promise.all(
+      [0, 1].map((shardIndex) =>
+        runShard({
+          ...options,
+          shardIndex,
+          shardCount: 2,
+        }),
+      ),
+    );
+
+    expect(
+      aggregateShardArtifacts(shards.map(artifactFromShard)).campaigns,
+    ).toHaveLength(12);
+  });
+
   it('unions shards to the exact unsharded campaign set', async () => {
     const merged = aggregateShardArtifacts(
       fourCampaignShards.map(artifactFromShard),
