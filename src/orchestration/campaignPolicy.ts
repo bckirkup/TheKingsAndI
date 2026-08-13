@@ -80,8 +80,8 @@ export function resolveCampaignTerminal(
   kingsRemaining: number,
   matches: readonly { readonly audit: { readonly realizedQuality: number } }[],
 ): ActTerminalState {
-  if (results.some((result) => result === 'ROUT')) return 'rout';
-  if (results.some((result) => result === 'DISMISSED') && kingsRemaining <= 0) {
+  if (results.includes('ROUT')) return 'rout';
+  if (results.includes('DISMISSED') && kingsRemaining <= 0) {
     return 'dismissal';
   }
   if (evaluateCareerVictory(matches)) return 'victory';

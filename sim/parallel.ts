@@ -197,7 +197,7 @@ export function deriveCampaignSeed(
     !Number.isSafeInteger(masterSeed) ||
     !Number.isSafeInteger(campaignIndex)
   ) {
-    throw new Error('Campaign seed inputs must be safe integers.');
+    throw new TypeError('Campaign seed inputs must be safe integers.');
   }
   if (campaignIndex < 0) {
     throw new Error('Campaign index must be non-negative.');
@@ -559,7 +559,9 @@ export function aggregateShardArtifacts(
     }
     seenShards.add(artifact.manifest.shardIndex);
     if (
-      JSON.stringify([...artifact.manifest.campaignIndices].sort()) !==
+      JSON.stringify(
+        [...artifact.manifest.campaignIndices].sort((a, b) => a - b),
+      ) !==
       JSON.stringify(
         artifact.campaigns
           .map((campaign) => campaign.campaignIndex)

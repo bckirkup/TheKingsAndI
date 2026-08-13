@@ -13,6 +13,8 @@ import type {
   Side,
   Square,
 } from './types';
+import { compareCodeUnits } from '../core/canonicalJson';
+import { comparePieceIds } from '../core/ids';
 
 /**
  * chess.js has no notion of piece identity: it stores glyphs on squares, so a
@@ -200,7 +202,7 @@ export class LivingBoard {
   /** Pieces sorted by `PieceId` so every consumer sees one canonical order. */
   pieces(): BoardPiece[] {
     return [...this.squareById.keys()]
-      .sort()
+      .sort(comparePieceIds)
       .map((id) => this.requirePiece(id));
   }
 
@@ -224,7 +226,7 @@ export class LivingBoard {
   /** A copy of the square -> PieceId map; the caller cannot mutate ours. */
   identityMap(): Record<Square, PieceId> {
     const map: Record<string, PieceId> = {};
-    for (const square of [...this.idBySquare.keys()].sort()) {
+    for (const square of [...this.idBySquare.keys()].sort(compareCodeUnits)) {
       const id = this.idBySquare.get(square);
       if (id !== undefined) map[square] = id;
     }

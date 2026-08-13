@@ -39,9 +39,9 @@ export function DebriefBarChart({
         ))}
       </ul>
       <p className="debrief-chart__legend">
-        <span className="debrief-chart__swatch debrief-chart__swatch--quality" />
-        Board quality
-        <span className="debrief-chart__swatch debrief-chart__swatch--fidelity" />
+        <span className="debrief-chart__swatch debrief-chart__swatch--quality" />{' '}
+        Board quality{' '}
+        <span className="debrief-chart__swatch debrief-chart__swatch--fidelity" />{' '}
         Execution fidelity
       </p>
     </div>

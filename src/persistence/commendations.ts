@@ -90,7 +90,7 @@ function consultationCounts(
 }
 
 function finalRoster(matches: readonly MatchRecord[]): StoredPieceState[] {
-  const last = matches[matches.length - 1];
+  const last = matches.at(-1);
   return last === undefined ? [] : [...last.rosterEnd];
 }
 

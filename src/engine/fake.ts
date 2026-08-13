@@ -1,3 +1,5 @@
+import { compareCodeUnits } from '../core/canonicalJson';
+
 import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from './search';
 import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
 
@@ -159,7 +161,7 @@ function pseudoMoves(pieces: readonly FakePiece[], side: 'w' | 'b'): string[] {
       }
     }
   }
-  return moves.sort();
+  return moves.sort(compareCodeUnits);
 }
 
 function applyPseudoMove(pieces: FakePiece[], move: string): void {

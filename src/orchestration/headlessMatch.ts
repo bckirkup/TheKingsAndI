@@ -6,9 +6,9 @@ import {
   type PieceId,
   type PieceIdFactory,
   type Role,
+  type Side,
   type Square,
 } from '../chess';
-import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
@@ -158,6 +158,22 @@ function updatePiece(
 function lineupPieceIdFactory(
   lineups: Readonly<Partial<Record<Side, readonly PieceState[]>>>,
 ): PieceIdFactory {
+  const roleNameFor = (role: Role): PieceState['role'] => {
+    switch (role) {
+      case 'P':
+        return 'Pawn';
+      case 'N':
+        return 'Knight';
+      case 'B':
+        return 'Bishop';
+      case 'R':
+        return 'Rook';
+      case 'Q':
+        return 'Queen';
+      case 'K':
+        return 'King';
+    }
+  };
   const counts: Record<string, number> = {};
   return ({
     side,
@@ -172,18 +188,7 @@ function lineupPieceIdFactory(
     const index = counts[key] ?? 0;
     counts[key] = index + 1;
     const lineup = lineups[side];
-    const roleName =
-      role === 'P'
-        ? 'Pawn'
-        : role === 'N'
-          ? 'Knight'
-          : role === 'B'
-            ? 'Bishop'
-            : role === 'R'
-              ? 'Rook'
-              : role === 'Q'
-                ? 'Queen'
-                : 'King';
+    const roleName = roleNameFor(role);
     const candidates = lineup?.filter((piece) => piece.role === roleName) ?? [];
     const piece = candidates[index];
     if (piece !== undefined) return piece.id;

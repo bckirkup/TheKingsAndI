@@ -37,16 +37,25 @@ export function intentFromKeys(
   if (promotionRole === undefined) {
     return intentFromOrigDest(board, orig, dest);
   }
-  const promotion =
-    promotionRole === undefined
-      ? undefined
-      : promotionRole === 'q'
-        ? 'Q'
-        : promotionRole === 'r'
-          ? 'R'
-          : promotionRole === 'b'
-            ? 'B'
-            : 'N';
+  let promotion: 'Q' | 'R' | 'B' | 'N';
+  switch (promotionRole) {
+    case 'q':
+      promotion = 'Q';
+      break;
+    case 'r':
+      promotion = 'R';
+      break;
+    case 'b':
+      promotion = 'B';
+      break;
+    case 'n':
+      promotion = 'N';
+      break;
+    default: {
+      const exhaustive: never = promotionRole;
+      throw new Error(`Unknown promotion role: ${exhaustive}`);
+    }
+  }
   const intent: MoveIntent = {
     from: orig as Square,
     to: dest as Square,

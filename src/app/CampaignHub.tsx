@@ -103,7 +103,7 @@ export function CampaignHub({
 
       {matchCount === 0 ? (
         <label className="campaign-hub__length">
-          Campaign length
+          Campaign length{' '}
           <select
             value={targetMatches}
             onChange={(event) => {

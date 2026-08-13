@@ -35,9 +35,7 @@ export class LivingChessDatabase extends Dexie {
 let sharedDb: LivingChessDatabase | undefined;
 
 export function getDatabase(name?: string): LivingChessDatabase {
-  if (sharedDb === undefined) {
-    sharedDb = new LivingChessDatabase(name);
-  }
+  sharedDb ??= new LivingChessDatabase(name);
   return sharedDb;
 }
 

@@ -20,7 +20,7 @@ describe('dialogue distillation (6.2)', () => {
   it('golden: pack expands to at least 200 lines across all situations', () => {
     const tree = distillPack(pack);
     expect(tree.totalLines).toBeGreaterThanOrEqual(200);
-    expect(Object.keys(tree.situations).length).toBe(
+    expect(Object.keys(tree.situations)).toHaveLength(
       Object.keys(DIALOGUE_LINES).length,
     );
   });

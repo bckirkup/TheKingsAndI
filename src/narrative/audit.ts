@@ -251,7 +251,7 @@ export interface CampaignProseInput {
 
 function trajectoryDelta(trajectory: readonly number[]): number {
   const first = trajectory[0];
-  const last = trajectory[trajectory.length - 1];
+  const last = trajectory.at(-1);
   if (first === undefined || last === undefined) return 0;
   return last - first;
 }
@@ -292,10 +292,13 @@ export function campaignDebriefProse(input: CampaignProseInput): DebriefProse {
   ];
 
   const first = input.matches[0];
-  const last = input.matches[input.matches.length - 1];
+  const last = input.matches.at(-1);
   if (first !== undefined && last !== undefined && input.matches.length > 1) {
     const drift = last.executionFidelity - first.executionFidelity;
-    const direction = drift > 0 ? 'rose' : drift < 0 ? 'fell' : 'held';
+    let direction: 'rose' | 'fell' | 'held';
+    if (drift > 0) direction = 'rose';
+    else if (drift < 0) direction = 'fell';
+    else direction = 'held';
     paragraphs.push(
       `Execution fidelity ${direction} from ${Math.round(first.executionFidelity * 100)}% to ${Math.round(last.executionFidelity * 100)}% across the campaign.`,
     );
