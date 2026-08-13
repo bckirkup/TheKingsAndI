@@ -1,6 +1,8 @@
-FROM public.ecr.aws/aws-cli/aws-cli:2.22.35@sha256:2cbc01b9a16896b248ebab5c8555e82b54e3eb26c125f4b0a04112d0e9ca5ab2 AS aws-cli
+# public.ecr.aws/aws-cli/aws-cli:2.22.35
+FROM public.ecr.aws/aws-cli/aws-cli@sha256:2cbc01b9a16896b248ebab5c8555e82b54e3eb26c125f4b0a04112d0e9ca5ab2 AS aws-cli
 
-FROM node:20.19.0-bookworm-slim@sha256:8898f8ed3c0126667837b678979b4ed83306c856a1227c8bf5f5f77740c25cd6
+# node:20.19.0-bookworm-slim
+FROM node@sha256:8898f8ed3c0126667837b678979b4ed83306c856a1227c8bf5f5f77740c25cd6
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /app
@@ -9,7 +11,7 @@ COPY --from=aws-cli /usr/local/aws-cli/v2/2.22.35 /usr/local/aws-cli/v2/2.22.35
 
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable \
-  && pnpm install --frozen-lockfile --no-optional
+  && pnpm install --frozen-lockfile --no-optional --ignore-scripts
 
 COPY src ./src
 COPY sim ./sim

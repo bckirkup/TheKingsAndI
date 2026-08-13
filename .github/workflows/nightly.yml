@@ -65,12 +65,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Resolve run configuration
         id: cfg
@@ -93,10 +93,12 @@ jobs:
           echo "run_sweep=${RUN_SWEEP}" >> "$GITHUB_OUTPUT"
 
       - name: Tyrannical Lozza campaign
+        env:
+          MATCHES: ${{ steps.cfg.outputs.matches }}
         run: |
           mkdir -p artifacts/nightly
           pnpm --silent sim \
-            --matches=${{ steps.cfg.outputs.matches }} \
+            --matches="$MATCHES" \
             --leader=tyrannical \
             --engine=lozza \
             --depth-cap=4 \
@@ -105,9 +107,11 @@ jobs:
             --out=artifacts/nightly/tyrannical.csv
 
       - name: Supportive Lozza campaign
+        env:
+          MATCHES: ${{ steps.cfg.outputs.matches }}
         run: |
           pnpm --silent sim \
-            --matches=${{ steps.cfg.outputs.matches }} \
+            --matches="$MATCHES" \
             --leader=supportive \
             --engine=lozza \
             --depth-cap=4 \
@@ -145,12 +149,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run selected heavy Vitest target
         env:
           VITEST_TARGET: ${{ inputs.vitest_target }}
@@ -185,16 +189,18 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Stockfish budgeted run
+        env:
+          STOCKFISH_MATCHES: ${{ inputs.stockfish_matches }}
         run: |
-          MATCHES='${{ inputs.stockfish_matches }}'
+          MATCHES="$STOCKFISH_MATCHES"
           mkdir -p artifacts/nightly
           echo "Stockfish budget: ${MATCHES} match(es) at uncapped production depth."
           pnpm --silent sim \

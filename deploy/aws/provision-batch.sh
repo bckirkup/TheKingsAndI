@@ -20,6 +20,9 @@ case "$max_vcpus" in
     echo 'MAX_VCPUS must be a positive integer.' >&2
     exit 2
     ;;
+  *)
+    : # Value validated.
+    ;;
 esac
 
 if ! aws batch describe-compute-environments \
