@@ -25,4 +25,24 @@ describe('enemy turn progress', () => {
     expect(result.ply).toBe(2);
     expect(board.turn()).toBe('w');
   });
+
+  it('honors the requested tracking cap on every enemy turn', async () => {
+    const board = LivingBoard.standard();
+    board.applySan('e4');
+    const enemyRoster = createStartingRoster(board, 'b', 100, 0.5);
+    const result = await applyEnemyTurn({
+      board,
+      enemyRoster,
+      enemySide: 'b',
+      random: createSeededRandom(5),
+      archetype: 'supportive',
+      ply: 1,
+      engine: createFakeEnginePort(),
+      overrideRefusals: false,
+      trackedIdentities: 16,
+    });
+
+    expect(result.trackedIdentityCount).toBe(16);
+    expect(result.enemyRoster).toHaveLength(16);
+  });
 });

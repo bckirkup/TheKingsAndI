@@ -61,6 +61,8 @@ function syncSideRoster(
 
 export interface EnemyTurnResult {
   readonly enemyRoster: PieceState[];
+  /** Number of identities retained after the configured tracking cap. */
+  readonly trackedIdentityCount: number;
   readonly departedRoster: readonly PieceState[];
   readonly dreadExposureByPiece: DreadExposureByPiece;
   readonly capturedPieceId?: string;
@@ -98,6 +100,7 @@ function finishUntrackedMove(
   const applied = board.applySan(san);
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
+    trackedIdentityCount: enemyRoster.length,
     departedRoster: [],
     dreadExposureByPiece: {},
     events: [
@@ -186,6 +189,7 @@ function applyTrackedEnemyDecision(input: {
       });
       return {
         enemyRoster,
+        trackedIdentityCount: enemyRoster.length,
         departedRoster: [],
         dreadExposureByPiece: input.dreadExposureByPiece ?? {},
         events,
@@ -224,6 +228,7 @@ function applyTrackedEnemyDecision(input: {
     }
     return {
       enemyRoster: syncSideRoster(board, cascade.roster, enemySide),
+      trackedIdentityCount: enemyRoster.length,
       departedRoster: cascade.departed,
       dreadExposureByPiece: input.dreadExposureByPiece ?? {},
       events,
@@ -299,6 +304,7 @@ function applyTrackedEnemyDecision(input: {
 
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
+    trackedIdentityCount: enemyRoster.length,
     departedRoster: [],
     dreadExposureByPiece: trauma.exposure,
     ...(applied.capture === undefined
@@ -337,16 +343,22 @@ export function applyEnemyTurnSync(input: {
   readonly archetype: OpponentArchetype;
   readonly ply: number;
   readonly overrideRefusals?: boolean;
+  readonly trackedIdentities?: number;
 }): EnemyTurnResult {
+  const trackedRoster = trackEnemyIdentities(
+    input.enemyRoster,
+    input.trackedIdentities,
+  );
   const enemyRoster = syncSideRoster(
     input.board,
-    trackEnemyIdentities(input.enemyRoster),
+    trackedRoster,
     input.enemySide,
   );
 
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
       enemyRoster,
+      trackedIdentityCount: trackedRoster.length,
       departedRoster: [],
       dreadExposureByPiece: {},
       events: [],
@@ -445,17 +457,23 @@ export async function applyEnemyTurn(input: {
   readonly insight?: InsightRoundHandle;
   readonly overrideRefusals?: boolean;
   readonly dreadExposureByPiece?: DreadExposureByPiece;
+  readonly trackedIdentities?: number;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
+  const trackedRoster = trackEnemyIdentities(
+    input.enemyRoster,
+    input.trackedIdentities,
+  );
   const enemyRoster = syncSideRoster(
     input.board,
-    trackEnemyIdentities(input.enemyRoster),
+    trackedRoster,
     input.enemySide,
   );
 
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
       enemyRoster,
+      trackedIdentityCount: trackedRoster.length,
       departedRoster: [],
       dreadExposureByPiece: input.dreadExposureByPiece ?? {},
       events: [],

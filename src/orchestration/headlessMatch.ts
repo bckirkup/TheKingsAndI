@@ -59,6 +59,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
+import { CAMPAIGN_CONFIG } from './campaignConfig';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -129,6 +130,9 @@ export interface HeadlessMatchResult {
   readonly enemyRoster: readonly PieceState[];
   readonly departedEnemyRoster: readonly PieceState[];
   readonly enemyFieldedPieceIds: readonly PieceId[];
+  readonly enemyTrackedIdentityCount: number;
+  readonly enemyTrackedIdentitiesRequested: number;
+  readonly enemyTrackingDiverged: boolean;
   readonly plies: number;
   readonly winScore: number;
   readonly rout: boolean;
@@ -409,6 +413,11 @@ export async function runHeadlessMatch(
       createStartingRoster(board, enemySide, 40, config.random.nextFloat()),
     config.enemyTrackedIdentities,
   );
+  const enemyTrackedIdentitiesRequested =
+    config.enemyTrackedIdentities ?? CAMPAIGN_CONFIG.ENEMY_TRACKED_IDENTITIES;
+  let enemyTrackedIdentityCount = enemyRoster.length;
+  let enemyTrackingDiverged =
+    enemyTrackedIdentityCount !== enemyTrackedIdentitiesRequested;
   let departedEnemyRoster: PieceState[] = [];
   const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];
@@ -465,8 +474,15 @@ export async function runHeadlessMatch(
         insight,
         overrideRefusals: opponentArchetype === 'tyrannical',
         dreadExposureByPiece: enemyDreadExposureByPiece,
+        trackedIdentities: enemyTrackedIdentitiesRequested,
       });
       enemyRoster = enemyTurn.enemyRoster;
+      enemyTrackedIdentityCount = Math.min(
+        enemyTrackedIdentityCount,
+        enemyTurn.trackedIdentityCount,
+      );
+      enemyTrackingDiverged ||=
+        enemyTurn.trackedIdentityCount !== enemyTrackedIdentitiesRequested;
       engineAudit.push(...(enemyTurn.engineAudit ?? []));
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
       roster = applyCapturedPieceInjury(
@@ -809,6 +825,12 @@ export async function runHeadlessMatch(
     (event) => event.t === 'OVERRIDE' && event.vindicated === true,
   ).length;
   roster = applyOutcomeVindication(roster, winScore, contestedOrders);
+  enemyRoster = applyMatchOutcomeTrust(enemyRoster, -winScore);
+  enemyRoster = applyOutcomeVindication(
+    enemyRoster,
+    -winScore,
+    contestedOrders,
+  );
 
   return {
     events: Object.freeze(events),
@@ -818,6 +840,9 @@ export async function runHeadlessMatch(
     enemyRoster: enemyRoster.map(normalizePieceState),
     departedEnemyRoster: departedEnemyRoster.map(normalizePieceState),
     enemyFieldedPieceIds,
+    enemyTrackedIdentityCount,
+    enemyTrackedIdentitiesRequested,
+    enemyTrackingDiverged,
     plies: ply - 1,
     winScore,
     rout,

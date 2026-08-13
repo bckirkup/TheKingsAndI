@@ -61,6 +61,9 @@ export interface MatchMetrics {
   readonly survivingRosterSize: number;
   readonly enemyAttrition: number;
   readonly enemyFieldedPieceIds: readonly PieceId[];
+  readonly enemyTrackedIdentityCount?: number;
+  readonly enemyTrackedIdentitiesRequested?: number;
+  readonly enemyTrackingDiverged?: boolean;
   readonly enemySurvivingRosterSize: number;
   readonly enemyDesertions: number;
   readonly enemyDesertedPieceIds: readonly PieceId[];
@@ -599,6 +602,9 @@ export function metricsFromMatch(
     survivingRosterSize: result.roster.length,
     enemyAttrition,
     enemyFieldedPieceIds,
+    enemyTrackedIdentityCount: result.enemyTrackedIdentityCount,
+    enemyTrackedIdentitiesRequested: result.enemyTrackedIdentitiesRequested,
+    enemyTrackingDiverged: result.enemyTrackingDiverged,
     enemySurvivingRosterSize: result.enemyRoster.length,
     enemyDesertions: enemyCounts.desertions,
     enemyDesertedPieceIds: [...enemyCounts.desertedPieceIds],

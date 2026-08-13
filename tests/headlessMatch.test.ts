@@ -129,7 +129,13 @@ describe('headless enemy tracking configuration', () => {
           : { enemyTrackedIdentities }),
         engine: createFakeEnginePort(),
       });
-    await expect((await run(undefined)).enemyFieldedPieceIds).toHaveLength(8);
-    await expect((await run(16)).enemyFieldedPieceIds).toHaveLength(16);
+    const defaultRun = await run(undefined);
+    const explicitRun = await run(16);
+    await expect(defaultRun.enemyFieldedPieceIds).toHaveLength(8);
+    await expect(defaultRun.enemyTrackedIdentityCount).toBe(8);
+    await expect(defaultRun.enemyTrackingDiverged).toBe(false);
+    await expect(explicitRun.enemyFieldedPieceIds).toHaveLength(16);
+    await expect(explicitRun.enemyTrackedIdentityCount).toBe(16);
+    await expect(explicitRun.enemyTrackingDiverged).toBe(false);
   });
 });
