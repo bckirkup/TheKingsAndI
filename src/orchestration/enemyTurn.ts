@@ -38,7 +38,7 @@ import {
   desertionContextFor,
 } from './psychologyHooks';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
-import { kingExposureAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],

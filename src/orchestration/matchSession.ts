@@ -61,7 +61,7 @@ import {
   isAvengedCapture,
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
-import { kingExposureAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 export type MatchPhase =
   | 'playing'
@@ -559,7 +559,10 @@ export class MatchSession {
         this.board.withdrawPiece(event.pieceId);
       }
     }
-    const exposure = kingExposureAfterWithdrawals(this.board, this.playerSide);
+    const exposure = kingExposureAfterWithdrawals(
+      this.board,
+      this.board.turn(),
+    );
     if (exposure !== undefined) {
       this.events.push({
         t: 'KING_EXPOSED_TURN_CEDED',

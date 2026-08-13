@@ -59,7 +59,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
-import { kingExposureAfterWithdrawals } from './kingAbandonment';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -110,6 +110,10 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  /**
+   * Optional complete starting position. It is mutually exclusive with
+   * initialLineup and initialEnemyLineup.
+   */
   readonly initialBoard?: LivingBoard;
   /**
    * Optional fielded lineup whose IDs must be installed on the standard
@@ -403,6 +407,15 @@ export async function runHeadlessMatch(
   }
   if (config.initialEnemyLineup !== undefined) {
     lineups[config.playerSide === 'w' ? 'b' : 'w'] = config.initialEnemyLineup;
+  }
+  if (
+    config.initialBoard !== undefined &&
+    (config.initialLineup !== undefined ||
+      config.initialEnemyLineup !== undefined)
+  ) {
+    throw new Error(
+      'initialBoard cannot be combined with initialLineup or initialEnemyLineup',
+    );
   }
   const board =
     config.initialBoard?.clone() ??
@@ -817,7 +830,6 @@ export async function runHeadlessMatch(
       continue;
     }
     if (!turnCompleted) break;
-    if (enemyRout) break;
   }
 
   const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);

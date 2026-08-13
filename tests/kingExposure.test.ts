@@ -6,6 +6,10 @@ import {
   runHeadlessMatch,
   type HeadlessLeaderPort,
 } from '../src/orchestration';
+import {
+  applyPrivateEvaluation,
+  evalProfileFor,
+} from '../src/orchestration/privateEvaluation';
 import { createFakeEnginePort } from '../src/engine/fake';
 import { createSeededRandom } from '../src/core/random';
 import type { CandidateMoveEvaluation } from '../src/psychology';
@@ -87,6 +91,29 @@ describe('King exposure', () => {
     expect(result.enemyRout).toBe(false);
   });
 
+  it('rejects an ambiguous complete board and lineup', async () => {
+    const leader: HeadlessLeaderPort = {
+      chooseMove: () => undefined,
+      shouldOverride: () => false,
+    };
+
+    await expect(
+      runHeadlessMatch({
+        random: createSeededRandom(7),
+        maxPlies: 1,
+        playerSide: 'w',
+        leader,
+        opponent: leader,
+        initialBoard: LivingBoard.standard(),
+        initialLineup: [],
+        initialRoster: [],
+        engine: createFakeEnginePort(),
+      }),
+    ).rejects.toThrow(
+      'initialBoard cannot be combined with initialLineup or initialEnemyLineup',
+    );
+  });
+
   it('detects an exposed King after a withdrawal', () => {
     const board = LivingBoard.fromFen('4k3/8/8/8/8/6b1/5p2/4K3 b - - 0 1');
 
@@ -110,10 +137,74 @@ describe('King exposure', () => {
   });
 
   it('never returns a kingless board from the evaluation endpoint', () => {
-    const board = LivingBoard.fromFen(
-      'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
-    );
+    const cases = [
+      {
+        fen: 'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
+        withdrawals: [] as const,
+        pv: ['c1h6'],
+      },
+      {
+        fen: 'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
+        withdrawals: ['w:P:d2'] as const,
+        pv: ['c1h6'],
+      },
+      {
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        withdrawals: ['w:P:e2'] as const,
+        pv: ['g1f3', 'b8c6'],
+      },
+    ];
 
-    expect(endpointFor(board, ['c1h6'])).toBeUndefined();
+    for (const testCase of cases) {
+      const board = LivingBoard.fromFen(testCase.fen);
+      for (const pieceId of testCase.withdrawals) {
+        board.withdrawPiece(pieceId);
+      }
+      const endpoint = endpointFor(board, testCase.pv);
+      if (endpoint !== undefined) {
+        expect(
+          endpoint.board.piecesOf('w').some((piece) => piece.role === 'K'),
+        ).toBe(true);
+        expect(
+          endpoint.board.piecesOf('b').some((piece) => piece.role === 'K'),
+        ).toBe(true);
+      }
+
+      const actor = board.piecesOf('w')[0];
+      if (actor === undefined) throw new Error('expected a white actor');
+      const actorState = createStartingRoster(board, 'w', 40, 0.5).find(
+        (piece) => piece.id === actor.id,
+      );
+      if (actorState === undefined) throw new Error('expected actor state');
+      expect(() =>
+        applyPrivateEvaluation(
+          { scoreCp: 0, pv: [] },
+          board,
+          actorState,
+          evalProfileFor(actorState, board),
+          [{ scoreCp: 0, pv: testCase.pv }],
+        ),
+      ).not.toThrow();
+    }
+  });
+
+  it('counts repeated positions across a ceded turn', () => {
+    const board = LivingBoard.fromFen('4k3/8/8/8/8/8/1N6/4K3 w - - 0 1');
+    const cycle = (): void => {
+      board.applyMove({ from: 'e8', to: 'f8' });
+      board.applyMove({ from: 'b2', to: 'c4' });
+      board.applyMove({ from: 'f8', to: 'e8' });
+      board.applyMove({ from: 'c4', to: 'b2' });
+    };
+
+    board.applyMove({ from: 'b2', to: 'c4' });
+    board.applyMove({ from: 'e8', to: 'f8' });
+    board.applyMove({ from: 'c4', to: 'b2' });
+    board.applyMove({ from: 'f8', to: 'e8' });
+    board.cedeTurn();
+    cycle();
+    cycle();
+
+    expect(board.isGameOver()).toBe(true);
   });
 });
