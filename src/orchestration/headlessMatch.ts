@@ -472,9 +472,9 @@ export async function runHeadlessMatch(
         ply,
         engine: config.engine,
         insight,
-        overrideRefusals: opponentArchetype === 'tyrannical',
         dreadExposureByPiece: enemyDreadExposureByPiece,
         trackedIdentities: enemyTrackedIdentitiesRequested,
+        leader: config.opponent,
       });
       enemyRoster = enemyTurn.enemyRoster;
       enemyTrackedIdentityCount = Math.min(

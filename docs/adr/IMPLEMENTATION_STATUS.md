@@ -57,6 +57,10 @@ These are status distinctions, not new design decisions:
 - **Facilitator/cohort surfaces remain partial.** Player commendations are
   implemented, while facilitator awards require the missing world/cohort model
   (`src/persistence/commendations.ts:232-333`).
+- **Headless commander comparisons now use equal ports.** `sim/match.ts:71-90`
+  supplies the same scripted `HeadlessLeaderPort` implementation to both
+  sides, and `src/orchestration/enemyTurn.ts:490-520` uses it for enemy
+  selection; the tactical archetype remains a compatibility fallback.
 
 Open calibration decisions (D35, D40, D42–D44, and later magnitude Ds) remain
 harness work — do not silently close them by changing defaults without a

@@ -981,6 +981,14 @@ from trauma retirement and desertion.
 The season-boundary mechanism intentionally does not update `M_i`; D22's
 morale semantics remain open and are not resolved by ADR 0051.
 
+### D145 ✓ Equal commander ports in the headless season harness
+For commander comparisons, both sides use the same scripted
+`HeadlessLeaderPort` implementation and policy parameters. The player and
+enemy ports are constructed symmetrically in `sim/match.ts:71-90`, and the
+enemy turn consumes the supplied port in `src/orchestration/enemyTurn.ts:490-520`.
+The legacy tactical archetype remains only as a compatibility fallback for
+callers that do not supply a commander port.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is

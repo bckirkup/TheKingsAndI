@@ -38,6 +38,7 @@ import {
   desertionContextFor,
 } from './psychologyHooks';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
+import type { HeadlessLeaderPort } from './headlessMatch';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],
@@ -458,6 +459,7 @@ export async function applyEnemyTurn(input: {
   readonly overrideRefusals?: boolean;
   readonly dreadExposureByPiece?: DreadExposureByPiece;
   readonly trackedIdentities?: number;
+  readonly leader?: HeadlessLeaderPort;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
   const trackedRoster = trackEnemyIdentities(
@@ -490,12 +492,26 @@ export async function applyEnemyTurn(input: {
   let currentEnemyRoster = enemyRoster;
   const maxCandidates = input.board.legalMoves().length;
   for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
-    const san = chooseOpponentMove(
-      input.board,
-      input.random,
-      input.archetype,
-      refusedSans,
-    );
+    const choice =
+      input.leader === undefined
+        ? undefined
+        : await input.leader.chooseMove(
+            input.board,
+            input.enemySide,
+            input.random,
+            input.ply,
+            refusedSans,
+          );
+    const san =
+      choice?.san ??
+      (input.leader === undefined
+        ? chooseOpponentMove(
+            input.board,
+            input.random,
+            input.archetype,
+            refusedSans,
+          )
+        : undefined);
     if (san === undefined) break;
 
     const intent = resolveIntent(input.board, san);
@@ -542,7 +558,10 @@ export async function applyEnemyTurn(input: {
       currentEnemyRoster,
       features,
     );
-    const moveEval = featuresToEvaluation(features, 0);
+    const moveEval = featuresToEvaluation(
+      features,
+      choice?.leaderImpliedBias ?? 0,
+    );
     const orderQualityCp = await resolveAuditMoveScore(
       input.engine,
       input.board,
@@ -578,7 +597,9 @@ export async function applyEnemyTurn(input: {
       },
       ply: input.ply,
       overrideRefusals:
-        (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
+        (input.overrideRefusals ??
+          input.leader?.shouldOverride(input.random, input.ply) ??
+          input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,
       objectivelyGood,
