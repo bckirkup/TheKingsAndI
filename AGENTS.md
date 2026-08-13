@@ -27,7 +27,8 @@ implementation status from an ADR or the decision register alone.
 | `docs/engine_licensing.md` | `EnginePort`, engine swap strategy, verified permissive candidates |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
-| `docs/calibration/2026-08-10-state-of-play.md` | Current harness numbers (supersedes older M3 reports) |
+| `docs/calibration/2026-08-13-blocked-on-measurement.md` | **Current state: the model is degenerate for cold styles and the measurement pipelines are broken.** Read before planning calibration or new mechanics |
+| `docs/calibration/2026-08-10-state-of-play.md` | Previous harness numbers; tyrannical figures superseded by the 08-13 pass |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0047 decided vs shipped |
 | `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
