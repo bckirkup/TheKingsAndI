@@ -44,9 +44,8 @@ function useMatchSession(
         rosterPreamble,
       }),
   );
-  const [revision, setRevision] = useState(0);
+  const [, setRevision] = useState(0);
   const refresh = (): void => setRevision((value) => value + 1);
-  void revision;
   return { snapshot: session.snapshot(), session, refresh };
 }
 

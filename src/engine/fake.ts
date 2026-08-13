@@ -1,5 +1,5 @@
 import { DEFAULT_PRIVATE_MULTIPV_WIDTH } from './search';
-import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
+import type { EngineEvaluation, EnginePort } from './types';
 
 interface FakePiece {
   readonly side: 'w' | 'b';
@@ -159,7 +159,7 @@ function pseudoMoves(pieces: readonly FakePiece[], side: 'w' | 'b'): string[] {
       }
     }
   }
-  return moves.sort();
+  return moves.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function applyPseudoMove(pieces: FakePiece[], move: string): void {
@@ -224,16 +224,11 @@ export function createFakeEnginePort(
 ): EnginePort {
   return {
     determinismId,
-    async evaluate(
-      fen: string,
-      depth: number,
-      evalProfile: EvalProfile = {},
-    ): Promise<EngineEvaluation> {
+    async evaluate(fen: string, depth: number): Promise<EngineEvaluation> {
       if (!Number.isSafeInteger(depth) || depth < 1) {
         throw new RangeError('Depth must be a positive integer.');
       }
       const scoreCp = scoreFen(fen, depth);
-      void evalProfile;
       const pvHash = (hashFen(fen) + depth * 1_000_003) | 0;
       const file = 7 - (Math.abs(pvHash) % 8);
       const rank = 1 + (Math.abs(pvHash >> 3) % 2);
@@ -261,7 +256,7 @@ export function createFakeEnginePort(
       return fakeLines(fen, 16);
     },
     async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
-      const line = (await fakeLines(fen, depth))[0];
+      const line = fakeLines(fen, depth)[0];
       if (line === undefined) throw new Error('Fake engine produced no line');
       return line;
     },

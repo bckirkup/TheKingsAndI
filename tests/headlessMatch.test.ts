@@ -58,7 +58,7 @@ describe('headless player refusal replanning', () => {
     const refusals = result.events.filter((event) => event.t === 'REFUSAL');
     const overrides = result.events.filter((event) => event.t === 'OVERRIDE');
     const moves = result.events.filter((event) => event.t === 'MOVE');
-    expect(refusals.length).toBe(20);
+    expect(refusals).toHaveLength(20);
     expect(overrides).toHaveLength(1);
     expect(overrides[0]?.t).toBe('OVERRIDE');
     if (overrides[0]?.t === 'OVERRIDE') {

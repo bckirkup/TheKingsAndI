@@ -434,8 +434,8 @@ describe('sacrifice attribution + avenged window', () => {
     expect(declinedSacrificePiece(board, line, [spared, friend], 100)).toBe(
       spared.id,
     );
-    expect(declinedSacrificePiece(board, line, [spared, friend], 121)).toBe(
-      undefined,
-    );
+    expect(
+      declinedSacrificePiece(board, line, [spared, friend], 121),
+    ).toBeUndefined();
   });
 });

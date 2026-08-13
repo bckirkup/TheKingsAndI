@@ -62,8 +62,8 @@ describe('scarce season pools', () => {
     const counts = poolRoleCounts();
     for (const [role, count] of Object.entries(counts)) {
       expect(
-        pool.members.filter((member) => member.state.role === role).length,
-      ).toBe(role === 'King' ? 1 : count * 2);
+        pool.members.filter((member) => member.state.role === role),
+      ).toHaveLength(role === 'King' ? 1 : count * 2);
     }
     expect(
       pool.members.filter((member) => member.state.role === 'King'),
