@@ -383,4 +383,249 @@ describe('scarce season pools', () => {
       }),
     );
   });
+
+  it('counts only available non-selection, erodes trust, and redeems selection', () => {
+    const white = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'servant',
+      depthFactor: 2,
+    });
+    const black = createCommanderPool({
+      id: 'b',
+      side: 'b',
+      style: 'servant',
+      depthFactor: 2,
+    });
+    const initialFielded = fieldPool(white, 1);
+    const target = white.members.find(
+      (member) =>
+        member.state.role === 'Pawn' &&
+        !initialFielded.lineup.some(
+          (fieldedMember) => fieldedMember.state.id === member.state.id,
+        ),
+    );
+    if (target === undefined) throw new Error('expected an unselected pawn');
+    const selected = initialFielded.lineup.filter(
+      (member) => member.state.id !== target.state.id,
+    );
+    const fielded = { ...initialFielded, lineup: selected };
+    const blackFielded = fieldPool(black, 1);
+    const result = emptyResult(
+      selected.map((member) => member.state),
+      blackFielded.lineup.map((member) => member.state),
+    );
+    const first = foldMatchIntoPools({
+      white,
+      black,
+      whiteFielded: fielded,
+      blackFielded,
+      result,
+      match: 1,
+    });
+    const targetAfterFirst = first.white.members.find(
+      (member) => member.state.id === target.state.id,
+    );
+    expect(targetAfterFirst?.service.consecutiveNonSelections).toBe(1);
+    expect(targetAfterFirst?.state.T_i).toBe(target.state.T_i);
+
+    const secondFielded = fieldPool(first.white, 2);
+    const secondSelected = secondFielded.lineup.filter(
+      (member) => member.state.id !== target.state.id,
+    );
+    const second = foldMatchIntoPools({
+      white: first.white,
+      black: first.black,
+      whiteFielded: { ...secondFielded, lineup: secondSelected },
+      blackFielded: fieldPool(first.black, 2),
+      result: emptyResult(
+        secondSelected.map((member) => member.state),
+        fieldPool(first.black, 2).lineup.map((member) => member.state),
+      ),
+      match: 2,
+    });
+    const targetAfterSecond = second.white.members.find(
+      (member) => member.state.id === target.state.id,
+    );
+    expect(targetAfterSecond?.service.consecutiveNonSelections).toBe(2);
+    expect(targetAfterSecond?.state.T_i).toBe(
+      target.state.T_i + SEASON_CONFIG.NON_SELECTION_SELF_TRUST_PENALTY,
+    );
+    expect(
+      second.events.find(
+        (event) =>
+          event.t === 'POOL_TRUST_ADJUSTMENT' &&
+          event.reason === 'non_selection' &&
+          event.pieceId === target.state.id,
+      ),
+    ).toMatchObject({
+      selfTrustDelta: SEASON_CONFIG.NON_SELECTION_SELF_TRUST_PENALTY,
+    });
+
+    const thirdFielded = fieldPool(second.white, 3);
+    const replacement = thirdFielded.lineup.find(
+      (member) => member.state.role === target.state.role,
+    );
+    if (replacement === undefined) throw new Error('expected replacement');
+    const thirdLineup = [
+      ...thirdFielded.lineup.filter(
+        (member) => member.state.id !== replacement.state.id,
+      ),
+      targetAfterSecond ?? target,
+    ];
+    const third = foldMatchIntoPools({
+      white: second.white,
+      black: second.black,
+      whiteFielded: { ...thirdFielded, lineup: thirdLineup },
+      blackFielded: fieldPool(second.black, 3),
+      result: emptyResult(
+        thirdLineup.map((member) => member.state),
+        fieldPool(second.black, 3).lineup.map((member) => member.state),
+      ),
+      match: 3,
+    });
+    const redeemed = third.white.members.find(
+      (member) => member.state.id === target.state.id,
+    );
+    expect(redeemed?.service.consecutiveNonSelections).toBe(0);
+    expect(redeemed?.state.T_i).toBe(
+      target.state.T_i +
+        SEASON_CONFIG.NON_SELECTION_SELF_TRUST_PENALTY +
+        SEASON_CONFIG.NON_SELECTION_REDEMPTION_TRUST_RECOVERY,
+    );
+    expect(
+      Math.abs(SEASON_CONFIG.NON_SELECTION_REDEMPTION_TRUST_RECOVERY),
+    ).toBeLessThan(Math.abs(SEASON_CONFIG.NON_SELECTION_SELF_TRUST_PENALTY));
+  });
+
+  it('records obsolescence separately from trauma retirement', () => {
+    const white = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'servant',
+      depthFactor: 2,
+    });
+    const black = createCommanderPool({
+      id: 'b',
+      side: 'b',
+      style: 'servant',
+      depthFactor: 2,
+    });
+    const fielded = fieldPool(white, 1);
+    const target = white.members.find(
+      (member) =>
+        member.state.role === 'Pawn' &&
+        !fielded.lineup.some(
+          (candidate) => candidate.state.id === member.state.id,
+        ),
+    );
+    if (target === undefined) throw new Error('expected an unselected pawn');
+    let current = white;
+    let events: ReturnType<typeof foldMatchIntoPools>['events'] = [];
+    for (let match = 1; match <= 3; match += 1) {
+      const available = fieldPool(current, match);
+      const lineup = available.lineup.filter(
+        (member) => member.state.id !== target.state.id,
+      );
+      const folded = foldMatchIntoPools({
+        white: current,
+        black,
+        whiteFielded: { ...available, lineup },
+        blackFielded: fieldPool(black, match),
+        result: emptyResult(
+          lineup.map((member) => member.state),
+          fieldPool(black, match).lineup.map((member) => member.state),
+        ),
+        match,
+        config: {
+          ...SEASON_CONFIG,
+          OBSOLESCENCE_NON_SELECTION_THRESHOLD: 3,
+        },
+      });
+      current = folded.white;
+      events = folded.events;
+    }
+    const obsolete = current.members.find(
+      (member) => member.state.id === target.state.id,
+    );
+    expect(obsolete?.status).toBe('retired');
+    expect(obsolete?.retirementCause).toBe('obsolescence');
+    expect(
+      events.find(
+        (event) =>
+          event.t === 'OBSOLESCENCE' && event.pieceId === target.state.id,
+      ),
+    ).toMatchObject({ nonSelectionStreak: 3 });
+    expect(poolSnapshot(current, fieldPool(current, 4)).obsolescenceCount).toBe(
+      1,
+    );
+  });
+
+  it('has golden and sensitivity coverage for selection knobs', async () => {
+    const config = SEASON_CONFIG;
+    expect(config.NON_SELECTION_TRUST_THRESHOLD).toBe(2);
+    expect(config.NON_SELECTION_SELF_TRUST_PENALTY).toBe(-10);
+    expect(config.NON_SELECTION_PEER_TRUST_PENALTY).toBe(-2);
+    expect(config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY).toBe(4);
+    expect(config.OBSOLESCENCE_NON_SELECTION_THRESHOLD).toBe(6);
+
+    const baseline = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+    });
+    const changedThreshold = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+      config: { ...config, NON_SELECTION_TRUST_THRESHOLD: 1 },
+    });
+    const changedSelfPenalty = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+      config: { ...config, NON_SELECTION_SELF_TRUST_PENALTY: -20 },
+    });
+    const changedPeerPenalty = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+      config: { ...config, NON_SELECTION_PEER_TRUST_PENALTY: -8 },
+    });
+    const changedRecovery = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+      config: { ...config, NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 1 },
+    });
+    const changedObsolescence = await runSeason({
+      seed: 1,
+      matches: 4,
+      whiteStyle: 'tyrannical',
+      blackStyle: 'supportive',
+      engineKind: 'fake',
+      config: { ...config, OBSOLESCENCE_NON_SELECTION_THRESHOLD: 2 },
+    });
+    expect(JSON.stringify(changedThreshold)).not.toBe(JSON.stringify(baseline));
+    expect(JSON.stringify(changedSelfPenalty)).not.toBe(
+      JSON.stringify(baseline),
+    );
+    expect(JSON.stringify(changedPeerPenalty)).not.toBe(
+      JSON.stringify(baseline),
+    );
+    expect(JSON.stringify(changedRecovery)).not.toBe(JSON.stringify(baseline));
+    expect(JSON.stringify(changedObsolescence)).not.toBe(
+      JSON.stringify(baseline),
+    );
+  }, 120_000);
 });

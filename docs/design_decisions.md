@@ -946,20 +946,40 @@ quoted as a human finding. No conferral implementation exists.
 
 ### D137 ⚠ Non-selection is the sanction (D129 bearing)
 The owner's ruling is that bad conduct is sanctioned by not being selected,
-not by extending desertion absence. This is not implemented; the current
-absence term remains at `sim/pool.ts:350-399`. Selection state is pool
-bookkeeping and does not reach `PieceState`.
+not by extending desertion absence. The season pool now records
+non-selection streaks and applies the sanction at the season boundary without
+changing the desertion absence term (`sim/pool.ts:376-484`).
 
 ### D138 ⚠ Obsolescence ends a career (D130 bearing)
 The owner's ruling is that a career ends when nobody chooses the piece,
-rather than at a trauma threshold. This is not implemented; current
-trauma-threshold retirement remains at `sim/pool.ts:350-399`.
+rather than at a trauma threshold. Obsolescence is now a distinct recorded
+career ending (`sim/pool.ts:460-474`, `sim/pool.ts:513-521`); trauma-threshold
+retirement remains unchanged and open for calibration.
 
 ### D139 ⚠ Selection state is not piece-perceived
 The current `PieceState` has no selection or service fields
-(`src/psychology/types.ts:47-60`), and pool selection remains in
-`sim/pool.ts:26-39` and `sim/season.ts:76-93`. A piece therefore cannot
-currently perceive non-selection; wiring that perception is a future slice.
+(`src/psychology/types.ts:47-60`). Selection perception is represented by
+pool-owned state and trust consequences, without adding selection fields to
+`PieceState` (`sim/pool.ts:27-65`, `sim/pool.ts:376-484`).
+
+### D141 ⚠ Non-selection trust erosion magnitude (ADR 0051)
+The sustained-run self penalty and bonded-peer base penalty are provisional
+integer calibration knobs at `sim/seasonConfig.ts:13-17`; they deliberately
+change trust only, not morale.
+
+### D142 ⚠ Non-selection trust threshold and redemption
+The sustained-run threshold and weaker selection redemption are provisional
+calibration knobs at `sim/seasonConfig.ts:13-18`; redemption occurs only when
+a member is selected after the threshold and has no passive time component.
+
+### D143 ⚠ Obsolescence threshold (ADR 0051)
+The consecutive available non-selection threshold for obsolescence is
+provisional at `sim/seasonConfig.ts:18`; the outcome is recorded separately
+from trauma retirement and desertion.
+
+### D144 ⚠ No morale effect from non-selection
+The season-boundary mechanism intentionally does not update `M_i`; D22's
+morale semantics remain open and are not resolved by ADR 0051.
 
 ## Suggested decision order
 

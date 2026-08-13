@@ -6,6 +6,7 @@ import type {
   PieceState,
   CredenceState,
 } from '../src/psychology';
+import { clampTrust, sharedBondScalar } from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
@@ -28,6 +29,7 @@ export interface PoolService {
   readonly desertions: number;
   readonly refusals: number;
   readonly captures: number;
+  readonly consecutiveNonSelections: number;
 }
 
 export interface PoolMember {
@@ -36,7 +38,29 @@ export interface PoolMember {
   readonly availableAtMatch: number;
   readonly provenance: 'original' | 'conscript';
   readonly service: PoolService;
+  readonly retirementCause?: 'trauma' | 'obsolescence';
 }
+
+export type PoolEvent =
+  | {
+      readonly t: 'POOL_TRUST_ADJUSTMENT';
+      readonly side: Side;
+      readonly match: number;
+      readonly reason: 'non_selection' | 'selection_redemption';
+      readonly pieceId: PieceId;
+      readonly selfTrustDelta: number;
+      readonly peerTrustDeltas: readonly {
+        readonly pieceId: PieceId;
+        readonly delta: number;
+      }[];
+    }
+  | {
+      readonly t: 'OBSOLESCENCE';
+      readonly side: Side;
+      readonly match: number;
+      readonly pieceId: PieceId;
+      readonly nonSelectionStreak: number;
+    };
 
 export interface CommanderPool {
   readonly id: string;
@@ -59,6 +83,8 @@ export interface PoolSnapshot {
   readonly retired: number;
   readonly conscriptsFielded: number;
   readonly veteransRested: number;
+  readonly passedOverDistribution: Readonly<Record<string, number>>;
+  readonly obsolescenceCount: number;
 }
 
 const STARTING_ROLE_COUNTS: Readonly<Record<PieceRole, number>> = {
@@ -145,6 +171,7 @@ function initialPoolMembers(
           desertions: 0,
           refusals: 0,
           captures: 0,
+          consecutiveNonSelections: 0,
         },
       });
       sequence += 1;
@@ -274,6 +301,7 @@ function conscriptMember(
       desertions: 0,
       refusals: 0,
       captures: 0,
+      consecutiveNonSelections: 0,
     },
   };
 }
@@ -323,8 +351,16 @@ function updateMember(
   status: PoolMember['status'],
   availableAtMatch: number,
   service: PoolService,
+  retirementCause: PoolMember['retirementCause'] = member.retirementCause,
 ): PoolMember {
-  return { ...member, state, status, availableAtMatch, service };
+  return {
+    ...member,
+    state,
+    status,
+    availableAtMatch,
+    service,
+    ...(retirementCause === undefined ? {} : { retirementCause }),
+  };
 }
 
 function foldSide(
@@ -337,46 +373,150 @@ function foldSide(
   fieldedIds: ReadonlySet<PieceId>,
   match: number,
   config: SeasonConfig,
-): CommanderPool {
+): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
   const resultById = new Map(
     [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
   );
   const activeIds = new Set(resultRoster.map((piece) => piece.id));
+  const erosionTargets: { pieceId: PieceId; selfTrustDelta: number }[] = [];
+  const events: PoolEvent[] = [];
   const members = pool.members.map((member) => {
     const wasFielded = fieldedIds.has(member.state.id);
-    if (!wasFielded) return member;
-    const state = resultById.get(member.state.id) ?? member.state;
+    const becameAvailable =
+      member.status === 'recovering' && match >= member.availableAtMatch;
+    const eligible = member.status === 'available' || becameAvailable;
+    let state = wasFielded
+      ? (resultById.get(member.state.id) ?? member.state)
+      : member.state;
+    let status = member.status;
+    let availableAtMatch = member.availableAtMatch;
+    let retirementCause = member.retirementCause;
     const desertion = desertions.has(member.state.id);
-    const captured = !desertion && !activeIds.has(member.state.id);
+    const captured =
+      wasFielded && !desertion && !activeIds.has(member.state.id);
+    let consecutiveNonSelections = member.service.consecutiveNonSelections;
     const service: PoolService = {
-      matchesPlayed: member.service.matchesPlayed + 1,
+      ...member.service,
+      matchesPlayed: member.service.matchesPlayed + (wasFielded ? 1 : 0),
       desertions: member.service.desertions + (desertion ? 1 : 0),
       refusals: member.service.refusals + (refusals.get(member.state.id) ?? 0),
       captures: member.service.captures + (captured ? 1 : 0),
     };
-    if (
-      state.role !== 'King' &&
-      state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-    ) {
-      return updateMember(
-        member,
-        state,
-        'retired',
-        Number.MAX_SAFE_INTEGER,
-        service,
-      );
+
+    if (wasFielded) {
+      if (consecutiveNonSelections >= config.NON_SELECTION_TRUST_THRESHOLD) {
+        state = {
+          ...state,
+          T_i: clampTrust(
+            state.T_i + config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY,
+          ),
+        };
+        events.push({
+          t: 'POOL_TRUST_ADJUSTMENT',
+          side: pool.side,
+          match,
+          reason: 'selection_redemption',
+          pieceId: member.state.id,
+          selfTrustDelta: state.T_i - member.state.T_i,
+          peerTrustDeltas: [],
+        });
+      }
+      consecutiveNonSelections = 0;
+      if (
+        state.role !== 'King' &&
+        state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+      ) {
+        status = 'retired';
+        availableAtMatch = Number.MAX_SAFE_INTEGER;
+        retirementCause = 'trauma';
+      } else if (desertion) {
+        status = 'recovering';
+        availableAtMatch = match + config.DESERTION_ABSENCE_MATCHES + 1;
+      } else {
+        status = 'available';
+        availableAtMatch = match + 1;
+      }
+    } else if (eligible) {
+      consecutiveNonSelections += 1;
+      status = 'available';
+      availableAtMatch = match + 1;
+      if (consecutiveNonSelections === config.NON_SELECTION_TRUST_THRESHOLD) {
+        state = {
+          ...state,
+          T_i: clampTrust(state.T_i + config.NON_SELECTION_SELF_TRUST_PENALTY),
+        };
+        erosionTargets.push({
+          pieceId: member.state.id,
+          selfTrustDelta: state.T_i - member.state.T_i,
+        });
+      }
+      if (
+        state.role !== 'King' &&
+        consecutiveNonSelections >= config.OBSOLESCENCE_NON_SELECTION_THRESHOLD
+      ) {
+        status = 'retired';
+        availableAtMatch = Number.MAX_SAFE_INTEGER;
+        retirementCause = 'obsolescence';
+        events.push({
+          t: 'OBSOLESCENCE',
+          side: pool.side,
+          match,
+          pieceId: member.state.id,
+          nonSelectionStreak: consecutiveNonSelections,
+        });
+      }
     }
-    if (desertion) {
-      return updateMember(
-        member,
-        state,
-        'recovering',
-        match + config.DESERTION_ABSENCE_MATCHES + 1,
-        service,
-      );
-    }
-    return updateMember(member, state, 'available', match + 1, service);
+    const nextService: PoolService = {
+      ...service,
+      consecutiveNonSelections,
+    };
+    return updateMember(
+      member,
+      state,
+      status,
+      availableAtMatch,
+      nextService,
+      retirementCause,
+    );
   });
+  for (const erosion of erosionTargets) {
+    const { pieceId } = erosion;
+    const target = members.find((member) => member.state.id === pieceId);
+    if (target === undefined) continue;
+    const peerTrustDeltas: { pieceId: PieceId; delta: number }[] = [];
+    for (let index = 0; index < members.length; index += 1) {
+      const peer = members[index];
+      if (
+        peer === undefined ||
+        peer.state.id === pieceId ||
+        peer.status === 'retired'
+      ) {
+        continue;
+      }
+      const nextTrust = clampTrust(
+        peer.state.T_i +
+          config.NON_SELECTION_PEER_TRUST_PENALTY *
+            (1 + peer.state.traits.w_empathy) *
+            sharedBondScalar(peer.state, target.state),
+      );
+      const delta = nextTrust - peer.state.T_i;
+      if (delta === 0) continue;
+      peerTrustDeltas.push({ pieceId: peer.state.id, delta });
+      members[index] = {
+        ...peer,
+        state: { ...peer.state, T_i: nextTrust },
+      };
+    }
+    events.push({
+      t: 'POOL_TRUST_ADJUSTMENT',
+      side: pool.side,
+      match,
+      reason: 'non_selection',
+      pieceId,
+      selfTrustDelta: erosion.selfTrustDelta,
+      peerTrustDeltas,
+    });
+  }
   const conscripts = fielded.lineup.filter(
     (member) => member.provenance === 'conscript',
   );
@@ -400,10 +540,11 @@ function foldSide(
         ...conscript.service,
         matchesPlayed: 1,
         refusals: refusals.get(conscript.state.id) ?? 0,
+        consecutiveNonSelections: 0,
       },
     });
   }
-  return { ...pool, members };
+  return { pool: { ...pool, members }, events };
 }
 
 export function foldMatchIntoPools(input: {
@@ -414,7 +555,11 @@ export function foldMatchIntoPools(input: {
   readonly result: HeadlessMatchResult;
   readonly match: number;
   readonly config?: SeasonConfig;
-}): { readonly white: CommanderPool; readonly black: CommanderPool } {
+}): {
+  readonly white: CommanderPool;
+  readonly black: CommanderPool;
+  readonly events: readonly PoolEvent[];
+} {
   const config = input.config ?? SEASON_CONFIG;
   const playerIds = new Set(
     input.whiteFielded.lineup.map((member) => member.state.id),
@@ -450,29 +595,32 @@ export function foldMatchIntoPools(input: {
     if (counts === undefined) continue;
     counts.set(event.pieceId, (counts.get(event.pieceId) ?? 0) + 1);
   }
+  const whiteFold = foldSide(
+    input.white,
+    input.whiteFielded,
+    input.result.roster,
+    input.result.departedRoster,
+    playerDesertions,
+    playerRefusals,
+    playerIds,
+    input.match,
+    config,
+  );
+  const blackFold = foldSide(
+    input.black,
+    input.blackFielded,
+    input.result.enemyRoster,
+    input.result.departedEnemyRoster,
+    enemyDesertions,
+    enemyRefusals,
+    enemyIds,
+    input.match,
+    config,
+  );
   return {
-    white: foldSide(
-      input.white,
-      input.whiteFielded,
-      input.result.roster,
-      input.result.departedRoster,
-      playerDesertions,
-      playerRefusals,
-      playerIds,
-      input.match,
-      config,
-    ),
-    black: foldSide(
-      input.black,
-      input.blackFielded,
-      input.result.enemyRoster,
-      input.result.departedEnemyRoster,
-      enemyDesertions,
-      enemyRefusals,
-      enemyIds,
-      input.match,
-      config,
-    ),
+    white: whiteFold.pool,
+    black: blackFold.pool,
+    events: [...whiteFold.events, ...blackFold.events],
   };
 }
 
@@ -490,6 +638,16 @@ export function poolSnapshot(
       .length,
     conscriptsFielded: fielded.conscriptsFielded,
     veteransRested: fielded.veteransRested,
+    passedOverDistribution: Object.fromEntries(
+      pool.members.reduce((distribution, member) => {
+        const key = String(member.service.consecutiveNonSelections);
+        distribution.set(key, (distribution.get(key) ?? 0) + 1);
+        return distribution;
+      }, new Map<string, number>()),
+    ),
+    obsolescenceCount: pool.members.filter(
+      (member) => member.retirementCause === 'obsolescence',
+    ).length,
   };
 }
 

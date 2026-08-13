@@ -20,6 +20,7 @@ import {
   foldMatchIntoPools,
   poolSnapshot,
   type CommanderPool,
+  type PoolEvent,
   type PoolSnapshot,
 } from './pool';
 import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
@@ -40,6 +41,7 @@ export interface SeasonResult {
   readonly horizon: readonly CampaignHorizon[];
   readonly whiteSnapshots: readonly PoolSnapshot[];
   readonly blackSnapshots: readonly PoolSnapshot[];
+  readonly poolEvents: readonly PoolEvent[];
   readonly finalWhitePool: CommanderPool;
   readonly finalBlackPool: CommanderPool;
 }
@@ -69,6 +71,7 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
   const metrics: MatchMetrics[] = [];
   const whiteSnapshots: PoolSnapshot[] = [];
   const blackSnapshots: PoolSnapshot[] = [];
+  const poolEvents: PoolEvent[] = [];
   const engine =
     options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
   const ownedEngine = options.engine === undefined;
@@ -92,15 +95,13 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
         enemyTrackedIdentities: 16,
         engine,
       });
-      metrics.push(
-        metricsFromMatch(
-          match,
-          matchSeed,
-          options.whiteStyle,
-          whiteLineup,
-          result,
-          result.refusedGoodMoves,
-        ),
+      const matchMetric = metricsFromMatch(
+        match,
+        matchSeed,
+        options.whiteStyle,
+        whiteLineup,
+        result,
+        result.refusedGoodMoves,
       );
       const folded = foldMatchIntoPools({
         white: whitePool,
@@ -111,8 +112,22 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
         match,
         config,
       });
-      whiteSnapshots.push(poolSnapshot(folded.white, whiteFielded));
-      blackSnapshots.push(poolSnapshot(folded.black, blackFielded));
+      const whiteSnapshot = poolSnapshot(folded.white, whiteFielded);
+      const blackSnapshot = poolSnapshot(folded.black, blackFielded);
+      poolEvents.push(...folded.events);
+      metrics.push({
+        ...matchMetric,
+        passedOverDistribution: whiteSnapshot.passedOverDistribution,
+        enemyPassedOverDistribution: blackSnapshot.passedOverDistribution,
+        obsolescenceCount: folded.events.filter(
+          (event) => event.t === 'OBSOLESCENCE' && event.side === 'w',
+        ).length,
+        enemyObsolescenceCount: folded.events.filter(
+          (event) => event.t === 'OBSOLESCENCE' && event.side === 'b',
+        ).length,
+      });
+      whiteSnapshots.push(whiteSnapshot);
+      blackSnapshots.push(blackSnapshot);
       whitePool = folded.white;
       blackPool = folded.black;
     }
@@ -124,6 +139,7 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     horizon: buildHorizonSeries(metrics),
     whiteSnapshots,
     blackSnapshots,
+    poolEvents,
     finalWhitePool: whitePool,
     finalBlackPool: blackPool,
   };
