@@ -34,19 +34,12 @@ export function PieceOverlay({
   const { column, row } = squareGridPosition(square);
 
   return (
-    <div
+    <button
+      type="button"
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
       aria-label={`${piece.role} trust ${piece.T_i} morale ${piece.M_i}`}
       onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect?.();
-        }
-      }}
-      role="button"
-      tabIndex={0}
     >
       <div
         className="piece-overlay__aura"
@@ -65,6 +58,6 @@ export function PieceOverlay({
           !
         </div>
       ) : null}
-    </div>
+    </button>
   );
 }

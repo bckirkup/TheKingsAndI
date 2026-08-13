@@ -76,6 +76,10 @@
   position: relative;
   pointer-events: auto;
   cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
 }
 
 .piece-overlay--selected {
@@ -135,6 +139,11 @@
   background: var(--surface);
   border: 1px solid var(--grid-line);
   padding: 0.75rem;
+}
+
+.override-panel {
+  margin: 0;
+  color: inherit;
 }
 
 .relationship-inspector h2,

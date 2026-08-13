@@ -18,7 +18,7 @@ import {
 
 /** Keep a failing piece — costly signal `retained_piece` (trust_dynamics §3). */
 export function applyRetainFailingPiece(
-  piece: StoredPieceState,
+  _piece: StoredPieceState,
   roster: readonly StoredPieceState[],
   ply: number,
 ): {
@@ -31,7 +31,6 @@ export function applyRetainFailingPiece(
     events.push(applied.event);
     return { ...entry, T_i: applied.piece.T_i };
   });
-  void piece;
   return { roster: next, events };
 }
 

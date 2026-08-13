@@ -131,7 +131,7 @@ export interface TrustTrajectoryBin {
   readonly meanTrustEnd: number;
 }
 
-export interface CampaignTrajectoryBand {
+export type CampaignTrajectoryBand = {
   readonly quartile: 1 | 2 | 3 | 4;
   readonly startMatch: number;
   readonly endMatch: number;
@@ -157,7 +157,7 @@ export interface CampaignTrajectoryBand {
   readonly meanDesertionDifferential: number;
   readonly meanRefusalRateDifferential: number;
   readonly meanWinScore: number;
-}
+};
 
 export interface CampaignHorizon {
   readonly horizon: number;
