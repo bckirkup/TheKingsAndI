@@ -226,6 +226,21 @@ function availableAt(member: PoolMember, match: number): boolean {
   );
 }
 
+function statusForConscript(
+  state: PieceState,
+  desertions: ReadonlySet<PieceId>,
+  config: SeasonConfig,
+): PoolMember['status'] {
+  if (
+    state.role !== 'King' &&
+    state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+  ) {
+    return 'retired';
+  }
+  if (desertions.has(state.id)) return 'recovering';
+  return 'available';
+}
+
 function compareForPolicy(
   policy: FieldingPolicy,
   left: PoolMember,
@@ -538,16 +553,7 @@ function foldSide(
     members.push({
       ...conscript,
       state,
-      status: (() => {
-        if (
-          state.role !== 'King' &&
-          state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-        ) {
-          return 'retired';
-        }
-        if (desertions.has(state.id)) return 'recovering';
-        return 'available';
-      })(),
+      status: statusForConscript(state, desertions, config),
       availableAtMatch: desertions.has(state.id)
         ? match + config.DESERTION_ABSENCE_MATCHES + 1
         : match + 1,
