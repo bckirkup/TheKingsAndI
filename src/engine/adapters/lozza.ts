@@ -8,7 +8,7 @@ import {
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
 } from '../search';
-import type { EngineEvaluation, EnginePort, EvalProfile } from '../types';
+import type { EngineEvaluation, EnginePort } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
 const LOZZA_HASH_MB = 16;
@@ -143,12 +143,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   };
   return {
     determinismId,
-    async evaluate(
-      fen: string,
-      depth: number,
-      evalProfile: EvalProfile = {},
-    ): Promise<EngineEvaluation> {
-      void evalProfile;
+    async evaluate(fen: string, depth: number): Promise<EngineEvaluation> {
       const ladder = await ladderFor(fen, depth);
       const result = bestAvailableResult(ladder, depth);
       if (result === undefined) {

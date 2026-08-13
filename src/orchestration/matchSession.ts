@@ -171,7 +171,7 @@ export class MatchSession {
   private board: LivingBoard;
   private roster: PieceState[];
   private enemyRoster: PieceState[];
-  private events: MatchEvent[] = [];
+  private readonly events: MatchEvent[] = [];
   private ply = 1;
   private phase: MatchPhase = 'playing';
   private pending: PendingVerdict | null = null;
@@ -713,7 +713,7 @@ export class MatchSession {
     }
 
     const moveFeatures = features;
-    void this.applyPostCommitPsychology(
+    this.applyPostCommitPsychology(
       actor,
       outcome,
       moveEval,

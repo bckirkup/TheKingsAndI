@@ -61,10 +61,10 @@ export function OverridePanel({
   onReplan,
 }: OverridePanelProps): JSX.Element {
   return (
-    <div className="override-panel" role="dialog" aria-modal="true">
+    <dialog open className="override-panel">
       <h2>Refusal — override available</h2>
       <p>
-        <strong>{pending.actor.role}</strong> refused <code>{pending.san}</code>
+        <strong>{pending.actor.role}</strong> refused <code>{pending.san}</code>{' '}
         . You may force the order or re-plan at no turn cost.
       </p>
       <DivergenceDisplay pending={pending} />
@@ -85,7 +85,7 @@ export function OverridePanel({
           Re-plan (free)
         </button>
       </div>
-    </div>
+    </dialog>
   );
 }
 

@@ -76,6 +76,10 @@
   position: relative;
   pointer-events: auto;
   cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
 }
 
 .piece-overlay--selected {
@@ -83,12 +87,14 @@
 }
 
 .piece-overlay__aura {
+  display: block;
   position: absolute;
   inset: 12%;
   border-radius: 50%;
 }
 
 .piece-overlay__morale {
+  display: block;
   position: absolute;
   right: 4px;
   bottom: 4px;
@@ -99,6 +105,7 @@
 }
 
 .piece-overlay__morale-fill {
+  display: block;
   position: absolute;
   bottom: 0;
   left: 0;
@@ -107,6 +114,7 @@
 }
 
 .piece-overlay__betrayal {
+  display: grid;
   position: absolute;
   top: 2px;
   left: 2px;
@@ -116,7 +124,6 @@
   background: var(--accent-danger);
   color: white;
   font-size: 10px;
-  display: grid;
   place-items: center;
   font-weight: 700;
 }
@@ -135,6 +142,18 @@
   background: var(--surface);
   border: 1px solid var(--grid-line);
   padding: 0.75rem;
+}
+
+.override-panel {
+  position: static;
+  inset: auto;
+  margin: 0;
+  color: inherit;
+  border: 1px solid var(--grid-line);
+  background: var(--surface);
+  width: auto;
+  max-width: none;
+  max-height: none;
 }
 
 .relationship-inspector h2,

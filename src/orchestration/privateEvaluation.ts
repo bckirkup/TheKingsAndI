@@ -7,6 +7,7 @@ import {
 import { compareCodeUnits } from '../core/canonicalJson';
 import { attentionWeight, ENGINE_CONFIG, type PieceState } from '../psychology';
 import type { EngineEvaluation, EvalProfile } from '../engine/types';
+import { comparePieceIds } from '../core/ids';
 
 const PROFILE_SCALE = 1_000;
 const MATE_SCORE_FLOOR = 29_000;
@@ -197,7 +198,7 @@ function relevantPeerIds(
         pieceId !== actor.id &&
         profileValue(profile, `weight:peer:${pieceId}`) > 0,
     )
-    .sort(compareCodeUnits);
+    .sort(comparePieceIds);
 }
 
 function lineIsAttended(
