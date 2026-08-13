@@ -102,12 +102,14 @@ export function evaluateConsumerPacing(
 
   const beats: PacingBeatObservation[] = consumerLeadershipBeats().map(
     (beat) => {
-      const observed =
-        beat.id === 'first_refusal_or_override'
-          ? (firstSignal?.matchIndex ?? null)
-          : beat.id === 'trust_or_desertion_signal'
-            ? (trustSignal?.matchIndex ?? null)
-            : (gapSignal?.matchIndex ?? null);
+      let observed: number | null;
+      if (beat.id === 'first_refusal_or_override') {
+        observed = firstSignal?.matchIndex ?? null;
+      } else if (beat.id === 'trust_or_desertion_signal') {
+        observed = trustSignal?.matchIndex ?? null;
+      } else {
+        observed = gapSignal?.matchIndex ?? null;
+      }
       const satisfied = observed !== null && observed <= beat.byMatchIndex;
       return {
         id: beat.id,

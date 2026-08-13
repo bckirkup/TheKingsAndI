@@ -34,7 +34,10 @@ function traitsForRole(role: Role, randomUnit: number): PieceTraits {
 }
 
 function classPrestigeFor(role: Role): PieceState['classPrestige'] {
-  const pawnBias = role === 'P' ? -10 : role === 'N' || role === 'B' ? 5 : 15;
+  let pawnBias: number;
+  if (role === 'P') pawnBias = -10;
+  else if (role === 'N' || role === 'B') pawnBias = 5;
+  else pawnBias = 15;
   return {
     Pawn: pawnBias - 20,
     Knight: pawnBias,
@@ -43,6 +46,12 @@ function classPrestigeFor(role: Role): PieceState['classPrestige'] {
     Queen: pawnBias + 20,
     King: 50,
   };
+}
+
+function experienceForRole(role: Role): number {
+  if (role === 'P') return 20;
+  if (role === 'K') return 80;
+  return 55;
 }
 
 export function createStartingRoster(
@@ -56,7 +65,7 @@ export function createStartingRoster(
       id: piece.id,
       role: ROLE_MAP[piece.role],
       traits: traitsForRole(piece.role, randomUnit),
-      E_i: piece.role === 'P' ? 20 : piece.role === 'K' ? 80 : 55,
+      E_i: experienceForRole(piece.role),
       T_i: initialTrust,
       M_i: 70,
       B_i: 0,

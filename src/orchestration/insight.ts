@@ -19,6 +19,12 @@ import { applyPrivateEvaluation, evalProfileFor } from './privateEvaluation';
 
 export { evalProfileFor } from './privateEvaluation';
 
+function compareIds(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 export const LEADER_INSIGHT_SEAT_ID = '\u0000leader';
 const BEFORE_INSIGHT_PREFIX = '\u0000before:';
 
@@ -90,7 +96,7 @@ export async function resolveMoverInsights(
   const terminalScore = terminalMoveScore(probe);
   if (terminalScore !== undefined) {
     const orderedRoster = [...roster].sort((left, right) =>
-      left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
+      compareIds(left.id, right.id),
     );
     const beforeProfiles = new Map(
       orderedRoster.map((piece) => [piece.id, evalProfileFor(piece, board)]),
@@ -195,7 +201,7 @@ export async function resolveMoverInsights(
   const beforeFen = board.fen();
   const fen = probe.fen();
   const orderedRoster = [...roster].sort((left, right) =>
-    left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
+    compareIds(left.id, right.id),
   );
   const profiles = new Map(
     orderedRoster.map((piece) => [piece.id, evalProfileFor(piece, probe)]),

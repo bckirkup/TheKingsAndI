@@ -109,8 +109,8 @@ function quantized(thousandths: number): number {
 }
 
 function ringSquaresOf(square: Square): Square[] {
-  const file = square.charCodeAt(0);
-  const rank = square.charCodeAt(1);
+  const file = square.codePointAt(0) ?? Number.NaN;
+  const rank = square.codePointAt(1) ?? Number.NaN;
   const squares: Square[] = [];
   for (const fileStep of [-1, 0, 1]) {
     for (const rankStep of [-1, 0, 1]) {
@@ -120,7 +120,7 @@ function ringSquaresOf(square: Square): Square[] {
       if (nextFile < 97 || nextFile > 104) continue;
       if (nextRank < 49 || nextRank > 56) continue;
       squares.push(
-        `${String.fromCharCode(nextFile)}${String.fromCharCode(nextRank)}` as Square,
+        `${String.fromCodePoint(nextFile)}${String.fromCodePoint(nextRank)}` as Square,
       );
     }
   }

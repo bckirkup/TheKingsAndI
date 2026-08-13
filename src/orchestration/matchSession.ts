@@ -277,7 +277,7 @@ export class MatchSession {
     if (!this.board.isLegal(intent)) return false;
 
     const mover = this.board.pieceAt(intent.from);
-    if (mover === undefined || mover.side !== this.playerSide) return false;
+    if (mover?.side !== this.playerSide) return false;
 
     const actor = this.roster.find((piece) => piece.id === mover.id);
     if (actor === undefined) return false;
@@ -435,7 +435,7 @@ export class MatchSession {
 
   replanAfterRefusal(): void {
     const pending = this.pending;
-    if (pending === null || pending.verdict !== 'MORAL_REFUSAL') return;
+    if (pending?.verdict !== 'MORAL_REFUSAL') return;
     const justified = pending.justified;
 
     const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
@@ -474,7 +474,7 @@ export class MatchSession {
 
   async confirmOverride(): Promise<void> {
     const pending = this.pending;
-    if (pending === null || pending.verdict !== 'MORAL_REFUSAL') return;
+    if (pending?.verdict !== 'MORAL_REFUSAL') return;
 
     const witnesses = this.roster.filter(
       (piece) => piece.id !== pending.actor.id,
@@ -529,7 +529,7 @@ export class MatchSession {
 
   async acknowledgeDesertion(): Promise<void> {
     const pending = this.pending;
-    if (pending === null || pending.verdict !== 'DESERTION_MUTINY') return;
+    if (pending?.verdict !== 'DESERTION_MUTINY') return;
 
     const cascade = applyDesertionWithCascade(
       this.roster,

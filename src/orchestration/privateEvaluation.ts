@@ -40,7 +40,7 @@ function quantizeSigned(value: number): number {
 }
 
 function coordinates(square: Square): readonly [number, number] {
-  return [square.charCodeAt(0) - 97, square.charCodeAt(1) - 49];
+  return [(square.codePointAt(0) ?? 0) - 97, (square.codePointAt(1) ?? 0) - 49];
 }
 
 function boardDistance(left: Square, right: Square): number {
@@ -67,7 +67,7 @@ function lineBlocked(board: LivingBoard, from: Square, to: Square): boolean {
   let file = fromFile + fileStep;
   let rank = fromRank + rankStep;
   while (file !== toFile || rank !== toRank) {
-    const square = `${String.fromCharCode(97 + file)}${rank + 1}` as Square;
+    const square = `${String.fromCodePoint(97 + file)}${rank + 1}` as Square;
     if (board.pieceAt(square) !== undefined) return true;
     file += fileStep;
     rank += rankStep;
@@ -265,7 +265,7 @@ export function evalProfileFor(
   return Object.freeze(
     Object.fromEntries(
       Object.entries(profile).sort(([left], [right]) =>
-        left < right ? -1 : left > right ? 1 : 0,
+        comparePieceIds(left, right),
       ),
     ),
   );

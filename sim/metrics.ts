@@ -629,7 +629,7 @@ export function buildTrajectoryBands(
       (metric) => quartileForMatch(metric.match, matches) === quartile,
     );
     const first = metrics[0];
-    const last = metrics[metrics.length - 1];
+    const last = metrics.at(-1);
     const mean = (pick: (metric: MatchMetrics) => number): number =>
       metrics.reduce((sum, metric) => sum + pick(metric), 0) /
       Math.max(1, metrics.length);
@@ -737,7 +737,7 @@ function aggregateCampaignCore(
     match: metric.match,
     meanTrustEnd: metric.meanTrustEnd,
   }));
-  const last = matchMetrics[matchMetrics.length - 1];
+  const last = matchMetrics.at(-1);
   const perRoleCulture: PerRoleCultureMetric[] =
     last === undefined
       ? []

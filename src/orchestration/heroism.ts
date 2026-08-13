@@ -7,11 +7,11 @@ import type {
 
 import { HEROISM_CONFIG } from './heroismConfig';
 
-const DUTY_VERDICTS: readonly MoveResponseVerdict[] = [
+const DUTY_VERDICTS = new Set<MoveResponseVerdict>([
   'HEROIC_EXECUTION',
   'COMPLIANT_EXECUTION',
   'FATALISTIC_COMPLIANCE',
-];
+]);
 
 export function engineAuditEntry(input: {
   readonly ply: number;
@@ -48,8 +48,8 @@ export function heroismNomination(
   const move = events.find(
     (event) => event.t === 'MOVE' && 'ply' in event && event.ply === audit.ply,
   );
-  if (move === undefined || move.t !== 'MOVE') return undefined;
-  if (!DUTY_VERDICTS.includes(move.verdict)) return undefined;
+  if (move?.t !== 'MOVE') return undefined;
+  if (!DUTY_VERDICTS.has(move.verdict)) return undefined;
   if (
     events.some(
       (event) =>

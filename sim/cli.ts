@@ -211,12 +211,12 @@ function parseArguments(
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
-  const depthCapValue =
-    values.get('depth-cap') === undefined
-      ? engineValue === 'lozza'
-        ? 4
-        : undefined
-      : Number(values.get('depth-cap'));
+  let depthCapValue: number | undefined;
+  if (values.get('depth-cap') === undefined) {
+    depthCapValue = engineValue === 'lozza' ? 4 : undefined;
+  } else {
+    depthCapValue = Number(values.get('depth-cap'));
+  }
   if (
     depthCapValue !== undefined &&
     (!Number.isSafeInteger(depthCapValue) || depthCapValue < 1)
@@ -421,10 +421,10 @@ async function main(): Promise<void> {
 
 const isMain =
   process.argv[1] !== undefined &&
-  import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+  import.meta.url.endsWith(process.argv[1].replaceAll('\\', '/'));
 
 if (isMain) {
-  main().catch((error: unknown) => {
+  await main().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   });

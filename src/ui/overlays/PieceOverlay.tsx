@@ -14,7 +14,7 @@ function trustHue(trust: number): string {
 }
 
 function squareGridPosition(square: string): { column: number; row: number } {
-  const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
+  const file = (square.codePointAt(0) ?? 0) - ('a'.codePointAt(0) ?? 0);
   const rank = Number.parseInt(square.charAt(1), 10);
   return { column: file + 1, row: 9 - rank };
 }

@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { createFakeEnginePort } from '../engine/fake';
 import { lineFor } from '../narrative';
-import type { OpponentArchetype } from '../persistence';
+import type {
+  MatchResult,
+  OpponentArchetype,
+  StoredPieceState,
+} from '../persistence';
 import {
   MatchSession,
   type MatchSessionSnapshot,
 } from '../orchestration/matchSession';
 import { classifyMatchResult } from '../orchestration/terminalState';
-import type { MatchResult, StoredPieceState } from '../persistence';
 import type { MatchEvent } from '../psychology';
 import {
   activeLineup,
@@ -23,6 +26,21 @@ import {
   QuietQuitPanel,
 } from '../ui/panels/VerdictPanels';
 import { RelationshipInspector } from '../ui/panels/RelationshipInspector';
+
+function matchStatus(
+  phase: MatchSessionSnapshot['phase'],
+  turn: 'w' | 'b',
+  playerSide: 'w' | 'b',
+): string {
+  if (phase === 'rout') return 'Rout — roster shattered';
+  if (phase === 'succession_spectate') {
+    return 'Dismissed — the King commands the remainder';
+  }
+  if (phase === 'game_over') return 'Match over';
+  if (phase === 'awaiting_player') return 'Awaiting your decision';
+  if (phase === 'thinking') return 'Consulting the pieces…';
+  return turn === playerSide ? 'Your command' : 'Opponent moving…';
+}
 
 function useMatchSession(
   seed: number,
@@ -142,20 +160,7 @@ export function MatchScreen({
       <header className="match-screen__header">
         <h1>The Kings and I</h1>
         <p className="match-screen__status">
-          Ply {snapshot.ply} ·{' '}
-          {phase === 'rout'
-            ? 'Rout — roster shattered'
-            : phase === 'succession_spectate'
-              ? 'Dismissed — the King commands the remainder'
-              : phase === 'game_over'
-                ? 'Match over'
-                : phase === 'awaiting_player'
-                  ? 'Awaiting your decision'
-                  : phase === 'thinking'
-                    ? 'Consulting the pieces…'
-                    : board.turn() === playerSide
-                      ? 'Your command'
-                      : 'Opponent moving…'}
+          Ply {snapshot.ply} · {matchStatus(phase, board.turn(), playerSide)}
         </p>
       </header>
 

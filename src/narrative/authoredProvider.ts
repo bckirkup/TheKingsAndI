@@ -104,7 +104,7 @@ function pickVariant(
   // consecutive plies never repeat, and a bank is exhausted before it recurs
   // (the "no repetition within a match" rule, narrative-llm skill). Still a pure
   // function of its inputs, so replays reproduce the line byte for byte.
-  const roleOffset = pieceRole.charCodeAt(0) * 17;
+  const roleOffset = (pieceRole.codePointAt(0) ?? 0) * 17;
   const base = Math.abs((seed ^ roleOffset) | 0);
   const index = (base + ply) % variants.length;
   return variants[index] ?? variants[0] ?? '';

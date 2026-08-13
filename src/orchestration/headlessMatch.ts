@@ -6,9 +6,9 @@ import {
   type PieceId,
   type PieceIdFactory,
   type Role,
+  type Side,
   type Square,
 } from '../chess';
-import type { Side } from '../chess';
 import type { SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
@@ -59,6 +59,15 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
+
+function roleNameFor(role: Role): string {
+  if (role === 'P') return 'Pawn';
+  if (role === 'N') return 'Knight';
+  if (role === 'B') return 'Bishop';
+  if (role === 'R') return 'Rook';
+  if (role === 'Q') return 'Queen';
+  return 'King';
+}
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -172,18 +181,7 @@ function lineupPieceIdFactory(
     const index = counts[key] ?? 0;
     counts[key] = index + 1;
     const lineup = lineups[side];
-    const roleName =
-      role === 'P'
-        ? 'Pawn'
-        : role === 'N'
-          ? 'Knight'
-          : role === 'B'
-            ? 'Bishop'
-            : role === 'R'
-              ? 'Rook'
-              : role === 'Q'
-                ? 'Queen'
-                : 'King';
+    const roleName = roleNameFor(role);
     const candidates = lineup?.filter((piece) => piece.role === roleName) ?? [];
     const piece = candidates[index];
     if (piece !== undefined) return piece.id;

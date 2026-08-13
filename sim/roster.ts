@@ -1,4 +1,4 @@
-import { LivingBoard, startingSquarePieceId } from '../src/chess';
+import { LivingBoard } from '../src/chess';
 import type { PieceId, Role, Side } from '../src/chess';
 import {
   defaultCredence,
@@ -43,7 +43,10 @@ function traitsForRole(role: Role, randomUnit: number): PieceTraits {
 }
 
 function classPrestigeFor(role: Role): PieceState['classPrestige'] {
-  const pawnBias = role === 'P' ? -10 : role === 'N' || role === 'B' ? 5 : 15;
+  let pawnBias: number;
+  if (role === 'P') pawnBias = -10;
+  else if (role === 'N' || role === 'B') pawnBias = 5;
+  else pawnBias = 15;
   return {
     Pawn: pawnBias - 20,
     Knight: pawnBias,
@@ -52,6 +55,12 @@ function classPrestigeFor(role: Role): PieceState['classPrestige'] {
     Queen: pawnBias + 20,
     King: 50,
   };
+}
+
+function experienceForRole(role: Role): number {
+  if (role === 'P') return 20;
+  if (role === 'K') return 80;
+  return 55;
 }
 
 export function createFreshPieceState(
@@ -65,7 +74,7 @@ export function createFreshPieceState(
     id,
     role,
     traits: traitsForRole(chessRole, randomUnit),
-    E_i: chessRole === 'P' ? 20 : chessRole === 'K' ? 80 : 55,
+    E_i: experienceForRole(chessRole),
     T_i: initialTrust,
     M_i: 70,
     B_i: 0,
@@ -164,4 +173,4 @@ export function meanClassContempt(roster: readonly PieceState[]): number {
   return total / count;
 }
 
-export { startingSquarePieceId };
+export { startingSquarePieceId } from '../src/chess';

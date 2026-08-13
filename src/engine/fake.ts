@@ -54,7 +54,7 @@ function parsePieces(fen: string): {
 }
 
 function square(file: number, rank: number): string {
-  return `${String.fromCharCode(97 + file)}${rank + 1}`;
+  return `${String.fromCodePoint(97 + file)}${rank + 1}`;
 }
 
 function inside(file: number, rank: number): boolean {
@@ -174,7 +174,7 @@ function applyPseudoMove(pieces: FakePiece[], move: string): void {
   const index = pieces.indexOf(mover);
   pieces[index] = {
     ...mover,
-    file: to.charCodeAt(0) - 97,
+    file: (to.codePointAt(0) ?? 0) - 97,
     rank: Number(to[1]) - 1,
   };
 }
@@ -234,8 +234,10 @@ export function createFakeEnginePort(
       const rank = 1 + (Math.abs(pvHash >> 3) % 2);
       const toFile = file;
       const toRank = rank + 1;
-      const fileChar = String.fromCharCode('a'.charCodeAt(0) + file);
-      const toFileChar = String.fromCharCode('a'.charCodeAt(0) + toFile);
+      const fileChar = String.fromCodePoint(('a'.codePointAt(0) ?? 0) + file);
+      const toFileChar = String.fromCodePoint(
+        ('a'.codePointAt(0) ?? 0) + toFile,
+      );
       return Object.freeze({
         scoreCp,
         pv: Object.freeze([

@@ -2,13 +2,8 @@ import { digest } from '../core/digest';
 
 import { buildCampaignDebrief } from './folds';
 import { foldCampaignTranscript } from './transcript';
-import type {
-  CampaignDebrief,
-  CampaignTranscript,
-  CareerRecord,
-  CertificateBundle,
-  MatchRecord,
-} from './types';
+import type { CareerRecord, CertificateBundle, MatchRecord } from './types';
+export type { CampaignDebrief, CampaignTranscript } from './types';
 import { CERTIFICATE_VERSION } from './types';
 
 export function buildCertificateBundle(input: {
@@ -52,5 +47,3 @@ export function verifyCertificateDigest(bundle: CertificateBundle): boolean {
   void contentDigest;
   return digest(payload) === bundle.contentDigest;
 }
-
-export type { CampaignDebrief, CampaignTranscript };

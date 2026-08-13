@@ -37,20 +37,15 @@ export function intentFromKeys(
   if (promotionRole === undefined) {
     return intentFromOrigDest(board, orig, dest);
   }
-  const promotion =
-    promotionRole === undefined
-      ? undefined
-      : promotionRole === 'q'
-        ? 'Q'
-        : promotionRole === 'r'
-          ? 'R'
-          : promotionRole === 'b'
-            ? 'B'
-            : 'N';
+  let promotion: 'Q' | 'R' | 'B' | 'N';
+  if (promotionRole === 'q') promotion = 'Q';
+  else if (promotionRole === 'r') promotion = 'R';
+  else if (promotionRole === 'b') promotion = 'B';
+  else promotion = 'N';
   const intent: MoveIntent = {
     from: orig as Square,
     to: dest as Square,
-    ...(promotion === undefined ? {} : { promotion }),
+    promotion,
   };
   return board.isLegal(intent) ? intent : undefined;
 }

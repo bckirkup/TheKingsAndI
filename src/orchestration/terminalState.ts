@@ -16,8 +16,8 @@ export function classifyActTerminal(
   results: readonly MatchResult[],
   kingsRemaining: number,
 ): ActTerminalState {
-  if (results.some((result) => result === 'ROUT')) return 'rout';
-  if (results.some((result) => result === 'DISMISSED')) {
+  if (results.includes('ROUT')) return 'rout';
+  if (results.includes('DISMISSED')) {
     return kingsRemaining <= 0 ? 'dismissal' : 'ongoing';
   }
   if (results.at(-1) === 'WIN') return 'victory';

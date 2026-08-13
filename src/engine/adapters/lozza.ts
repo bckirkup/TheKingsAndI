@@ -59,14 +59,12 @@ function getState(enginePath: string): LozzaEngineState {
 }
 
 function getBestEngine(state: LozzaEngineState, enginePath: string): UciEngine {
-  if (state.bestEngine === undefined) {
-    state.bestEngine = new UciEngine({
-      enginePath,
-      hashMb: LOZZA_HASH_MB,
-      threads: 1,
-      multiPv: 1,
-    });
-  }
+  state.bestEngine ??= new UciEngine({
+    enginePath,
+    hashMb: LOZZA_HASH_MB,
+    threads: 1,
+    multiPv: 1,
+  });
   return state.bestEngine;
 }
 
