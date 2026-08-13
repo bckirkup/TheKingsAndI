@@ -21,8 +21,7 @@ case "$max_vcpus" in
     exit 2
     ;;
   *)
-    echo 'Unexpected MAX_VCPUS value.' >&2
-    exit 2
+    : # Value validated.
     ;;
 esac
 

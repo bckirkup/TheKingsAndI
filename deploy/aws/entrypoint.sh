@@ -17,23 +17,23 @@ output_root="${OUTPUT_DIR:-/work/output}"
 
 case "$shard_index" in
   ''|*[!0-9]*) echo 'AWS_BATCH_JOB_ARRAY_INDEX must be a non-negative integer.' >&2; exit 2 ;;
-  *) echo 'Unexpected AWS_BATCH_JOB_ARRAY_INDEX value.' >&2; exit 2 ;;
+  *) : # Value validated. ;;
 esac
 case "$SHARD_COUNT" in
   ''|*[!0-9]*|0) echo 'SHARD_COUNT must be a positive integer.' >&2; exit 2 ;;
-  *) echo 'Unexpected SHARD_COUNT value.' >&2; exit 2 ;;
+  *) : # Value validated. ;;
 esac
 case "$CAMPAIGNS" in
   ''|*[!0-9]*|0) echo 'CAMPAIGNS must be a positive integer.' >&2; exit 2 ;;
-  *) echo 'Unexpected CAMPAIGNS value.' >&2; exit 2 ;;
+  *) : # Value validated. ;;
 esac
 case "$CAMPAIGN_LENGTH" in
   ''|*[!0-9]*|0) echo 'CAMPAIGN_LENGTH must be a positive integer.' >&2; exit 2 ;;
-  *) echo 'Unexpected CAMPAIGN_LENGTH value.' >&2; exit 2 ;;
+  *) : # Value validated. ;;
 esac
 case "$DEPTH_CAP" in
   ''|*[!0-9]*|0) echo 'DEPTH_CAP must be a positive integer.' >&2; exit 2 ;;
-  *) echo 'Unexpected DEPTH_CAP value.' >&2; exit 2 ;;
+  *) : # Value validated. ;;
 esac
 
 if [ "$shard_index" -ge "$SHARD_COUNT" ]; then

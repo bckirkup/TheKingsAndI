@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: pre-commit
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
       - name: Required planning docs present
         run: |
           for f in AGENTS.md README.md CONTRIBUTING.md LICENSING.md \
@@ -75,4 +75,4 @@ jobs:
           path: coverage
       - name: SonarQube scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
