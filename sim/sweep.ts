@@ -39,7 +39,7 @@ function parseList(flag: string | undefined, fallback: number[]): number[] {
   return flag.split(',').map((part) => {
     const value = Number(part);
     if (!Number.isFinite(value)) {
-      throw new Error(`Invalid sweep value: ${part}`);
+      throw new TypeError(`Invalid sweep value: ${part}`);
     }
     return value;
   });
@@ -56,7 +56,9 @@ export async function runCoefficientSweep(options: {
 }): Promise<readonly SweepPoint[]> {
   const original = MUTABLE_CONFIG[options.knob as string];
   if (typeof original !== 'number') {
-    throw new Error(`Knob ${String(options.knob)} is not a numeric config.`);
+    throw new TypeError(
+      `Knob ${String(options.knob)} is not a numeric config.`,
+    );
   }
   const plainWin = plainChessMeanWinScore({
     matches: options.matches,
@@ -123,12 +125,12 @@ function parseArgs(argv: readonly string[]): {
   if (!ENGINES.includes(engine as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
-  const depthCapValue =
-    map.get('depth-cap') === undefined
-      ? engine === 'lozza'
-        ? 4
-        : undefined
-      : Number(map.get('depth-cap'));
+  let depthCapValue: number | undefined;
+  if (map.get('depth-cap') === undefined) {
+    depthCapValue = engine === 'lozza' ? 4 : undefined;
+  } else {
+    depthCapValue = Number(map.get('depth-cap'));
+  }
   if (
     depthCapValue !== undefined &&
     (!Number.isSafeInteger(depthCapValue) || depthCapValue < 1)
@@ -179,7 +181,7 @@ async function main(): Promise<void> {
 
 const isMain =
   process.argv[1] !== undefined &&
-  import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+  import.meta.url.endsWith(process.argv[1].replaceAll('\\', '/'));
 
 if (isMain) {
   main().catch((error: unknown) => {

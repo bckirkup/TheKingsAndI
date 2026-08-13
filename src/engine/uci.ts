@@ -65,14 +65,14 @@ function parseScoreCp(tokens: readonly string[]): number {
   if (kind === 'cp') {
     const cp = Number(value);
     if (!Number.isSafeInteger(cp)) {
-      throw new Error(`Non-integer centipawn score: ${value}`);
+      throw new TypeError(`Non-integer centipawn score: ${value}`);
     }
     return cp;
   }
   if (kind === 'mate') {
     const mateIn = Number(value);
     if (!Number.isSafeInteger(mateIn)) {
-      throw new Error(`Invalid mate score: ${value}`);
+      throw new TypeError(`Invalid mate score: ${value}`);
     }
     // Lozza reports an immediate forced mate as `mate 0` alongside the mating
     // pv, so treat it as decisive for the side to move. Orchestration scores

@@ -27,7 +27,8 @@ export function applySustainedDread(
   const serious = currentRisk >= threshold;
   const sustained =
     serious && previous !== undefined && previous.risk >= threshold;
-  const streak = serious ? (sustained ? previous.streak + 1 : 1) : 0;
+  let streak = 0;
+  if (serious) streak = sustained ? previous.streak + 1 : 1;
   const required = Math.max(2, Math.trunc(ENGINE_CONFIG.DREAD_REQUIRED_PLIES));
   const injured = streak >= required && (previous?.streak ?? 0) < required;
   return {

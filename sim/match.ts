@@ -31,7 +31,7 @@ function leaderPort(
       const choice = policy.chooseMove(board, moves, random, context);
       if (choice === undefined) return undefined;
       const mover = board.pieceAt(choice.intent.from);
-      if (mover === undefined || mover.side !== side) return undefined;
+      if (mover?.side !== side) return undefined;
       return {
         moverId: mover.id,
         intent: choice.intent,

@@ -153,7 +153,7 @@ describe('King results channel and diminished act (ADR 0024)', () => {
       makePiece({ id: `p${index}`, T_i: index }),
     );
     const thinned = thinRosterForDiminishedAppointment(roster);
-    expect(thinned.length).toBe(CAMPAIGN_CONFIG.DIMINISHED_ROSTER_CAP);
+    expect(thinned).toHaveLength(CAMPAIGN_CONFIG.DIMINISHED_ROSTER_CAP);
     expect(kingDepthForAppointment(true)).toBeLessThan(
       kingDepthForAppointment(false),
     );

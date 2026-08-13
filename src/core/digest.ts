@@ -13,9 +13,9 @@ import { canonicalJson } from './canonicalJson';
  * Certificate of Completion, ADR 0029) needs a real signature instead.
  */
 
-const PRIME = 0x0100_0193;
-const OFFSET_A = 0x811c_9dc5;
-const OFFSET_B = 0x9e37_79b9;
+const PRIME = 0x01000193;
+const OFFSET_A = 0x811c9dc5;
+const OFFSET_B = 0x9e3779b9;
 
 function fnv1a(input: string, offset: number): number {
   let hash = offset >>> 0;

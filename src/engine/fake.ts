@@ -159,7 +159,7 @@ function pseudoMoves(pieces: readonly FakePiece[], side: 'w' | 'b'): string[] {
       }
     }
   }
-  return moves.sort();
+  return moves.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function applyPseudoMove(pieces: FakePiece[], move: string): void {

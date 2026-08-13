@@ -114,6 +114,23 @@ function stateWithId(state: PieceState, id: PieceId): PieceState {
   return { ...state, id };
 }
 
+function pieceRoleName(role: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K'): PieceRole {
+  switch (role) {
+    case 'P':
+      return 'Pawn';
+    case 'N':
+      return 'Knight';
+    case 'B':
+      return 'Bishop';
+    case 'R':
+      return 'Rook';
+    case 'Q':
+      return 'Queen';
+    case 'K':
+      return 'King';
+  }
+}
+
 function initialPoolMembers(
   side: Side,
   style: Leader,
@@ -127,18 +144,7 @@ function initialPoolMembers(
   const trust = leaderTrustBias(style);
   const roleTemplates = new Map<PieceRole, PieceState['id']>();
   for (const piece of board.piecesOf(side)) {
-    const role =
-      piece.role === 'P'
-        ? 'Pawn'
-        : piece.role === 'N'
-          ? 'Knight'
-          : piece.role === 'B'
-            ? 'Bishop'
-            : piece.role === 'R'
-              ? 'Rook'
-              : piece.role === 'Q'
-                ? 'Queen'
-                : 'King';
+    const role = pieceRoleName(piece.role);
     if (!roleTemplates.has(role)) roleTemplates.set(role, piece.id);
   }
   const members: PoolMember[] = [];
@@ -225,18 +231,23 @@ function compareForPolicy(
   left: PoolMember,
   right: PoolMember,
 ): number {
-  const values =
-    policy === 'strongest_available'
-      ? [right.state.E_i - left.state.E_i, right.state.B_i - left.state.B_i]
-      : policy === 'rest_traumatised'
-        ? [
-            left.state.B_i - right.state.B_i,
-            left.service.matchesPlayed - right.service.matchesPlayed,
-          ]
-        : [
-            right.service.matchesPlayed - left.service.matchesPlayed,
-            right.state.E_i - left.state.E_i,
-          ];
+  let values: number[];
+  if (policy === 'strongest_available') {
+    values = [
+      right.state.E_i - left.state.E_i,
+      right.state.B_i - left.state.B_i,
+    ];
+  } else if (policy === 'rest_traumatised') {
+    values = [
+      left.state.B_i - right.state.B_i,
+      left.service.matchesPlayed - right.service.matchesPlayed,
+    ];
+  } else {
+    values = [
+      right.service.matchesPlayed - left.service.matchesPlayed,
+      right.state.E_i - left.state.E_i,
+    ];
+  }
   return (
     values.find((value) => value !== 0) ??
     (left.state.id < right.state.id ? -1 : 1)
@@ -527,12 +538,16 @@ function foldSide(
     members.push({
       ...conscript,
       state,
-      status:
-        state.role !== 'King' && state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-          ? 'retired'
-          : desertions.has(state.id)
-            ? 'recovering'
-            : 'available',
+      status: (() => {
+        if (
+          state.role !== 'King' &&
+          state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+        ) {
+          return 'retired';
+        }
+        if (desertions.has(state.id)) return 'recovering';
+        return 'available';
+      })(),
       availableAtMatch: desertions.has(state.id)
         ? match + config.DESERTION_ABSENCE_MATCHES + 1
         : match + 1,
@@ -587,11 +602,12 @@ export function foldMatchIntoPools(input: {
   const enemyRefusals = new Map<PieceId, number>();
   for (const event of input.result.events) {
     if (event.t !== 'REFUSAL') continue;
-    const counts = playerIds.has(event.pieceId)
-      ? playerRefusals
-      : enemyIds.has(event.pieceId)
-        ? enemyRefusals
-        : undefined;
+    let counts: Map<PieceId, number> | undefined;
+    if (playerIds.has(event.pieceId)) {
+      counts = playerRefusals;
+    } else if (enemyIds.has(event.pieceId)) {
+      counts = enemyRefusals;
+    }
     if (counts === undefined) continue;
     counts.set(event.pieceId, (counts.get(event.pieceId) ?? 0) + 1);
   }

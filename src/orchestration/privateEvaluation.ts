@@ -4,6 +4,7 @@ import {
   type Role,
   type Square,
 } from '../chess';
+import { compareCodeUnits } from '../core/canonicalJson';
 import { attentionWeight, ENGINE_CONFIG, type PieceState } from '../psychology';
 import type { EngineEvaluation, EvalProfile } from '../engine/types';
 
@@ -196,7 +197,7 @@ function relevantPeerIds(
         pieceId !== actor.id &&
         profileValue(profile, `weight:peer:${pieceId}`) > 0,
     )
-    .sort();
+    .sort(compareCodeUnits);
 }
 
 function lineIsAttended(
@@ -264,7 +265,7 @@ export function evalProfileFor(
   return Object.freeze(
     Object.fromEntries(
       Object.entries(profile).sort(([left], [right]) =>
-        left < right ? -1 : left > right ? 1 : 0,
+        compareCodeUnits(left, right),
       ),
     ),
   );

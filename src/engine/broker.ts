@@ -118,15 +118,13 @@ export async function createSharedSearchBroker(
   const bestByFenDepth = new Map<string, EngineEvaluation>();
 
   function ensureBestPool(): Promise<EnginePool> {
-    if (bestPoolPromise === undefined) {
-      bestPoolPromise = EnginePool.create({
-        enginePath: options.enginePath,
-        hashMb: options.hashMb ?? 16,
-        threads: 1,
-        multiPv: preferredMultiPv,
-        size: preferredPoolSize,
-      });
-    }
+    bestPoolPromise ??= EnginePool.create({
+      enginePath: options.enginePath,
+      hashMb: options.hashMb ?? 16,
+      threads: 1,
+      multiPv: preferredMultiPv,
+      size: preferredPoolSize,
+    });
     return bestPoolPromise;
   }
 

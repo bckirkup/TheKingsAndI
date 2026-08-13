@@ -124,7 +124,7 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
     !Array.isArray(value.enemyRoster) ||
     !Array.isArray(value.completedMetrics)
   ) {
-    throw new Error(
+    throw new TypeError(
       'Campaign checkpoint roster and completedMetrics must be arrays.',
     );
   }

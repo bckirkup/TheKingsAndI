@@ -25,7 +25,7 @@ function rotateLeft(value: number, distance: number): number {
 }
 
 function validWord(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff;
+  return Number.isInteger(value) && value >= 0 && value <= 0xffffffff;
 }
 
 function validateState(state: RandomState): void {
@@ -51,7 +51,7 @@ function createRandom(state: [number, number, number, number]): SeededRandom {
       return result;
     },
     nextFloat(): number {
-      return this.nextUint32() / 0x1_0000_0000;
+      return this.nextUint32() / 0x100000000;
     },
     nextInt(maxExclusive: number): number {
       if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
