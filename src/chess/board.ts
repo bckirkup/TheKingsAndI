@@ -107,11 +107,12 @@ function isCastle(move: Move): boolean {
 }
 
 export class LivingBoard {
-  private readonly chess: Chess;
+  private chess: Chess;
   private readonly idBySquare: Map<Square, PieceId>;
   private readonly squareById: Map<PieceId, Square>;
   private readonly roleById: Map<PieceId, Role>;
   private readonly sideById: Map<PieceId, Side>;
+  private readonly positionCounts: Map<string, number>;
   private plyCount: number;
 
   private constructor(
@@ -120,6 +121,7 @@ export class LivingBoard {
     squareById: Map<PieceId, Square>,
     roleById: Map<PieceId, Role>,
     sideById: Map<PieceId, Side>,
+    positionCounts: Map<string, number>,
     plyCount: number,
   ) {
     this.chess = chess;
@@ -127,6 +129,7 @@ export class LivingBoard {
     this.squareById = squareById;
     this.roleById = roleById;
     this.sideById = sideById;
+    this.positionCounts = positionCounts;
     this.plyCount = plyCount;
   }
 
@@ -160,6 +163,7 @@ export class LivingBoard {
       squareById,
       roleById,
       sideById,
+      new Map([[chess.hash(), 1]]),
       0,
     );
   }
@@ -175,6 +179,7 @@ export class LivingBoard {
       new Map(this.squareById),
       new Map(this.roleById),
       new Map(this.sideById),
+      new Map(this.positionCounts),
       this.plyCount,
     );
   }
@@ -187,12 +192,24 @@ export class LivingBoard {
     return this.chess.turn();
   }
 
+  /** Cede the current turn without making a chess move. */
+  cedeTurn(): void {
+    const fields = this.chess.fen().split(' ');
+    fields[1] = fields[1] === 'w' ? 'b' : 'w';
+    fields[3] = '-';
+    this.chess = new Chess(fields.join(' '));
+    this.recordPosition();
+  }
+
   ply(): number {
     return this.plyCount;
   }
 
   isGameOver(): boolean {
-    return this.chess.isGameOver();
+    return (
+      this.chess.isGameOver() ||
+      (this.positionCounts.get(this.chess.hash()) ?? 0) >= 3
+    );
   }
 
   isCheck(): boolean {
@@ -311,6 +328,7 @@ export class LivingBoard {
     }
     this.chess.remove(square);
     this.removePiece(id, square);
+    this.recordPosition();
   }
 
   private commit(move: Move): AppliedMove {
@@ -366,6 +384,7 @@ export class LivingBoard {
     }
 
     this.plyCount += 1;
+    this.recordPosition();
     return {
       ply: this.plyCount,
       side: move.color,
@@ -410,6 +429,11 @@ export class LivingBoard {
   private removePiece(id: PieceId, square: Square): void {
     this.idBySquare.delete(square);
     this.squareById.delete(id);
+  }
+
+  private recordPosition(): void {
+    const hash = this.chess.hash();
+    this.positionCounts.set(hash, (this.positionCounts.get(hash) ?? 0) + 1);
   }
 
   private requireRole(id: PieceId): Role {

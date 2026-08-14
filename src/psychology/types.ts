@@ -214,6 +214,12 @@ export type MatchEvent =
       readonly witnessOwnValue: number;
     }
   | {
+      readonly t: 'KING_EXPOSED_TURN_CEDED';
+      readonly ply: number;
+      readonly exposedKingId: PieceId;
+      readonly attackerSide: 'w' | 'b';
+    }
+  | {
       readonly t: 'PSYCH_DELTA';
       readonly ply: number;
       readonly pieceId: PieceId;

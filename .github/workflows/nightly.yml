@@ -103,8 +103,9 @@ jobs:
             --engine=lozza \
             --depth-cap=4 \
             --seed=1 \
-            --enforce-calibration=true \
-            --out=artifacts/nightly/tyrannical.csv
+            --enforce-calibration=false \
+            --out=artifacts/nightly/tyrannical.csv \
+            --artifact-out=artifacts/nightly/tyrannical.metrics.json
 
       - name: Supportive Lozza campaign
         env:
@@ -116,8 +117,9 @@ jobs:
             --engine=lozza \
             --depth-cap=4 \
             --seed=1 \
-            --enforce-calibration=true \
-            --out=artifacts/nightly/supportive.csv
+            --enforce-calibration=false \
+            --out=artifacts/nightly/supportive.csv \
+            --artifact-out=artifacts/nightly/supportive.metrics.json
 
       - name: Coefficient sweep (OUTCOME_TRUST_LOSS_SCALE)
         if: steps.cfg.outputs.run_sweep == 'true'
@@ -133,12 +135,27 @@ jobs:
             | tee artifacts/nightly/sweep-outcome-trust-loss.csv
 
       - name: Upload metrics artifacts
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nightly-lozza-metrics
           path: artifacts/nightly/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Enforce tyrannical calibration bounds
+        if: always()
+        run: |
+          pnpm sim:aggregate \
+            --inputs=artifacts/nightly/tyrannical.metrics.json \
+            --enforce-calibration=true
+
+      - name: Enforce supportive calibration bounds
+        if: always()
+        run: |
+          pnpm sim:aggregate \
+            --inputs=artifacts/nightly/supportive.metrics.json \
+            --enforce-calibration=true
 
   vitest-heavy:
     name: Heavy Vitest balance tests

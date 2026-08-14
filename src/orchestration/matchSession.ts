@@ -61,6 +61,7 @@ import {
   isAvengedCapture,
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 export type MatchPhase =
   | 'playing'
@@ -125,6 +126,7 @@ export interface MatchSessionSnapshot {
   readonly seed: number;
   readonly selectedPieceId: string | null;
   readonly rout: boolean;
+  readonly enemyRout: boolean;
   readonly winScore: number;
   readonly lastMove: readonly [Square, Square] | null;
   readonly dismissed: boolean;
@@ -181,6 +183,7 @@ export class MatchSession {
   private readonly playerSide: Side;
   private selectedPieceId: string | null = null;
   private rout = false;
+  private enemyRout = false;
   private lastMove: readonly [Square, Square] | null = null;
   private dismissed = false;
   private dismissalCause: DismissalCause | null = null;
@@ -246,6 +249,7 @@ export class MatchSession {
       seed: this.matchSeed,
       selectedPieceId: this.selectedPieceId,
       rout: this.rout,
+      enemyRout: this.enemyRout,
       winScore: this.winScore(),
       lastMove: this.lastMove,
       dismissed: this.dismissed,
@@ -258,7 +262,12 @@ export class MatchSession {
   }
 
   winScore(): number {
-    return scoreMatchOutcome(this.board, this.playerSide, this.rout);
+    return scoreMatchOutcome(
+      this.board,
+      this.playerSide,
+      this.rout,
+      this.enemyRout,
+    );
   }
 
   selectPiece(pieceId: string | null): void {
@@ -550,6 +559,19 @@ export class MatchSession {
         this.board.withdrawPiece(event.pieceId);
       }
     }
+    const exposure = kingExposureAfterWithdrawals(
+      this.board,
+      this.board.turn(),
+    );
+    if (exposure !== undefined) {
+      this.events.push({
+        t: 'KING_EXPOSED_TURN_CEDED',
+        ply: this.ply,
+        exposedKingId: exposure.kingId,
+        attackerSide: exposure.attackerSide,
+      });
+      this.board.cedeTurn();
+    }
     this.roster = cascade.roster;
     this.pending = null;
     this.phase = 'playing';
@@ -565,7 +587,6 @@ export class MatchSession {
       };
       return;
     }
-
     this.dialogueCue = {
       eventKind: 'desertion',
       pieceId: pending.actor.id,
@@ -920,6 +941,7 @@ export class MatchSession {
     }
     this.events.push(...result.events);
     this.ply = result.ply;
+    this.enemyRout ||= result.enemyRout;
     if (result.lastMove !== null) {
       this.lastMove = result.lastMove;
     }

@@ -59,6 +59,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -109,6 +110,11 @@ export interface HeadlessMatchConfig {
   readonly leader: HeadlessLeaderPort;
   readonly opponent: HeadlessLeaderPort;
   readonly initialRoster: readonly PieceState[];
+  /**
+   * Optional complete starting position. It is mutually exclusive with
+   * initialLineup and initialEnemyLineup.
+   */
+  readonly initialBoard?: LivingBoard;
   /**
    * Optional fielded lineup whose IDs must be installed on the standard
    * position. When omitted, the historical starting-square IDs are used.
@@ -402,10 +408,20 @@ export async function runHeadlessMatch(
   if (config.initialEnemyLineup !== undefined) {
     lineups[config.playerSide === 'w' ? 'b' : 'w'] = config.initialEnemyLineup;
   }
+  if (
+    config.initialBoard !== undefined &&
+    (config.initialLineup !== undefined ||
+      config.initialEnemyLineup !== undefined)
+  ) {
+    throw new Error(
+      'initialBoard cannot be combined with initialLineup or initialEnemyLineup',
+    );
+  }
   const board =
-    Object.keys(lineups).length === 0
+    config.initialBoard?.clone() ??
+    (Object.keys(lineups).length === 0
       ? LivingBoard.standard()
-      : LivingBoard.standard(lineupPieceIdFactory(lineups));
+      : LivingBoard.standard(lineupPieceIdFactory(lineups)));
   let roster = config.initialRoster.map(normalizePieceState);
   let departedRoster: PieceState[] = [];
   const enemySide = config.playerSide === 'w' ? 'b' : 'w';
@@ -700,6 +716,16 @@ export async function runHeadlessMatch(
           if (event.t === 'DESERTION') {
             board.withdrawPiece(event.pieceId);
           }
+        }
+        const exposure = kingExposureAfterWithdrawals(board, side);
+        if (exposure !== undefined) {
+          events.push({
+            t: 'KING_EXPOSED_TURN_CEDED',
+            ply,
+            exposedKingId: exposure.kingId,
+            attackerSide: exposure.attackerSide,
+          });
+          board.cedeTurn();
         }
         roster = cascade.roster;
         departedRoster = appendDeparted(departedRoster, cascade.departed);

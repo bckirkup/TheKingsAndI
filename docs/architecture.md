@@ -194,6 +194,7 @@ type MatchEvent =
   | { t: 'SACRIFICE_WITNESSED'; ply: number; hero: PieceId; beneficiary: PieceId }
   | { t: 'ROSTER_BENCH'; pieceId: PieceId }
   | { t: 'PSYCH_DELTA'; ply: number; pieceId: PieceId; field: PsychField; delta: number }
+  | { t: 'KING_EXPOSED_TURN_CEDED'; ply: number; exposedKingId: PieceId; attackerSide: Side }
   ...
 ```
 

@@ -11,10 +11,10 @@ import type { LivingBoard, Side } from '../chess';
 export function scoreMatchOutcome(
   board: LivingBoard,
   playerSide: Side,
-  terminalLoss: boolean,
+  rout: boolean,
   enemyRout = false,
 ): number {
-  if (terminalLoss) return 0;
+  if (rout) return 0;
   if (enemyRout) return 100;
   if (!board.isGameOver()) return 50;
   return board.turn() === playerSide ? 0 : 100;

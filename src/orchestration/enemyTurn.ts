@@ -38,6 +38,7 @@ import {
   desertionContextFor,
 } from './psychologyHooks';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
+import { kingExposureAfterWithdrawals } from './kingExposure';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],
@@ -221,6 +222,16 @@ function applyTrackedEnemyDecision(input: {
         board.withdrawPiece(event.pieceId);
         behaviours.push('desertion');
       }
+    }
+    const exposure = kingExposureAfterWithdrawals(board, enemySide);
+    if (exposure !== undefined) {
+      events.push({
+        t: 'KING_EXPOSED_TURN_CEDED',
+        ply,
+        exposedKingId: exposure.kingId,
+        attackerSide: exposure.attackerSide,
+      });
+      board.cedeTurn();
     }
     return {
       enemyRoster: syncSideRoster(board, cascade.roster, enemySide),

@@ -77,6 +77,12 @@ interface CampaignRecord {
 }
 ```
 
+`KING_EXPOSED_TURN_CEDED` is appended when a desertion withdrawal unblocks the
+deserting side's own attacker, leaving the opposing King attacked while that
+side remains to move. The deserting side cedes the remainder of its turn so the
+exposed side can answer the discovered check; the event records the cause
+without changing rout semantics.
+
 **Class prestige is per piece, not per roster.** The reference implementation
 stores `classPrestige` on each `PieceState` keyed by role, so every piece holds
 its own prejudices and only updates them from events it witnessed. That is 6
