@@ -164,12 +164,15 @@ export function calculateUStay(
 ): number {
   const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
   const pain = calculatePain(piece) * shadowFactor;
+  const weight = Math.max(0, Math.min(1_000, stayAttachmentWeightPermille));
   const collectiveStake =
-    (context.P_lossIfStay *
-      lambda *
-      ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
-      Math.max(0, Math.min(1_000, stayAttachmentWeightPermille))) /
-    1_000;
+    weight === 1_000
+      ? context.P_lossIfStay * lambda * ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE
+      : (context.P_lossIfStay *
+          lambda *
+          ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
+          weight) /
+        1_000;
   const stayCost = -context.P_captured * pain - collectiveStake;
   return quantizeBoardValue(stayCost) / 1_000;
 }
