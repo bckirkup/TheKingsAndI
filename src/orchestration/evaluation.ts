@@ -13,13 +13,14 @@ export function insightToEvaluation(
   privateDeltaInsight: EngineEvaluation,
   leaderInsight: EngineEvaluation,
   leaderImpliedBias = 0,
+  privatePostMoveScoreCp = privateDeltaInsight.scoreCp,
 ): CandidateMoveEvaluation {
   const deltaV_board = privateDeltaInsight.scoreCp / 100;
   const vLeaderImplied = leaderInsight.scoreCp / 100 + leaderImpliedBias;
   return {
     moveNotation: features.san,
     deltaV_board,
-    privateScoreCp: privateDeltaInsight.scoreCp,
+    privateScoreCp: privatePostMoveScoreCp,
     vLeaderImplied,
     deltaV_capture: features.deltaVCapture,
     P_captured: features.pCaptured,

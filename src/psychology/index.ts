@@ -40,6 +40,7 @@ export {
   calculateUDesert,
   calculateAttachment,
   calculateAttachmentPermille,
+  calculateStayAttachmentWeightPermille,
   calculateUStay,
   isKingExempt,
   raiseLossEstimatesAfterDesertion,

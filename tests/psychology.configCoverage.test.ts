@@ -33,6 +33,7 @@ import {
   calculatePain,
   calculatePivotalityPermille,
   calculateSingleMatchLeadershipIndex,
+  calculateStayAttachmentWeightPermille,
   defaultCredence,
   defaultRumor,
   diffuseRumor,
@@ -825,6 +826,36 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
         ).roster.find((p) => p.id === actor.id)?.engagementFactor ?? 0;
     });
     expect(harshEng).toBeLessThan(mildEng);
+  });
+});
+
+describe('wiring — desertion attachment weighting', () => {
+  it('unit: stay attachment weight follows k at 0, 500, and 1000', () => {
+    expect(calculateStayAttachmentWeightPermille(400, 0)).toBe(1_000);
+    expect(calculateStayAttachmentWeightPermille(400, 500)).toBe(700);
+    expect(calculateStayAttachmentWeightPermille(400, 1_000)).toBe(400);
+  });
+
+  it('wiring: stay attachment knob produces graded utility movement', () => {
+    const piece = makePiece({
+      T_i: -100,
+      traits: { ...neutralTraits, w_loyalty: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0 },
+    });
+    const context = makeDesertionContext({
+      P_captured: 0,
+      P_lossIfStay: 0.5,
+      P_lossIfLeave: 0.5,
+    });
+    const values: number[] = [];
+    for (const k of [0, 500, 1_000]) {
+      mutateConfig('DESERTION_STAY_ATTACHMENT_PERMILLE', k, () => {
+        values.push(shouldDesert(piece, context, [piece]).uStay);
+      });
+    }
+    const [low, middle, high] = values as [number, number, number];
+    expect(low).toBeLessThan(middle);
+    expect(middle).toBeLessThan(high);
   });
 });
 

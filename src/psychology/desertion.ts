@@ -144,15 +144,32 @@ export function calculateAttachment(
   return calculateAttachmentPermille(piece, activePeers) / 1_000;
 }
 
+export function calculateStayAttachmentWeightPermille(
+  attachmentPermille: number,
+  k: number = ENGINE_CONFIG.DESERTION_STAY_ATTACHMENT_PERMILLE,
+): number {
+  const attachment = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(attachmentPermille)),
+  );
+  const clampedK = Math.max(0, Math.min(1_000, Math.trunc(k)));
+  return 1_000 - clampedK + Math.trunc((clampedK * attachment) / 1_000);
+}
+
 export function calculateUStay(
   piece: PieceState,
   context: DesertionContext,
   lambda: number,
+  stayAttachmentWeightPermille = 1_000,
 ): number {
   const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
   const pain = calculatePain(piece) * shadowFactor;
   const collectiveStake =
-    context.P_lossIfStay * lambda * ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE;
+    (context.P_lossIfStay *
+      lambda *
+      ENGINE_CONFIG.DESERTION_COLLECTIVE_STAKE *
+      Math.max(0, Math.min(1_000, stayAttachmentWeightPermille))) /
+    1_000;
   const stayCost = -context.P_captured * pain - collectiveStake;
   return quantizeBoardValue(stayCost) / 1_000;
 }
@@ -214,10 +231,21 @@ export function shouldDesert(
 } {
   const lambdaComponents = calculateLambdaComponents(piece, activePeers);
   const lambda = lambdaComponents.total;
-  const uStay = calculateUStay(piece, context, lambda);
+  const attachment = calculateAttachment(piece, activePeers);
+  const attachmentPermille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(attachment * 1_000)),
+  );
+  const stayAttachmentWeightPermille =
+    calculateStayAttachmentWeightPermille(attachmentPermille);
+  const uStay = calculateUStay(
+    piece,
+    context,
+    lambda,
+    stayAttachmentWeightPermille,
+  );
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const standing = calculateStandingCostComponents(piece, activePeers);
-  const attachment = calculateAttachment(piece, activePeers);
   const pivotality =
     (calculatePivotalityPermille(piece, activePeers) *
       ENGINE_CONFIG.DESERTION_PIVOTALITY_SCALE_PERMILLE) /
