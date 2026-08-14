@@ -28,6 +28,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
 | `docs/calibration/2026-08-13-blocked-on-measurement.md` | **Current state: the model is degenerate for cold styles and the measurement pipelines are broken.** Read before planning calibration or new mechanics |
+| `docs/calibration/2026-08-13-cross-style-table.md` | All nine leader styles measured on 248cd08 — collapse is style-invariant and attrition is saturated; compute footprint is bounded |
 | `docs/calibration/2026-08-10-state-of-play.md` | Previous harness numbers; tyrannical figures superseded by the 08-13 pass |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0047 decided vs shipped |
