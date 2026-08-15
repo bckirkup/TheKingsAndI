@@ -981,20 +981,36 @@ from trauma retirement and desertion.
 The season-boundary mechanism intentionally does not update `M_i`; D22's
 morale semantics remain open and are not resolved by ADR 0051.
 
-### D145 ⚠ Does attachment weight one branch of the exit decision or both?
-**Blocking calibration.** Today attachment discounts only the deserter's
+### D145 ✅ Attachment weights both branches of the exit decision
+**Resolved: both.** `DESERTION_STAY_ATTACHMENT_PERMILLE` is `1000` at
+`src/psychology/config.ts:84`, so attachment multiplies the collective term on
+the stay side as well as the desert side. The one-sided form is treated as a
+defect, not a setting: it made λ the only asymmetric factor and therefore
+cancelled leadership out of the decision entirely. The analysis that produced
+the ruling follows.
+
+Before this, attachment discounted only the deserter's
 collective term, so for a piece with no capture risk and no standing cost the
 decision reduces to `attachment < P_lossIfStay / P_lossIfLeave`: λ — trust,
 morale, loyalty, affinity — multiplies both branches and cancels out of the
 sign, and the ratio is a knife edge at `≈ 0.96` that `tauBenev ≥ 50` decides.
-That is why eight of nine leader styles are byte-identical and only servant
-escapes. `DESERTION_STAY_ATTACHMENT_PERMILLE` exposes both branches with the
-current behaviour as the default (`0`); `1000` weights the stay branch too, so
-attachment cancels instead of λ and the decision becomes capture pain and
-standing against the pivotality increment. Measured in
-`docs/calibration/2026-08-15-desertion-gradient.md`: `1000` restores a gradient
-but is not sufficient on its own. This is a model-structure choice, not a
-coefficient to sweep.
+That is why eight of nine leader styles were byte-identical and only servant
+escaped. At `1000` attachment cancels instead of λ and the decision becomes
+what the model documents it to be: capture pain and standing against the
+pivotality increment you inflict by leaving. Measured in
+`docs/calibration/2026-08-15-desertion-gradient.md`. The knob is retained at
+`0` for reproducing the pre-ruling regime, and both branches keep unit and
+wiring coverage.
+
+**Still open underneath this ruling** (they are calibration, not structure, and
+do not reopen D145): the ruling restores a gradient but not yet a defensible
+one — `random`, `pure_tactician`, and `redeemer` still lose the whole roster,
+and `tyrannical` ends a campaign with a *fuller* roster than `supportive`,
+which ADR 0024 permits but does not predict. The remaining suspects are
+style-independent: the per-departure `pLossTeam` bump with `M−5 / T−3` in
+`raiseLossEstimatesAfterDesertion`, zero standing cost for most pawns, and
+`P_captured` measuring the commanded move's risk rather than the piece's own
+exposure.
 
 ## Suggested decision order
 

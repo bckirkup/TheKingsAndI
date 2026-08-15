@@ -155,12 +155,31 @@ The cascade in `raiseLossEstimatesAfterDesertion` is untouched. The knob does
 not weaken the feedback loop; it removes an unintended cancellation inside the
 per-piece decision.
 
-## 5. Decision needed
+## 5. Decision
 
-D145: should attachment weight both branches (`k = 1000`), one branch
-(`k = 0`, today), or something between? The measurement says `k = 0` cannot be
-right — it makes the leadership channel algebraically inert for most of the
-roster — and that `k = 1000` alone is not sufficient. My recommendation is to
-adopt `k = 1000` as the structural correction and then attack driver (4) above,
-rather than to calibrate `k` as a continuous knob: it is a model-structure
-choice masquerading as a coefficient.
+D145 is **resolved: both branches** — `DESERTION_STAY_ATTACHMENT_PERMILLE` is
+`1000`, adopted as a structural correction rather than calibrated as a
+continuous knob. `k = 0` cannot be right: it makes the leadership channel
+algebraically inert for most of the roster. `k` survives as a knob only so the
+pre-ruling regime stays reproducible.
+
+`k = 1000` alone is not sufficient, and the ruling does not claim otherwise.
+Driver (4) above is the next target, and two of the numbers in the table are
+themselves symptoms rather than successes: `servant` at zero desertion, and
+`tyrannical` finishing with a fuller roster than `supportive`. Neither is
+evidence that the balance is right; both are why the remaining, style-independent
+drivers come before any coefficient tuning.
+
+### 5.1 Fixtures that depended on the collapse
+
+Adopting the ruling failed three tests, and all three were fixtures that had
+been quietly relying on the degenerate regime rather than on the mechanism they
+name: the discovered-check turn-cession integration test forced its withdrawal
+by flattening morale and `tauBenev`, which only worked while the collective term
+alone could evict a piece; the season selection-knob probe only rotated its
+bench because desertions kept emptying the lineup, so the redemption knob went
+inert; and the early-saturation detector test asserted the detector's finding
+against a live campaign that is no longer saturated. Each fixture was rebuilt to
+exercise its mechanism independently of the desertion coefficients, and the
+assertions were kept. This is worth recording: a balance regime this degenerate
+becomes load-bearing for tests that were never meant to be about balance.
