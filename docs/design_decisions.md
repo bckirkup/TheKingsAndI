@@ -1024,6 +1024,9 @@ deterministic static-exchange classification at
 replacing the former defence-count threat flag. The settled specification is
 `docs/adr/0052-exit-cost-and-capture-probability.md`; the default selection is
 documented in `docs/calibration/2026-08-16-exit-permanence-sweep.md`.
+The same resolution re-expresses the tyrannical `no-rout` guard at
+`sim/degeneracy.ts:27`: its `0.05` floor asserts that at least one piece leaves,
+without requiring a fixed fraction of the roster.
 
 The pawn `standing` finding remains open: initial class prestige for pawns is
 negative from every role (`src/orchestration/roster.ts:36`), so pawn standing is

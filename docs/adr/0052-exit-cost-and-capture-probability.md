@@ -120,3 +120,27 @@ generation every ply is not worth its cost.
   difference between styles is the attachment threshold, not the flag.
 - Class prejudice still zeroes pawn `standing`; that remains open and is now the
   smaller of the two brakes rather than the only one.
+
+## The `no-rout` guard is re-expressed, not weakened
+
+`DEGENERACY_CONFIG.noRoutAttritionThreshold` was `0.2`: a tyrant whose campaign
+lost less than a fifth of the roster failed the smoke gate as an inert
+consequence layer. That floor was written while the exit was free, when a fifth
+of the roster was a low bar — under the priced exit, `tyrannical` deliberately
+finishes at `0.063` (one piece over six matches), so the old floor now fails the
+intended behaviour.
+
+The threshold moves to `0.05`, which on a sixteen-piece roster is the smallest
+threshold that still admits a single departure. The check therefore stops
+asserting a magnitude — how *much* of the roster a tyrant must lose, which is a
+balance target and not a degeneracy — and asserts the thing its message actually
+claims: that a tyrant loses somebody. Attrition of exactly zero, meaning no
+piece ever walked out on a tyrant in any match, still hard-fails the gate.
+
+The guard keeps its hard-failure status on both the smoke and calibration paths.
+Nothing else in `DEGENERACY_CONFIG` moves; in particular the supportive rout
+ceiling and the early-saturation thresholds — the guards that catch the
+collapse direction — are untouched. The tyrant's consequences are also visible
+in channels this detector never read (`refusal = 0.164`, `override = 0.462`,
+`trust_delta = -31.98` at the adopted default), so a low attrition figure is not
+evidence of inertness on its own.

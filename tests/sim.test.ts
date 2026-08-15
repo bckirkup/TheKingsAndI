@@ -401,7 +401,7 @@ describe('simulation harness argument parsing', () => {
 
 describe('degeneracy detectors', () => {
   it('uses named attrition thresholds and responds to each threshold', async () => {
-    expect(DEGENERACY_CONFIG.noRoutAttritionThreshold).toBe(0.2);
+    expect(DEGENERACY_CONFIG.noRoutAttritionThreshold).toBe(0.05);
     expect(DEGENERACY_CONFIG.supportiveRoutAttritionThreshold).toBe(0.5);
     expect(DEGENERACY_CONFIG.earlySaturationAttritionThreshold).toBe(0.8);
     expect(DEGENERACY_CONFIG.earlySaturationRoutThreshold).toBe(0.8);
@@ -416,17 +416,19 @@ describe('degeneracy detectors', () => {
       engineKind: 'fake',
     });
     const summary = aggregateCampaign('tyrannical', 7, metrics);
-    const noRoutSummary = { ...summary, desertionAttrition: 0.1 };
+    const noRoutSummary = { ...summary, desertionAttrition: 0 };
     expect(
       detectDegeneracy('tyrannical', metrics, noRoutSummary).some(
         (finding) => finding.code === 'no-rout',
       ),
     ).toBe(true);
-    expect(
-      detectDegeneracy('tyrannical', metrics, noRoutSummary, {
-        noRoutAttritionThreshold: 0.05,
+    const adoptedDefaultSummary = { ...summary, desertionAttrition: 0.063 };
+    const thresholdFindings = [0.05, 0.06, 0.07].map((threshold) =>
+      detectDegeneracy('tyrannical', metrics, adoptedDefaultSummary, {
+        noRoutAttritionThreshold: threshold,
       }).some((finding) => finding.code === 'no-rout'),
-    ).toBe(false);
+    );
+    expect(thresholdFindings).toEqual([false, false, true]);
 
     const supportiveSummary = {
       ...summary,

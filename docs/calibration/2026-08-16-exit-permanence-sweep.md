@@ -76,6 +76,13 @@ is coarse, the grid is 250 wide so the true optimum is somewhere in 500–1000, 
 the two warm styles contribute no information at this default. The honest claim
 is that 750 is the best of five tested values on one seed, not a fitted optimum.
 
+### No-rout guard
+
+The tyrannical `no-rout` floor moved from 20% to 5% because the adopted default
+deliberately produces 6.3% attrition. The guard's rationale and unchanged
+hard-failure role are recorded in the final section of
+`docs/adr/0052-exit-cost-and-capture-probability.md`.
+
 ## Still open
 
 - Pawn `standing` is 0 by construction, because initial class prestige for pawns
