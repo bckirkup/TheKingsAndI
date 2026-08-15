@@ -142,9 +142,18 @@ export function captureRiskThousandths(
   const piece = board.pieceAt(square);
   if (piece === undefined || piece.role === 'K') return 0;
   const attackers = board.attackersOf(square, opponent(piece.side));
-  if (attackers.length === 0) return 0;
   const defenders = board.attackersOf(square, piece.side);
-  const attackerValues = attackers
+  const nonKingAttackers = attackers.filter(
+    (attacker) => attacker.role !== 'K',
+  );
+  if (
+    defenders.length === 0 &&
+    attackers.some((attacker) => attacker.role === 'K')
+  ) {
+    return config.riskUndefended;
+  }
+  if (nonKingAttackers.length === 0) return 0;
+  const attackerValues = nonKingAttackers
     .map((attacker) => attackerValueOf(attacker.role, config))
     .sort((left, right) => left - right);
   const defenderValues = defenders

@@ -80,6 +80,20 @@ describe('threat feature golden values', () => {
     );
   });
 
+  it('classifies a King attacking an undefended pawn as undefended risk', () => {
+    const board = LivingBoard.fromFen('4k3/8/8/3p4/2K5/8/8/8 w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskUndefended,
+    );
+  });
+
+  it('drops a King attacker from a defended exchange classification', () => {
+    const board = LivingBoard.fromFen('8/8/2k5/3p4/2K1PN2/8/8/8 w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskOutnumbered,
+    );
+  });
+
   it('classifies a rook taking a pawn-defended knight as a losing trade', () => {
     const board = LivingBoard.fromFen('k7/8/4p3/3n4/8/8/8/3R3K w - - 0 1');
     expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
@@ -308,19 +322,18 @@ describe('feature config sensitivity probes', () => {
     ).toBe(4);
   });
 
-  it('kingAttackerValue decides whether a King attack looks like a cheap trade', () => {
+  it('kingAttackerValue remains a non-material sentinel', () => {
     // Black pawn on d5 attacked only by the white King on c4, defended by e6.
     const board = LivingBoard.fromFen('4k3/8/4p3/3p4/2K5/8/8/8 b - - 0 1');
-    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
-      config.riskLosingTrade,
-    );
+    const baseline = captureRiskThousandths(board, 'd5' as Square, config);
     expect(
       captureRiskThousandths(
         board,
         'd5' as Square,
         withOverride({ kingAttackerValue: 0 }),
       ),
-    ).toBe(config.riskFavourableTrade);
+    ).toBe(baseline);
+    expect(baseline).not.toBe(config.riskLosingTrade);
   });
 
   it('kingRingExposure and kingCheckExposure change King exposure independently', () => {

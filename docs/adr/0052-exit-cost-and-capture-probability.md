@@ -90,7 +90,13 @@ gain = 0                    → riskDefended          (an even trade, taken some
 gain < 0                    → riskLosingTrade       (new; the opponent loses by taking)
 ```
 
-Kings still score 0 and use `kingExposureThousandths`. All five outcomes stay
+Kings still score 0 as victims and use `kingExposureThousandths`. A King
+*attacker* is not an ordinary participant in the swap-off: `kingAttackerValue`
+is a sentinel for "cannot be recaptured", not a material value, so a King is
+counted as an attacker only when the square has no defenders — where its capture
+is free and the target reads `riskUndefended` — and is dropped from the swap-off
+otherwise. Feeding the sentinel into the exchange would report every King-
+adjacent piece, defended or hanging, as a losing trade. All five outcomes stay
 `FeatureConfig` knobs, so each keeps a sensitivity probe, and `riskLosingTrade`
 is the new one: today a knight defended by a pawn and attacked by a rook reads
 0.25, when in fact the opponent cannot profitably take it at all.
