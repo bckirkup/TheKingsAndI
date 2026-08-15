@@ -534,22 +534,28 @@ describe('degeneracy detectors', () => {
     expect(findings.some((finding) => finding.code === 'no-rout')).toBe(true);
   });
 
-  it('flags early quartile saturation', async () => {
-    const metrics = await runSimulation({
-      matches: 4,
-      leader: 'tyrannical',
-      seed: 7,
-      engineKind: 'fake',
-    });
+  it('flags early quartile saturation', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
     const summary = aggregateCampaign('tyrannical', 7, metrics);
-    const findings = detectDegeneracy('tyrannical', metrics, summary);
+    const saturatedSummary = {
+      ...summary,
+      desertionAttrition: 0.9,
+      trajectoryBands: summary.trajectoryBands.map((band) => ({
+        ...band,
+        desertionAttrition: 0.9,
+        routRate: 0.9,
+      })),
+    };
+    const findings = detectDegeneracy('tyrannical', metrics, saturatedSummary);
     expect(
       findings.some((finding) => finding.code === 'early-saturation'),
     ).toBe(true);
-    expect(() => assertSmokeBounds('tyrannical', summary)).not.toThrow();
-    expect(() => assertCalibrationBounds('tyrannical', summary)).toThrow(
-      'early',
-    );
+    expect(() =>
+      assertSmokeBounds('tyrannical', saturatedSummary),
+    ).not.toThrow();
+    expect(() =>
+      assertCalibrationBounds('tyrannical', saturatedSummary),
+    ).toThrow('early');
   });
 
   it('flags collinear transcript metrics with a golden pair', () => {

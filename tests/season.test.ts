@@ -574,13 +574,22 @@ describe('scarce season pools', () => {
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
     });
+    expect(
+      baseline.poolEvents.some(
+        (event) =>
+          event.t === 'POOL_TRUST_ADJUSTMENT' &&
+          event.reason === 'selection_redemption',
+      ),
+    ).toBe(true);
     const changedThreshold = await runSeason({
       seed: 1,
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
       config: { ...config, NON_SELECTION_TRUST_THRESHOLD: 1 },
     });
@@ -589,6 +598,7 @@ describe('scarce season pools', () => {
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
       config: { ...config, NON_SELECTION_SELF_TRUST_PENALTY: -20 },
     });
@@ -597,6 +607,7 @@ describe('scarce season pools', () => {
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
       config: { ...config, NON_SELECTION_PEER_TRUST_PENALTY: -8 },
     });
@@ -605,6 +616,7 @@ describe('scarce season pools', () => {
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
       config: { ...config, NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 1 },
     });
@@ -613,6 +625,7 @@ describe('scarce season pools', () => {
       matches: 4,
       whiteStyle: 'tyrannical',
       blackStyle: 'supportive',
+      depthFactor: 3,
       engineKind: 'fake',
       config: { ...config, OBSOLESCENCE_NON_SELECTION_THRESHOLD: 2 },
     });
