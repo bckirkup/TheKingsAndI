@@ -1002,15 +1002,38 @@ pivotality increment you inflict by leaving. Measured in
 `0` for reproducing the pre-ruling regime, and both branches keep unit and
 wiring coverage.
 
-**Still open underneath this ruling** (they are calibration, not structure, and
-do not reopen D145): the ruling restores a gradient but not yet a defensible
-one — `random`, `pure_tactician`, and `redeemer` still lose the whole roster,
-and `tyrannical` ends a campaign with a *fuller* roster than `supportive`,
-which ADR 0024 permits but does not predict. The remaining suspects are
-style-independent: the per-departure `pLossTeam` bump with `M−5 / T−3` in
-`raiseLossEstimatesAfterDesertion`, zero standing cost for most pawns, and
-`P_captured` measuring the commanded move's risk rather than the piece's own
-exposure.
+**Still open underneath this ruling** (do not reopen D145): the ruling restores
+a gradient but not yet a defensible one — `random`, `pure_tactician`, and
+`redeemer` still lose the whole roster, and `tyrannical` ends a campaign with a
+*fuller* roster than `supportive`, which ADR 0024 permits but does not predict.
+The cause is measured in
+`docs/calibration/2026-08-16-exit-cost-asymmetry.md` and is structural, not
+calibration: see **D146**. Two suspects named here earlier are ruled out by
+that report — `P_captured` is already per-piece rather than the commanded
+move's risk (`src/orchestration/insight.ts:179`), and the per-departure
+`pLossTeam` bump cancels out of the sign at `k = 1000`.
+
+### D146 ⚠ The exit charges the deserter nothing, and its fear is a flag not a probability
+**Open — do not resolve in code.** Every remaining departure carries real
+per-piece capture risk, and the decision reduces to
+`P_captured · pain · shadow` against `pivotality · λ · 50 · attachment +
+standing · shadow`, which the push side wins by 5–10× for pawns. Two
+structural facts, measured in
+`docs/calibration/2026-08-16-exit-cost-asymmetry.md`:
+
+1. Desertion removes the piece from the board exactly as capture does, yet
+   `U_desert` charges no own-future cost (`src/psychology/desertion.ts:180`), so
+   a piece flees a *risk* of removal into a *certainty* of it.
+2. `captureRiskThousandths` (`src/chess/features.ts:134`) is a threat flag —
+   0.25/0.6/0.8/0.9 by defence count — with no side-to-move, escapability, or
+   trade-desirability term, so ordinary chess tension reads as a death sentence.
+
+Candidate resolutions: charge the exit an own-future cost (structural, restores
+the dilemma and makes λ decisive), make `P_captured` a probability (fidelity),
+or both. Related: pawn `standing` is 0 by construction because initial class
+prestige for pawns is negative from every role
+(`src/orchestration/roster.ts:36`) — prejudice manufacturing deserters may be
+intended, but it removes the only brake for eight of fifteen pieces.
 
 ## Suggested decision order
 
