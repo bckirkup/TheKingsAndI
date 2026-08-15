@@ -39,7 +39,7 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `glory_i` | `(w_ambition_i + w_prestige_i) / 2`, the piece's stake in reputation |
 | `S_standing` | anticipated standing-loss stake in pain units (default `100`) |
 | `attachment_i` | residual stake after walking away, strictly in `(0, 1]`; it starts at the ceiling and is eroded by below-neutral alienation, resisted by loyalty |
-| `w_stay` | attachment weight on the stay collective stake: `(1000 − k + trunc(k·attachment_i))/1000`, with `k = DESERTION_STAY_ATTACHMENT_PERMILLE` clamped to `0..1000` |
+| `w_stay` | attachment weight on the stay collective stake: `(1000 − k + trunc(k·attachment_i))/1000`, with `k = DESERTION_STAY_ATTACHMENT_PERMILLE` clamped to `0..1000`; `k = 1000` per D145, so `w_stay = attachment_i` |
 
 Deserting sets the piece's personal capture risk to zero and raises
 `P_loss(team)`. The stay estimate combines the piece's own private board read,
@@ -59,10 +59,17 @@ each survivor's share rises, so the final pieces are harder to justify leaving.
 
 The impending-loss shadow is a fourth explicit term. The same attenuation
 factor, driven by `P_lossIfStay`, scales both private capture pain and
-anticipated standing cost. The optional `DESERTION_STAY_ATTACHMENT_PERMILLE`
-calibration knob applies attachment to the stay collective term without
-changing the default (`0`) behavior, allowing the lambda-cancellation
-hypothesis to be measured without adding cooldowns, floors, or caps.
+anticipated standing cost.
+
+Attachment weights **both** branches of the comparison (D145). With the same
+factor on each side it cancels from the sign, and so does `λ_i`: what decides
+the exit is capture pain and anticipated standing loss against the pivotality
+increment the piece inflicts by leaving. λ and attachment still set the
+magnitude of the margin, and therefore how far a piece is from quitting, but a
+piece with no capture risk and no standing to lose no longer quits over the
+collective term alone. `DESERTION_STAY_ATTACHMENT_PERMILLE` remains a knob
+(`1000` by default, `0` reproduces the pre-D145 one-sided form) so the regime
+is reproducible; it is not a damping mechanism, and the cascade stays undamped.
 
 ### 1.1 Discovered check cedes the turn
 

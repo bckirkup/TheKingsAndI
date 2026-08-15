@@ -48,17 +48,22 @@ describe('King exposure', () => {
           moverId: currentBoard.pieceAt(choice.from)?.id ?? 'w:P:d2',
           intent: choice,
           san: extractMoveFeatures(currentBoard, choice).san,
-          moveEval,
+          moveEval: {
+            ...moveEval,
+            P_captured: side === 'w' && choice.from === 'd2' ? 1 : 0,
+          },
         };
       },
       shouldOverride: () => false,
     };
-    const initialRoster = createStartingRoster(board, 'w', -100, 0.5).map(
-      (piece) => ({
-        ...piece,
-        M_i: 0,
-        credence: { ...piece.credence, tauBenev: 0 },
-      }),
+    const initialRoster = createStartingRoster(board, 'w', 0, 0.5).map(
+      (piece) =>
+        piece.id === 'w:P:d2'
+          ? {
+              ...piece,
+              B_i: 100,
+            }
+          : piece,
     );
 
     const result = await runHeadlessMatch({
@@ -70,6 +75,16 @@ describe('King exposure', () => {
       initialBoard: board,
       initialRoster,
       engine: createFakeEnginePort(),
+    });
+
+    const d2Departure = result.events.find(
+      (event) => event.t === 'DESERTION' && event.pieceId === 'w:P:d2',
+    );
+    expect(d2Departure).toMatchObject({
+      terms: {
+        P_captured: 1,
+        pain: 60,
+      },
     });
 
     expect(
