@@ -114,6 +114,8 @@ export interface DesertionDecisionTerms {
   readonly lambdaAffinity: number;
   /** Positive cost subtracted from U_desert. */
   readonly standingCost: number;
+  /** Positive own-future cost subtracted from U_desert. */
+  readonly exitSelfCost?: number;
   readonly gloryWeight: number;
   readonly tauBenev: number;
   readonly tauAbil: number;

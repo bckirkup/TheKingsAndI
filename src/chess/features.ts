@@ -31,6 +31,8 @@ export interface FeatureConfig {
   readonly riskOutnumbered: number;
   /** Risk when the target is attacked but adequately defended. */
   readonly riskDefended: number;
+  /** Risk when the opponent loses material by taking the target. */
+  readonly riskLosingTrade: number;
   /** Exposure charged per attacked square in the King's ring. */
   readonly kingRingExposure: number;
   /** Exposure charged when the King stands in check. */
@@ -46,6 +48,7 @@ export const DEFAULT_FEATURE_CONFIG: FeatureConfig = {
   riskUndefended: 800,
   riskOutnumbered: 600,
   riskDefended: 250,
+  riskLosingTrade: 50,
   kingRingExposure: 110,
   kingCheckExposure: 450,
 };
@@ -141,17 +144,40 @@ export function captureRiskThousandths(
   const attackers = board.attackersOf(square, opponent(piece.side));
   if (attackers.length === 0) return 0;
   const defenders = board.attackersOf(square, piece.side);
-  const cheapestAttacker = attackers.reduce(
-    (cheapest, attacker) =>
-      Math.min(cheapest, attackerValueOf(attacker.role, config)),
-    Number.MAX_SAFE_INTEGER,
-  );
-  if (cheapestAttacker < valueOf(piece.role, config)) {
-    return config.riskFavourableTrade;
+  const attackerValues = attackers
+    .map((attacker) => attackerValueOf(attacker.role, config))
+    .sort((left, right) => left - right);
+  const defenderValues = defenders
+    .map((defender) => valueOf(defender.role, config))
+    .sort((left, right) => left - right);
+  let gain = valueOf(piece.role, config);
+  let attackerIndex = 0;
+  let defenderIndex = 0;
+  let defendersTurn = true;
+  while (
+    attackerIndex < attackerValues.length &&
+    defenderIndex < defenderValues.length
+  ) {
+    if (defendersTurn) {
+      gain -= attackerValues[attackerIndex] ?? 0;
+      attackerIndex += 1;
+    } else {
+      gain += defenderValues[defenderIndex] ?? 0;
+      defenderIndex += 1;
+    }
+    defendersTurn = !defendersTurn;
   }
-  if (defenders.length === 0) return config.riskUndefended;
-  if (attackers.length > defenders.length) return config.riskOutnumbered;
-  return config.riskDefended;
+  if (gain > 0) {
+    return defenders.length === 0
+      ? config.riskUndefended
+      : config.riskFavourableTrade;
+  }
+  if (gain === 0) {
+    return attackers.length > defenders.length
+      ? config.riskOutnumbered
+      : config.riskDefended;
+  }
+  return config.riskLosingTrade;
 }
 
 /** King exposure in thousandths: attacked ring squares plus being in check. */

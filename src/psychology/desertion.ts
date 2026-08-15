@@ -186,6 +186,13 @@ export function calculateUDesert(
   const standing = calculateStandingCostComponents(piece, activePeers);
   const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
   const attachment = calculateAttachment(piece, activePeers);
+  const exitPermanencePermille = Math.max(
+    0,
+    Math.min(
+      1_000,
+      Math.trunc(ENGINE_CONFIG.DESERTION_EXIT_PERMANENCE_PERMILLE),
+    ),
+  );
   const residualCost =
     -context.P_lossIfLeave *
     lambda *
@@ -195,7 +202,17 @@ export function calculateUDesert(
   const quantizedStandingCost = quantizeBoardValue(
     -standing.anticipatedStandingCost * shadowFactor,
   );
-  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
+  const exitSelfCost =
+    (calculatePain(piece) *
+      attachment *
+      exitPermanencePermille *
+      shadowFactor) /
+    1_000;
+  const quantizedExitSelfCost = quantizeBoardValue(exitSelfCost);
+  return (
+    (quantizedResidualCost + quantizedStandingCost - quantizedExitSelfCost) /
+    1_000
+  );
 }
 
 function calculateStandingCostComponents(
@@ -249,6 +266,21 @@ export function shouldDesert(
   );
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const standing = calculateStandingCostComponents(piece, activePeers);
+  const exitPermanencePermille = Math.max(
+    0,
+    Math.min(
+      1_000,
+      Math.trunc(ENGINE_CONFIG.DESERTION_EXIT_PERMANENCE_PERMILLE),
+    ),
+  );
+  const exitSelfCost =
+    quantizeBoardValue(
+      (calculatePain(piece) *
+        attachment *
+        exitPermanencePermille *
+        calculateShadowFactor(context.P_lossIfStay)) /
+        1_000,
+    ) / 1_000;
   const pivotality =
     (calculatePivotalityPermille(piece, activePeers) *
       ENGINE_CONFIG.DESERTION_PIVOTALITY_SCALE_PERMILLE) /
@@ -276,6 +308,7 @@ export function shouldDesert(
       lambdaAffinity: lambdaComponents.affinity,
       standingCost:
         quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
+      exitSelfCost,
       gloryWeight: standing.gloryWeight,
       tauBenev: piece.credence.tauBenev,
       tauAbil: piece.credence.tauAbil,

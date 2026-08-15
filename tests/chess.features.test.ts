@@ -20,17 +20,17 @@ const HANGING_KNIGHT =
   'r1bqkb1r/ppp2ppp/2n5/3p4/4N3/8/PPPP1PPP/R1BQKB1R w KQkq - 0 1';
 
 describe('threat feature golden values', () => {
-  it('scores a knight attacked by a pawn as a favourable trade for the enemy', () => {
+  it('scores a hanging knight as an undefended target', () => {
     const board = LivingBoard.fromFen(HANGING_KNIGHT);
     expect(captureRiskThousandths(board, 'e4' as Square, config)).toBe(
-      config.riskFavourableTrade,
+      config.riskUndefended,
     );
     const threats = extractThreatMap(board, 'w', config);
     expect(threats.pieces['w:N:e4']).toEqual({
       pieceId: 'w:N:e4',
       square: 'e4',
       role: 'N',
-      captureRisk: 0.9,
+      captureRisk: 0.8,
       attackerCount: 1,
       defenderCount: 0,
     });
@@ -45,9 +45,10 @@ describe('threat feature golden values', () => {
       config.riskUndefended,
     );
 
-    // Same rook, defended once but attacked twice.
+    // A pawn attacked twice and defended only by its King has no profitable
+    // exchange, but remains outnumbered.
     const outnumbered = LivingBoard.fromFen(
-      '3rk3/8/8/R2r4/8/8/8/3RK3 b - - 0 1',
+      '8/8/2k5/3p4/2P1P3/8/8/7K b - - 0 1',
     );
     expect(captureRiskThousandths(outnumbered, 'd5' as Square, config)).toBe(
       config.riskOutnumbered,
@@ -76,6 +77,41 @@ describe('threat feature golden values', () => {
     // The rook on e2 gives check and attacks two ring squares, d2 and f2.
     expect(kingExposureThousandths(inCheck, 'w', config)).toBe(
       2 * config.kingRingExposure + config.kingCheckExposure,
+    );
+  });
+
+  it('classifies a rook taking a pawn-defended knight as a losing trade', () => {
+    const board = LivingBoard.fromFen('k7/8/4p3/3n4/8/8/8/3R3K w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskLosingTrade,
+    );
+  });
+
+  it('classifies a pawn taking a defended knight as a favourable trade', () => {
+    const board = LivingBoard.fromFen('k7/8/2p5/3n4/4P3/8/8/7K w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskFavourableTrade,
+    );
+  });
+
+  it('classifies an equal exchange as defended risk', () => {
+    const board = LivingBoard.fromFen('k7/8/8/3rr3/8/8/8/3R3K w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskDefended,
+    );
+  });
+
+  it('classifies a hanging piece as an undefended risk', () => {
+    const board = LivingBoard.fromFen('k7/8/8/3n4/4P3/8/8/7K w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskUndefended,
+    );
+  });
+
+  it('classifies two attackers on one defender by exchange gain', () => {
+    const board = LivingBoard.fromFen('k7/8/8/R2rr3/8/8/8/3R3K w - - 0 1');
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
+      config.riskFavourableTrade,
     );
   });
 
@@ -187,8 +223,15 @@ describe('feature config sensitivity probes', () => {
     );
 
   it('riskFavourableTrade changes the risk of a knight attacked by a pawn', () => {
-    expect(knightRisk(withOverride({ riskFavourableTrade: 500 }))).toBe(500);
-    expect(knightRisk(config)).toBe(900);
+    const board = LivingBoard.fromFen('k7/8/2p5/3n4/4P3/8/8/7K w - - 0 1');
+    expect(
+      captureRiskThousandths(
+        board,
+        'd5' as Square,
+        withOverride({ riskFavourableTrade: 500 }),
+      ),
+    ).toBe(500);
+    expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(900);
   });
 
   it('riskUndefended changes the risk of an undefended equal trade', () => {
@@ -203,7 +246,7 @@ describe('feature config sensitivity probes', () => {
   });
 
   it('riskOutnumbered changes the risk of a doubly attacked, singly defended piece', () => {
-    const board = LivingBoard.fromFen('3rk3/8/8/R2r4/8/8/8/3RK3 b - - 0 1');
+    const board = LivingBoard.fromFen('8/8/2k5/3p4/2P1P3/8/8/7K b - - 0 1');
     expect(
       captureRiskThousandths(
         board,
@@ -222,6 +265,17 @@ describe('feature config sensitivity probes', () => {
         withOverride({ riskDefended: 333 }),
       ),
     ).toBe(333);
+  });
+
+  it('riskLosingTrade changes the risk of a losing exchange', () => {
+    const board = LivingBoard.fromFen('k7/8/4p3/3n4/8/8/8/3R3K w - - 0 1');
+    expect(
+      captureRiskThousandths(
+        board,
+        'd5' as Square,
+        withOverride({ riskLosingTrade: 123 }),
+      ),
+    ).toBe(123);
   });
 
   it('pieceValues change both the trade classification and material delta', () => {
@@ -258,7 +312,7 @@ describe('feature config sensitivity probes', () => {
     // Black pawn on d5 attacked only by the white King on c4, defended by e6.
     const board = LivingBoard.fromFen('4k3/8/4p3/3p4/2K5/8/8/8 b - - 0 1');
     expect(captureRiskThousandths(board, 'd5' as Square, config)).toBe(
-      config.riskDefended,
+      config.riskLosingTrade,
     );
     expect(
       captureRiskThousandths(

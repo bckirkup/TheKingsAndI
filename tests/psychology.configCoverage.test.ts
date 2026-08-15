@@ -34,6 +34,7 @@ import {
   calculatePivotalityPermille,
   calculateSingleMatchLeadershipIndex,
   calculateStayAttachmentWeightPermille,
+  calculateUDesert,
   defaultCredence,
   defaultRumor,
   diffuseRumor,
@@ -856,6 +857,45 @@ describe('wiring — desertion attachment weighting', () => {
     const [low, middle, high] = values as [number, number, number];
     expect(low).toBeLessThan(middle);
     expect(middle).toBeLessThan(high);
+  });
+});
+
+describe('wiring — desertion exit permanence', () => {
+  it('unit: exit permanence is zero, partial, and full at k=0, 500, and 1000', () => {
+    const piece = makePiece({ B_i: 20, T_i: -40 });
+    const context = makeDesertionContext({
+      P_captured: 0,
+      P_lossIfStay: 0.2,
+      P_lossIfLeave: 0.5,
+    });
+    const values: number[] = [];
+    for (const k of [0, 500, 1_000]) {
+      mutateConfig('DESERTION_EXIT_PERMANENCE_PERMILLE', k, () => {
+        values.push(calculateUDesert(piece, context, 0, [piece]));
+      });
+    }
+    const [none, partial, full] = values as [number, number, number];
+    expect(none).toBeGreaterThan(partial);
+    expect(partial).toBeGreaterThan(full);
+    expect(none).not.toBe(partial);
+    expect(partial).not.toBe(full);
+  });
+
+  it('wiring: exit permanence changes desertion utility monotonically', () => {
+    const piece = makePiece({ B_i: 20, T_i: -40 });
+    const context = makeDesertionContext({
+      P_captured: 0,
+      P_lossIfStay: 0.2,
+      P_lossIfLeave: 0.5,
+    });
+    const values: number[] = [];
+    for (const k of [0, 250, 500, 1_000]) {
+      mutateConfig('DESERTION_EXIT_PERMANENCE_PERMILLE', k, () => {
+        values.push(calculateUDesert(piece, context, 0, [piece]));
+      });
+    }
+    expect(values).toEqual([...values].sort((left, right) => right - left));
+    expect(new Set(values).size).toBe(4);
   });
 });
 
