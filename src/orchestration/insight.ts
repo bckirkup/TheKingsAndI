@@ -34,6 +34,8 @@ export interface InsightRoundHandle {
 
 export interface MoverInsights {
   readonly actor: Insight;
+  /** Absolute mover-side score for the post-move private position. */
+  readonly actorPrivateScoreCp: number;
   readonly leader: Insight;
   /**
    * One private evaluation per living piece for this commanded move. These
@@ -188,6 +190,7 @@ export async function resolveMoverInsights(
         scoreCp: terminalScore - actorBeforeScoreCp,
         pv: Object.freeze([]),
       }),
+      actorPrivateScoreCp: terminalScore,
       leader,
       desertionMoveEvals,
       declinedSacrificeOpportunity: undefined,
@@ -392,6 +395,7 @@ export async function resolveMoverInsights(
       depth,
       scoreCp: privateActor.scoreCp - privateBeforeActor.scoreCp,
     }),
+    actorPrivateScoreCp: privateActor.scoreCp,
     leader: Object.freeze({
       ...moverLeader,
     }),

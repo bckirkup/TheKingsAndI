@@ -571,6 +571,7 @@ export async function runHeadlessMatch(
           moverInsights.actor,
           moverInsights.leader,
           choice.leaderImpliedBias ?? 0,
+          moverInsights.actorPrivateScoreCp,
         );
       const moveEvalByPiece = {
         ...moverInsights.desertionMoveEvals,

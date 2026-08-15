@@ -218,4 +218,41 @@ describe('private evaluation profile', () => {
     expect(evaluatedFens).toContain(POST_MOVE.fen());
     expect(handle.round).toBe(1);
   });
+
+  it('keeps privateScoreCp absolute while deltaV_board remains a delta', async () => {
+    const handle = createInsightRoundHandle();
+    const features: MoveFeatures = {
+      moverId: ACTOR.id,
+      san: 'e4',
+      deltaVCapture: 0,
+      materialDelta: 0,
+      pCaptured: 0,
+      pCapturedDelta: 0,
+      captureRiskByPiece: {},
+      peerSafetyDeltas: {},
+      kingSafetyDelta: 0,
+    };
+    const insights = await resolveMoverInsights(
+      createFakeEnginePort(),
+      BOARD,
+      { from: 'e2', to: 'e4' },
+      ACTOR,
+      handle,
+      [ACTOR],
+      features,
+    );
+    const evaluation = insightToEvaluation(
+      features,
+      insights.actor,
+      insights.leader,
+      0,
+      insights.actorPrivateScoreCp,
+    );
+    expect(evaluation.privateScoreCp).toBe(insights.actorPrivateScoreCp);
+    expect(evaluation.deltaV_board).toBe(insights.actor.scoreCp / 100);
+    expect(evaluation.privateScoreCp).not.toBe(insights.actor.scoreCp);
+    expect(insights.desertionMoveEvals[ACTOR.id]?.privateScoreCp).toBe(
+      insights.actorPrivateScoreCp,
+    );
+  });
 });

@@ -306,6 +306,8 @@ export class MatchSession {
       features,
       insights.actor,
       insights.leader,
+      0,
+      insights.actorPrivateScoreCp,
     );
     const desertionMoveEvals = {
       ...insights.desertionMoveEvals,

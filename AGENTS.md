@@ -29,6 +29,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
 | `docs/calibration/2026-08-13-blocked-on-measurement.md` | **Current state: the model is degenerate for cold styles and the measurement pipelines are broken.** Read before planning calibration or new mechanics |
 | `docs/calibration/2026-08-13-cross-style-table.md` | All nine leader styles measured on 248cd08 — collapse is style-invariant and attrition is saturated; compute footprint is bounded |
+| `docs/calibration/2026-08-15-desertion-gradient.md` | **Why style does not change the exit decision:** λ cancels out of the desertion comparison, the discriminator is an attachment knife edge at `tauBenev = 50`, and `DESERTION_STAY_ATTACHMENT_PERMILLE` (D145) measures the fix |
 | `docs/calibration/2026-08-10-state-of-play.md` | Previous harness numbers; tyrannical figures superseded by the 08-13 pass |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0047 decided vs shipped |

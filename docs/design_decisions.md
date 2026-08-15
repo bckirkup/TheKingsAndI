@@ -981,6 +981,21 @@ from trauma retirement and desertion.
 The season-boundary mechanism intentionally does not update `M_i`; D22's
 morale semantics remain open and are not resolved by ADR 0051.
 
+### D145 ⚠ Does attachment weight one branch of the exit decision or both?
+**Blocking calibration.** Today attachment discounts only the deserter's
+collective term, so for a piece with no capture risk and no standing cost the
+decision reduces to `attachment < P_lossIfStay / P_lossIfLeave`: λ — trust,
+morale, loyalty, affinity — multiplies both branches and cancels out of the
+sign, and the ratio is a knife edge at `≈ 0.96` that `tauBenev ≥ 50` decides.
+That is why eight of nine leader styles are byte-identical and only servant
+escapes. `DESERTION_STAY_ATTACHMENT_PERMILLE` exposes both branches with the
+current behaviour as the default (`0`); `1000` weights the stay branch too, so
+attachment cancels instead of λ and the decision becomes capture pain and
+standing against the pivotality increment. Measured in
+`docs/calibration/2026-08-15-desertion-gradient.md`: `1000` restores a gradient
+but is not sufficient on its own. This is a model-structure choice, not a
+coefficient to sweep.
+
 ## Suggested decision order
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
