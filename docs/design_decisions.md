@@ -1013,27 +1013,22 @@ that report — `P_captured` is already per-piece rather than the commanded
 move's risk (`src/orchestration/insight.ts:179`), and the per-departure
 `pLossTeam` bump cancels out of the sign at `k = 1000`.
 
-### D146 ⚠ The exit charges the deserter nothing, and its fear is a flag not a probability
-**Open — do not resolve in code.** Every remaining departure carries real
-per-piece capture risk, and the decision reduces to
-`P_captured · pain · shadow` against `pivotality · λ · 50 · attachment +
-standing · shadow`, which the push side wins by 5–10× for pawns. Two
-structural facts, measured in
-`docs/calibration/2026-08-16-exit-cost-asymmetry.md`:
+### D146 ✅ Exit permanence and static-exchange capture risk (ADR 0052)
+**Resolved: both candidate directions adopted.** The exit now charges an
+own-future cost,
+`pain · attachment · (DESERTION_EXIT_PERMANENCE_PERMILLE / 1000) · shadow`,
+through the shared helper at `src/psychology/desertion.ts:209`; the selected
+default is `750` at `src/psychology/config.ts:86`. Capture risk is now a
+deterministic static-exchange classification at
+`src/chess/features.ts:137`, preserving the piece's own plain-data view while
+replacing the former defence-count threat flag. The settled specification is
+`docs/adr/0052-exit-cost-and-capture-probability.md`; the default selection is
+documented in `docs/calibration/2026-08-16-exit-permanence-sweep.md`.
 
-1. Desertion removes the piece from the board exactly as capture does, yet
-   `U_desert` charges no own-future cost (`src/psychology/desertion.ts:180`), so
-   a piece flees a *risk* of removal into a *certainty* of it.
-2. `captureRiskThousandths` (`src/chess/features.ts:134`) is a threat flag —
-   0.25/0.6/0.8/0.9 by defence count — with no side-to-move, escapability, or
-   trade-desirability term, so ordinary chess tension reads as a death sentence.
-
-Candidate resolutions: charge the exit an own-future cost (structural, restores
-the dilemma and makes λ decisive), make `P_captured` a probability (fidelity),
-or both. Related: pawn `standing` is 0 by construction because initial class
-prestige for pawns is negative from every role
-(`src/orchestration/roster.ts:36`) — prejudice manufacturing deserters may be
-intended, but it removes the only brake for eight of fifteen pieces.
+The pawn `standing` finding remains open: initial class prestige for pawns is
+negative from every role (`src/orchestration/roster.ts:36`), so pawn standing is
+0 by construction. Prejudice manufacturing deserters may be intended, but it
+removes the only brake for eight of fifteen pieces.
 
 ## Suggested decision order
 

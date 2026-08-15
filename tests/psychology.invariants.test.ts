@@ -82,6 +82,19 @@ function makePiece(overrides: Partial<PieceState> = {}): PieceState {
   });
 }
 
+function withExitPermanence<T>(value: number, run: () => T): T {
+  const config = ENGINE_CONFIG as {
+    DESERTION_EXIT_PERMANENCE_PERMILLE: number;
+  };
+  const original = config.DESERTION_EXIT_PERMANENCE_PERMILLE;
+  try {
+    config.DESERTION_EXIT_PERMANENCE_PERMILLE = value;
+    return run();
+  } finally {
+    config.DESERTION_EXIT_PERMANENCE_PERMILLE = original;
+  }
+}
+
 function makeMove(
   overrides: Partial<CandidateMoveEvaluation> = {},
 ): CandidateMoveEvaluation {
@@ -580,7 +593,11 @@ describe('desertion cascade', () => {
     const lambda = 0.64;
 
     expect(calculateUStay(piece, context, lambda)).toBe(-5.45);
-    expect(calculateUDesert(piece, context, lambda, [piece])).toBe(-19.2);
+    expect(
+      withExitPermanence(0, () =>
+        calculateUDesert(piece, context, lambda, [piece]),
+      ),
+    ).toBe(-19.2);
   });
 
   it('charges anticipated standing loss in the desertion utility (golden)', () => {
@@ -598,7 +615,11 @@ describe('desertion cascade', () => {
       shadowFactor: 1,
     };
 
-    expect(calculateUDesert(piece, context, 0.64, [piece, peer])).toBe(-21.45);
+    expect(
+      withExitPermanence(0, () =>
+        calculateUDesert(piece, context, 0.64, [piece, peer]),
+      ),
+    ).toBe(-21.45);
   });
 
   it('makes anticipated standing loss fall with the audience', () => {
@@ -618,13 +639,9 @@ describe('desertion cascade', () => {
       shadowFactor: 1,
     };
 
-    const firstDeserter = calculateUDesert(piece, context, 0.64, [
-      piece,
-      ...peers,
-    ]);
-    const lateDeserter = calculateUDesert(piece, context, 0.64, [
-      piece,
-      ...peers.slice(0, 1),
+    const [firstDeserter, lateDeserter] = withExitPermanence(0, () => [
+      calculateUDesert(piece, context, 0.64, [piece, ...peers]),
+      calculateUDesert(piece, context, 0.64, [piece, ...peers.slice(0, 1)]),
     ]);
 
     expect(firstDeserter).toBe(-52.95);
@@ -643,11 +660,15 @@ describe('desertion cascade', () => {
       shadowFactor: 1,
     };
     const config = ENGINE_CONFIG as { DESERTION_COLLECTIVE_STAKE: number };
-    const baseline = shouldDesert(piece, context, [piece]);
+    const baseline = withExitPermanence(0, () =>
+      shouldDesert(piece, context, [piece]),
+    );
     const original = config.DESERTION_COLLECTIVE_STAKE;
     try {
       config.DESERTION_COLLECTIVE_STAKE = 0.3;
-      const lowStake = shouldDesert(piece, context, [piece]);
+      const lowStake = withExitPermanence(0, () =>
+        shouldDesert(piece, context, [piece]),
+      );
       expect(lowStake.desert).not.toBe(baseline.desert);
       expect(lowStake.uStay).not.toBe(baseline.uStay);
       expect(lowStake.uDesert).not.toBe(baseline.uDesert);

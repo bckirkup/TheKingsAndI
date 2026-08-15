@@ -33,7 +33,7 @@ Six weights in `[0,1]`, rolled at creation and immutable:
 | Trait | Meaning | Where it enters |
 |---|---|---|
 | `w_honor` | value placed on heroic achievement and fair leadership | scales `ΔV_board` |
-| `w_courage` | resistance to fear of capture | discounts `P_captured` |
+| `w_courage` | resistance to fear of capture | discounts deterministic static-exchange `P_captured` |
 | `w_ambition` | desire to engage high-value targets | scales `ΔV_capture` |
 | `w_loyalty` | trust vs. self-preservation | scales `T_i` |
 | `w_empathy` | sensitivity to peer safety and fair treatment | scales `Φ` and benching penalties |
@@ -58,9 +58,14 @@ move pipeline.
 U(P_i, m) =  w_loyalty  · T_i
            + w_honor    · ΔV_board(m)          // engine eval delta, -10..+10
            + w_ambition · ΔV_capture(m)        // captured piece value, K = 0
-           - (1 - w_courage) · P_captured(m)   // 0..1
+           - (1 - w_courage) · P_captured(m)   // deterministic static-exchange risk, 0..1
            + Σ_{j ≠ i} Φ(P_i, P_j, m)
 ```
+
+`P_captured` is a deterministic static-exchange risk supplied as plain board
+data. It is computed from sorted attacker and defender values on the square,
+without x-rays or engine evaluation; it is not a binary threat flag or a claim
+that capture is certain.
 
 with the **inter-piece protection term**
 
