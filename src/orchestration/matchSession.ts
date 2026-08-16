@@ -63,6 +63,7 @@ import {
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
 import { kingExposureAfterWithdrawals } from './kingExposure';
+import { applyPromotion } from './promotion';
 
 export type MatchPhase =
   | 'playing'
@@ -142,6 +143,7 @@ export interface MatchSessionConfig {
   readonly engine: EnginePort;
   readonly seed?: number;
   readonly playerSide?: Side;
+  readonly initialBoard?: LivingBoard;
   readonly initialTrust?: number;
   readonly initialRoster?: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
@@ -211,7 +213,7 @@ export class MatchSession {
     this.kingTauAbil = config.kingTauAbil ?? 50;
     this.rivalLeaderId =
       config.rivalLeaderId ?? `opponent:${this.opponentArchetype}`;
-    this.board = LivingBoard.standard();
+    this.board = config.initialBoard ?? LivingBoard.standard();
     this.roster =
       config.initialRoster !== undefined
         ? config.initialRoster.map(normalizePieceState)
@@ -629,6 +631,15 @@ export class MatchSession {
           by: applied.moverId,
         });
       }
+      if (applied.promotion !== undefined) {
+        const promotion = applyPromotion(
+          this.roster,
+          applied.promotion,
+          this.ply,
+        );
+        this.roster = promotion.roster;
+        this.events.push(promotion.event);
+      }
       this.roster = syncRoster(this.board, this.roster, this.playerSide);
       this.ply += 1;
     } else {
@@ -700,6 +711,15 @@ export class MatchSession {
             by: applied.moverId,
           });
         }
+        if (applied.promotion !== undefined) {
+          const promotion = applyPromotion(
+            this.roster,
+            applied.promotion,
+            this.ply,
+          );
+          this.roster = promotion.roster;
+          this.events.push(promotion.event);
+        }
         this.roster = syncRoster(this.board, this.roster, this.playerSide);
         this.ply += 1;
       } else {
@@ -735,6 +755,15 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp,
     });
+    if (applied.promotion !== undefined) {
+      const promotion = applyPromotion(
+        this.roster,
+        applied.promotion,
+        this.ply,
+      );
+      this.roster = promotion.roster;
+      this.events.push(promotion.event);
+    }
     if (applied.capture !== undefined) {
       this.events.push({
         t: 'CAPTURE',

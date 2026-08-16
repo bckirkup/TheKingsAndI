@@ -78,6 +78,7 @@ function makeMatchRecord(
       overrideCount: 0,
       desertionCount: 0,
       quietQuitCount: 0,
+      promotionCount: 0,
       meanTrustDelta: 0,
       foldVersion: AUDIT_FOLD_VERSION,
       ...auditOverrides,
@@ -152,6 +153,58 @@ describe('foldMatchAudit', () => {
     expect(compliantOnly.executionFidelity).not.toBe(
       baseline.executionFidelity,
     );
+  });
+
+  it('counts promotion events without maintaining a second source of truth', () => {
+    const promotions: MatchEvent[] = [
+      {
+        t: 'PROMOTION',
+        ply: 1,
+        pieceId: 'w:P:a7',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
+        t: 'PROMOTION',
+        ply: 2,
+        pieceId: 'w:P:b7',
+        fromRole: 'Pawn',
+        toRole: 'Rook',
+      },
+    ];
+    expect(
+      foldMatchAudit(promotions, 50, 50, new Set(['w:P:a7', 'w:P:b7']))
+        .promotionCount,
+    ).toBe(2);
+    expect(foldMatchAudit([], 50, 50).promotionCount).toBe(0);
+  });
+
+  it("excludes the opponent's promotions from the commander's audit", () => {
+    const promotions: MatchEvent[] = [
+      {
+        t: 'PROMOTION',
+        ply: 1,
+        pieceId: 'w:P:a7',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
+        t: 'PROMOTION',
+        ply: 2,
+        pieceId: 'b:P:a2',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+    ];
+    expect(
+      foldMatchAudit(promotions, 50, 50, new Set(['w:P:a7'])).promotionCount,
+    ).toBe(1);
+    expect(
+      foldMatchAudit(promotions, 50, 50, new Set(['b:P:a2'])).promotionCount,
+    ).toBe(1);
+    expect(
+      foldMatchAudit(promotions, 50, 50, new Set(['w:N:b1'])).promotionCount,
+    ).toBe(0);
   });
 });
 

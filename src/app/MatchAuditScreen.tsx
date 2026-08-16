@@ -31,6 +31,7 @@ export function MatchAuditScreen({
     overrideCount: match.audit.overrideCount,
     desertionCount: match.audit.desertionCount,
     refusalCount: match.audit.refusalCount,
+    promotionCount: match.audit.promotionCount,
     events: match.events,
     roleOf,
   });
@@ -83,6 +84,10 @@ export function MatchAuditScreen({
           <tr>
             <th>Quiet quits</th>
             <td>{match.audit.quietQuitCount}</td>
+          </tr>
+          <tr>
+            <th>Promotions</th>
+            <td>{match.audit.promotionCount}</td>
           </tr>
           <tr>
             <th>Trust delta</th>

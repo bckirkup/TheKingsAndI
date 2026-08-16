@@ -15,6 +15,21 @@ import {
   rosterBenevolenceAppraisal,
   rosterLaunderingRisk,
 } from './campaignPolicy';
+import { ENGINE_CONFIG } from '../psychology';
+
+const ROLE_BY_ID: Readonly<Record<string, PieceState['role']>> = {
+  P: 'Pawn',
+  N: 'Knight',
+  B: 'Bishop',
+  R: 'Rook',
+  Q: 'Queen',
+  K: 'King',
+};
+
+function chairRole(piece: StoredPieceState): PieceState['role'] {
+  const token = piece.id.split(':')[1];
+  return (token === undefined ? undefined : ROLE_BY_ID[token]) ?? piece.role;
+}
 
 /** Keep a failing piece — costly signal `retained_piece` (trust_dynamics §3). */
 export function applyRetainFailingPiece(
@@ -161,6 +176,10 @@ export function mergeRosterAfterMatch(
       const updated = matchById.get(piece.id);
       return {
         ...(updated ?? piece),
+        ...(updated === undefined ||
+        ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
+          ? {}
+          : { role: chairRole(piece) }),
         status: 'DESERTED' as const,
       };
     }
@@ -168,6 +187,12 @@ export function mergeRosterAfterMatch(
     if (updated === undefined) {
       return { ...piece, status: 'CAPTURED' as const };
     }
-    return { ...updated, status: 'ACTIVE' as const };
+    return {
+      ...updated,
+      role: ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
+        ? updated.role
+        : chairRole(piece),
+      status: 'ACTIVE' as const,
+    };
   });
 }

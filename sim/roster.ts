@@ -4,6 +4,7 @@ import {
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  ENGINE_CONFIG,
   type PieceRole,
   type PieceState,
   type PieceTraits,
@@ -120,6 +121,9 @@ export function mergeCampaignRoster(
       if (previous === undefined) return piece;
       return normalizePieceState({
         ...piece,
+        role: ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
+          ? previous.role
+          : piece.role,
         traits: previous.traits,
         T_i: previous.T_i,
         M_i: previous.M_i,

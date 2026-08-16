@@ -14,6 +14,7 @@ export interface PieceServiceRecord {
   readonly timesBenched: number;
   readonly timesFired: number;
   readonly timesRecruited: number;
+  readonly promotions: number;
   readonly deserted: boolean;
 }
 
@@ -37,6 +38,7 @@ function emptyRecord(): PieceServiceRecord {
     timesBenched: 0,
     timesFired: 0,
     timesRecruited: 0,
+    promotions: 0,
     deserted: false,
   };
 }
@@ -92,6 +94,12 @@ export function foldPieceServiceRecords(
       if (pieceId === undefined || !records.has(pieceId)) continue;
 
       switch (event.t) {
+        case 'PROMOTION':
+          update(pieceId, (record) => ({
+            ...record,
+            promotions: record.promotions + 1,
+          }));
+          break;
         case 'MOVE':
           switch (event.verdict) {
             case 'HEROIC_EXECUTION':

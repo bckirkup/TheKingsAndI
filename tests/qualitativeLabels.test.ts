@@ -7,6 +7,7 @@ import {
   moraleBandWord,
   moraleTooltip,
   pieceAccessibleLabel,
+  promotionAttainmentLabel,
   rosterPieceLabel,
   traumaBandWord,
   traumaTooltip,
@@ -43,12 +44,16 @@ describe('qualitative UI labels', () => {
         firePreviewLabel(index - 100),
       ),
       ...Array.from({ length: 201 }, (_, index) => heatBandWord(index - 100)),
+      ...['Pawn', 'Knight', 'Queen'].map(
+        (role) => promotionAttainmentLabel(role) ?? '',
+      ),
     ];
 
     expect(labels.every((label) => !/\d/.test(label))).toBe(true);
     expect(pieceAccessibleLabel(undefined, 'Pawn', 0, 50)).toBe(
       'Pawn, wary trust, steady morale',
     );
+    expect(promotionAttainmentLabel(undefined)).toBeNull();
   });
 
   it('uses monotone trust, morale, and trauma bands', () => {

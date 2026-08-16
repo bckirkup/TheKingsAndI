@@ -36,6 +36,25 @@ function meanTrust(roster: readonly StoredPieceState[]): number {
   return roster.reduce((sum, piece) => sum + piece.T_i, 0) / roster.length;
 }
 
+const ATTAINMENT_RANK: Readonly<Record<string, number>> = {
+  Pawn: 1,
+  Knight: 2,
+  Bishop: 2,
+  Rook: 3,
+  Queen: 4,
+  King: 5,
+};
+
+function highestAttainment(
+  current: string | undefined,
+  candidate: string,
+): string {
+  return (ATTAINMENT_RANK[candidate] ?? 0) >
+    (ATTAINMENT_RANK[current ?? ''] ?? 0)
+    ? candidate
+    : (current ?? candidate);
+}
+
 function normalizeAct(act: ActRecord): ActRecord {
   return {
     ...act,
@@ -214,6 +233,7 @@ export class CareerRepository {
       input.events,
       meanTrust(input.rosterSnapshot),
       meanTrust(input.rosterEnd),
+      new Set(input.rosterSnapshot.map((piece) => piece.id)),
     );
     const record: MatchRecord = {
       id: matchId,
@@ -238,6 +258,7 @@ export class CareerRepository {
       this.db.campaigns,
       this.db.acts,
       this.db.pieceStates,
+      this.db.pieceIdentities,
       async () => {
         await this.db.matches.put(record);
         const campaign = await this.db.campaigns.get(input.campaignId);
@@ -262,6 +283,30 @@ export class CareerRepository {
           await this.db.acts.put(nextAct);
         }
         await this.db.pieceStates.bulkPut([...input.rosterEnd]);
+        const promotedById = new Map<string, string>();
+        for (const event of input.events) {
+          if (event.t !== 'PROMOTION') continue;
+          promotedById.set(
+            event.pieceId,
+            highestAttainment(promotedById.get(event.pieceId), event.toRole),
+          );
+        }
+        if (promotedById.size > 0) {
+          const identities = await this.db.pieceIdentities.toArray();
+          await this.db.pieceIdentities.bulkPut(
+            identities.map((identity) => {
+              const attained = promotedById.get(identity.id);
+              if (attained === undefined) return identity;
+              return {
+                ...identity,
+                attainedRole: highestAttainment(
+                  identity.attainedRole,
+                  attained,
+                ),
+              };
+            }),
+          );
+        }
       },
     );
 
