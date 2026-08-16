@@ -20,19 +20,26 @@ Pawn promotion prospect is deterministic integer permille data, mirrored for
 both sides and damped, but not erased, by a blocker on the pawn's file.
 Prospect is carried through plain-data move evaluations and contributes a
 prospective standing term when `DESERTION_PROMOTION_HOPE_PERMILLE` is enabled.
-That term is additionally scaled by the piece's `τ_abil` credence: hope about
-promotion is leadership-conditional belief in competence, not warmth.
+That term is additionally scaled by an effective ability credence: hope about
+promotion is leadership-conditional belief in competence, not warmth, but a
+bad commander devalues a pawn's dream rather than deleting it. Effective
+credence interpolates from
+`DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE` to `1000` as `τ_abil`
+rises. A floor of `0` reproduces the pure ability gate; a floor of `1000`
+makes hope leader-independent.
 
 The posthumous class-shift default is in the same family as living heroic
 credit but smaller, so a death can establish class worth without overpowering
 a living hero. The chosen promotion-hope default is **TBD** pending the D147
-sweep. The “why this number” calibration rationale is **TBD**.
+sweep. The credence-floor default is provisional at `250` pending its paired
+sweep and owner approval. The “why this number” calibration rationale is
+**TBD**.
 
 ## Implementation
 
 - `src/chess/features.ts:112-151,331-365`
 - `src/psychology/types.ts:55-126,220-235`
-- `src/psychology/desertion.ts:186-320`
+- `src/psychology/desertion.ts:186-333`
 - `src/orchestration/psychologyHooks.ts:68-96`
 - `src/orchestration/headlessMatch.ts:310-318`
 - `src/orchestration/matchSession.ts:626-748`

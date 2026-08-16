@@ -48,13 +48,18 @@ raises `P_loss(team)`, but it now charges the piece an own-future exit cost
 before the decision. The stay estimate combines the piece's own private board
 read, social rumor, and the existing capture-stress term. A pawn may also carry
 prospective promotion standing when the configured hope weight is non-zero.
-The prospective term is leadership-conditional: promotion prospect is
-multiplied by `τ_abil / 100`, because believing that promotion will be earned
-is a belief about the commander's competence, not warmth:
+The prospective term is leadership-conditional through an effective ability
+credence, because believing that promotion will be earned is a belief about
+the commander's competence, not warmth. The effective credence interpolates
+from the configured floor to full credence:
 
 ```
+effectiveCredence =
+  floorPermille
+  + (1_000 − floorPermille) · τ_abilPermille / 1_000
+
 prospectiveStanding =
-  prospectPermille · hopeWeight · τ_abilPermille
+  prospectPermille · hopeWeight · effectiveCredence
   / (1_000 · 1_000 · 1_000 · (STANDARD_ROSTER_SIZE − 1))
 ```
 

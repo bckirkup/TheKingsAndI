@@ -69,8 +69,10 @@ that capture is certain.
 
 Move evaluations also carry integer-permille `promotionProspect`, which is zero
 for non-pawns and feeds the optional prospective standing term. That term is
-scaled by the actor's integer `τ_abil` credence (0..100): promotion hope is
-conditional on believing the commander is competent, not on warmth.
+scaled by effective ability credence: the configured floor is interpolated to
+full credence by the actor's integer `τ_abil` (0..100). Floor `0` is the pure
+gate and floor `1000` is leader-independent hope; promotion hope is about
+competence, not warmth.
 
 with the **inter-piece protection term**
 

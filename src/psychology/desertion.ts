@@ -265,8 +265,22 @@ function calculateStandingCostComponents(
     0,
     Math.min(1_000, Math.trunc(piece.credence.tauAbil * 10)),
   );
+  const credenceFloorPermille = Math.max(
+    0,
+    Math.min(
+      1_000,
+      Math.trunc(
+        ENGINE_CONFIG.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE,
+      ),
+    ),
+  );
+  const effectiveAbilityCredencePermille =
+    credenceFloorPermille +
+    Math.trunc(
+      ((1_000 - credenceFloorPermille) * abilityCredencePermille) / 1_000,
+    );
   const prospectiveStanding =
-    (prospectPermille * hopeWeight * abilityCredencePermille) /
+    (prospectPermille * hopeWeight * effectiveAbilityCredencePermille) /
     (1_000 * 1_000 * 1_000 * Math.max(1, STANDARD_ROSTER_SIZE - 1));
   const prospectiveStandingCost =
     prospectiveStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;

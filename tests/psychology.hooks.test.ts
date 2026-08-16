@@ -88,6 +88,8 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     promotionProspect: 1_000,
   };
   const originalHope = config.DESERTION_PROMOTION_HOPE_PERMILLE;
+  const originalHopeFloor =
+    config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE;
   try {
     config.DESERTION_PROMOTION_HOPE_PERMILLE = 0;
     const lowHope = shouldDesert(hero, context, [hero, witness]).terms
@@ -120,8 +122,48 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
       shouldDesert(hero, context, [hero, witness]).terms
         .prospectiveStandingCost,
     ).toBe(highHope);
+
+    config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE = 0;
+    const pureGate = shouldDesert(
+      makePiece({ credence: { ...defaultCredence(), tauAbil: 50 } }),
+      context,
+      [hero, witness],
+    ).terms.prospectiveStandingCost;
+    const floorValues = [0, 250, 500, 1_000].map((floor) => {
+      config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE = floor;
+      return (
+        shouldDesert(
+          makePiece({ credence: { ...defaultCredence(), tauAbil: 50 } }),
+          context,
+          [hero, witness],
+        ).terms.prospectiveStandingCost ?? Number.NaN
+      );
+    });
+    expect(floorValues).toEqual([...floorValues].sort((a, b) => a - b));
+    expect(new Set(floorValues).size).toBe(4);
+    expect(pureGate).toBe(floorValues[0]);
+
+    config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE = 1_000;
+    const floorMaxLowCredence = shouldDesert(
+      makePiece({ credence: { ...defaultCredence(), tauAbil: 0 } }),
+      context,
+      [hero, witness],
+    ).terms.prospectiveStandingCost;
+    const floorMaxHighCredence = shouldDesert(
+      makePiece({ credence: { ...defaultCredence(), tauAbil: 100 } }),
+      context,
+      [hero, witness],
+    ).terms.prospectiveStandingCost;
+    expect(floorMaxLowCredence).toBe(floorMaxHighCredence);
+    expect(
+      floorValues.every(
+        (value) => value !== undefined && Number.isFinite(value) && value >= 0,
+      ),
+    ).toBe(true);
   } finally {
     config.DESERTION_PROMOTION_HOPE_PERMILLE = originalHope ?? 0;
+    config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE =
+      originalHopeFloor ?? 250;
   }
 });
 import type { EngineEvaluation } from '../src/engine';

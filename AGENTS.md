@@ -31,13 +31,13 @@ implementation status from an ADR or the decision register alone.
 | `docs/calibration/2026-08-13-cross-style-table.md` | All nine leader styles measured on 248cd08 — collapse is style-invariant and attrition is saturated; compute footprint is bounded |
 | `docs/calibration/2026-08-15-desertion-gradient.md` | **Why style does not change the exit decision:** λ cancels out of the desertion comparison, the discriminator is an attachment knife edge at `tauBenev = 50`, and `DESERTION_STAY_ATTACHMENT_PERMILLE` (D145) measures the fix |
 | `docs/calibration/2026-08-16-exit-cost-asymmetry.md` | **Historical D146 diagnosis before ADR 0052:** desertion removed the piece just as capture did without an own-future cost, `P_captured` was a threat flag rather than a probability, and pawn standing was 0 by construction |
-| `docs/calibration/2026-08-16-exit-permanence-sweep.md` | **D146 default selection:** the fake-engine sweep selects exit permanence `750` as the only tested setting with live, leadership-ordered desertion |
+| `docs/calibration/2026-08-16-exit-permanence-sweep.md` | **D146 default selection:** the CI-seed measurement adopts exit permanence `625`; seed-7 `750` was unsafe at the smoke boundary |
 | `docs/calibration/2026-08-10-state-of-play.md` | Previous harness numbers; tyrannical figures superseded by the 08-13 pass |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/0052-exit-cost-and-capture-probability.md` | D146 exit permanence and static-exchange capture-risk specification |
 | `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0053 decided vs shipped |
 | `docs/adr/0053-pawn-hope-and-posthumous-credit.md` | D147 pawn hope, capture truth, and posthumous class credit |
-| `docs/calibration/2026-08-18-pawn-hope-sweep.md` | D147 promotion-hope calibration; raw sweep artifacts retained externally |
+| `docs/calibration/2026-08-18-pawn-hope-sweep.md` | D147 promotion-hope and credence-floor calibration; raw sweep artifacts retained externally |
 | `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
 | `docs/risks_and_open_questions.md` | Known hazards |
