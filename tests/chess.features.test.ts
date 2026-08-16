@@ -9,6 +9,7 @@ import {
   extractThreatMap,
   kingExposureThousandths,
   materialBalance,
+  promotionProspectThousandths,
 } from '../src/chess';
 import type { FeatureConfig, MoveIntent, Square } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
@@ -20,6 +21,37 @@ const HANGING_KNIGHT =
   'r1bqkb1r/ppp2ppp/2n5/3p4/4N3/8/PPPP1PPP/R1BQKB1R w KQkq - 0 1';
 
 describe('threat feature golden values', () => {
+  it('computes bounded, mirrored promotion prospect and obstruction damping', () => {
+    const white = LivingBoard.fromFen('4k3/8/8/8/8/8/P7/4K3 w - - 0 1');
+    const black = LivingBoard.fromFen('4k3/p7/8/8/8/8/8/4K3 b - - 0 1');
+    expect(promotionProspectThousandths(white, 'a2', config)).toBe(0);
+    expect(promotionProspectThousandths(black, 'a7', config)).toBe(0);
+    const advancedWhite = LivingBoard.fromFen('4k3/P7/8/8/8/8/8/4K3 w - - 0 1');
+    const advancedBlack = LivingBoard.fromFen('4k3/8/8/8/8/8/p7/4K3 b - - 0 1');
+    expect(promotionProspectThousandths(advancedWhite, 'a7', config)).toBe(
+      1000,
+    );
+    expect(promotionProspectThousandths(advancedBlack, 'a2', config)).toBe(
+      1000,
+    );
+    const blocked = LivingBoard.fromFen('4k3/p7/8/P7/8/8/8/4K3 w - - 0 1');
+    expect(promotionProspectThousandths(blocked, 'a5', config)).toBe(300);
+    expect(
+      promotionProspectThousandths(blocked, 'a5', {
+        ...config,
+        promotionProspectBlockedDamperPermille: 250,
+      }),
+    ).toBe(150);
+  });
+
+  it('carries advanced-pawn prospect through MoveFeatures in permille', () => {
+    const advanced = LivingBoard.fromFen('4k3/8/P7/8/8/8/8/4K3 w - - 0 1');
+    const advancedFeatures = extractMoveFeatures(advanced, {
+      from: 'a6',
+      to: 'a7',
+    });
+    expect(advancedFeatures.promotionProspectByPiece['w:P:a6']).toBe(1000);
+  });
   it('scores a hanging knight as an undefended target', () => {
     const board = LivingBoard.fromFen(HANGING_KNIGHT);
     expect(captureRiskThousandths(board, 'e4' as Square, config)).toBe(

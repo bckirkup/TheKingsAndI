@@ -178,6 +178,7 @@ export async function resolveMoverInsights(
         deltaV_capture: features.deltaVCapture,
         P_captured: features.captureRiskByPiece[piece.id] ?? 0,
         peerSafetyDeltas: features.peerSafetyDeltas,
+        promotionProspect: features.promotionProspectByPiece[piece.id] ?? 0,
       };
     }
     if (actorBeforeScoreCp === undefined) {
@@ -384,6 +385,7 @@ export async function resolveMoverInsights(
       deltaV_capture: features.deltaVCapture,
       P_captured: features.captureRiskByPiece[piece.id] ?? 0,
       peerSafetyDeltas: features.peerSafetyDeltas,
+      promotionProspect: features.promotionProspectByPiece[piece.id] ?? 0,
     };
   }
   // Post-move FEN is opponent-to-move; private scoring is already applied from

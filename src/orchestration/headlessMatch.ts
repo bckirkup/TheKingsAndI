@@ -46,6 +46,7 @@ import {
   applyOutcomeVindication,
   applyPostMoveCredence,
   applyRosterAbilityObservations,
+  applyPosthumousClassCredit,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
   attributeSacrifice,
@@ -304,6 +305,14 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
+  if (applied.capture !== undefined) {
+    events.push({
+      t: 'CAPTURE',
+      ply,
+      victim: applied.capture.pieceId,
+      by: applied.moverId,
+    });
+  }
   const nomination = heroismNomination(events, moveEval, input.audit);
   if (nomination !== undefined) events.push(nomination);
   const abilityObservations = applyRosterAbilityObservations(
@@ -490,6 +499,21 @@ export async function runHeadlessMatch(
       enemyRoster = enemyTurn.enemyRoster;
       engineAudit.push(...(enemyTurn.engineAudit ?? []));
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
+      events.push(...enemyTurn.events);
+      const capturedByEnemy =
+        enemyTurn.capturedPieceId === undefined
+          ? undefined
+          : roster.find((piece) => piece.id === enemyTurn.capturedPieceId);
+      if (capturedByEnemy !== undefined) {
+        const credit = applyPosthumousClassCredit(
+          roster,
+          capturedByEnemy,
+          events,
+          enemyTurn.ply - 1,
+        );
+        roster = credit.roster;
+        events.push(...credit.events);
+      }
       roster = applyCapturedPieceInjury(
         roster,
         enemyTurn.capturedPieceId,
@@ -500,7 +524,6 @@ export async function runHeadlessMatch(
         departedEnemyRoster,
         enemyTurn.departedRoster,
       );
-      events.push(...enemyTurn.events);
       enemyObservableBehaviours.push(...enemyTurn.observableBehaviours);
       ply = enemyTurn.ply;
       if (enemyTurn.enemyRout) {
@@ -761,6 +784,20 @@ export async function runHeadlessMatch(
         actorChallenged,
       });
       roster = committed.roster;
+      const capturedByPlayer =
+        committed.capturedPieceId === undefined
+          ? undefined
+          : enemyRoster.find((piece) => piece.id === committed.capturedPieceId);
+      if (capturedByPlayer !== undefined) {
+        const credit = applyPosthumousClassCredit(
+          enemyRoster,
+          capturedByPlayer,
+          events,
+          committed.ply - 1,
+        );
+        enemyRoster = credit.roster;
+        events.push(...credit.events);
+      }
       enemyRoster = applyCapturedPieceInjury(
         enemyRoster,
         committed.capturedPieceId,

@@ -1035,6 +1035,19 @@ removes the only brake for eight of fifteen pieces.
 
 ## Suggested decision order
 
+### D147 ✅ Pawn hope, capture truth, and posthumous class credit (ADR 0053)
+The event log now emits `CAPTURE` for resolved captures. Recent witnessed
+sacrifices grant bounded posthumous class prestige to surviving witnesses.
+Promotion prospect is carried as plain integer-permille data and contributes a
+prospective standing term behind `DESERTION_PROMOTION_HOPE_PERMILLE`.
+Its ability gate uses the provisional
+`DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE` interpolation: floor `0`
+reproduces the pure gate and floor `1000` makes hope leader-independent.
+Implementations are at `src/chess/features.ts:112-151`,
+`src/psychology/desertion.ts:231-333`, and
+`src/orchestration/psychologyHooks.ts:68-96`. The selected promotion-hope
+and floor defaults and rationale remain TBD pending calibration.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had

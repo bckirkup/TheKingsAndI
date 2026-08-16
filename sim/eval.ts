@@ -19,6 +19,7 @@ export function featuresToEvaluation(
     deltaV_capture: features.deltaVCapture,
     P_captured: features.pCaptured,
     peerSafetyDeltas: features.peerSafetyDeltas,
+    promotionProspect: features.promotionProspectByPiece[features.moverId] ?? 0,
   };
 }
 

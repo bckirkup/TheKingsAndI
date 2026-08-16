@@ -72,6 +72,7 @@ function makeMove(
     deltaV_capture: 0,
     P_captured: 0.7,
     peerSafetyDeltas: {},
+    promotionProspect: 0,
     ...overrides,
   };
 }

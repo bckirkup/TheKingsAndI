@@ -97,20 +97,28 @@ function finishUntrackedMove(
   ply: number,
 ): EnemyTurnResult {
   const applied = board.applySan(san);
+  const events: MatchEvent[] = [];
+  events.push({
+    t: 'MOVE',
+    ply,
+    san,
+    pieceId: applied.moverId,
+    verdict: 'COMPLIANT_EXECUTION',
+    orderQualityCp: 0,
+  });
+  if (applied.capture !== undefined) {
+    events.push({
+      t: 'CAPTURE',
+      ply,
+      victim: applied.capture.pieceId,
+      by: applied.moverId,
+    });
+  }
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
     departedRoster: [],
     dreadExposureByPiece: {},
-    events: [
-      {
-        t: 'MOVE',
-        ply,
-        san,
-        pieceId: applied.moverId,
-        verdict: 'COMPLIANT_EXECUTION',
-        orderQualityCp: 0,
-      },
-    ],
+    events,
     ply: ply + 1,
     enemyRout: false,
     lastMove: [applied.from, applied.to],
@@ -255,6 +263,14 @@ function applyTrackedEnemyDecision(input: {
     verdict: outcome.verdict,
     orderQualityCp,
   });
+  if (applied.capture !== undefined) {
+    events.push({
+      t: 'CAPTURE',
+      ply,
+      victim: applied.capture.pieceId,
+      by: applied.moverId,
+    });
+  }
   behaviours.push('move');
   if (outcome.verdict === 'QUIET_QUITTING') behaviours.push('quiet_quit');
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {

@@ -58,6 +58,7 @@ export function desertionContextFor(
     pLossBoard: boardLossPermille / 1_000,
     pivotality: pivotalityLossPermille / 1_000,
     shadowFactor: calculateShadowFactor(pLossIfStayPermille / 1_000),
+    promotionProspect: moveEval.promotionProspect,
   };
 }
 
@@ -78,6 +79,7 @@ export function buildDesertionContexts(
           vLeaderImplied: 0,
           deltaV_capture: 0,
           P_captured: 0,
+          promotionProspect: 0,
           peerSafetyDeltas: {},
         },
         roster,

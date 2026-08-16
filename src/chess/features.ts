@@ -33,6 +33,8 @@ export interface FeatureConfig {
   readonly riskDefended: number;
   /** Risk when the opponent loses material by taking the target. */
   readonly riskLosingTrade: number;
+  /** Fraction of promotion prospect retained when a pawn's file is blocked. */
+  readonly promotionProspectBlockedDamperPermille: number;
   /** Exposure charged per attacked square in the King's ring. */
   readonly kingRingExposure: number;
   /** Exposure charged when the King stands in check. */
@@ -49,6 +51,7 @@ export const DEFAULT_FEATURE_CONFIG: FeatureConfig = {
   riskOutnumbered: 600,
   riskDefended: 250,
   riskLosingTrade: 50,
+  promotionProspectBlockedDamperPermille: 500,
   kingRingExposure: 110,
   kingCheckExposure: 450,
 };
@@ -86,6 +89,8 @@ export interface MoveFeatures {
   readonly pCapturedDelta: number;
   /** Post-move capture risk for every surviving friendly piece, 0..1. */
   readonly captureRiskByPiece: Record<PieceId, number>;
+  /** Post-move promotion prospect for every surviving friendly piece, 0..1000. */
+  readonly promotionProspectByPiece: Record<PieceId, number>;
   /**
    * `ΔSafety_j(m)` in -1..1 for every friendly piece other than the mover:
    * positive means the peer got safer. A captured or deserted peer is absent.
@@ -109,6 +114,77 @@ function opponent(side: Side): Side {
 
 function quantized(thousandths: number): number {
   return thousandths / RISK_SCALE;
+}
+
+function promotionProspectForPieceThousandths(
+  piece: BoardPiece,
+  pieces: readonly BoardPiece[],
+  config: FeatureConfig,
+): number {
+  if (piece.role !== 'P') return 0;
+  const rank = piece.square.charCodeAt(1) - 48;
+  const advanced = piece.side === 'w' ? rank - 2 : 7 - rank;
+  const base = Math.max(
+    0,
+    Math.min(RISK_SCALE, Math.trunc((advanced * RISK_SCALE) / 5)),
+  );
+  if (base === 0) return 0;
+  const file = piece.square.charCodeAt(0);
+  const rankCode = piece.square.charCodeAt(1);
+  const blocked = pieces.some(
+    (other) =>
+      other.square.charCodeAt(0) === file &&
+      (piece.side === 'w'
+        ? other.square.charCodeAt(1) > rankCode
+        : other.square.charCodeAt(1) < rankCode),
+  );
+  if (!blocked) return base;
+  const damper = Math.max(
+    0,
+    Math.min(
+      RISK_SCALE,
+      Math.trunc(config.promotionProspectBlockedDamperPermille),
+    ),
+  );
+  return Math.trunc((base * damper) / RISK_SCALE);
+}
+
+function promotionProspectBaseThousandths(
+  board: LivingBoard,
+  square: Square,
+  config: FeatureConfig,
+): number {
+  const piece = board.pieceAt(square);
+  if (piece === undefined) return 0;
+  return promotionProspectForPieceThousandths(piece, board.pieces(), config);
+}
+
+function promotionProspectByPieceThousandths(
+  board: LivingBoard,
+  side: Side,
+  config: FeatureConfig,
+): Record<PieceId, number> {
+  const pieces = board.pieces();
+  const result: Record<PieceId, number> = {};
+  for (const piece of pieces) {
+    if (piece.side !== side || piece.role !== 'P') {
+      continue;
+    }
+    result[piece.id] = promotionProspectForPieceThousandths(
+      piece,
+      pieces,
+      config,
+    );
+  }
+  return result;
+}
+
+export function promotionProspectThousandths(
+  board: LivingBoard,
+  square: Square,
+  config: FeatureConfig = DEFAULT_FEATURE_CONFIG,
+): number {
+  return promotionProspectBaseThousandths(board, square, config);
 }
 
 function ringSquaresOf(square: Square): Square[] {
@@ -287,11 +363,17 @@ export function extractMoveFeatures(
   const afterKingExposure = kingExposureThousandths(probe, side, config);
 
   const captureRiskByPiece: Record<PieceId, number> = {};
+  const promotionProspectByPiece = promotionProspectByPieceThousandths(
+    probe,
+    side,
+    config,
+  );
   const peerSafetyDeltas: Record<PieceId, number> = {};
   for (const [pieceId, after] of [...afterRisks.entries()].sort(
     ([left], [right]) => (left < right ? -1 : 1),
   )) {
     captureRiskByPiece[pieceId] = quantized(after);
+    promotionProspectByPiece[pieceId] ??= 0;
     if (pieceId === applied.moverId) continue;
     const before = beforeRisks.get(pieceId) ?? 0;
     peerSafetyDeltas[pieceId] = quantized(before - after);
@@ -309,6 +391,7 @@ export function extractMoveFeatures(
     pCaptured: quantized(moverRiskAfter),
     pCapturedDelta: quantized(moverRiskAfter - moverRiskBefore),
     captureRiskByPiece,
+    promotionProspectByPiece,
     peerSafetyDeltas,
     kingSafetyDelta: quantized(beforeKingExposure - afterKingExposure),
   };
