@@ -143,6 +143,19 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     expect(new Set(floorValues).size).toBe(4);
     expect(pureGate).toBe(floorValues[0]);
 
+    config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE = 250;
+    const tauValues = [0, 25, 50, 100].map((tauAbil) => {
+      return (
+        shouldDesert(
+          makePiece({ credence: { ...defaultCredence(), tauAbil } }),
+          context,
+          [hero, witness],
+        ).terms.prospectiveStandingCost ?? Number.NaN
+      );
+    });
+    expect(tauValues).toEqual([...tauValues].sort((a, b) => a - b));
+    expect(new Set(tauValues).size).toBe(4);
+
     config.DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE = 1_000;
     const floorMaxLowCredence = shouldDesert(
       makePiece({ credence: { ...defaultCredence(), tauAbil: 0 } }),
