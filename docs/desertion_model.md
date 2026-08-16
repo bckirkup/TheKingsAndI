@@ -24,13 +24,14 @@ U_stay(i)   = -P_capture(i)·pain_i
 U_desert(i) =            0
               - P_loss(team | i leaves) · λ_i · S_collective · attachment_i
               - standing_i · glory_i · S_standing
+              - pain_i · attachment_i · w_exit · shadowFactor
 
 desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 ```
 
 | Term | Meaning |
 |---|---|
-| `P_capture(i)` | the piece's own estimate of being taken soon, from its depth-`D_i` view |
+| `P_capture(i)` | the piece's own deterministic static-exchange estimate of being taken soon, from its depth-`D_i` view |
 | `pain_i` | how much being taken costs it — rises with accumulated `B_i` (ADR 0009) |
 | `P_loss(team \| ·)` | probability the army loses, with and without it on the board |
 | `λ_i` | **how much this piece cares that the team loses** |
@@ -40,10 +41,12 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `S_standing` | anticipated standing-loss stake in pain units (default `100`) |
 | `attachment_i` | residual stake after walking away, strictly in `(0, 1]`; it starts at the ceiling and is eroded by below-neutral alienation, resisted by loyalty |
 | `w_stay` | attachment weight on the stay collective stake: `(1000 − k + trunc(k·attachment_i))/1000`, with `k = DESERTION_STAY_ATTACHMENT_PERMILLE` clamped to `0..1000`; `k = 1000` per D145, so `w_stay = attachment_i` |
+| `w_exit` | own-future exit permanence weight: `DESERTION_EXIT_PERMANENCE_PERMILLE / 1000`, clamped to `0..1` |
 
-Deserting sets the piece's personal capture risk to zero and raises
-`P_loss(team)`. The stay estimate combines the piece's own private board read,
-social rumor, and the existing capture-stress term:
+Deserting sets the piece's personal capture risk to zero after it leaves and
+raises `P_loss(team)`, but it now charges the piece an own-future exit cost
+before the decision. The stay estimate combines the piece's own private board
+read, social rumor, and the existing capture-stress term:
 
 ```
 pLossBoard = 500 - trunc(500·s/(|s| + K))
@@ -63,13 +66,15 @@ anticipated standing cost.
 
 Attachment weights **both** branches of the comparison (D145). With the same
 factor on each side it cancels from the sign, and so does `λ_i`: what decides
-the exit is capture pain and anticipated standing loss against the pivotality
-increment the piece inflicts by leaving. λ and attachment still set the
-magnitude of the margin, and therefore how far a piece is from quitting, but a
-piece with no capture risk and no standing to lose no longer quits over the
-collective term alone. `DESERTION_STAY_ATTACHMENT_PERMILLE` remains a knob
-(`1000` by default, `0` reproduces the pre-D145 one-sided form) so the regime
-is reproducible; it is not a damping mechanism, and the cascade stays undamped.
+factor on each side it cancels from the collective terms, and so does `λ_i`;
+the exit permanence cost is the intentional own-future asymmetry. λ and
+attachment still set the magnitude of the margin, and therefore how far a
+piece is from quitting, but a piece with no capture risk and no standing to
+lose no longer quits over the collective term alone. `DESERTION_STAY_ATTACHMENT_PERMILLE`
+remains a knob (`1000` by default, `0` reproduces the pre-D145 one-sided form),
+while `DESERTION_EXIT_PERMANENCE_PERMILLE` defaults to `750` and `0` remains the
+free-exit control setting. Neither is a damping mechanism, and the cascade stays
+undamped.
 
 ### 1.1 Discovered check cedes the turn
 

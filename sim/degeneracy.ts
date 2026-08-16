@@ -23,8 +23,8 @@ export const DEGENERACY_CONFIG = {
   counterfactualMinimumMatches: 1,
   /** Fraction of awards one policy may earn before dominating-strategy fires. */
   dominatingAwardFraction: COMMENDATION_CONFIG.DOMINATING_AWARD_FRACTION,
-  /** Attrition below this means a tyrant never routs the roster. */
-  noRoutAttritionThreshold: 0.2,
+  /** Minimum attrition proving that a tyrant loses at least one piece. */
+  noRoutAttritionThreshold: 0.05,
   /** Attrition above this means a supportive leader routs too often. */
   supportiveRoutAttritionThreshold: 0.5,
   /** Early-quartile attrition above this is campaign saturation. */
@@ -321,7 +321,7 @@ export function detectDegeneracy(
   ) {
     findings.push({
       code: 'no-rout',
-      message: `Tyrannical leader desertion attrition below ${config.noRoutAttritionThreshold * 100}% — consequence layer may be inert.`,
+      message: `Tyrannical leader did not lose a piece — consequence layer may be inert.`,
     });
   }
   if (

@@ -82,6 +82,8 @@ export const ENGINE_CONFIG = {
   DESERTION_HYSTERESIS: 0.05,
   /** Attachment weight applied to the stay collective stake, permille. */
   DESERTION_STAY_ATTACHMENT_PERMILLE: 1_000,
+  /** Own-future cost charged when a piece permanently exits, permille. */
+  DESERTION_EXIT_PERMANENCE_PERMILLE: 625,
   DESERTION_PAIN_BASE: 10,
   DESERTION_PAIN_TRAUMA_SCALE: 0.5,
   DESERTION_LAMBDA_TRUST_SCALE: 0.4,

@@ -195,7 +195,37 @@ export function calculateUDesert(
   const quantizedStandingCost = quantizeBoardValue(
     -standing.anticipatedStandingCost * shadowFactor,
   );
-  return (quantizedResidualCost + quantizedStandingCost) / 1_000;
+  const quantizedExitSelfCost = calculateExitSelfCostQuantized(
+    piece,
+    context,
+    activePeers,
+  );
+  return (
+    (quantizedResidualCost + quantizedStandingCost - quantizedExitSelfCost) /
+    1_000
+  );
+}
+
+function calculateExitSelfCostQuantized(
+  piece: PieceState,
+  context: DesertionContext,
+  activePeers: readonly PieceState[],
+): number {
+  const attachment = calculateAttachment(piece, activePeers);
+  const exitPermanencePermille = Math.max(
+    0,
+    Math.min(
+      1_000,
+      Math.trunc(ENGINE_CONFIG.DESERTION_EXIT_PERMANENCE_PERMILLE),
+    ),
+  );
+  return quantizeBoardValue(
+    (calculatePain(piece) *
+      attachment *
+      exitPermanencePermille *
+      calculateShadowFactor(context.P_lossIfStay)) /
+      1_000,
+  );
 }
 
 function calculateStandingCostComponents(
@@ -249,6 +279,8 @@ export function shouldDesert(
   );
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
   const standing = calculateStandingCostComponents(piece, activePeers);
+  const exitSelfCost =
+    calculateExitSelfCostQuantized(piece, context, activePeers) / 1_000;
   const pivotality =
     (calculatePivotalityPermille(piece, activePeers) *
       ENGINE_CONFIG.DESERTION_PIVOTALITY_SCALE_PERMILLE) /
@@ -276,6 +308,7 @@ export function shouldDesert(
       lambdaAffinity: lambdaComponents.affinity,
       standingCost:
         quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
+      exitSelfCost,
       gloryWeight: standing.gloryWeight,
       tauBenev: piece.credence.tauBenev,
       tauAbil: piece.credence.tauAbil,
