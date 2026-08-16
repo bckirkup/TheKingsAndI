@@ -29,11 +29,11 @@ export function DivergenceDisplay({
   );
   return (
     <div className="divergence">
-      <h3>Evaluation divergence</h3>
+      <h3>Why this order is refused</h3>
       <p className="divergence__note">
-        {pieceSubject(name, pending.actor.role)} reasons with{' '}
-        {sightBandWord(searchDepth)}, not the true score (ADR 0013). This
-        shortfall is limited sight, not disloyalty.
+        {pieceSubject(name, pending.actor.role)} reasons from a limited view
+        rather than the true score (ADR 0013). The shortfall is sight, not
+        disloyalty.
       </p>
       <dl>
         <div>
@@ -137,19 +137,22 @@ export function RefusalPanel({
 
 export interface DesertionPanelProps {
   readonly pending: PendingVerdict;
+  readonly name?: string;
   readonly onAcknowledge: () => void;
 }
 
 export function DesertionPanel({
   pending,
+  name,
   onAcknowledge,
 }: DesertionPanelProps): JSX.Element {
   return (
     <div className="verdict-panel verdict-panel--desertion">
       <h2>Desertion</h2>
       <p>
-        <strong>{pending.actor.role}</strong> walks off the board rather than
-        play <code>{pending.san}</code>. Remaining pieces will re-evaluate.
+        <strong>{pieceSubject(name, pending.actor.role)}</strong> walks off the
+        board rather than play <code>{pending.san}</code>. Remaining pieces will
+        re-evaluate.
       </p>
       <button type="button" className="btn btn--danger" onClick={onAcknowledge}>
         Acknowledge departure

@@ -1098,8 +1098,8 @@ campaign match events (`src/persistence/service.ts:33-177`). The board gauges
 remain visual, but their labels are qualitative rather than arithmetic.
 The verdict, override, and quiet-quit panels now explain judgement gap,
 objection strength, sight, and override cost without arithmetic
-(`src/ui/panels/VerdictPanels.tsx:1-190`,
-`src/app/MatchScreen.tsx:230-270`). These panels provide a readable reason, not
+(`src/ui/panels/VerdictPanels.tsx:1-205`,
+`src/app/MatchScreen.tsx:235-273`). These panels provide a readable reason, not
 knowledge about pieces the commander has never led. Slice 1 does not implement
 testimony, rumor, or earned-knowledge projections; those remain open here.
 ADR 0054 §6 still proposes earned knowledge as

@@ -101,6 +101,12 @@ export function MatchScreen({
   );
   const { board, roster, phase, pending, dialogueCue, playerSide } = snapshot;
   const [reported, setReported] = useState(false);
+  const namePropsFor = (
+    pieceId: string,
+  ): { readonly name: string } | Record<string, never> => {
+    const name = identities.find((identity) => identity.id === pieceId)?.name;
+    return name === undefined ? {} : { name };
+  };
 
   const dialogueLine = useMemo(() => {
     if (dialogueCue === null) return null;
@@ -194,12 +200,7 @@ export function MatchScreen({
                   <PieceOverlay
                     key={piece.id}
                     piece={state}
-                    {...(() => {
-                      const name = identities.find(
-                        (identity) => identity.id === piece.id,
-                      )?.name;
-                      return name === undefined ? {} : { name };
-                    })()}
+                    {...namePropsFor(piece.id)}
                     square={piece.square}
                     selected={snapshot.selectedPieceId === piece.id}
                     onSelect={() => {
@@ -233,12 +234,7 @@ export function MatchScreen({
 
           {dialogueCue?.eventKind === 'quiet_quit' && pending === null ? (
             <QuietQuitPanel
-              {...(() => {
-                const name = identities.find(
-                  (identity) => identity.id === dialogueCue.pieceId,
-                )?.name;
-                return name === undefined ? {} : { name };
-              })()}
+              {...namePropsFor(dialogueCue.pieceId)}
               role={
                 roster.find((p) => p.id === dialogueCue.pieceId)?.role ??
                 'Piece'
@@ -251,12 +247,7 @@ export function MatchScreen({
           {pending?.verdict === 'MORAL_REFUSAL' ? (
             <OverridePanel
               pending={pending}
-              {...(() => {
-                const name = identities.find(
-                  (identity) => identity.id === pending.actor.id,
-                )?.name;
-                return name === undefined ? {} : { name };
-              })()}
+              {...namePropsFor(pending.actor.id)}
               onOverride={() => {
                 void session.confirmOverride().then(() => {
                   refresh();
@@ -272,6 +263,7 @@ export function MatchScreen({
           {pending?.verdict === 'DESERTION_MUTINY' ? (
             <DesertionPanel
               pending={pending}
+              {...namePropsFor(pending.actor.id)}
               onAcknowledge={() => {
                 void session.acknowledgeDesertion().then(() => {
                   refresh();
