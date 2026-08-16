@@ -38,7 +38,8 @@ it('applies bounded posthumous class credit only inside the look-back window', (
   };
   const near = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
   expect(near.roster[0]?.classPrestige.Pawn).toBe(
-    witness.classPrestige.Pawn + ENGINE_CONFIG.POSTHUMOUS_CLASS_SHIFT,
+    witness.classPrestige.Pawn +
+      ENGINE_CONFIG.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE,
   );
   expect(near.events).toHaveLength(1);
   const far = applyPosthumousClassCredit([witness], hero, [witnessed], 8);
@@ -55,12 +56,12 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     beneficiary: witness.id,
   };
   const config = ENGINE_CONFIG as unknown as Record<string, number>;
-  const originalShift = config.POSTHUMOUS_CLASS_SHIFT;
+  const originalShift = config.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE;
   const originalWindow = config.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES;
   try {
-    config.POSTHUMOUS_CLASS_SHIFT = 5;
+    config.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE = 5;
     const low = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
-    config.POSTHUMOUS_CLASS_SHIFT = 15;
+    config.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE = 15;
     const high = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
     expect(
       high.events[0]?.t === 'POSTHUMOUS_CLASS_CREDIT'
@@ -74,7 +75,7 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
       applyPosthumousClassCredit([witness], hero, [witnessed], 7).events,
     ).toHaveLength(0);
   } finally {
-    config.POSTHUMOUS_CLASS_SHIFT = originalShift ?? 10;
+    config.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE = originalShift ?? 10;
     config.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES = originalWindow ?? 3;
   }
   const context: DesertionContext = {
@@ -117,7 +118,7 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     expect(highCredence).toBeGreaterThan(lowCredence ?? 0);
     expect(
       shouldDesert(hero, context, [hero, witness]).terms
-        .credenceScaledProspectiveStandingCost,
+        .prospectiveStandingCost,
     ).toBe(highHope);
   } finally {
     config.DESERTION_PROMOTION_HOPE_PERMILLE = originalHope ?? 0;

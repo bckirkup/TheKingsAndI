@@ -122,8 +122,6 @@ export interface DesertionDecisionTerms {
   readonly exitSelfCost?: number;
   /** Posthumous/prospective standing component, in pain units. */
   readonly prospectiveStandingCost?: number;
-  /** Prospective standing cost after scaling by ability credence. */
-  readonly credenceScaledProspectiveStandingCost?: number;
   /** Post-move promotion prospect used by the standing calculation. */
   readonly promotionProspect?: number;
   readonly gloryWeight: number;

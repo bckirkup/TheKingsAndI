@@ -45,7 +45,7 @@ export function applyWitnessedSacrificeEvent(
 export function applyPosthumousClassCreditEvent(
   observer: PieceState,
   heroPiece: PieceState,
-  classShift: number = ENGINE_CONFIG.POSTHUMOUS_CLASS_SHIFT,
+  classShift: number = ENGINE_CONFIG.DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE,
 ): { readonly piece: PieceState; readonly delta: number } {
   const current = observer.classPrestige[heroPiece.role] ?? 0;
   const next = Math.max(-100, Math.min(100, current + classShift));

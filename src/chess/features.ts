@@ -116,29 +116,28 @@ function quantized(thousandths: number): number {
   return thousandths / RISK_SCALE;
 }
 
-function promotionProspectBaseThousandths(
-  board: LivingBoard,
-  square: Square,
+function promotionProspectForPieceThousandths(
+  piece: BoardPiece,
+  pieces: readonly BoardPiece[],
   config: FeatureConfig,
 ): number {
-  const piece = board.pieceAt(square);
-  if (piece === undefined || piece.role !== 'P') return 0;
-  const rank = square.charCodeAt(1) - 48;
+  if (piece.role !== 'P') return 0;
+  const rank = piece.square.charCodeAt(1) - 48;
   const advanced = piece.side === 'w' ? rank - 2 : 7 - rank;
   const base = Math.max(
     0,
     Math.min(RISK_SCALE, Math.trunc((advanced * RISK_SCALE) / 5)),
   );
   if (base === 0) return 0;
-  const blocked = board
-    .pieces()
-    .some(
-      (other) =>
-        other.square.charCodeAt(0) === square.charCodeAt(0) &&
-        (piece.side === 'w'
-          ? other.square.charCodeAt(1) > square.charCodeAt(1)
-          : other.square.charCodeAt(1) < square.charCodeAt(1)),
-    );
+  const file = piece.square.charCodeAt(0);
+  const rankCode = piece.square.charCodeAt(1);
+  const blocked = pieces.some(
+    (other) =>
+      other.square.charCodeAt(0) === file &&
+      (piece.side === 'w'
+        ? other.square.charCodeAt(1) > rankCode
+        : other.square.charCodeAt(1) < rankCode),
+  );
   if (!blocked) return base;
   const damper = Math.max(
     0,
@@ -148,6 +147,16 @@ function promotionProspectBaseThousandths(
     ),
   );
   return Math.trunc((base * damper) / RISK_SCALE);
+}
+
+function promotionProspectBaseThousandths(
+  board: LivingBoard,
+  square: Square,
+  config: FeatureConfig,
+): number {
+  const piece = board.pieceAt(square);
+  if (piece === undefined) return 0;
+  return promotionProspectForPieceThousandths(piece, board.pieces(), config);
 }
 
 function promotionProspectByPieceThousandths(
@@ -161,37 +170,11 @@ function promotionProspectByPieceThousandths(
     if (piece.side !== side || piece.role !== 'P') {
       continue;
     }
-    const rank = piece.square.charCodeAt(1) - 48;
-    const advanced = piece.side === 'w' ? rank - 2 : 7 - rank;
-    const base = Math.max(
-      0,
-      Math.min(RISK_SCALE, Math.trunc((advanced * RISK_SCALE) / 5)),
+    result[piece.id] = promotionProspectForPieceThousandths(
+      piece,
+      pieces,
+      config,
     );
-    if (base === 0) {
-      result[piece.id] = 0;
-      continue;
-    }
-    const file = piece.square.charCodeAt(0);
-    const rankCode = piece.square.charCodeAt(1);
-    const blocked = pieces.some(
-      (other) =>
-        other.square.charCodeAt(0) === file &&
-        (piece.side === 'w'
-          ? other.square.charCodeAt(1) > rankCode
-          : other.square.charCodeAt(1) < rankCode),
-    );
-    if (!blocked) {
-      result[piece.id] = base;
-      continue;
-    }
-    const damper = Math.max(
-      0,
-      Math.min(
-        RISK_SCALE,
-        Math.trunc(config.promotionProspectBlockedDamperPermille),
-      ),
-    );
-    result[piece.id] = Math.trunc((base * damper) / RISK_SCALE);
   }
   return result;
 }
@@ -390,9 +373,7 @@ export function extractMoveFeatures(
     ([left], [right]) => (left < right ? -1 : 1),
   )) {
     captureRiskByPiece[pieceId] = quantized(after);
-    promotionProspectByPiece[pieceId] = quantized(
-      promotionProspectByPiece[pieceId] ?? 0,
-    );
+    promotionProspectByPiece[pieceId] ??= 0;
     if (pieceId === applied.moverId) continue;
     const before = beforeRisks.get(pieceId) ?? 0;
     peerSafetyDeltas[pieceId] = quantized(before - after);

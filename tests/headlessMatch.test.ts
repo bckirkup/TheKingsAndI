@@ -4,6 +4,7 @@ import { extractMoveFeatures, LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
 import { createFakeEnginePort } from '../src/engine/fake';
 import {
+  featuresToEvaluation,
   runHeadlessMatch,
   type HeadlessLeaderPort,
 } from '../src/orchestration';
@@ -132,5 +133,50 @@ describe('headless enemy tracking configuration', () => {
       });
     await expect((await run(undefined)).enemyFieldedPieceIds).toHaveLength(8);
     await expect((await run(16)).enemyFieldedPieceIds).toHaveLength(16);
+  });
+});
+
+it('records exactly one CAPTURE event per resolved headless capture', async () => {
+  const board = LivingBoard.fromFen('4k3/8/8/8/8/3p4/4B3/4K3 w - - 0 1');
+  const leader: HeadlessLeaderPort = {
+    chooseMove(currentBoard, side) {
+      const capture = currentBoard.legalMoves().find((intent) => {
+        const mover = currentBoard.pieceAt(intent.from);
+        const victim = currentBoard.pieceAt(intent.to);
+        return (
+          mover?.side === side && victim !== undefined && victim.side !== side
+        );
+      });
+      if (capture === undefined) return undefined;
+      const mover = currentBoard.pieceAt(capture.from);
+      if (mover === undefined) return undefined;
+      const features = extractMoveFeatures(currentBoard, capture);
+      return {
+        moverId: mover.id,
+        intent: capture,
+        san: features.san,
+        moveEval: featuresToEvaluation(features),
+        objectivelyGood: true,
+      };
+    },
+    shouldOverride: () => false,
+  };
+  const result = await runHeadlessMatch({
+    random: createSeededRandom(7),
+    maxPlies: 1,
+    playerSide: 'w',
+    leader,
+    opponent: leader,
+    initialBoard: board,
+    initialRoster: createStartingRoster(board, 'w', 0, 0.5),
+    initialEnemyRoster: createStartingRoster(board, 'b', 0, 0.5),
+    engine: createFakeEnginePort(),
+  });
+  const captures = result.events.filter((event) => event.t === 'CAPTURE');
+  expect(captures).toHaveLength(1);
+  expect(captures[0]).toMatchObject({
+    t: 'CAPTURE',
+    victim: 'b:P:d3',
+    by: 'w:B:e2',
   });
 });

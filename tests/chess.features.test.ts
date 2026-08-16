@@ -43,6 +43,15 @@ describe('threat feature golden values', () => {
       }),
     ).toBe(150);
   });
+
+  it('carries advanced-pawn prospect through MoveFeatures in permille', () => {
+    const advanced = LivingBoard.fromFen('4k3/8/P7/8/8/8/8/4K3 w - - 0 1');
+    const advancedFeatures = extractMoveFeatures(advanced, {
+      from: 'a6',
+      to: 'a7',
+    });
+    expect(advancedFeatures.promotionProspectByPiece['w:P:a6']).toBe(1000);
+  });
   it('scores a hanging knight as an undefended target', () => {
     const board = LivingBoard.fromFen(HANGING_KNIGHT);
     expect(captureRiskThousandths(board, 'e4' as Square, config)).toBe(

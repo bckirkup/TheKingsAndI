@@ -524,7 +524,6 @@ export async function runHeadlessMatch(
         departedEnemyRoster,
         enemyTurn.departedRoster,
       );
-      events.push(...enemyTurn.events);
       enemyObservableBehaviours.push(...enemyTurn.observableBehaviours);
       ply = enemyTurn.ply;
       if (enemyTurn.enemyRout) {

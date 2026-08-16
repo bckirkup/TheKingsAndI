@@ -12,7 +12,7 @@ export const ENGINE_CONFIG = {
   DEFAULT_BENCHING_PEER_BASE_PENALTY: -10,
   DEFAULT_CLASS_SHIFT_HEROIC_SACRIFICE: 20,
   /** Class prestige awarded when a witnessed sacrifice is later captured. */
-  POSTHUMOUS_CLASS_SHIFT: 10,
+  DEFAULT_CLASS_SHIFT_POSTHUMOUS_SACRIFICE: 10,
   /** Maximum sacrifice-to-capture distance for posthumous class credit. */
   POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES: 3,
   DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE: 50,

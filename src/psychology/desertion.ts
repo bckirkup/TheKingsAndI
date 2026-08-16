@@ -343,8 +343,6 @@ export function shouldDesert(
         quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
       prospectiveStandingCost:
         quantizeBoardValue(standing.prospectiveStandingCost) / 1_000,
-      credenceScaledProspectiveStandingCost:
-        quantizeBoardValue(standing.prospectiveStandingCost) / 1_000,
       promotionProspect: context.promotionProspect,
       exitSelfCost,
       gloryWeight: standing.gloryWeight,

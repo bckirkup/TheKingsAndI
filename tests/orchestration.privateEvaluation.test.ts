@@ -69,6 +69,27 @@ describe('private evaluation profile', () => {
     expect(result.vLeaderImplied).toBe(1.55);
   });
 
+  it('carries feature-layer promotion prospect into psychology in permille', () => {
+    const features: MoveFeatures = {
+      moverId: 'w:P:e2',
+      san: 'e4',
+      deltaVCapture: 0,
+      materialDelta: 0,
+      pCaptured: 0,
+      pCapturedDelta: 0,
+      captureRiskByPiece: {},
+      peerSafetyDeltas: {},
+      promotionProspectByPiece: { 'w:P:e2': 750 },
+      kingSafetyDelta: 0,
+    };
+    const result = insightToEvaluation(
+      features,
+      { scoreCp: 0, pv: [] },
+      { scoreCp: 0, pv: [] },
+    );
+    expect(result.promotionProspect).toBe(750);
+  });
+
   it('produces deterministic integer-quantized profile data', () => {
     const first = evalProfileFor(ACTOR, POST_MOVE, { traumaDrift: false });
     const second = evalProfileFor(ACTOR, POST_MOVE, { traumaDrift: false });
