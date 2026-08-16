@@ -4,11 +4,11 @@ import {
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  ENGINE_CONFIG,
   type PieceRole,
   type PieceState,
   type PieceTraits,
 } from '../src/psychology';
-import { ENGINE_CONFIG } from '../src/psychology';
 
 const ROLE_MAP: Record<Role, PieceRole> = {
   P: 'Pawn',

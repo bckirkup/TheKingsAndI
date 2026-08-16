@@ -49,6 +49,7 @@ export function foldMatchAudit(
   events: readonly MatchEvent[],
   rosterStartTrust: number,
   rosterEndTrust: number,
+  rosterPieceIds?: ReadonlySet<string>,
 ): MatchAudit {
   let refusalCount = 0;
   let overrideCount = 0;
@@ -69,7 +70,9 @@ export function foldMatchAudit(
         if (event.verdict === 'QUIET_QUITTING') quietQuitCount += 1;
         break;
       case 'PROMOTION':
-        promotionCount += 1;
+        if (rosterPieceIds === undefined || rosterPieceIds.has(event.pieceId)) {
+          promotionCount += 1;
+        }
         break;
       case 'DESERTION':
         desertionCount += 1;

@@ -7,7 +7,7 @@ import type { EngineAuditEntry } from '../engine';
 
 export const SCHEMA_VERSION = 1;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
-export const AUDIT_FOLD_VERSION = 'audit-v2';
+export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';

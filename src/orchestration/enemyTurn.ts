@@ -90,7 +90,7 @@ function resolveIntent(
   });
 }
 
-function finishUntrackedMove(
+export function finishUntrackedMove(
   board: LivingBoard,
   enemyRoster: PieceState[],
   enemySide: Side,

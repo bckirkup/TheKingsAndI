@@ -135,9 +135,14 @@ export function RosterScreen({
                     roleFor(agent),
                     agent.T_i,
                   )}
-                  {promotionAttainmentLabel(
-                    identityById.get(agent.id)?.attainedRole,
-                  ) ?? null}
+                  {(() => {
+                    const attainment = promotionAttainmentLabel(
+                      identityById.get(agent.id)?.attainedRole,
+                    );
+                    return attainment === null ? null : (
+                      <span>{attainment}</span>
+                    );
+                  })()}
                 </button>
               </li>
             ))}
@@ -164,9 +169,12 @@ export function RosterScreen({
                 piece.T_i,
                 piece.status,
               )}
-              {promotionAttainmentLabel(
-                identityById.get(piece.id)?.attainedRole,
-              ) ?? null}
+              {(() => {
+                const attainment = promotionAttainmentLabel(
+                  identityById.get(piece.id)?.attainedRole,
+                );
+                return attainment === null ? null : <span>{attainment}</span>;
+              })()}
             </button>
           </li>
         ))}

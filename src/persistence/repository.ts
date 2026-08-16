@@ -233,6 +233,7 @@ export class CareerRepository {
       input.events,
       meanTrust(input.rosterSnapshot),
       meanTrust(input.rosterEnd),
+      new Set(input.rosterSnapshot.map((piece) => piece.id)),
     );
     const record: MatchRecord = {
       id: matchId,
