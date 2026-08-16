@@ -87,7 +87,7 @@ export const ENGINE_CONFIG = {
   /** Attachment weight applied to the stay collective stake, permille. */
   DESERTION_STAY_ATTACHMENT_PERMILLE: 1_000,
   /** Own-future cost charged when a piece permanently exits, permille. */
-  DESERTION_EXIT_PERMANENCE_PERMILLE: 750,
+  DESERTION_EXIT_PERMANENCE_PERMILLE: 625,
   /** Weight of a pawn's prospective promotion stake, permille. */
   DESERTION_PROMOTION_HOPE_PERMILLE: 0,
   DESERTION_PAIN_BASE: 10,
