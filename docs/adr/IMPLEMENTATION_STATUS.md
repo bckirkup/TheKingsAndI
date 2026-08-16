@@ -29,7 +29,7 @@ the discrepancy is corrected.
 | 0051 | Non-selection, redemption, and obsolescence | Accepted for season-pool slice; calibration remains open | **Shipped** — `sim/pool.ts:27-65`, `sim/pool.ts:376-552`, `sim/season.ts:98-145` |
 | 0052 | Exit permanence and static-exchange capture risk | Accepted — both candidate directions adopted; CI-safe default `625` selected by calibration | **Shipped** — `src/psychology/config.ts:90`, `src/psychology/desertion.ts:209`, `src/chess/features.ts:137` |
 | 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; calibration defaults open | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-333`, `src/orchestration/psychologyHooks.ts:68-96` |
-| 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Not wired** — promotion is recorded at `src/chess/board.ts:367-369` and read nowhere; no `PROMOTION` event; no player-facing bench |
+| 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slice 1 renders stored identity, origin, and event-log service records and replaces arithmetic leaks with qualitative labels; promotion remains recorded at `src/chess/board.ts:367-369` and read nowhere, with no `PROMOTION` event or player-facing bench |
 
 ## Confirmed implementation gaps
 
@@ -67,13 +67,15 @@ These are status distinctions, not new design decisions:
   (`src/orchestration/rosterActions.ts:132-141`), while `listFreeAgents`
   returns the player's own `DESERTED` pieces
   (`src/persistence/repository.ts:354-357`).
-- **Piece names are not rendered.** Names are stored in
-  `src/app/careerBootstrap.ts:44-49`, but no screen renders them.
-- **Exact integers leak through the piece overlay.** `PieceOverlay` publishes
-  exact trust and morale in its `aria-label`
-  (`src/ui/overlays/PieceOverlay.tsx:41`) and exact morale and trauma in
-  `title` attributes (`src/ui/overlays/PieceOverlay.tsx:50-57`), against
-  ADR 0018.
+- **Piece names are partly wired.** Names are stored in
+  `src/app/careerBootstrap.ts:44-49` and now render in the roster and piece
+  overlay; missing identity records still use a role fallback. Service records
+  are folded from match events in `src/persistence/service.ts:31-140`.
+- **Exact gauge integers are partly resolved.** The piece overlay now publishes
+  qualitative trust, morale, and trauma labels in
+  `src/ui/overlays/PieceOverlay.tsx:44-73`; the numeric leak is removed there
+  against ADR 0018. Testimony, rumor, and earned-knowledge projections remain
+  unwired.
 
 Open calibration decisions (D35, D40, D42–D44, and later magnitude Ds) remain
 harness work — do not silently close them by changing defaults without a

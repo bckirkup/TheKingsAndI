@@ -29,6 +29,11 @@ export {
   type LearningDelta,
 } from './learningDelta';
 export {
+  foldPieceServiceRecords,
+  type PieceServiceRecord,
+  type PieceServiceRecordSet,
+} from './service';
+export {
   assertSchemaVersion,
   MIGRATIONS,
   stampSchemaVersion,
@@ -81,6 +86,7 @@ export {
   LEARNING_DELTA_FOLD_VERSION,
   PASSPORT_VERSION,
   PSYCH_CONFIG_VERSION,
+  SERVICE_RECORD_FOLD_VERSION,
   SCHEMA_VERSION,
   TRANSCRIPT_FOLD_VERSION,
 } from './types';

@@ -7,7 +7,12 @@ import { MatchScreen } from './MatchScreen';
 import { RosterScreen } from './RosterScreen';
 import { ThemeProvider } from './ThemeProvider';
 import { finalizeCampaignIfComplete } from '../orchestration/campaignFinalize';
-import { CareerRepository } from '../persistence';
+import {
+  CareerRepository,
+  foldPieceServiceRecords,
+  type PieceIdentityRecord,
+  type PieceServiceRecord,
+} from '../persistence';
 import type {
   ActRecord,
   CampaignRecord,
@@ -26,6 +31,8 @@ type AppScreen =
       readonly campaign: CampaignRecord;
       readonly roster: StoredPieceState[];
       readonly freeAgents: StoredPieceState[];
+      readonly identities: readonly PieceIdentityRecord[];
+      readonly serviceRecords: ReadonlyMap<string, PieceServiceRecord>;
       readonly matchIndex: number;
       readonly seed: number;
       readonly leaderAbilityTrust: number;
@@ -36,6 +43,7 @@ type AppScreen =
       readonly act: ActRecord;
       readonly campaign: CampaignRecord;
       readonly roster: StoredPieceState[];
+      readonly identities: readonly PieceIdentityRecord[];
       readonly matchIndex: number;
       readonly seed: number;
       readonly rosterPreamble: readonly MatchEvent[];
@@ -60,6 +68,15 @@ export function App(): JSX.Element {
             void (async () => {
               await repo.init();
               const freeAgents = await repo.listFreeAgents();
+              const matches = await repo.listMatches(input.campaign.id);
+              const pieceIds = new Set([
+                ...input.roster.map((piece) => piece.id),
+                ...freeAgents.map((piece) => piece.id),
+                ...matches.flatMap((match) =>
+                  match.rosterSnapshot.map((piece) => piece.id),
+                ),
+              ]);
+              const identities = await repo.getIdentities([...pieceIds]);
               setScreen({
                 kind: 'roster',
                 career: input.career,
@@ -67,6 +84,8 @@ export function App(): JSX.Element {
                 campaign: input.campaign,
                 roster: input.roster,
                 freeAgents,
+                identities,
+                serviceRecords: foldPieceServiceRecords(matches).records,
                 matchIndex: input.matchIndex,
                 seed: input.seed,
                 leaderAbilityTrust: input.leaderAbilityTrust,
@@ -83,6 +102,8 @@ export function App(): JSX.Element {
         <RosterScreen
           roster={screen.roster}
           freeAgents={screen.freeAgents}
+          identities={screen.identities}
+          serviceRecords={screen.serviceRecords}
           leaderAbilityTrust={screen.leaderAbilityTrust}
           onBack={() => setScreen({ kind: 'hub' })}
           onConfirm={(roster, preambleEvents) => {
@@ -95,6 +116,7 @@ export function App(): JSX.Element {
                 act: screen.act,
                 campaign: screen.campaign,
                 roster,
+                identities: screen.identities,
                 matchIndex: screen.matchIndex,
                 seed: screen.seed,
                 rosterPreamble: preambleEvents,
@@ -110,6 +132,7 @@ export function App(): JSX.Element {
           initialRoster={screen.roster}
           opponentArchetype={screen.act.opponentArchetype}
           rosterPreamble={screen.rosterPreamble}
+          identities={screen.identities}
           onMatchFinished={(result) => {
             void (async () => {
               await repo.init();

@@ -1090,14 +1090,17 @@ coefficient must be re-ranged afterwards.
 ### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
 **Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
 failure equally bad: a bench nobody can read is a bench nobody can use. Shipped
-today: role, raw `T_i` and status on the roster screen
-(`src/app/RosterScreen.tsx:84`), non-numeric board gauges whose exact integers
-leak through `title`/`aria-label` (`src/ui/overlays/PieceOverlay.tsx:40-58`), and
-**names that are stored but rendered nowhere** (`src/app/careerBootstrap.ts:44-49`).
-ADR 0054 §6 proposes earned knowledge as testimony rather than telemetry, with
-rumor-only information about pieces never served. Open: whether a commander may
-be *wrong* about a piece he has not led, and how far testimony may rationalize.
-The numeric leak is a defect against ADR 0018 regardless of how this resolves.
+today: role, qualitative trust and status on the roster screen
+(`src/app/RosterScreen.tsx:108-110`), names and origin in the roster plus names
+in the piece overlay (`src/app/RosterScreen.tsx:80-110`,
+`src/ui/overlays/PieceOverlay.tsx:44-73`), and a service record folded from
+campaign match events (`src/persistence/service.ts:31-140`). The board gauges
+remain visual, but their labels are qualitative rather than arithmetic.
+Slice 1 does not implement testimony, rumor, or earned-knowledge projections;
+those remain open here. ADR 0054 §6 still proposes earned knowledge as
+testimony rather than telemetry, with rumor-only information about pieces never
+served. Open: whether a commander may be *wrong* about a piece he has not led,
+and how far testimony may rationalize.
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
