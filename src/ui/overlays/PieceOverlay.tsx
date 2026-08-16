@@ -45,12 +45,7 @@ export function PieceOverlay({
       type="button"
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
-      aria-label={pieceAccessibleLabel(
-        name ?? piece.role,
-        piece.role,
-        piece.T_i,
-        piece.M_i,
-      )}
+      aria-label={pieceAccessibleLabel(name, piece.role, piece.T_i, piece.M_i)}
       onClick={onSelect}
     >
       <span

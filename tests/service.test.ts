@@ -14,7 +14,10 @@ import {
   type StoredPieceState,
 } from '../src/persistence';
 
-function makePiece(id: string): StoredPieceState {
+function makePiece(
+  id: string,
+  status: StoredPieceState['status'] = 'ACTIVE',
+): StoredPieceState {
   return {
     ...normalizePieceState({
       id,
@@ -44,19 +47,20 @@ function makePiece(id: string): StoredPieceState {
       credence: defaultCredence(),
       rumor: defaultRumor(),
     }),
-    status: 'ACTIVE',
+    status,
   };
 }
 
 function makeMatch(
   rosterSnapshot: readonly StoredPieceState[],
   events: readonly MatchEvent[],
+  matchIndex = 1,
 ): MatchRecord {
   return {
-    id: `match-${rosterSnapshot.length}-${events.length}`,
+    id: `match-${matchIndex}`,
     campaignId: 'campaign-1',
     actId: 'act-1',
-    matchIndex: 1,
+    matchIndex,
     seed: 1,
     rosterSnapshot,
     rosterEnd: rosterSnapshot,
@@ -92,8 +96,43 @@ describe('foldPieceServiceRecords', () => {
         verdict: 'COMPLIANT_EXECUTION',
       },
       {
-        t: 'REFUSAL',
+        t: 'MOVE',
         ply: 2,
+        san: 'd4',
+        pieceId: hero.id,
+        verdict: 'HEROIC_EXECUTION',
+      },
+      {
+        t: 'MOVE',
+        ply: 3,
+        san: 'Nf3',
+        pieceId: hero.id,
+        verdict: 'FATALISTIC_COMPLIANCE',
+      },
+      {
+        t: 'MOVE',
+        ply: 4,
+        san: 'Nc3',
+        pieceId: hero.id,
+        verdict: 'QUIET_QUITTING',
+      },
+      {
+        t: 'MOVE',
+        ply: 5,
+        san: 'a3',
+        pieceId: hero.id,
+        verdict: 'MORAL_REFUSAL',
+      },
+      {
+        t: 'MOVE',
+        ply: 6,
+        san: 'h3',
+        pieceId: hero.id,
+        verdict: 'DESERTION_MUTINY',
+      },
+      {
+        t: 'REFUSAL',
+        ply: 7,
         pieceId: hero.id,
         utility: -1,
         threshold: 0,
@@ -101,15 +140,15 @@ describe('foldPieceServiceRecords', () => {
       },
       {
         t: 'OVERRIDE',
-        ply: 2,
+        ply: 8,
         pieceId: hero.id,
         san: 'e4',
         pieceTrustDelta: -10,
       },
-      { t: 'CAPTURE', ply: 3, victim: comrade.id, by: hero.id },
+      { t: 'CAPTURE', ply: 9, victim: comrade.id, by: hero.id },
       {
         t: 'SACRIFICE_WITNESSED',
-        ply: 4,
+        ply: 10,
         hero: hero.id,
         beneficiary: comrade.id,
       },
@@ -118,13 +157,13 @@ describe('foldPieceServiceRecords', () => {
       { t: 'ROSTER_RECRUIT', pieceId: hero.id },
       {
         t: 'HEROISM_NOMINATION',
-        ply: 5,
+        ply: 11,
         pieceId: hero.id,
         san: 'e5',
       },
       {
         t: 'DESERTION',
-        ply: 6,
+        ply: 12,
         pieceId: hero.id,
         refusedMove: 'e5',
         uStay: -1,
@@ -140,7 +179,9 @@ describe('foldPieceServiceRecords', () => {
 
     expect(record).toEqual({
       matchesServed: 1,
-      ordersCarriedOut: 1,
+      ordersCarriedOut: 2,
+      ordersFatalistic: 1,
+      ordersQuietlyQuit: 1,
       ordersRefused: 1,
       ordersOverridden: 1,
       capturesMade: 1,
@@ -157,44 +198,103 @@ describe('foldPieceServiceRecords', () => {
 
   it('is sensitive to distinct event logs and pure across repeated folds', () => {
     const piece = makePiece('piece');
-    const carried = makeMatch(
-      [piece],
-      [
-        {
-          t: 'MOVE',
-          ply: 1,
-          san: 'e4',
-          pieceId: piece.id,
-          verdict: 'COMPLIANT_EXECUTION',
-        },
-      ],
+    const target = makePiece('target');
+    const logs = [
+      makeMatch(
+        [piece, target],
+        [
+          {
+            t: 'MOVE',
+            ply: 1,
+            san: 'e4',
+            pieceId: piece.id,
+            verdict: 'COMPLIANT_EXECUTION',
+          },
+        ],
+        1,
+      ),
+      makeMatch(
+        [piece, target],
+        [
+          {
+            t: 'MOVE',
+            ply: 1,
+            san: 'e4',
+            pieceId: piece.id,
+            verdict: 'COMPLIANT_EXECUTION',
+          },
+          {
+            t: 'REFUSAL',
+            ply: 2,
+            pieceId: piece.id,
+            utility: -1,
+            threshold: 0,
+            perceivedValue: 0,
+          },
+        ],
+        2,
+      ),
+      makeMatch(
+        [piece, target],
+        [
+          {
+            t: 'MOVE',
+            ply: 1,
+            san: 'e4',
+            pieceId: piece.id,
+            verdict: 'HEROIC_EXECUTION',
+          },
+          {
+            t: 'REFUSAL',
+            ply: 2,
+            pieceId: piece.id,
+            utility: -1,
+            threshold: 0,
+            perceivedValue: 0,
+          },
+          {
+            t: 'OVERRIDE',
+            ply: 2,
+            pieceId: piece.id,
+            san: 'e4',
+            pieceTrustDelta: -10,
+          },
+          { t: 'CAPTURE', ply: 3, victim: target.id, by: piece.id },
+        ],
+        3,
+      ),
+    ];
+    const folds = logs.map((_, index) =>
+      foldPieceServiceRecords(logs.slice(0, index + 1)).records.get(piece.id),
     );
-    const refused = makeMatch(
-      [piece],
-      [
-        {
-          t: 'REFUSAL',
-          ply: 1,
-          pieceId: piece.id,
-          utility: -1,
-          threshold: 0,
-          perceivedValue: 0,
-        },
-      ],
+    const carried = folds.map((record) => record?.ordersCarriedOut ?? 0);
+    const matches = folds.map((record) => record?.matchesServed ?? 0);
+    const refusals = folds.map((record) => record?.ordersRefused ?? 0);
+    const captures = folds.map((record) => record?.capturesMade ?? 0);
+    const serviceTotals = folds.map(
+      (record) =>
+        (record?.matchesServed ?? 0) +
+        (record?.ordersCarriedOut ?? 0) +
+        (record?.ordersRefused ?? 0) +
+        (record?.ordersOverridden ?? 0) +
+        (record?.capturesMade ?? 0),
     );
-    const carriedFold = foldPieceServiceRecords([carried]);
-    const repeatedFold = foldPieceServiceRecords([carried]);
 
-    expect([...carriedFold.records.entries()]).not.toEqual([
-      ...foldPieceServiceRecords([refused]).records.entries(),
-    ]);
-    expect([...carriedFold.records.entries()]).toEqual([
+    expect(matches).toEqual([1, 2, 3]);
+    expect(carried).toEqual([1, 2, 3]);
+    expect(refusals).toEqual([0, 1, 2]);
+    expect(captures).toEqual([0, 0, 1]);
+    expect(serviceTotals).toEqual([2, 5, 10]);
+    const firstFold = foldPieceServiceRecords(logs);
+    const repeatedFold = foldPieceServiceRecords(logs);
+    expect([...firstFold.records.entries()]).toEqual([
       ...repeatedFold.records.entries(),
     ]);
   });
 
   it('keeps counts bounded and ignores pieces absent from snapshots', () => {
     const piece = makePiece('piece');
+    const benched = makePiece('benched', 'BENCHED');
     const unknown = 'unknown';
     const events: MatchEvent[] = [
       {
@@ -207,14 +307,32 @@ describe('foldPieceServiceRecords', () => {
       { t: 'CAPTURE', ply: 2, victim: unknown, by: piece.id },
     ];
     const records = foldPieceServiceRecords([
-      makeMatch([piece], events),
+      makeMatch([piece, benched], events),
     ]).records;
     const record = records.get(piece.id);
+    const benchedRecord = records.get(benched.id);
 
     expect(records.has(unknown)).toBe(false);
     expect(record?.matchesServed).toBe(1);
+    expect(benchedRecord?.matchesServed).toBe(0);
     expect(record?.ordersCarriedOut).toBeLessThanOrEqual(
-      events.filter((event) => event.t === 'MOVE').length,
+      events.filter(
+        (event) =>
+          event.t === 'MOVE' &&
+          (event.verdict === 'HEROIC_EXECUTION' ||
+            event.verdict === 'COMPLIANT_EXECUTION'),
+      ).length,
+    );
+    expect(record?.ordersFatalistic).toBeLessThanOrEqual(
+      events.filter(
+        (event) =>
+          event.t === 'MOVE' && event.verdict === 'FATALISTIC_COMPLIANCE',
+      ).length,
+    );
+    expect(record?.ordersQuietlyQuit).toBeLessThanOrEqual(
+      events.filter(
+        (event) => event.t === 'MOVE' && event.verdict === 'QUIET_QUITTING',
+      ).length,
     );
     expect(record?.capturesMade).toBeLessThanOrEqual(
       events.filter((event) => event.t === 'CAPTURE').length,

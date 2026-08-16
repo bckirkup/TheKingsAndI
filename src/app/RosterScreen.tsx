@@ -14,7 +14,12 @@ import type {
   PieceServiceRecord,
   StoredPieceState,
 } from '../persistence';
-import { trustBandWord, trustChangeWord } from '../ui/qualitativeLabels';
+import {
+  firePreviewLabel,
+  freeAgentRecruitLabel,
+  rosterPieceLabel,
+  trustChangeWord,
+} from '../ui/qualitativeLabels';
 
 export interface RosterScreenProps {
   readonly roster: readonly StoredPieceState[];
@@ -54,6 +59,47 @@ export function RosterScreen({
       ? `${piece.role} (promoted from ${originRole.toLowerCase()})`
       : piece.role;
   };
+  const serviceLines = (record: PieceServiceRecord): readonly string[] => {
+    const lines: string[] = [];
+    if (record.ordersCarriedOut > 0) {
+      lines.push(`Orders carried out: ${record.ordersCarriedOut}`);
+    }
+    if (record.ordersFatalistic > 0) {
+      lines.push(`Fatalistic orders: ${record.ordersFatalistic}`);
+    }
+    if (record.ordersQuietlyQuit > 0) {
+      lines.push(`Orders quietly quit: ${record.ordersQuietlyQuit}`);
+    }
+    if (record.ordersRefused > 0) {
+      lines.push(`Orders refused: ${record.ordersRefused}`);
+    }
+    if (record.ordersOverridden > 0) {
+      lines.push(`Orders overridden: ${record.ordersOverridden}`);
+    }
+    if (record.capturesMade > 0) {
+      lines.push(`Captures made: ${record.capturesMade}`);
+    }
+    if (record.timesTaken > 0) {
+      lines.push(`Times taken: ${record.timesTaken}`);
+    }
+    if (record.timesCoveredComrade > 0) {
+      lines.push(`Comrades covered: ${record.timesCoveredComrade}`);
+    }
+    if (record.heroismNominations > 0) {
+      lines.push(`Heroism nominations: ${record.heroismNominations}`);
+    }
+    if (record.timesBenched > 0) {
+      lines.push(`Benched: ${record.timesBenched}`);
+    }
+    if (record.timesFired > 0) {
+      lines.push(`Fired: ${record.timesFired}`);
+    }
+    if (record.timesRecruited > 0) {
+      lines.push(`Recruited: ${record.timesRecruited}`);
+    }
+    if (record.deserted) lines.push('Deserted');
+    return lines;
+  };
 
   return (
     <section className="roster-screen">
@@ -80,8 +126,11 @@ export function RosterScreen({
                     setLaunderingWarning(result.launderingRisk);
                   }}
                 >
-                  Recruit {nameFor(agent)} — {roleFor(agent)} (
-                  {trustBandWord(agent.T_i)} trust)
+                  {freeAgentRecruitLabel(
+                    nameFor(agent),
+                    roleFor(agent),
+                    agent.T_i,
+                  )}
                 </button>
               </li>
             ))}
@@ -102,8 +151,12 @@ export function RosterScreen({
               className={`roster-screen__piece${selectedId === piece.id ? ' roster-screen__piece--selected' : ''}`}
               onClick={() => setSelectedId(piece.id)}
             >
-              <strong>{nameFor(piece)}</strong> · {roleFor(piece)} ·{' '}
-              {trustBandWord(piece.T_i)} trust · {piece.status}
+              {rosterPieceLabel(
+                nameFor(piece),
+                roleFor(piece),
+                piece.T_i,
+                piece.status,
+              )}
             </button>
           </li>
         ))}
@@ -117,33 +170,20 @@ export function RosterScreen({
             if (record === undefined) {
               return <p>No recorded service yet.</p>;
             }
+            const lines = serviceLines(record);
             return (
-              <dl>
-                <dt>Matches served</dt>
-                <dd>{record.matchesServed}</dd>
-                <dt>Orders carried out</dt>
-                <dd>{record.ordersCarriedOut}</dd>
-                <dt>Orders refused</dt>
-                <dd>{record.ordersRefused}</dd>
-                <dt>Orders overridden</dt>
-                <dd>{record.ordersOverridden}</dd>
-                <dt>Captures made</dt>
-                <dd>{record.capturesMade}</dd>
-                <dt>Times taken</dt>
-                <dd>{record.timesTaken}</dd>
-                <dt>Comrades covered</dt>
-                <dd>{record.timesCoveredComrade}</dd>
-                <dt>Heroism nominations</dt>
-                <dd>{record.heroismNominations}</dd>
-                <dt>Benched</dt>
-                <dd>{record.timesBenched}</dd>
-                <dt>Fired</dt>
-                <dd>{record.timesFired}</dd>
-                <dt>Recruited</dt>
-                <dd>{record.timesRecruited}</dd>
-                <dt>Deserted</dt>
-                <dd>{record.deserted ? 'Yes' : 'No'}</dd>
-              </dl>
+              <>
+                <p>Matches served: {record.matchesServed}</p>
+                {lines.length === 0 ? (
+                  <p>No recorded deeds yet.</p>
+                ) : (
+                  <ul>
+                    {lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
             );
           })()}
         </div>
@@ -162,7 +202,7 @@ export function RosterScreen({
                   {trustChangeWord(bench.selfTrustDelta)}, peers affected{' '}
                   {bench.peerTrustDeltas.length}
                 </p>
-                <p>Fire: trust becomes {trustBandWord(fire.newTrust)} </p>
+                <p>{firePreviewLabel(fire.newTrust)}</p>
                 <div className="roster-screen__actions">
                   <button
                     type="button"

@@ -44,12 +44,13 @@ export function heatBandWord(value: number): HeatBandWord {
 }
 
 export function pieceAccessibleLabel(
-  name: string,
+  name: string | undefined,
   role: PieceRole,
   trust: number,
   morale: number,
 ): string {
-  return `${name}, ${role}, ${trustBandWord(trust)} trust, ${moraleBandWord(morale)} morale`;
+  const subject = name === undefined ? role : `${name}, ${role}`;
+  return `${subject}, ${trustBandWord(trust)} trust, ${moraleBandWord(morale)} morale`;
 }
 
 export function moraleTooltip(morale: number): string {
@@ -58,4 +59,25 @@ export function moraleTooltip(morale: number): string {
 
 export function traumaTooltip(trauma: number): string {
   return `Trauma is ${traumaBandWord(trauma)}`;
+}
+
+export function rosterPieceLabel(
+  name: string,
+  role: string,
+  trust: number,
+  status: string,
+): string {
+  return `${name} · ${role} · ${trustBandWord(trust)} trust · ${status}`;
+}
+
+export function freeAgentRecruitLabel(
+  name: string,
+  role: string,
+  trust: number,
+): string {
+  return `Recruit ${name} — ${role} (${trustBandWord(trust)} trust)`;
+}
+
+export function firePreviewLabel(newTrust: number): string {
+  return `Fire: trust becomes ${trustBandWord(newTrust)}`;
 }

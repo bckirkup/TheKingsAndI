@@ -3,6 +3,8 @@ import { SERVICE_RECORD_FOLD_VERSION, type MatchRecord } from './types';
 export interface PieceServiceRecord {
   readonly matchesServed: number;
   readonly ordersCarriedOut: number;
+  readonly ordersFatalistic: number;
+  readonly ordersQuietlyQuit: number;
   readonly ordersRefused: number;
   readonly ordersOverridden: number;
   readonly capturesMade: number;
@@ -16,7 +18,7 @@ export interface PieceServiceRecord {
 }
 
 export interface PieceServiceRecordSet {
-  readonly foldVersion: typeof SERVICE_RECORD_FOLD_VERSION;
+  readonly foldVersion: string;
   readonly records: ReadonlyMap<string, PieceServiceRecord>;
 }
 
@@ -24,6 +26,8 @@ function emptyRecord(): PieceServiceRecord {
   return {
     matchesServed: 0,
     ordersCarriedOut: 0,
+    ordersFatalistic: 0,
+    ordersQuietlyQuit: 0,
     ordersRefused: 0,
     ordersOverridden: 0,
     capturesMade: 0,
@@ -51,6 +55,7 @@ export function foldPieceServiceRecords(
       if (!records.has(piece.id)) records.set(piece.id, emptyRecord());
       const current = records.get(piece.id);
       if (current === undefined) continue;
+      if (piece.status !== 'ACTIVE') continue;
       records.set(piece.id, {
         ...current,
         matchesServed: current.matchesServed + 1,
@@ -88,10 +93,32 @@ export function foldPieceServiceRecords(
 
       switch (event.t) {
         case 'MOVE':
-          update(pieceId, (record) => ({
-            ...record,
-            ordersCarriedOut: record.ordersCarriedOut + 1,
-          }));
+          switch (event.verdict) {
+            case 'HEROIC_EXECUTION':
+            case 'COMPLIANT_EXECUTION':
+              update(pieceId, (record) => ({
+                ...record,
+                ordersCarriedOut: record.ordersCarriedOut + 1,
+              }));
+              break;
+            case 'FATALISTIC_COMPLIANCE':
+              update(pieceId, (record) => ({
+                ...record,
+                ordersFatalistic: record.ordersFatalistic + 1,
+              }));
+              break;
+            case 'QUIET_QUITTING':
+              update(pieceId, (record) => ({
+                ...record,
+                ordersQuietlyQuit: record.ordersQuietlyQuit + 1,
+              }));
+              break;
+            case 'MORAL_REFUSAL':
+            case 'DESERTION_MUTINY':
+              break;
+            default:
+              break;
+          }
           break;
         case 'REFUSAL':
           update(pieceId, (record) => ({

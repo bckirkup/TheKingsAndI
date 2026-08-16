@@ -1091,10 +1091,10 @@ coefficient must be re-ranged afterwards.
 **Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
 failure equally bad: a bench nobody can read is a bench nobody can use. Shipped
 today: role, qualitative trust and status on the roster screen
-(`src/app/RosterScreen.tsx:108-110`), names and origin in the roster plus names
-in the piece overlay (`src/app/RosterScreen.tsx:80-110`,
+(`src/app/RosterScreen.tsx:146-163`), names and origin in the roster plus names
+in the piece overlay (`src/app/RosterScreen.tsx:118-163`,
 `src/ui/overlays/PieceOverlay.tsx:44-73`), and a service record folded from
-campaign match events (`src/persistence/service.ts:31-140`). The board gauges
+campaign match events (`src/persistence/service.ts:33-177`). The board gauges
 remain visual, but their labels are qualitative rather than arithmetic.
 Slice 1 does not implement testimony, rumor, or earned-knowledge projections;
 those remain open here. ADR 0054 §6 still proposes earned knowledge as

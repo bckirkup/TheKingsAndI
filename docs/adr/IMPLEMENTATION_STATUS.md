@@ -70,7 +70,7 @@ These are status distinctions, not new design decisions:
 - **Piece names are partly wired.** Names are stored in
   `src/app/careerBootstrap.ts:44-49` and now render in the roster and piece
   overlay; missing identity records still use a role fallback. Service records
-  are folded from match events in `src/persistence/service.ts:31-140`.
+  are folded from match events in `src/persistence/service.ts:33-177`.
 - **Exact gauge integers are partly resolved.** The piece overlay now publishes
   qualitative trust, morale, and trauma labels in
   `src/ui/overlays/PieceOverlay.tsx:44-73`; the numeric leak is removed there
