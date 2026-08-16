@@ -21,6 +21,7 @@ describe('headless player refusal replanning', () => {
       deltaV_capture: 0,
       P_captured: 0,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const leader: HeadlessLeaderPort = {
       chooseMove(currentBoard, side, _random, _ply, refusedSans) {

@@ -43,10 +43,11 @@ desert  ⟺  U_desert(i) > U_stay(i) + hysteresis_i
 | `w_stay` | attachment weight on the stay collective stake: `(1000 − k + trunc(k·attachment_i))/1000`, with `k = DESERTION_STAY_ATTACHMENT_PERMILLE` clamped to `0..1000`; `k = 1000` per D145, so `w_stay = attachment_i` |
 | `w_exit` | own-future exit permanence weight: `DESERTION_EXIT_PERMANENCE_PERMILLE / 1000`, clamped to `0..1` |
 
-Deserting sets the piece's personal capture risk to zero after it leaves and
+Deserting sets the piece's personal future capture risk to zero after it leaves
 raises `P_loss(team)`, but it now charges the piece an own-future exit cost
 before the decision. The stay estimate combines the piece's own private board
-read, social rumor, and the existing capture-stress term:
+read, social rumor, and the existing capture-stress term. A pawn may also carry
+prospective promotion standing when the configured hope weight is non-zero:
 
 ```
 pLossBoard = 500 - trunc(500·s/(|s| + K))

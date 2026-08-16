@@ -57,6 +57,7 @@ describe('private evaluation profile', () => {
       pCapturedDelta: 0,
       captureRiskByPiece: {},
       peerSafetyDeltas: {},
+      promotionProspectByPiece: {},
       kingSafetyDelta: 0,
     };
     const result = insightToEvaluation(
@@ -202,6 +203,7 @@ describe('private evaluation profile', () => {
       pCapturedDelta: 0,
       captureRiskByPiece: {},
       peerSafetyDeltas: {},
+      promotionProspectByPiece: {},
       kingSafetyDelta: 0,
     };
     await resolveMoverInsights(
@@ -230,6 +232,7 @@ describe('private evaluation profile', () => {
       pCapturedDelta: 0,
       captureRiskByPiece: {},
       peerSafetyDeltas: {},
+      promotionProspectByPiece: {},
       kingSafetyDelta: 0,
     };
     const insights = await resolveMoverInsights(

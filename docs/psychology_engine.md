@@ -67,6 +67,9 @@ data. It is computed from sorted attacker and defender values on the square,
 without x-rays or engine evaluation; it is not a binary threat flag or a claim
 that capture is certain.
 
+Move evaluations also carry integer-permille `promotionProspect`, which is zero
+for non-pawns and feeds the optional prospective standing term.
+
 with the **inter-piece protection term**
 
 ```

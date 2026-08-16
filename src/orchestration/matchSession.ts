@@ -49,6 +49,7 @@ import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
   applyPostMoveCredence,
+  applyPosthumousClassCredit,
   applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
   applySacrificeWitnesses,
@@ -620,6 +621,14 @@ export class MatchSession {
         verdict: 'COMPLIANT_EXECUTION',
         orderQualityCp: 40,
       });
+      if (applied.capture !== undefined) {
+        this.events.push({
+          t: 'CAPTURE',
+          ply: this.ply,
+          victim: applied.capture.pieceId,
+          by: applied.moverId,
+        });
+      }
       this.roster = syncRoster(this.board, this.roster, this.playerSide);
       this.ply += 1;
     } else {
@@ -683,6 +692,14 @@ export class MatchSession {
           verdict: 'COMPLIANT_EXECUTION',
           orderQualityCp: 40,
         });
+        if (applied.capture !== undefined) {
+          this.events.push({
+            t: 'CAPTURE',
+            ply: this.ply,
+            victim: applied.capture.pieceId,
+            by: applied.moverId,
+          });
+        }
         this.roster = syncRoster(this.board, this.roster, this.playerSide);
         this.ply += 1;
       } else {
@@ -718,6 +735,27 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp,
     });
+    if (applied.capture !== undefined) {
+      this.events.push({
+        t: 'CAPTURE',
+        ply: this.ply,
+        victim: applied.capture.pieceId,
+        by: applied.moverId,
+      });
+      const captured = this.enemyRoster.find(
+        (piece) => piece.id === applied.capture?.pieceId,
+      );
+      if (captured !== undefined) {
+        const credit = applyPosthumousClassCredit(
+          this.enemyRoster,
+          captured,
+          this.events,
+          this.ply,
+        );
+        this.enemyRoster = credit.roster;
+        this.events.push(...credit.events);
+      }
+    }
     const nomination = heroismNomination(this.events, moveEval, audit);
     if (nomination !== undefined) this.events.push(nomination);
     if (applied.capture !== undefined) {
@@ -927,7 +965,21 @@ export class MatchSession {
     this.enemyRoster = result.enemyRoster;
     this.enemyDreadExposureByPiece = result.dreadExposureByPiece;
     this.engineAudit.push(...(result.engineAudit ?? []));
+    this.events.push(...result.events);
     if (result.capturedPieceId !== undefined) {
+      const captured = this.roster.find(
+        (piece) => piece.id === result.capturedPieceId,
+      );
+      if (captured !== undefined) {
+        const credit = applyPosthumousClassCredit(
+          this.roster,
+          captured,
+          this.events,
+          result.ply - 1,
+        );
+        this.roster = credit.roster;
+        this.events.push(...credit.events);
+      }
       this.roster = this.roster.map((piece) => {
         if (piece.id !== result.capturedPieceId) return piece;
         const injured = applyCaptureInjury(piece);
@@ -941,7 +993,6 @@ export class MatchSession {
         return injured;
       });
     }
-    this.events.push(...result.events);
     this.ply = result.ply;
     this.enemyRout ||= result.enemyRout;
     if (result.lastMove !== null) {

@@ -70,6 +70,8 @@ export interface CandidateMoveEvaluation {
   readonly deltaV_capture: number;
   readonly P_captured: number;
   readonly peerSafetyDeltas: Readonly<Record<PieceId, number>>;
+  /** Post-move promotion prospect for the evaluated actor, 0..1. */
+  readonly promotionProspect: number;
 }
 
 export type MoveResponseVerdict =
@@ -96,6 +98,8 @@ export interface DesertionContext {
   readonly pLossBoard: number;
   readonly pivotality: number;
   readonly shadowFactor: number;
+  /** Post-move promotion prospect for the evaluated actor, 0..1. */
+  readonly promotionProspect: number;
 }
 
 export interface DesertionDecisionTerms {
@@ -116,6 +120,10 @@ export interface DesertionDecisionTerms {
   readonly standingCost: number;
   /** Positive own-future cost subtracted from U_desert. */
   readonly exitSelfCost?: number;
+  /** Posthumous/prospective standing component, in pain units. */
+  readonly prospectiveStandingCost?: number;
+  /** Post-move promotion prospect used by the standing calculation. */
+  readonly promotionProspect?: number;
   readonly gloryWeight: number;
   readonly tauBenev: number;
   readonly tauAbil: number;
@@ -233,6 +241,14 @@ export type MatchEvent =
       readonly ply: number;
       readonly victim: PieceId;
       readonly by: PieceId;
+    }
+  | {
+      readonly t: 'POSTHUMOUS_CLASS_CREDIT';
+      readonly ply: number;
+      readonly witnessId: PieceId;
+      readonly heroId: PieceId;
+      readonly role: PieceRole;
+      readonly delta: number;
     }
   | {
       readonly t: 'SACRIFICE_WITNESSED';

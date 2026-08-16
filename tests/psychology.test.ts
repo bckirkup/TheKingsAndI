@@ -57,6 +57,7 @@ const quietMove: CandidateMoveEvaluation = {
   deltaV_capture: 0,
   P_captured: 0.1,
   peerSafetyDeltas: {},
+  promotionProspect: 0,
 };
 
 const braveMove: CandidateMoveEvaluation = {
@@ -67,6 +68,7 @@ const braveMove: CandidateMoveEvaluation = {
   deltaV_capture: 3,
   P_captured: 0.8,
   peerSafetyDeltas: {},
+  promotionProspect: 0,
 };
 
 describe('search depth golden values', () => {
@@ -167,6 +169,7 @@ describe('move utility golden values', () => {
       deltaV_capture: 0,
       P_captured: 0.2,
       peerSafetyDeltas: { 'w:P:e2': 0.5 },
+      promotionProspect: 0,
     };
     const utility = calculateMoveUtility(actor, moveEval, [actor, peer]);
     expect(utility).toBeCloseTo(0.4, 5);

@@ -12,6 +12,7 @@ const moveEval: CandidateMoveEvaluation = {
   deltaV_capture: 0,
   P_captured: 0.8,
   peerSafetyDeltas: {},
+  promotionProspect: 0,
 };
 
 const audit: EngineAuditEntry = {

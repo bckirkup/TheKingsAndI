@@ -183,7 +183,11 @@ export function calculateUDesert(
   lambda: number,
   activePeers: readonly PieceState[],
 ): number {
-  const standing = calculateStandingCostComponents(piece, activePeers);
+  const standing = calculateStandingCostComponents(
+    piece,
+    activePeers,
+    context.promotionProspect,
+  );
   const shadowFactor = calculateShadowFactor(context.P_lossIfStay);
   const attachment = calculateAttachment(piece, activePeers);
   const residualCost =
@@ -231,9 +235,11 @@ function calculateExitSelfCostQuantized(
 function calculateStandingCostComponents(
   piece: PieceState,
   activePeers: readonly PieceState[],
+  promotionProspect = 0,
 ): {
   readonly anticipatedStandingCost: number;
   readonly gloryWeight: number;
+  readonly prospectiveStandingCost: number;
 } {
   let standing = 0;
   for (const peer of activePeers) {
@@ -244,11 +250,26 @@ function calculateStandingCostComponents(
   }
   const audienceStanding = standing / Math.max(1, STANDARD_ROSTER_SIZE - 1);
   const gloryWeight = (piece.traits.w_ambition + piece.traits.w_prestige) / 2;
+  const hopeWeight = Math.max(
+    0,
+    Math.min(
+      1_000,
+      Math.trunc(ENGINE_CONFIG.DESERTION_PROMOTION_HOPE_PERMILLE),
+    ),
+  );
+  const prospectiveStanding =
+    (Math.max(0, Math.min(1, promotionProspect)) * hopeWeight) /
+    (1_000 * Math.max(1, STANDARD_ROSTER_SIZE - 1));
+  const prospectiveStandingCost =
+    prospectiveStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
   const anticipatedStandingCost =
-    audienceStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
+    (audienceStanding + prospectiveStanding) *
+    gloryWeight *
+    ENGINE_CONFIG.DESERTION_STANDING_STAKE;
   return {
     anticipatedStandingCost,
     gloryWeight,
+    prospectiveStandingCost,
   };
 }
 
@@ -278,7 +299,11 @@ export function shouldDesert(
     stayAttachmentWeightPermille,
   );
   const uDesert = calculateUDesert(piece, context, lambda, activePeers);
-  const standing = calculateStandingCostComponents(piece, activePeers);
+  const standing = calculateStandingCostComponents(
+    piece,
+    activePeers,
+    context.promotionProspect,
+  );
   const exitSelfCost =
     calculateExitSelfCostQuantized(piece, context, activePeers) / 1_000;
   const pivotality =
@@ -308,6 +333,9 @@ export function shouldDesert(
       lambdaAffinity: lambdaComponents.affinity,
       standingCost:
         quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
+      prospectiveStandingCost:
+        quantizeBoardValue(standing.prospectiveStandingCost) / 1_000,
+      promotionProspect: context.promotionProspect,
       exitSelfCost,
       gloryWeight: standing.gloryWeight,
       tauBenev: piece.credence.tauBenev,

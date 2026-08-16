@@ -14,6 +14,7 @@ export {
   extractThreatMap,
   kingExposureThousandths,
   materialBalance,
+  promotionProspectThousandths,
 } from './features';
 export type {
   FeatureConfig,

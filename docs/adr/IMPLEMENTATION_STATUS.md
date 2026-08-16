@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0052)
+# ADR implementation status (0035–0053)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -28,6 +28,7 @@ the discrepancy is corrected.
 | 0050 | Machine heroism nomination / human conferral | Accepted for nomination records; thresholds and conferral stand-in open | **Shipped** — `src/orchestration/heroism.ts:16-73`, `src/psychology/types.ts:254-270`, `src/persistence/types.ts:120-123` |
 | 0051 | Non-selection, redemption, and obsolescence | Accepted for season-pool slice; calibration remains open | **Shipped** — `sim/pool.ts:27-65`, `sim/pool.ts:376-552`, `sim/season.ts:98-145` |
 | 0052 | Exit permanence and static-exchange capture risk | Accepted — both candidate directions adopted; default `750` selected by calibration | **Shipped** — `src/psychology/config.ts:86`, `src/psychology/desertion.ts:209`, `src/chess/features.ts:137` |
+| 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; calibration defaults open | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-320`, `src/orchestration/psychologyHooks.ts:68-96` |
 
 ## Confirmed implementation gaps
 

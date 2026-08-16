@@ -8,6 +8,7 @@ import {
   applyCostlySignal,
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
+  applyPosthumousClassCreditEvent,
   desertionContextFor,
   evaluateMoveResponse,
   justifiedRefusalObviousness,
@@ -61,6 +62,37 @@ export function applySacrificeWitnesses(
       beneficiary: observer.id,
     });
   }
+  return { roster: next, events };
+}
+
+export function applyPosthumousClassCredit(
+  roster: readonly PieceState[],
+  captured: PieceState,
+  priorEvents: readonly MatchEvent[],
+  ply: number,
+): { readonly roster: PieceState[]; readonly events: MatchEvent[] } {
+  const witnessed = priorEvents.some(
+    (event) =>
+      event.t === 'SACRIFICE_WITNESSED' &&
+      event.hero === captured.id &&
+      ply >= event.ply &&
+      ply - event.ply <= ENGINE_CONFIG.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES,
+  );
+  if (!witnessed) return { roster: [...roster], events: [] };
+  const events: MatchEvent[] = [];
+  const next = roster.map((observer) => {
+    if (observer.id === captured.id) return observer;
+    const applied = applyPosthumousClassCreditEvent(observer, captured);
+    events.push({
+      t: 'POSTHUMOUS_CLASS_CREDIT',
+      ply,
+      witnessId: observer.id,
+      heroId: captured.id,
+      role: captured.role,
+      delta: applied.delta,
+    });
+    return normalizePieceState(applied.piece);
+  });
   return { roster: next, events };
 }
 

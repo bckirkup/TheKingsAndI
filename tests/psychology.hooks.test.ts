@@ -18,6 +18,7 @@ import {
   attributeSacrifice,
   applyDeclinedSacrificeSignal,
   applySacrificeWitnesses,
+  applyPosthumousClassCredit,
   detectDeclinedSacrificeCostlySignal,
   isAvengedCapture,
   isNearRefusal,
@@ -25,6 +26,79 @@ import {
 } from '../src/orchestration/psychologyHooks';
 import { declinedSacrificePiece } from '../src/orchestration/insight';
 import { LivingBoard } from '../src/chess';
+
+it('applies bounded posthumous class credit only inside the look-back window', () => {
+  const hero = makePiece({ id: 'w:P:e4', role: 'Pawn' });
+  const witness = makePiece({ id: 'w:N:g1' });
+  const witnessed = {
+    t: 'SACRIFICE_WITNESSED' as const,
+    ply: 4,
+    hero: hero.id,
+    beneficiary: witness.id,
+  };
+  const near = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
+  expect(near.roster[0]?.classPrestige.Pawn).toBe(
+    witness.classPrestige.Pawn + ENGINE_CONFIG.POSTHUMOUS_CLASS_SHIFT,
+  );
+  expect(near.events).toHaveLength(1);
+  const far = applyPosthumousClassCredit([witness], hero, [witnessed], 8);
+  expect(far.events).toHaveLength(0);
+});
+
+it('wires posthumous knobs and promotion hope into measurable outputs', () => {
+  const hero = makePiece({ id: 'w:P:e4', role: 'Pawn' });
+  const witness = makePiece({ id: 'w:N:g1' });
+  const witnessed = {
+    t: 'SACRIFICE_WITNESSED' as const,
+    ply: 4,
+    hero: hero.id,
+    beneficiary: witness.id,
+  };
+  const config = ENGINE_CONFIG as unknown as Record<string, number>;
+  const originalShift = config.POSTHUMOUS_CLASS_SHIFT;
+  const originalWindow = config.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES;
+  try {
+    config.POSTHUMOUS_CLASS_SHIFT = 5;
+    const low = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
+    config.POSTHUMOUS_CLASS_SHIFT = 15;
+    const high = applyPosthumousClassCredit([witness], hero, [witnessed], 7);
+    expect(
+      high.events[0]?.t === 'POSTHUMOUS_CLASS_CREDIT'
+        ? high.events[0].delta
+        : 0,
+    ).toBeGreaterThan(
+      low.events[0]?.t === 'POSTHUMOUS_CLASS_CREDIT' ? low.events[0].delta : 0,
+    );
+    config.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES = 2;
+    expect(
+      applyPosthumousClassCredit([witness], hero, [witnessed], 7).events,
+    ).toHaveLength(0);
+  } finally {
+    config.POSTHUMOUS_CLASS_SHIFT = originalShift ?? 10;
+    config.POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES = originalWindow ?? 3;
+  }
+  const context: DesertionContext = {
+    P_captured: 0.2,
+    P_lossIfStay: 0.5,
+    P_lossIfLeave: 0.8,
+    pLossBoard: 0,
+    pivotality: 0,
+    shadowFactor: 1,
+    promotionProspect: 1,
+  };
+  const originalHope = config.DESERTION_PROMOTION_HOPE_PERMILLE;
+  try {
+    config.DESERTION_PROMOTION_HOPE_PERMILLE = 0;
+    const lowHope = shouldDesert(hero, context, [hero, witness]).terms
+      .prospectiveStandingCost;
+    config.DESERTION_PROMOTION_HOPE_PERMILLE = 1_000;
+    const highHope = shouldDesert(hero, context, [hero, witness]).terms
+      .prospectiveStandingCost;
+    expect(highHope).toBeGreaterThan(lowHope ?? 0);
+  } finally {
+    config.DESERTION_PROMOTION_HOPE_PERMILLE = originalHope ?? 0;
+  }
+});
 import type { EngineEvaluation } from '../src/engine';
 import { appraiseDesertionWitness } from '../src/psychology/witness';
 
@@ -72,6 +146,7 @@ function makeFeatures(overrides: Partial<MoveFeatures> = {}): MoveFeatures {
     pCapturedDelta: 0,
     captureRiskByPiece: {},
     peerSafetyDeltas: {},
+    promotionProspectByPiece: {},
     kingSafetyDelta: 0,
     ...overrides,
   };
@@ -100,6 +175,7 @@ describe('desertion cascade (live path)', () => {
       deltaV_capture: 0,
       P_captured: 0.5,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const low = calculateAbilityDripGain(piece, moveEval, 2);
     const high = calculateAbilityDripGain(piece, moveEval, 8);
@@ -116,6 +192,7 @@ describe('desertion cascade (live path)', () => {
       deltaV_capture: 0,
       P_captured: 0.1,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const secondEval = { ...firstEval, P_captured: 0.8 };
     const contexts = buildDesertionContexts([first, second], {
@@ -144,6 +221,7 @@ describe('desertion cascade (live path)', () => {
       deltaV_capture: 0,
       P_captured: 0.9,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const decision = shouldDesert(
       first,
@@ -211,6 +289,7 @@ describe('desertion cascade (live path)', () => {
       deltaV_capture: 0,
       P_captured: 0.9,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const witnessEval = { ...actorEval, deltaV_board: 2 };
     const decision = shouldDesert(
@@ -254,6 +333,7 @@ describe('desertion cascade (live path)', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const results = evaluateDesertionCascade([piece], { [piece.id]: context });
     expect(results).toHaveLength(1);
@@ -278,6 +358,7 @@ describe('departure witnessing and positive signals', () => {
         deltaV_capture: 0,
         P_captured: 0.5,
         peerSafetyDeltas: {},
+        promotionProspect: 0,
       },
       4,
     );
@@ -306,6 +387,7 @@ describe('departure witnessing and positive signals', () => {
         deltaV_capture: 0,
         P_captured: 0.5,
         peerSafetyDeltas: {},
+        promotionProspect: 0,
       },
       4,
     );

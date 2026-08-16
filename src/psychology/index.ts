@@ -50,6 +50,7 @@ export type { LambdaComponents } from './desertion';
 export {
   appendEvent,
   applyWitnessedSacrificeEvent,
+  applyPosthumousClassCreditEvent,
   calculateBenchingTrustPenalties,
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,

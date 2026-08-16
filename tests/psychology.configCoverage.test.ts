@@ -106,6 +106,7 @@ function makeDesertionContext(
     pLossBoard: 0.5,
     pivotality: 0,
     shadowFactor: 1,
+    promotionProspect: 0,
     ...overrides,
   };
 }
@@ -168,6 +169,7 @@ describe('wiring — depth & engagement', () => {
       deltaV_capture: 0,
       P_captured: 0.99,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     let low = 0;
     let high = 0;
@@ -501,6 +503,7 @@ describe('wiring — benevolence & ability knobs', () => {
       deltaV_capture: 0,
       P_captured: 0.8,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const baseline = calculateAbilityDripGain(piece, move);
     mutateConfig('ABIL_DRIP_SCALE', 0, () => {
@@ -695,6 +698,7 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
       deltaV_capture: 0,
       P_captured: 0.8,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     const cowardMove: CandidateMoveEvaluation = {
       ...braveMove,
@@ -737,6 +741,7 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
       deltaV_capture: 0,
       P_captured: 0.4,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     mutateConfig('HEROIC_CAPTURE_RISK', 0.3, () => {
       expect(evaluateMoveResponse(actor, risky, [actor]).verdict).toBe(
@@ -772,6 +777,7 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
       deltaV_capture: 0,
       P_captured: 0.7,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     mutateConfig('FATALISTIC_TAU_ABIL_CEILING', 50, () => {
       expect(evaluateMoveResponse(actor, move, [actor]).verdict).toBe(
@@ -930,6 +936,7 @@ describe('wiring — PieceTraits', () => {
     deltaV_capture: 0.5,
     P_captured: 0.4,
     peerSafetyDeltas: { 'w:P:e2': 1.0 },
+    promotionProspect: 0,
   };
   const peer = makePiece({ id: 'w:P:e2', role: 'Pawn' });
 

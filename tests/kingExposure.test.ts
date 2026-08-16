@@ -32,6 +32,7 @@ describe('King exposure', () => {
       deltaV_capture: 0,
       P_captured: 0,
       peerSafetyDeltas: {},
+      promotionProspect: 0,
     };
     let d2Chosen = false;
     const leader: HeadlessLeaderPort = {

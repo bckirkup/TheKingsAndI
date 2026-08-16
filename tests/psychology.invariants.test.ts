@@ -106,6 +106,7 @@ function makeMove(
     deltaV_capture: 0,
     P_captured: 0.1,
     peerSafetyDeltas: {},
+    promotionProspect: 0,
     ...overrides,
   };
 }
@@ -349,6 +350,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     expect(isKingExempt(king.role)).toBe(true);
     expect(shouldDesert(king, context, [king]).desert).toBe(false);
@@ -440,6 +442,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const base = makePiece({
       traits: { ...neutralTraits, w_loyalty: 0.5 },
@@ -566,6 +569,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const highLoss: DesertionContext = {
       ...lowLoss,
@@ -589,6 +593,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const lambda = 0.64;
 
@@ -613,6 +618,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
 
     expect(
@@ -637,6 +643,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
 
     const [firstDeserter, lateDeserter] = withExitPermanence(0, () => [
@@ -658,6 +665,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const config = ENGINE_CONFIG as { DESERTION_COLLECTIVE_STAKE: number };
     const baseline = withExitPermanence(0, () =>
@@ -690,6 +698,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const config = ENGINE_CONFIG as {
       DESERTION_STANDING_STAKE: number;
@@ -717,6 +726,7 @@ describe('desertion cascade', () => {
       pLossBoard: 0,
       pivotality: 0,
       shadowFactor: 1,
+      promotionProspect: 0,
     };
     const outcome = evaluateMoveResponse(piece, makeMove(), [piece], context);
     expect(outcome.verdict).toBe('DESERTION_MUTINY');
