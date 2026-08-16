@@ -1,4 +1,9 @@
 import type { PieceState } from '../../psychology';
+import {
+  heatBandWord,
+  moraleBandWord,
+  trustBandWord,
+} from '../qualitativeLabels';
 
 const ROLES = ['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King'] as const;
 
@@ -33,8 +38,8 @@ export function RelationshipInspector({
     <section className="relationship-inspector">
       <h2>Relationships</h2>
       <p className="relationship-inspector__focus">
-        Focus: <strong>{selected.role}</strong> (T={selected.T_i}, M=
-        {selected.M_i})
+        Focus: <strong>{selected.role}</strong> ({trustBandWord(selected.T_i)}{' '}
+        trust, {moraleBandWord(selected.M_i)} morale)
       </p>
 
       <h3>Who protects whom</h3>
@@ -46,7 +51,9 @@ export function RelationshipInspector({
             return (
               <li key={peer.id}>
                 <span>{peer.role}</span>
-                <span className={heatClass(affinity)}>{affinity}</span>
+                <span className={heatClass(affinity)}>
+                  {heatBandWord(affinity)}
+                </span>
               </li>
             );
           })}
@@ -69,7 +76,7 @@ export function RelationshipInspector({
               const value = selected.classPrestige[role];
               return (
                 <td key={role} className={heatClass(value)}>
-                  {value}
+                  {heatBandWord(value)}
                 </td>
               );
             })}

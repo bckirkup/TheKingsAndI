@@ -9,11 +9,23 @@ import {
   previewFire,
 } from '../orchestration/rosterActions';
 import type { MatchEvent } from '../psychology';
-import type { StoredPieceState } from '../persistence';
+import type {
+  PieceIdentityRecord,
+  PieceServiceRecord,
+  StoredPieceState,
+} from '../persistence';
+import {
+  firePreviewLabel,
+  freeAgentRecruitLabel,
+  rosterPieceLabel,
+  trustChangeWord,
+} from '../ui/qualitativeLabels';
 
 export interface RosterScreenProps {
   readonly roster: readonly StoredPieceState[];
   readonly freeAgents: readonly StoredPieceState[];
+  readonly identities: readonly PieceIdentityRecord[];
+  readonly serviceRecords: ReadonlyMap<string, PieceServiceRecord>;
   readonly leaderAbilityTrust: number;
   readonly onConfirm: (
     roster: StoredPieceState[],
@@ -25,6 +37,8 @@ export interface RosterScreenProps {
 export function RosterScreen({
   roster,
   freeAgents,
+  identities,
+  serviceRecords,
   leaderAbilityTrust,
   onConfirm,
   onBack,
@@ -34,6 +48,58 @@ export function RosterScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [launderingWarning, setLaunderingWarning] = useState(false);
   const selected = draft.find((piece) => piece.id === selectedId);
+  const identityById = new Map(
+    identities.map((identity) => [identity.id, identity]),
+  );
+  const nameFor = (piece: StoredPieceState): string =>
+    identityById.get(piece.id)?.name ?? `${piece.role} conscript`;
+  const roleFor = (piece: StoredPieceState): string => {
+    const originRole = identityById.get(piece.id)?.originRole;
+    return originRole !== undefined && originRole !== piece.role
+      ? `${piece.role} (promoted from ${originRole.toLowerCase()})`
+      : piece.role;
+  };
+  const serviceLines = (record: PieceServiceRecord): readonly string[] => {
+    const lines: string[] = [];
+    if (record.ordersCarriedOut > 0) {
+      lines.push(`Orders carried out: ${record.ordersCarriedOut}`);
+    }
+    if (record.ordersFatalistic > 0) {
+      lines.push(`Fatalistic orders: ${record.ordersFatalistic}`);
+    }
+    if (record.ordersQuietlyQuit > 0) {
+      lines.push(`Orders quietly quit: ${record.ordersQuietlyQuit}`);
+    }
+    if (record.ordersRefused > 0) {
+      lines.push(`Orders refused: ${record.ordersRefused}`);
+    }
+    if (record.ordersOverridden > 0) {
+      lines.push(`Orders overridden: ${record.ordersOverridden}`);
+    }
+    if (record.capturesMade > 0) {
+      lines.push(`Captures made: ${record.capturesMade}`);
+    }
+    if (record.timesTaken > 0) {
+      lines.push(`Times taken: ${record.timesTaken}`);
+    }
+    if (record.timesCoveredComrade > 0) {
+      lines.push(`Comrades covered: ${record.timesCoveredComrade}`);
+    }
+    if (record.heroismNominations > 0) {
+      lines.push(`Heroism nominations: ${record.heroismNominations}`);
+    }
+    if (record.timesBenched > 0) {
+      lines.push(`Benched: ${record.timesBenched}`);
+    }
+    if (record.timesFired > 0) {
+      lines.push(`Fired: ${record.timesFired}`);
+    }
+    if (record.timesRecruited > 0) {
+      lines.push(`Recruited: ${record.timesRecruited}`);
+    }
+    if (record.deserted) lines.push('Deserted');
+    return lines;
+  };
 
   return (
     <section className="roster-screen">
@@ -60,7 +126,11 @@ export function RosterScreen({
                     setLaunderingWarning(result.launderingRisk);
                   }}
                 >
-                  Recruit {agent.role} (T={agent.T_i})
+                  {freeAgentRecruitLabel(
+                    nameFor(agent),
+                    roleFor(agent),
+                    agent.T_i,
+                  )}
                 </button>
               </li>
             ))}
@@ -81,25 +151,58 @@ export function RosterScreen({
               className={`roster-screen__piece${selectedId === piece.id ? ' roster-screen__piece--selected' : ''}`}
               onClick={() => setSelectedId(piece.id)}
             >
-              <strong>{piece.role}</strong> · T={piece.T_i} · {piece.status}
+              {rosterPieceLabel(
+                nameFor(piece),
+                roleFor(piece),
+                piece.T_i,
+                piece.status,
+              )}
             </button>
           </li>
         ))}
       </ul>
 
+      {selected !== undefined ? (
+        <div className="roster-screen__service">
+          <h2>Service record — {nameFor(selected)}</h2>
+          {(() => {
+            const record = serviceRecords.get(selected.id);
+            if (record === undefined) {
+              return <p>No recorded service yet.</p>;
+            }
+            const lines = serviceLines(record);
+            return (
+              <>
+                <p>Matches served: {record.matchesServed}</p>
+                {lines.length === 0 ? (
+                  <p>No recorded deeds yet.</p>
+                ) : (
+                  <ul>
+                    {lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      ) : null}
+
       {selected !== undefined && selected.status === 'ACTIVE' ? (
         <div className="roster-screen__preview">
-          <h2>Consequence preview — {selected.role}</h2>
+          <h2>Consequence preview — {nameFor(selected)}</h2>
           {(() => {
             const bench = previewBench(selected, draft);
             const fire = previewFire(selected);
             return (
               <>
                 <p>
-                  Bench: self trust {bench.selfTrustDelta}, peers affected{' '}
+                  Bench: self trust impact{' '}
+                  {trustChangeWord(bench.selfTrustDelta)}, peers affected{' '}
                   {bench.peerTrustDeltas.length}
                 </p>
-                <p>Fire: trust set to {fire.newTrust}</p>
+                <p>{firePreviewLabel(fire.newTrust)}</p>
                 <div className="roster-screen__actions">
                   <button
                     type="button"

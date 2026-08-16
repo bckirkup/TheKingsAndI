@@ -1,7 +1,13 @@
 import type { PieceState } from '../../psychology';
+import {
+  moraleTooltip,
+  pieceAccessibleLabel,
+  traumaTooltip,
+} from '../qualitativeLabels';
 
 export interface PieceOverlayProps {
   readonly piece: PieceState;
+  readonly name?: string;
   readonly square: string;
   readonly selected: boolean;
   readonly onSelect?: () => void;
@@ -21,6 +27,7 @@ function squareGridPosition(square: string): { column: number; row: number } {
 
 export function PieceOverlay({
   piece,
+  name,
   square,
   selected,
   onSelect,
@@ -38,7 +45,7 @@ export function PieceOverlay({
       type="button"
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
-      aria-label={`${piece.role} trust ${piece.T_i} morale ${piece.M_i}`}
+      aria-label={pieceAccessibleLabel(name, piece.role, piece.T_i, piece.M_i)}
       onClick={onSelect}
     >
       <span
@@ -47,14 +54,17 @@ export function PieceOverlay({
           boxShadow: `0 0 0 ${trustRing}px ${trustHue(piece.T_i)}`,
         }}
       />
-      <span className="piece-overlay__morale" title={`Morale ${piece.M_i}`}>
+      <span className="piece-overlay__morale" title={moraleTooltip(piece.M_i)}>
         <span
           className="piece-overlay__morale-fill"
           style={{ height: `${moraleHeight}px` }}
         />
       </span>
       {betrayal ? (
-        <span className="piece-overlay__betrayal" title={`Trauma ${piece.B_i}`}>
+        <span
+          className="piece-overlay__betrayal"
+          title={traumaTooltip(piece.B_i)}
+        >
           !
         </span>
       ) : null}

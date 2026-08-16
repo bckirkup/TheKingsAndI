@@ -6,6 +6,7 @@ import { lineFor } from '../narrative';
 import type {
   MatchResult,
   OpponentArchetype,
+  PieceIdentityRecord,
   StoredPieceState,
 } from '../persistence';
 import {
@@ -73,6 +74,7 @@ export interface MatchScreenProps {
   readonly initialRoster?: readonly StoredPieceState[];
   readonly opponentArchetype?: OpponentArchetype;
   readonly rosterPreamble?: readonly MatchEvent[];
+  readonly identities?: readonly PieceIdentityRecord[];
   readonly onMatchFinished?: (input: {
     readonly events: MatchSessionSnapshot['events'];
     readonly rosterEnd: StoredPieceState[];
@@ -87,6 +89,7 @@ export function MatchScreen({
   initialRoster,
   opponentArchetype = 'random',
   rosterPreamble = [],
+  identities = [],
   onMatchFinished,
 }: MatchScreenProps): JSX.Element {
   const rosterForMatch = initialRoster ?? [];
@@ -191,6 +194,12 @@ export function MatchScreen({
                   <PieceOverlay
                     key={piece.id}
                     piece={state}
+                    {...(() => {
+                      const name = identities.find(
+                        (identity) => identity.id === piece.id,
+                      )?.name;
+                      return name === undefined ? {} : { name };
+                    })()}
                     square={piece.square}
                     selected={snapshot.selectedPieceId === piece.id}
                     onSelect={() => {

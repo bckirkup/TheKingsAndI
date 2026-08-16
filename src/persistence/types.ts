@@ -15,6 +15,7 @@ export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
 export const DETERMINISM_ID = 'heuristic-eval-v1';
 export const COMMENDATION_FOLD_VERSION = 'commendations-v1';
 export const LEARNING_DELTA_FOLD_VERSION = 'learning-delta-v1';
+export const SERVICE_RECORD_FOLD_VERSION = 'service-record-v1';
 
 /** Why a commander was dismissed (ADR 0024 §3). */
 export type DismissalCause = 'dismissed_by_room' | 'dismissed_by_king';
