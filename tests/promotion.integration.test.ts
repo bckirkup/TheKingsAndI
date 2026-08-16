@@ -9,8 +9,8 @@ import {
 } from '../src/orchestration/enemyTurn';
 import { MatchSession } from '../src/orchestration/matchSession';
 import { runHeadlessMatch } from '../src/orchestration/headlessMatch';
+import { createStartingRoster } from '../src/orchestration/roster';
 import type { CandidateMoveEvaluation, PieceState } from '../src/psychology';
-import { createStartingRoster } from '../sim/roster';
 
 const WHITE_PROMOTION_FEN = '8/P7/8/8/8/8/8/k6K w - - 0 1';
 const BLACK_PROMOTION_FEN = '7k/8/8/8/8/8/p7/7K b - - 0 1';
@@ -59,17 +59,10 @@ describe('promotion orchestration wiring', () => {
     const session = new MatchSession({
       seed: 3,
       engine: createFakeEnginePort(),
+      initialBoard: board,
       initialRoster: roster,
       initialEnemyRoster: rosterFor(board, 'b'),
     });
-    const internals = session as unknown as {
-      board: LivingBoard;
-      roster: PieceState[];
-      enemyRoster: PieceState[];
-    };
-    internals.board = board;
-    internals.roster = roster;
-    internals.enemyRoster = rosterFor(board, 'b');
 
     const choice = promotionChoice(board, 'w');
     await session.submitPlayerIntent({
@@ -93,17 +86,10 @@ describe('promotion orchestration wiring', () => {
     const session = new MatchSession({
       seed: 3,
       engine: createFakeEnginePort(),
+      initialBoard: board,
       initialRoster: roster,
       initialEnemyRoster: rosterFor(board, 'b'),
     });
-    const internals = session as unknown as {
-      board: LivingBoard;
-      roster: PieceState[];
-      enemyRoster: PieceState[];
-    };
-    internals.board = board;
-    internals.roster = roster;
-    internals.enemyRoster = rosterFor(board, 'b');
 
     const choice = promotionChoice(board, 'w');
     await session.submitPlayerIntent(choice.intent);

@@ -143,6 +143,7 @@ export interface MatchSessionConfig {
   readonly engine: EnginePort;
   readonly seed?: number;
   readonly playerSide?: Side;
+  readonly initialBoard?: LivingBoard;
   readonly initialTrust?: number;
   readonly initialRoster?: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
@@ -212,7 +213,7 @@ export class MatchSession {
     this.kingTauAbil = config.kingTauAbil ?? 50;
     this.rivalLeaderId =
       config.rivalLeaderId ?? `opponent:${this.opponentArchetype}`;
-    this.board = LivingBoard.standard();
+    this.board = config.initialBoard ?? LivingBoard.standard();
     this.roster =
       config.initialRoster !== undefined
         ? config.initialRoster.map(normalizePieceState)
