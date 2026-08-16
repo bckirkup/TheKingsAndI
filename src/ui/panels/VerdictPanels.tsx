@@ -1,13 +1,24 @@
 import { calculateEngineSearchDepth } from '../../psychology/depth';
 import { ENGINE_CONFIG } from '../../psychology/config';
 import type { PendingVerdict } from '../../orchestration/matchSession';
+import {
+  judgementGapWord,
+  objectionStrengthWord,
+  pieceSubject,
+  sightBandWord,
+  trustBandWord,
+  trustChangeWord,
+  witnessCostWord,
+} from '../qualitativeLabels';
 
 export interface DivergenceDisplayProps {
   readonly pending: PendingVerdict;
+  readonly name?: string;
 }
 
 export function DivergenceDisplay({
   pending,
+  name,
 }: DivergenceDisplayProps): JSX.Element {
   const own = pending.moveEval.deltaV_board;
   const leader = pending.moveEval.vLeaderImplied;
@@ -20,29 +31,26 @@ export function DivergenceDisplay({
     <div className="divergence">
       <h3>Evaluation divergence</h3>
       <p className="divergence__note">
-        The piece reasons from depth {searchDepth} — not the true score (ADR
-        0013). This gap is faith, not disloyalty.
+        {pieceSubject(name, pending.actor.role)} reasons with{' '}
+        {sightBandWord(searchDepth)}, not the true score (ADR 0013). This
+        shortfall is limited sight, not disloyalty.
       </p>
       <dl>
         <div>
-          <dt>Piece view (depth {searchDepth})</dt>
-          <dd>{own.toFixed(2)}</dd>
+          <dt>Judgement gap</dt>
+          <dd>{judgementGapWord(gap)}</dd>
         </div>
         <div>
-          <dt>Commander implied</dt>
-          <dd>{leader.toFixed(2)}</dd>
+          <dt>Objection</dt>
+          <dd>
+            {objectionStrengthWord(
+              pending.outcome.refusalThreshold - pending.outcome.perceivedValue,
+            )}
+          </dd>
         </div>
         <div>
-          <dt>Faith gap</dt>
-          <dd>{gap.toFixed(2)}</dd>
-        </div>
-        <div>
-          <dt>Perceived value</dt>
-          <dd>{pending.outcome.perceivedValue.toFixed(2)}</dd>
-        </div>
-        <div>
-          <dt>Refusal threshold</dt>
-          <dd>{pending.outcome.refusalThreshold.toFixed(2)}</dd>
+          <dt>Sight</dt>
+          <dd>{sightBandWord(searchDepth)}</dd>
         </div>
       </dl>
     </div>
@@ -51,12 +59,14 @@ export function DivergenceDisplay({
 
 export interface OverridePanelProps {
   readonly pending: PendingVerdict;
+  readonly name?: string;
   readonly onOverride: () => void;
   readonly onReplan: () => void;
 }
 
 export function OverridePanel({
   pending,
+  name,
   onOverride,
   onReplan,
 }: OverridePanelProps): JSX.Element {
@@ -64,16 +74,23 @@ export function OverridePanel({
     <dialog open className="override-panel">
       <h2>Refusal — override available</h2>
       <p>
-        <strong>{pending.actor.role}</strong> refused <code>{pending.san}</code>{' '}
-        . You may force the order or re-plan at no turn cost.
+        <strong>{pieceSubject(name, pending.actor.role)}</strong> refused{' '}
+        <code>{pending.san}</code> . You may force the order or re-plan at no
+        turn cost.
       </p>
-      <DivergenceDisplay pending={pending} />
+      <DivergenceDisplay
+        pending={pending}
+        {...(name === undefined ? {} : { name })}
+      />
       <div className="override-panel__costs">
         <h3>Override cost preview</h3>
         <ul>
-          <li>Trust to piece: {ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY}</li>
           <li>
-            Witness trust: {ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY} each
+            To the piece:{' '}
+            {trustChangeWord(ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY)} trust
+          </li>
+          <li>
+            {witnessCostWord(ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY)}
           </li>
         </ul>
       </div>
@@ -91,21 +108,26 @@ export function OverridePanel({
 
 export interface RefusalPanelProps {
   readonly pending: PendingVerdict;
+  readonly name?: string;
   readonly onReplan: () => void;
 }
 
 export function RefusalPanel({
   pending,
+  name,
   onReplan,
 }: RefusalPanelProps): JSX.Element {
   return (
     <div className="verdict-panel verdict-panel--refusal">
       <h2>Order refused</h2>
       <p>
-        <strong>{pending.actor.role}</strong> will not play{' '}
+        <strong>{pieceSubject(name, pending.actor.role)}</strong> will not play{' '}
         <code>{pending.san}</code>.
       </p>
-      <DivergenceDisplay pending={pending} />
+      <DivergenceDisplay
+        pending={pending}
+        {...(name === undefined ? {} : { name })}
+      />
       <button type="button" className="btn" onClick={onReplan}>
         Issue a different order
       </button>
@@ -138,12 +160,14 @@ export function DesertionPanel({
 
 export interface QuietQuitPanelProps {
   readonly role: string;
+  readonly name?: string;
   readonly san: string;
   readonly trust: number;
 }
 
 export function QuietQuitPanel({
   role,
+  name,
   san,
   trust,
 }: QuietQuitPanelProps): JSX.Element {
@@ -151,9 +175,9 @@ export function QuietQuitPanel({
     <div className="verdict-panel verdict-panel--quiet-quit">
       <h2>Quiet compliance</h2>
       <p>
-        <strong>{role}</strong> played <code>{san}</code> without enthusiasm.
-        Trust is {trust}; engagement is low. The order went through — the army
-        did not.
+        <strong>{pieceSubject(name, role)}</strong> played <code>{san}</code>{' '}
+        without enthusiasm. Trust is {trustBandWord(trust)}; engagement is low.
+        The order went through — the army did not.
       </p>
       <p className="divergence__note">
         This is not a bug. The piece complied while withholding effort.

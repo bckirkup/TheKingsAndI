@@ -233,6 +233,12 @@ export function MatchScreen({
 
           {dialogueCue?.eventKind === 'quiet_quit' && pending === null ? (
             <QuietQuitPanel
+              {...(() => {
+                const name = identities.find(
+                  (identity) => identity.id === dialogueCue.pieceId,
+                )?.name;
+                return name === undefined ? {} : { name };
+              })()}
               role={
                 roster.find((p) => p.id === dialogueCue.pieceId)?.role ??
                 'Piece'
@@ -245,6 +251,12 @@ export function MatchScreen({
           {pending?.verdict === 'MORAL_REFUSAL' ? (
             <OverridePanel
               pending={pending}
+              {...(() => {
+                const name = identities.find(
+                  (identity) => identity.id === pending.actor.id,
+                )?.name;
+                return name === undefined ? {} : { name };
+              })()}
               onOverride={() => {
                 void session.confirmOverride().then(() => {
                   refresh();

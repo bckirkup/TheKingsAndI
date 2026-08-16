@@ -1096,8 +1096,13 @@ in the piece overlay (`src/app/RosterScreen.tsx:118-163`,
 `src/ui/overlays/PieceOverlay.tsx:44-73`), and a service record folded from
 campaign match events (`src/persistence/service.ts:33-177`). The board gauges
 remain visual, but their labels are qualitative rather than arithmetic.
-Slice 1 does not implement testimony, rumor, or earned-knowledge projections;
-those remain open here. ADR 0054 §6 still proposes earned knowledge as
+The verdict, override, and quiet-quit panels now explain judgement gap,
+objection strength, sight, and override cost without arithmetic
+(`src/ui/panels/VerdictPanels.tsx:1-190`,
+`src/app/MatchScreen.tsx:230-270`). These panels provide a readable reason, not
+knowledge about pieces the commander has never led. Slice 1 does not implement
+testimony, rumor, or earned-knowledge projections; those remain open here.
+ADR 0054 §6 still proposes earned knowledge as
 testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
 and how far testimony may rationalize.

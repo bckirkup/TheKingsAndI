@@ -76,6 +76,12 @@ These are status distinctions, not new design decisions:
   `src/ui/overlays/PieceOverlay.tsx:44-73`; the numeric leak is removed there
   against ADR 0018. Testimony, rumor, and earned-knowledge projections remain
   unwired.
+- **Verdict arithmetic is now qualitative.** Refusal, override, and quiet-quit
+  panels explain judgement gap, objection strength, sight, and override cost in
+  words, with piece names when available
+  (`src/ui/panels/VerdictPanels.tsx:1-190`,
+  `src/app/MatchScreen.tsx:230-270`). Testimony, rumor, and earned-knowledge
+  projections remain unwired.
 
 Open calibration decisions (D35, D40, D42–D44, and later magnitude Ds) remain
 harness work — do not silently close them by changing defaults without a
