@@ -35,7 +35,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/calibration/2026-08-10-state-of-play.md` | Previous harness numbers; tyrannical figures superseded by the 08-13 pass |
 | `docs/calibration/milestone-3-engine-wired.md` | Historical post-wiring calibration report |
 | `docs/adr/0052-exit-cost-and-capture-probability.md` | D146 exit permanence and static-exchange capture-risk specification |
-| `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0053 decided vs shipped |
+| `docs/adr/IMPLEMENTATION_STATUS.md` | ADR 0035–0054 decided vs shipped |
 | `docs/adr/0053-pawn-hope-and-posthumous-credit.md` | D147 pawn hope, capture truth, and posthumous class credit |
 | `docs/calibration/2026-08-18-pawn-hope-sweep.md` | D147 promotion-hope and credence-floor calibration; raw sweep artifacts retained externally |
 | `docs/adr/0054-the-seminar-pool-and-what-a-player-knows.md` | D148–D150 seminar-pool direction and open decisions |
