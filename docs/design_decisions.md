@@ -1018,7 +1018,7 @@ move's risk (`src/orchestration/insight.ts:179`), and the per-departure
 own-future cost,
 `pain · attachment · (DESERTION_EXIT_PERMANENCE_PERMILLE / 1000) · shadow`,
 through the shared helper at `src/psychology/desertion.ts:209`; the selected
-default is `750` at `src/psychology/config.ts:86`. Capture risk is now a
+default is `625` at `src/psychology/config.ts:90`. Capture risk is now a
 deterministic static-exchange classification at
 `src/chess/features.ts:137`, preserving the piece's own plain-data view while
 replacing the former defence-count threat flag. The settled specification is
@@ -1047,6 +1047,57 @@ Implementations are at `src/chess/features.ts:112-151`,
 `src/psychology/desertion.ts:231-333`, and
 `src/orchestration/psychologyHooks.ts:68-96`. The selected promotion-hope
 and floor defaults and rationale remain TBD pending calibration.
+
+### D148 ❓ What promotion means at campaign scale (ADR 0054)
+**Open.** Promotion is a board event with no existence in the simulation:
+`LivingBoard` records it at `src/chess/board.ts:367-369`, **no orchestration path
+reads that field**, there is no `PROMOTION` member of the event union, and
+`PieceState.role` is never mutated — so a promoted pawn is fielded as a pawn in
+the next match. The mechanism half is settled by ADR 0054 §4 (emit the event,
+mutate `role`, preserve `originRole`, carry the mutated role through
+`mergeCampaignRoster` at `sim/roster.ts:109-135`, which currently re-derives role
+from the standard board). **Not wired.**
+
+What remains open is the seminar-level effect and its magnitude: whether a
+witnessed promotion moves **Pawn** class prestige for every witness, and in which
+direction — "one of us made it" or "she left us behind". Also open: whether the
+promoted piece's own trust, morale, or trauma move on elevation.
+`DESERTION_PROMOTION_HOPE_PERMILLE` stays at `0` at
+`src/psychology/config.ts` until this resolves, because the in-match stake cannot
+be calibrated while the campaign-scale prize is zero
+(`docs/calibration/2026-08-18-pawn-hope-sweep.md`).
+
+### D149 ❓ Can service move ability? (ADR 0054 §5)
+**Open.** `E_i` — specified as *experience* in `docs/psychology_engine.md:17` — is
+assigned only at piece creation (`src/orchestration/roster.ts:58-65`,
+`sim/roster.ts:74-78`) and is otherwise only clamped
+(`src/psychology/reducers.ts:34`). No event, reducer, fold or campaign path moves
+it, so ability is a constant of role: pawn 20, officer 55, King 80. Traits are
+frozen at creation with ±0.1 jitter (`sim/roster.ts:29-41`). **Not wired.**
+
+Two consequences make this load-bearing rather than cosmetic. A bench cannot have
+a quality gradient, so "a much better queen" can only ever mean *more compliant
+and more resilient*, never *better counsel*
+(`docs/calibration/2026-08-19-piece-quality-and-the-bench.md`). And
+`strongest_available` orders by `E_i` (`sim/pool.ts:250-254`), so a promoted pawn
+keeps ability 20, loses the queen's chair by construction, and is honoured into
+permanent benching. Either service moves `E_i`, or fielding priority must stop
+being ability alone; resolving neither makes promotion a trap decided by a
+constant. If ability does become earnable, ADR 0043's asymmetry argument
+(quick to lose, slow to rebuild) is the shape to consider, and every desertion
+coefficient must be re-ranged afterwards.
+
+### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
+**Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
+failure equally bad: a bench nobody can read is a bench nobody can use. Shipped
+today: role, raw `T_i` and status on the roster screen
+(`src/app/RosterScreen.tsx:84`), non-numeric board gauges whose exact integers
+leak through `title`/`aria-label` (`src/ui/overlays/PieceOverlay.tsx:40-58`), and
+**names that are stored but rendered nowhere** (`src/app/careerBootstrap.ts:44-49`).
+ADR 0054 §6 proposes earned knowledge as testimony rather than telemetry, with
+rumor-only information about pieces never served. Open: whether a commander may
+be *wrong* about a piece he has not led, and how far testimony may rationalize.
+The numeric leak is a defect against ADR 0018 regardless of how this resolves.
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one

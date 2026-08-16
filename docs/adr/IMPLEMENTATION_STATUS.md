@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0053)
+# ADR implementation status (0035–0054)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -29,6 +29,7 @@ the discrepancy is corrected.
 | 0051 | Non-selection, redemption, and obsolescence | Accepted for season-pool slice; calibration remains open | **Shipped** — `sim/pool.ts:27-65`, `sim/pool.ts:376-552`, `sim/season.ts:98-145` |
 | 0052 | Exit permanence and static-exchange capture risk | Accepted — both candidate directions adopted; CI-safe default `625` selected by calibration | **Shipped** — `src/psychology/config.ts:86`, `src/psychology/desertion.ts:209`, `src/chess/features.ts:137` |
 | 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; calibration defaults open | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-333`, `src/orchestration/psychologyHooks.ts:68-96` |
+| 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Not wired** — promotion is recorded at `src/chess/board.ts:367-369` and read nowhere; no `PROMOTION` event; no player-facing bench |
 
 ## Confirmed implementation gaps
 
@@ -59,6 +60,20 @@ These are status distinctions, not new design decisions:
 - **Facilitator/cohort surfaces remain partial.** Player commendations are
   implemented, while facilitator awards require the missing world/cohort model
   (`src/persistence/commendations.ts:232-333`).
+- **Experience does not grow.** `E_i` is assigned only when a piece is created
+  (`src/orchestration/roster.ts:58-65`, `sim/roster.ts:71-78`) and is otherwise
+  only clamped (`src/psychology/reducers.ts:32-35`), so ability remains fixed.
+- **There is no shipped bench.** `activeLineup` fields every `ACTIVE` piece
+  (`src/orchestration/rosterActions.ts:132-141`), while `listFreeAgents`
+  returns the player's own `DESERTED` pieces
+  (`src/persistence/repository.ts:354-357`).
+- **Piece names are not rendered.** Names are stored in
+  `src/app/careerBootstrap.ts:44-49`, but no screen renders them.
+- **Exact integers leak through the piece overlay.** `PieceOverlay` publishes
+  exact trust and morale in its `aria-label`
+  (`src/ui/overlays/PieceOverlay.tsx:41`) and exact morale and trauma in
+  `title` attributes (`src/ui/overlays/PieceOverlay.tsx:50-57`), against
+  ADR 0018.
 
 Open calibration decisions (D35, D40, D42–D44, and later magnitude Ds) remain
 harness work — do not silently close them by changing defaults without a
