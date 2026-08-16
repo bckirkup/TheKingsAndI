@@ -110,6 +110,7 @@ function input(overrides: Partial<MatchProseInput> = {}): MatchProseInput {
     overrideCount: 1,
     desertionCount: 3,
     refusalCount: 2,
+    promotionCount: 0,
     events: EVENTS,
     roleOf: ROLE_OF,
     ...overrides,
@@ -120,6 +121,12 @@ describe('match audit prose (6.4)', () => {
   it('carries the outcome headline', () => {
     expect(matchAuditProse(input()).headline).toBe(
       'A rout. They would rather lose than serve.',
+    );
+  });
+
+  it('reports witnessed promotions as an audit finding', () => {
+    expect(matchAuditProse(input({ promotionCount: 2 })).findings).toContain(
+      'The match recorded 2 promotions.',
     );
   });
 

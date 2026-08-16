@@ -61,6 +61,7 @@ import { createStartingRoster } from './roster';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
 import { kingExposureAfterWithdrawals } from './kingExposure';
+import { applyPromotion } from './promotion';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -305,6 +306,11 @@ function applyPlayerMoveConsequences(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
   });
+  if (applied.promotion !== undefined) {
+    const promotion = applyPromotion(roster, applied.promotion, ply);
+    roster = promotion.roster;
+    events.push(promotion.event);
+  }
   if (applied.capture !== undefined) {
     events.push({
       t: 'CAPTURE',

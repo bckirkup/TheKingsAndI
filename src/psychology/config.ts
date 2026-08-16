@@ -16,6 +16,10 @@ export const ENGINE_CONFIG = {
   /** Maximum sacrifice-to-capture distance for posthumous class credit. */
   POSTHUMOUS_SACRIFICE_LOOKBACK_PLIES: 3,
   DEFAULT_AFFINITY_SHIFT_HEROIC_SACRIFICE: 50,
+  /** Keep promoted roles on their original campaign chair only when enabled. */
+  PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES: false,
+  /** Signed class-prestige shift witnesses apply to a promotion's origin class. */
+  PROMOTION_CLASS_PRESTIGE_SHIFT: 0,
   LEADERSHIP_WEIGHTS: {
     alpha: 0.4,
     beta: 0.3,

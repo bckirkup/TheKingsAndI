@@ -117,3 +117,11 @@ export function freeAgentRecruitLabel(
 export function firePreviewLabel(newTrust: number): string {
   return `Fire: trust becomes ${trustBandWord(newTrust)}`;
 }
+
+export function promotionAttainmentLabel(
+  attainedRole: string | undefined,
+): string | null {
+  return attainedRole === undefined
+    ? null
+    : `Attained ${attainedRole.toLowerCase()} through promotion`;
+}

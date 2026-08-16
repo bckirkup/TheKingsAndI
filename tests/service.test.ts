@@ -74,6 +74,7 @@ function makeMatch(
       overrideCount: 0,
       desertionCount: 0,
       quietQuitCount: 0,
+      promotionCount: 0,
       meanTrustDelta: 0,
       foldVersion: AUDIT_FOLD_VERSION,
     },
@@ -162,8 +163,15 @@ describe('foldPieceServiceRecords', () => {
         san: 'e5',
       },
       {
+        t: 'PROMOTION',
+        ply: 11,
+        pieceId: hero.id,
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
         t: 'DESERTION',
-        ply: 12,
+        ply: 13,
         pieceId: hero.id,
         refusedMove: 'e5',
         uStay: -1,
@@ -191,6 +199,7 @@ describe('foldPieceServiceRecords', () => {
       timesBenched: 1,
       timesFired: 1,
       timesRecruited: 1,
+      promotions: 1,
       deserted: true,
     });
     expect(folded.foldVersion).toBe(SERVICE_RECORD_FOLD_VERSION);

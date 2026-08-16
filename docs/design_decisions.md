@@ -1049,14 +1049,17 @@ Implementations are at `src/chess/features.ts:112-151`,
 and floor defaults and rationale remain TBD pending calibration.
 
 ### D148 ❓ What promotion means at campaign scale (ADR 0054)
-**Open.** Promotion is a board event with no existence in the simulation:
-`LivingBoard` records it at `src/chess/board.ts:367-369`, **no orchestration path
-reads that field**, there is no `PROMOTION` member of the event union, and
-`PieceState.role` is never mutated — so a promoted pawn is fielded as a pawn in
-the next match. The mechanism half is settled by ADR 0054 §4 (emit the event,
-mutate `role`, preserve `originRole`, carry the mutated role through
-`mergeCampaignRoster` at `sim/roster.ts:109-135`, which currently re-derives role
-from the standard board). **Not wired.**
+**Open.** Promotion is now truthful in-match: orchestration consumes the board
+fact through `src/orchestration/promotion.ts:18-61`, emits `PROMOTION`, mutates
+the promoted `PieceState.role`, and applies the signed witness channel to the
+origin class. The event-log service and audit folds count it, while identity
+attainment is persisted by `src/persistence/repository.ts:283-310`. The
+campaign policy remains unresolved and is explicitly gated:
+`PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES` defaults to `false` at
+`src/psychology/config.ts:20-23`; `src/orchestration/rosterActions.ts:175-197`
+normalizes the role to its chair by default, while `sim/roster.ts:109-135`
+honours the flag. The signed `PROMOTION_CLASS_PRESTIGE_SHIFT` witness knob is
+also defaulted to `0` at `src/psychology/config.ts:20-23`.
 
 What remains open is the seminar-level effect and its magnitude: whether a
 witnessed promotion moves **Pawn** class prestige for every witness, and in which

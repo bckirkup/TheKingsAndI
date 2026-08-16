@@ -7,7 +7,7 @@ import type { EngineAuditEntry } from '../engine';
 
 export const SCHEMA_VERSION = 1;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
-export const AUDIT_FOLD_VERSION = 'audit-v2';
+export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
@@ -49,6 +49,7 @@ export interface PieceIdentityRecord {
   readonly name: string;
   readonly bornInMatch: number;
   readonly originRole: string;
+  readonly attainedRole?: string;
 }
 
 export interface StoredPieceState extends PieceState {
@@ -110,6 +111,7 @@ export interface MatchAudit {
   readonly overrideCount: number;
   readonly desertionCount: number;
   readonly quietQuitCount: number;
+  readonly promotionCount: number;
   readonly meanTrustDelta: number;
   readonly foldVersion: string;
 }

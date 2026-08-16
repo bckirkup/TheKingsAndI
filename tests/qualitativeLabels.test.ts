@@ -10,6 +10,7 @@ import {
   objectionStrengthWord,
   pieceAccessibleLabel,
   pieceSubject,
+  promotionAttainmentLabel,
   rosterPieceLabel,
   sightBandWord,
   traumaBandWord,
@@ -58,6 +59,9 @@ describe('qualitative UI labels', () => {
       ...Array.from({ length: 401 }, (_, index) =>
         witnessCostWord(index - 200),
       ),
+      ...['Pawn', 'Knight', 'Queen'].map(
+        (role) => promotionAttainmentLabel(role) ?? '',
+      ),
     ];
 
     expect(labels.every((label) => !/\d/.test(label))).toBe(true);
@@ -66,6 +70,7 @@ describe('qualitative UI labels', () => {
     );
     expect(pieceSubject(undefined, 'Pawn')).toBe('Pawn');
     expect(pieceSubject('Aethelgard', 'Pawn')).toBe('Aethelgard');
+    expect(promotionAttainmentLabel(undefined)).toBeNull();
   });
 
   it('uses monotone trust, morale, and trauma bands', () => {

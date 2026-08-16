@@ -86,6 +86,7 @@ function makeMatch(
       overrideCount: 0,
       desertionCount: 0,
       quietQuitCount: 0,
+      promotionCount: 0,
       meanTrustDelta: 0,
       foldVersion: AUDIT_FOLD_VERSION,
       ...auditOverrides,
