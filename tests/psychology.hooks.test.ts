@@ -84,7 +84,7 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     pLossBoard: 0,
     pivotality: 0,
     shadowFactor: 1,
-    promotionProspect: 1,
+    promotionProspect: 1_000,
   };
   const originalHope = config.DESERTION_PROMOTION_HOPE_PERMILLE;
   try {
@@ -95,6 +95,30 @@ it('wires posthumous knobs and promotion hope into measurable outputs', () => {
     const highHope = shouldDesert(hero, context, [hero, witness]).terms
       .prospectiveStandingCost;
     expect(highHope).toBeGreaterThan(lowHope ?? 0);
+    const early = shouldDesert(hero, { ...context, promotionProspect: 250 }, [
+      hero,
+      witness,
+    ]).terms.prospectiveStandingCost;
+    const late = shouldDesert(hero, { ...context, promotionProspect: 1_000 }, [
+      hero,
+      witness,
+    ]).terms.prospectiveStandingCost;
+    expect(late).toBeGreaterThan(early ?? 0);
+    const lowCredence = shouldDesert(
+      makePiece({ credence: { ...defaultCredence(), tauAbil: 20 } }),
+      context,
+      [hero, witness],
+    ).terms.prospectiveStandingCost;
+    const highCredence = shouldDesert(
+      makePiece({ credence: { ...defaultCredence(), tauAbil: 80 } }),
+      context,
+      [hero, witness],
+    ).terms.prospectiveStandingCost;
+    expect(highCredence).toBeGreaterThan(lowCredence ?? 0);
+    expect(
+      shouldDesert(hero, context, [hero, witness]).terms
+        .credenceScaledProspectiveStandingCost,
+    ).toBe(highHope);
   } finally {
     config.DESERTION_PROMOTION_HOPE_PERMILLE = originalHope ?? 0;
   }

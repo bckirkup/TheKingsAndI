@@ -70,7 +70,7 @@ export interface CandidateMoveEvaluation {
   readonly deltaV_capture: number;
   readonly P_captured: number;
   readonly peerSafetyDeltas: Readonly<Record<PieceId, number>>;
-  /** Post-move promotion prospect for the evaluated actor, 0..1. */
+  /** Post-move promotion prospect for the evaluated actor, 0..1000. */
   readonly promotionProspect: number;
 }
 
@@ -98,7 +98,7 @@ export interface DesertionContext {
   readonly pLossBoard: number;
   readonly pivotality: number;
   readonly shadowFactor: number;
-  /** Post-move promotion prospect for the evaluated actor, 0..1. */
+  /** Post-move promotion prospect for the evaluated actor, 0..1000. */
   readonly promotionProspect: number;
 }
 
@@ -122,6 +122,8 @@ export interface DesertionDecisionTerms {
   readonly exitSelfCost?: number;
   /** Posthumous/prospective standing component, in pain units. */
   readonly prospectiveStandingCost?: number;
+  /** Prospective standing cost after scaling by ability credence. */
+  readonly credenceScaledProspectiveStandingCost?: number;
   /** Post-move promotion prospect used by the standing calculation. */
   readonly promotionProspect?: number;
   readonly gloryWeight: number;

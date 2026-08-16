@@ -47,7 +47,19 @@ Deserting sets the piece's personal future capture risk to zero after it leaves
 raises `P_loss(team)`, but it now charges the piece an own-future exit cost
 before the decision. The stay estimate combines the piece's own private board
 read, social rumor, and the existing capture-stress term. A pawn may also carry
-prospective promotion standing when the configured hope weight is non-zero:
+prospective promotion standing when the configured hope weight is non-zero.
+The prospective term is leadership-conditional: promotion prospect is
+multiplied by `τ_abil / 100`, because believing that promotion will be earned
+is a belief about the commander's competence, not warmth:
+
+```
+prospectiveStanding =
+  prospectPermille · hopeWeight · τ_abilPermille
+  / (1_000 · 1_000 · 1_000 · (STANDARD_ROSTER_SIZE − 1))
+```
+
+The resulting standing term is then multiplied by the existing glory weight
+and standing stake:
 
 ```
 pLossBoard = 500 - trunc(500·s/(|s| + K))

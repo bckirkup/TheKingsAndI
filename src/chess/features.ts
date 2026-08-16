@@ -89,7 +89,7 @@ export interface MoveFeatures {
   readonly pCapturedDelta: number;
   /** Post-move capture risk for every surviving friendly piece, 0..1. */
   readonly captureRiskByPiece: Record<PieceId, number>;
-  /** Post-move promotion prospect for every surviving friendly piece, 0..1. */
+  /** Post-move promotion prospect for every surviving friendly piece, 0..1000. */
   readonly promotionProspectByPiece: Record<PieceId, number>;
   /**
    * `ΔSafety_j(m)` in -1..1 for every friendly piece other than the mover:
@@ -148,6 +148,52 @@ function promotionProspectBaseThousandths(
     ),
   );
   return Math.trunc((base * damper) / RISK_SCALE);
+}
+
+function promotionProspectByPieceThousandths(
+  board: LivingBoard,
+  side: Side,
+  config: FeatureConfig,
+): Record<PieceId, number> {
+  const pieces = board.pieces();
+  const result: Record<PieceId, number> = {};
+  for (const piece of pieces) {
+    if (piece.side !== side || piece.role !== 'P') {
+      continue;
+    }
+    const rank = piece.square.charCodeAt(1) - 48;
+    const advanced = piece.side === 'w' ? rank - 2 : 7 - rank;
+    const base = Math.max(
+      0,
+      Math.min(RISK_SCALE, Math.trunc((advanced * RISK_SCALE) / 5)),
+    );
+    if (base === 0) {
+      result[piece.id] = 0;
+      continue;
+    }
+    const file = piece.square.charCodeAt(0);
+    const rankCode = piece.square.charCodeAt(1);
+    const blocked = pieces.some(
+      (other) =>
+        other.square.charCodeAt(0) === file &&
+        (piece.side === 'w'
+          ? other.square.charCodeAt(1) > rankCode
+          : other.square.charCodeAt(1) < rankCode),
+    );
+    if (!blocked) {
+      result[piece.id] = base;
+      continue;
+    }
+    const damper = Math.max(
+      0,
+      Math.min(
+        RISK_SCALE,
+        Math.trunc(config.promotionProspectBlockedDamperPermille),
+      ),
+    );
+    result[piece.id] = Math.trunc((base * damper) / RISK_SCALE);
+  }
+  return result;
 }
 
 export function promotionProspectThousandths(
@@ -334,21 +380,19 @@ export function extractMoveFeatures(
   const afterKingExposure = kingExposureThousandths(probe, side, config);
 
   const captureRiskByPiece: Record<PieceId, number> = {};
-  const promotionProspectByPiece: Record<PieceId, number> = {};
+  const promotionProspectByPiece = promotionProspectByPieceThousandths(
+    probe,
+    side,
+    config,
+  );
   const peerSafetyDeltas: Record<PieceId, number> = {};
   for (const [pieceId, after] of [...afterRisks.entries()].sort(
     ([left], [right]) => (left < right ? -1 : 1),
   )) {
     captureRiskByPiece[pieceId] = quantized(after);
-    const afterPiece = probe.pieceAt(
-      [...probe.pieces()].find((candidate) => candidate.id === pieceId)
-        ?.square ?? 'a1',
+    promotionProspectByPiece[pieceId] = quantized(
+      promotionProspectByPiece[pieceId] ?? 0,
     );
-    if (afterPiece !== undefined) {
-      promotionProspectByPiece[pieceId] = quantized(
-        promotionProspectThousandths(probe, afterPiece.square, config),
-      );
-    }
     if (pieceId === applied.moverId) continue;
     const before = beforeRisks.get(pieceId) ?? 0;
     peerSafetyDeltas[pieceId] = quantized(before - after);

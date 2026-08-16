@@ -257,9 +257,17 @@ function calculateStandingCostComponents(
       Math.trunc(ENGINE_CONFIG.DESERTION_PROMOTION_HOPE_PERMILLE),
     ),
   );
+  const prospectPermille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(promotionProspect)),
+  );
+  const abilityCredencePermille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(piece.credence.tauAbil * 10)),
+  );
   const prospectiveStanding =
-    (Math.max(0, Math.min(1, promotionProspect)) * hopeWeight) /
-    (1_000 * Math.max(1, STANDARD_ROSTER_SIZE - 1));
+    (prospectPermille * hopeWeight * abilityCredencePermille) /
+    (1_000 * 1_000 * 1_000 * Math.max(1, STANDARD_ROSTER_SIZE - 1));
   const prospectiveStandingCost =
     prospectiveStanding * gloryWeight * ENGINE_CONFIG.DESERTION_STANDING_STAKE;
   const anticipatedStandingCost =
@@ -334,6 +342,8 @@ export function shouldDesert(
       standingCost:
         quantizeBoardValue(standing.anticipatedStandingCost) / 1_000,
       prospectiveStandingCost:
+        quantizeBoardValue(standing.prospectiveStandingCost) / 1_000,
+      credenceScaledProspectiveStandingCost:
         quantizeBoardValue(standing.prospectiveStandingCost) / 1_000,
       promotionProspect: context.promotionProspect,
       exitSelfCost,

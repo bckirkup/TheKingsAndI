@@ -20,6 +20,8 @@ Pawn promotion prospect is deterministic integer permille data, mirrored for
 both sides and damped, but not erased, by a blocker on the pawn's file.
 Prospect is carried through plain-data move evaluations and contributes a
 prospective standing term when `DESERTION_PROMOTION_HOPE_PERMILLE` is enabled.
+That term is additionally scaled by the piece's `τ_abil` credence: hope about
+promotion is leadership-conditional belief in competence, not warmth.
 
 The posthumous class-shift default is in the same family as living heroic
 credit but smaller, so a death can establish class worth without overpowering
