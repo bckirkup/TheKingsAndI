@@ -37,6 +37,7 @@ export interface MatchProseInput {
   readonly overrideCount: number;
   readonly desertionCount: number;
   readonly refusalCount: number;
+  readonly promotionCount: number;
   readonly events: readonly MatchEvent[];
   /** Role for each piece id, for role-abstract naming. */
   readonly roleOf: Readonly<Record<string, PieceRole>>;
@@ -223,6 +224,10 @@ export function matchAuditProse(
   if (input.overrideCount > 0) {
     const word = input.overrideCount === 1 ? 'refusal' : 'refusals';
     findings.push(`You overrode ${input.overrideCount} ${word} by force.`);
+  }
+  if (input.promotionCount > 0) {
+    const noun = input.promotionCount === 1 ? 'promotion' : 'promotions';
+    findings.push(`The match recorded ${input.promotionCount} ${noun}.`);
   }
   const sacrifice = sacrificeFinding(input);
   if (sacrifice !== null) findings.push(sacrifice);

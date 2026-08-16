@@ -49,6 +49,7 @@ export interface PieceIdentityRecord {
   readonly name: string;
   readonly bornInMatch: number;
   readonly originRole: string;
+  readonly attainedRole?: string;
 }
 
 export interface StoredPieceState extends PieceState {
@@ -110,6 +111,7 @@ export interface MatchAudit {
   readonly overrideCount: number;
   readonly desertionCount: number;
   readonly quietQuitCount: number;
+  readonly promotionCount: number;
   readonly meanTrustDelta: number;
   readonly foldVersion: string;
 }

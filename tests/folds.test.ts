@@ -78,6 +78,7 @@ function makeMatchRecord(
       overrideCount: 0,
       desertionCount: 0,
       quietQuitCount: 0,
+      promotionCount: 0,
       meanTrustDelta: 0,
       foldVersion: AUDIT_FOLD_VERSION,
       ...auditOverrides,
@@ -152,6 +153,27 @@ describe('foldMatchAudit', () => {
     expect(compliantOnly.executionFidelity).not.toBe(
       baseline.executionFidelity,
     );
+  });
+
+  it('counts promotion events without maintaining a second source of truth', () => {
+    const promotions: MatchEvent[] = [
+      {
+        t: 'PROMOTION',
+        ply: 1,
+        pieceId: 'w:P:a7',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
+        t: 'PROMOTION',
+        ply: 2,
+        pieceId: 'w:P:b7',
+        fromRole: 'Pawn',
+        toRole: 'Rook',
+      },
+    ];
+    expect(foldMatchAudit(promotions, 50, 50).promotionCount).toBe(2);
+    expect(foldMatchAudit([], 50, 50).promotionCount).toBe(0);
   });
 });
 

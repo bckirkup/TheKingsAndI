@@ -63,6 +63,7 @@ import {
 } from './psychologyHooks';
 import { createStartingRoster } from './roster';
 import { kingExposureAfterWithdrawals } from './kingExposure';
+import { applyPromotion } from './promotion';
 
 export type MatchPhase =
   | 'playing'
@@ -629,6 +630,15 @@ export class MatchSession {
           by: applied.moverId,
         });
       }
+      if (applied.promotion !== undefined) {
+        const promotion = applyPromotion(
+          this.roster,
+          applied.promotion,
+          this.ply,
+        );
+        this.roster = promotion.roster;
+        this.events.push(promotion.event);
+      }
       this.roster = syncRoster(this.board, this.roster, this.playerSide);
       this.ply += 1;
     } else {
@@ -700,6 +710,15 @@ export class MatchSession {
             by: applied.moverId,
           });
         }
+        if (applied.promotion !== undefined) {
+          const promotion = applyPromotion(
+            this.roster,
+            applied.promotion,
+            this.ply,
+          );
+          this.roster = promotion.roster;
+          this.events.push(promotion.event);
+        }
         this.roster = syncRoster(this.board, this.roster, this.playerSide);
         this.ply += 1;
       } else {
@@ -735,6 +754,15 @@ export class MatchSession {
       verdict: outcome.verdict,
       orderQualityCp,
     });
+    if (applied.promotion !== undefined) {
+      const promotion = applyPromotion(
+        this.roster,
+        applied.promotion,
+        this.ply,
+      );
+      this.roster = promotion.roster;
+      this.events.push(promotion.event);
+    }
     if (applied.capture !== undefined) {
       this.events.push({
         t: 'CAPTURE',

@@ -8,6 +8,7 @@ import {
   type PieceState,
   type PieceTraits,
 } from '../src/psychology';
+import { ENGINE_CONFIG } from '../src/psychology';
 
 const ROLE_MAP: Record<Role, PieceRole> = {
   P: 'Pawn',
@@ -120,6 +121,9 @@ export function mergeCampaignRoster(
       if (previous === undefined) return piece;
       return normalizePieceState({
         ...piece,
+        role: ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
+          ? previous.role
+          : piece.role,
         traits: previous.traits,
         T_i: previous.T_i,
         M_i: previous.M_i,

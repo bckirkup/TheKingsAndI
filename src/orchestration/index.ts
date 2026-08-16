@@ -33,6 +33,7 @@ export {
   PACING_CONFIG,
 } from './pacingConfig';
 export { createStartingRoster } from './roster';
+export { applyPromotion } from './promotion';
 export type {
   HeadlessLeaderPort,
   HeadlessMatchConfig,

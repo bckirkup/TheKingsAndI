@@ -131,6 +131,64 @@ describe('persistence repository', () => {
     expect(debrief.meanBoardQuality).toBeGreaterThan(0);
     expect(debrief.foldVersion).toBeTruthy();
   });
+
+  it('persists the highest attained promotion role without changing originRole', async () => {
+    const repo = new CareerRepository();
+    await repo.init();
+    const { roster, identities } = bootstrapRoster(12);
+    const created = await repo.createCareer({
+      seed: 12,
+      roster,
+      identities,
+      targetMatches: 3,
+    });
+    const pawn = created.roster.find((piece) => piece.role === 'Pawn');
+    if (pawn === undefined) throw new Error('expected a pawn');
+    const promoted = {
+      ...pawn,
+      role: 'Queen' as const,
+    };
+    const recordInput = {
+      campaignId: created.campaign.id,
+      actId: created.act.id,
+      seed: 12,
+      rosterSnapshot: created.roster,
+      rosterEnd: created.roster.map((piece) =>
+        piece.id === pawn.id ? promoted : piece,
+      ),
+      engineAudit: [],
+      result: 'DRAW' as const,
+    };
+    await repo.recordMatch({
+      ...recordInput,
+      matchIndex: 1,
+      events: [
+        {
+          t: 'PROMOTION',
+          ply: 1,
+          pieceId: pawn.id,
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
+      ],
+    });
+    await repo.recordMatch({
+      ...recordInput,
+      matchIndex: 2,
+      events: [
+        {
+          t: 'PROMOTION',
+          ply: 1,
+          pieceId: pawn.id,
+          fromRole: 'Pawn',
+          toRole: 'Knight',
+        },
+      ],
+    });
+    const stored = (await repo.getIdentities([pawn.id]))[0];
+    expect(stored?.originRole).toBe('Pawn');
+    expect(stored?.attainedRole).toBe('Queen');
+  });
 });
 
 describe('schema migrations', () => {

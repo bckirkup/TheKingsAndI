@@ -13,6 +13,7 @@ import {
   previewBench,
   previewFire,
 } from '../src/orchestration/rosterActions';
+import { ENGINE_CONFIG } from '../src/psychology';
 import type { StoredPieceState } from '../src/persistence';
 
 const neutralTraits = {
@@ -124,5 +125,64 @@ describe('roster actions', () => {
     expect(merged.find((piece) => piece.id === 'w:B:c1')?.status).toBe(
       'BENCHED',
     );
+  });
+
+  it('normalizes a promoted role to its chair by default while retaining state', () => {
+    const original = ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES;
+    const config = ENGINE_CONFIG as {
+      PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES: boolean;
+    };
+    try {
+      config.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES = false;
+      const base = makePiece('w:P:a2', 40);
+      const lineup = [base];
+      const promoted = { ...base, role: 'Queen' as const };
+      const merged = mergeRosterAfterMatch(
+        lineup,
+        [promoted],
+        [
+          {
+            t: 'PROMOTION',
+            ply: 1,
+            pieceId: promoted.id,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+        ],
+      );
+      expect(merged[0]?.role).toBe('Pawn');
+      expect(merged[0]?.T_i).toBe(40);
+    } finally {
+      config.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES = original;
+    }
+  });
+
+  it('carries a promoted role when campaign persistence is enabled', () => {
+    const original = ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES;
+    const config = ENGINE_CONFIG as {
+      PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES: boolean;
+    };
+    try {
+      config.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES = true;
+      const base = makePiece('w:P:a2', 40);
+      const lineup = [base];
+      const promoted = { ...base, role: 'Queen' as const };
+      const merged = mergeRosterAfterMatch(
+        lineup,
+        [promoted],
+        [
+          {
+            t: 'PROMOTION',
+            ply: 1,
+            pieceId: promoted.id,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+        ],
+      );
+      expect(merged[0]?.role).toBe('Queen');
+    } finally {
+      config.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES = original;
+    }
   });
 });

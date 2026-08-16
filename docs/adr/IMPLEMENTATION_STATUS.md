@@ -29,7 +29,7 @@ the discrepancy is corrected.
 | 0051 | Non-selection, redemption, and obsolescence | Accepted for season-pool slice; calibration remains open | **Shipped** — `sim/pool.ts:27-65`, `sim/pool.ts:376-552`, `sim/season.ts:98-145` |
 | 0052 | Exit permanence and static-exchange capture risk | Accepted — both candidate directions adopted; CI-safe default `625` selected by calibration | **Shipped** — `src/psychology/config.ts:90`, `src/psychology/desertion.ts:209`, `src/chess/features.ts:137` |
 | 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; calibration defaults open | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-333`, `src/orchestration/psychologyHooks.ts:68-96` |
-| 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slice 1 renders stored identity, origin, and event-log service records and replaces arithmetic leaks with qualitative labels; promotion remains recorded at `src/chess/board.ts:367-369` and read nowhere, with no `PROMOTION` event or player-facing bench |
+| 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slices 1–2 render identity and service truth, emit `PROMOTION`, write in-match roles, record attained roles, and count promotions; campaign role carry is flag-gated off by default and cohort prestige is wired at zero; no player-facing bench |
 
 ## Confirmed implementation gaps
 
@@ -70,9 +70,16 @@ These are status distinctions, not new design decisions:
 - **Piece names are partly wired.** Names are stored in
   `src/app/careerBootstrap.ts:44-49` and now render in the roster and piece
   overlay; missing identity records still use a role fallback. Service records
-  are folded from match events in `src/persistence/service.ts:33-177`.
-- **Exact gauge integers are partly resolved.** The piece overlay now publishes
-  qualitative trust, morale, and trauma labels in
+  are folded from match events in `src/persistence/service.ts:33-185`.
+- **Promotion truth is partly wired.** Board promotions are consumed by the
+  shared helper at `src/orchestration/promotion.ts:18-61`, recorded in the
+  event log, and persisted as identity attainment in
+  `src/persistence/repository.ts:42-59` and `src/persistence/repository.ts:283-310`.
+  Campaign carry remains off by default at
+  `src/psychology/config.ts:20-23`; the signed witness channel is wired at zero
+  there. Testimony, rumor, and earned-knowledge projections remain unwired.
+- **Exact gauge integers are resolved for the shipped overlay.** The piece
+  overlay publishes qualitative trust, morale, and trauma labels in
   `src/ui/overlays/PieceOverlay.tsx:44-73`; the numeric leak is removed there
   against ADR 0018. Testimony, rumor, and earned-knowledge projections remain
   unwired.

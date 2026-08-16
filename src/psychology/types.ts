@@ -161,6 +161,13 @@ export type MatchEvent =
       readonly orderQualityCp?: number;
     }
   | {
+      readonly t: 'PROMOTION';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly fromRole: PieceRole;
+      readonly toRole: PieceRole;
+    }
+  | {
       readonly t: 'ABILITY_OBSERVATION';
       readonly ply: number;
       readonly pieceId: PieceId;

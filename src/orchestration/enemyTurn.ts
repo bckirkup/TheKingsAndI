@@ -39,6 +39,7 @@ import {
 } from './psychologyHooks';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { kingExposureAfterWithdrawals } from './kingExposure';
+import { applyPromotion } from './promotion';
 
 export function trackEnemyIdentities(
   roster: readonly PieceState[],
@@ -113,6 +114,11 @@ function finishUntrackedMove(
       victim: applied.capture.pieceId,
       by: applied.moverId,
     });
+  }
+  if (applied.promotion !== undefined) {
+    const promotion = applyPromotion(enemyRoster, applied.promotion, ply);
+    enemyRoster = promotion.roster;
+    events.push(promotion.event);
   }
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
@@ -263,6 +269,11 @@ function applyTrackedEnemyDecision(input: {
     verdict: outcome.verdict,
     orderQualityCp,
   });
+  if (applied.promotion !== undefined) {
+    const promotion = applyPromotion(enemyRoster, applied.promotion, ply);
+    enemyRoster = promotion.roster;
+    events.push(promotion.event);
+  }
   if (applied.capture !== undefined) {
     events.push({
       t: 'CAPTURE',

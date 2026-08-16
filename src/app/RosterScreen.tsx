@@ -17,6 +17,7 @@ import type {
 import {
   firePreviewLabel,
   freeAgentRecruitLabel,
+  promotionAttainmentLabel,
   rosterPieceLabel,
   trustChangeWord,
 } from '../ui/qualitativeLabels';
@@ -97,6 +98,9 @@ export function RosterScreen({
     if (record.timesRecruited > 0) {
       lines.push(`Recruited: ${record.timesRecruited}`);
     }
+    if (record.promotions > 0) {
+      lines.push(`Promotions: ${record.promotions}`);
+    }
     if (record.deserted) lines.push('Deserted');
     return lines;
   };
@@ -131,6 +135,9 @@ export function RosterScreen({
                     roleFor(agent),
                     agent.T_i,
                   )}
+                  {promotionAttainmentLabel(
+                    identityById.get(agent.id)?.attainedRole,
+                  ) ?? null}
                 </button>
               </li>
             ))}
@@ -157,6 +164,9 @@ export function RosterScreen({
                 piece.T_i,
                 piece.status,
               )}
+              {promotionAttainmentLabel(
+                identityById.get(piece.id)?.attainedRole,
+              ) ?? null}
             </button>
           </li>
         ))}
