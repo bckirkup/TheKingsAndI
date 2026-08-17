@@ -48,12 +48,14 @@ export function scoreLeaderMove(
   move: ScoredMove,
   tactical: (feature: MoveFeatures) => number,
   config: LeaderPolicyConfig = LEADER_POLICY_CONFIG,
+  beforeProspectTotal?: number,
 ): number {
   const mover = board.pieceOf(move.features.moverId);
   const before =
-    mover === undefined
+    beforeProspectTotal ??
+    (mover === undefined
       ? 0
-      : prospectTotal(promotionProspectByPiece(board, mover.side));
+      : prospectTotal(promotionProspectByPiece(board, mover.side)));
   const after = prospectTotal(move.features.promotionProspectByPiece);
   const repetitions = board.repetitionCountAfter(move.intent);
   return (
@@ -89,10 +91,21 @@ export function pickByScore(
   config: LeaderPolicyConfig = LEADER_POLICY_CONFIG,
 ): ScoredMove | undefined {
   if (moves.length === 0) return undefined;
+  const mover = board.pieceOf(moves[0]?.features.moverId ?? '');
+  const beforeProspectTotal =
+    mover === undefined
+      ? 0
+      : prospectTotal(promotionProspectByPiece(board, mover.side));
   let bestScore = Number.NEGATIVE_INFINITY;
   const best: ScoredMove[] = [];
   for (const move of moves) {
-    const score = scoreLeaderMove(board, move, scorer, config);
+    const score = scoreLeaderMove(
+      board,
+      move,
+      scorer,
+      config,
+      beforeProspectTotal,
+    );
     if (score > bestScore) {
       best.length = 0;
       best.push(move);
