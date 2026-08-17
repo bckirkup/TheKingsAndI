@@ -43,6 +43,8 @@ function makeMetric(): MatchMetrics {
     implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: 0,
+    promotions: 0,
+    promotionToRoleCounts: {},
     winningPositionDesertions: 0,
     cascadeLength: 0,
     firstDeparture: EMPTY_DESERTION_SUMMARY,

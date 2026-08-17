@@ -6,6 +6,21 @@ import { createSeededRandom } from '../src/core/random';
 import { runBoardIdentityFuzz } from './helpers/boardIdentityFuzz';
 
 describe('LivingBoard identity golden values', () => {
+  it('reports checkmate separately from drawn positions', () => {
+    expect(
+      LivingBoard.fromFen('7k/6Q1/5K2/8/8/8/8/8 b - - 0 1').isCheckmate(),
+    ).toBe(true);
+    expect(
+      LivingBoard.fromFen('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1').isDrawnPosition(),
+    ).toBe(true);
+    expect(
+      LivingBoard.fromFen('8/8/8/8/8/8/2k5/7K w - - 0 1').isDrawnPosition(),
+    ).toBe(true);
+    expect(
+      LivingBoard.fromFen('8/8/8/8/8/8/2k5/7K w - - 100 1').isDrawnPosition(),
+    ).toBe(true);
+  });
+
   it('mints one identity per piece in the starting position', () => {
     const board = LivingBoard.standard();
     expect(board.pieces()).toHaveLength(32);
