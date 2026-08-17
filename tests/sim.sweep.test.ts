@@ -13,7 +13,8 @@ import {
   runPlainChessMatch,
   plainChessWinScores,
 } from '../sim/baseline';
-import { matchSeedForCampaign } from '../sim/campaign';
+import { matchSeedForCampaign, runCampaign } from '../sim/campaign';
+import { disposeSimEngine } from '../sim/engine';
 import { runCoefficientSweep } from '../sim/sweep';
 
 const samplePiece = normalizePieceState({
@@ -75,29 +76,23 @@ describe('plain-chess baseline', () => {
           }).winScore,
       ),
     );
+    // Truthful terminal scoring classifies these non-checkmate control games
+    // as draws rather than using the old turn-parity outcome.
     expect(
       plainChessHorizonSeries({
         matches: 3,
         seed: 7,
         whiteLeader: 'tyrannical',
       }),
-    ).toEqual([
-      { horizon: 1, meanWinScore: 0, winRate: 0, drawRate: 0, lossRate: 1 },
-      {
-        horizon: 2,
+    ).toEqual(
+      [1, 2, 3].map((horizon) => ({
+        horizon,
         meanWinScore: 50,
-        winRate: 0.5,
-        drawRate: 0,
-        lossRate: 0.5,
-      },
-      {
-        horizon: 3,
-        meanWinScore: 33.333333333333336,
-        winRate: 1 / 3,
-        drawRate: 0,
-        lossRate: 2 / 3,
-      },
-    ]);
+        winRate: 0,
+        drawRate: 1,
+        lossRate: 0,
+      })),
+    );
   });
 
   it('sensitivity: changing the campaign seed changes control output', () => {
@@ -135,17 +130,51 @@ describe('coefficient sweep', () => {
     }
   });
 
-  it('runs a campaign sweep and reports plain-chess win delta', async () => {
+  it('runs a campaign sweep and reports campaign summary metrics', async () => {
+    const cfg = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = cfg.OUTCOME_TRUST_LOSS_SCALE ?? 12;
+    let campaignSummary;
     const points = await runCoefficientSweep({
       knob: 'OUTCOME_TRUST_LOSS_SCALE',
-      values: [6, 18],
+      values: [6],
       matches: 2,
       seed: 7,
       leader: 'tyrannical',
       engineKind: 'fake',
     });
-    expect(points).toHaveLength(2);
-    expect(points[0]?.knob).toBe('OUTCOME_TRUST_LOSS_SCALE');
-    expect(typeof points[0]?.plainChessWinDelta).toBe('number');
+    try {
+      cfg.OUTCOME_TRUST_LOSS_SCALE = 6;
+      campaignSummary = (
+        await runCampaign({
+          matches: 2,
+          leader: 'tyrannical',
+          seed: 7,
+          engineKind: 'fake',
+        })
+      ).summary;
+    } finally {
+      cfg.OUTCOME_TRUST_LOSS_SCALE = original;
+      await disposeSimEngine('fake');
+    }
+    const point = points[0];
+    expect(point).toBeDefined();
+    if (point === undefined || campaignSummary === undefined) return;
+    expect(point.knob).toBe('OUTCOME_TRUST_LOSS_SCALE');
+    expect(point.meanPlies).toBe(campaignSummary.meanPlies);
+    expect(point.winCount).toBe(campaignSummary.winCount);
+    expect(point.drawCount).toBe(campaignSummary.drawCount);
+    expect(point.lossCount).toBe(campaignSummary.lossCount);
+    expect(point.meanPromotionsPerMatch).toBe(
+      campaignSummary.meanPromotionsPerMatch,
+    );
+    expect(point.promotionMatchRate).toBe(campaignSummary.promotionMatchRate);
+    expect(point.promotionToRoleCounts).toEqual(
+      campaignSummary.promotionToRoleCounts,
+    );
+    expect(point.enemyDesertionAttrition).toBe(
+      campaignSummary.enemyDesertionAttrition,
+    );
+    expect(point.meanEnemyDesertions).toBe(campaignSummary.meanEnemyDesertions);
+    expect(typeof point.plainChessWinDelta).toBe('number');
   }, 60_000);
 });
