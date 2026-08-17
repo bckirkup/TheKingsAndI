@@ -44,6 +44,35 @@ repetition wins are no longer decisive wins; non-checkmate, non-rout endings
 are drawn. Exact repetition-draw share is not currently emitted as a separate
 metric.
 
+## Promotion refusal evidence
+
+The approximately 16% tyrannical underpromotion rate is an emergent refusal
+effect, not a promotion-generation defect. In a seed-11 tyrannical-versus-
+random fake-engine match, the leader first chose `dxc8=Q`, but the pawn refused
+that order because the promotion square carried the same `pCaptured = 0.8`
+static-exchange risk for every promotion. The refusal event was:
+
+```text
+REFUSAL { ply: 15, pieceId: 'w:P:c2', san: 'dxc8=Q', utility: 1.318, threshold: 2.34, perceivedValue: 1.31 }
+```
+
+Refusal is free to re-plan under ADR 0002, so the next pass accepted
+`dxc8=R`. All four promotions were legal and generated. In the captured
+post-refusal candidate list, the scores were Bishop **47.18**, Knight
+**47.18**, and Rook **67.18**; Queen was absent because it had already been
+refused, not because it was illegal or tied away. No behavior was changed by
+this finding. The remaining question — whether a refusal keyed by SAN should
+allow the same piece to accept a different promotion of the same move — is a
+design question for the decision register and is intentionally not decided
+here.
+
+## Harness-runtime follow-up
+
+The tyrannical 20-match smoke takes approximately **350 seconds**; the
+per-candidate board clone in `repetitionCountAfter` dominates runtime, so
+hoisting the promotion-prospect total was behavior-preserving but not a
+measured speedup.
+
 ## Calibration caveat
 
 Every default calibrated before this fix — D146 exit permanence **625**, the
