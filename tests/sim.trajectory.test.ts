@@ -18,6 +18,8 @@ function handCheckMetric(match: number): MatchMetrics {
     implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: match % 2,
+    promotions: match % 3,
+    promotionToRoleCounts: match % 3 === 0 ? {} : { Q: 1 },
     winningPositionDesertions: 0,
     cascadeLength: match % 2,
     firstDeparture: EMPTY_DESERTION_SUMMARY,

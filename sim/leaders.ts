@@ -1,5 +1,6 @@
 import {
   extractMoveFeatures,
+  promotionProspectByPiece,
   type LivingBoard,
   type MoveFeatures,
   type MoveIntent,
@@ -26,6 +27,42 @@ export interface ScoredMove {
   readonly features: MoveFeatures;
 }
 
+export interface LeaderPolicyConfig {
+  readonly repetitionPenalty: number;
+  readonly pawnAdvanceWeight: number;
+}
+
+export const LEADER_POLICY_CONFIG: LeaderPolicyConfig = {
+  /** Penalize moves that recreate an already-seen position. */
+  repetitionPenalty: -1_000,
+  /** Small reward per permille of friendly promotion prospect gained. */
+  pawnAdvanceWeight: 0.02,
+} as const;
+
+function prospectTotal(prospect: Readonly<Record<string, number>>): number {
+  return Object.values(prospect).reduce((total, value) => total + value, 0);
+}
+
+export function scoreLeaderMove(
+  board: LivingBoard,
+  move: ScoredMove,
+  tactical: (feature: MoveFeatures) => number,
+  config: LeaderPolicyConfig = LEADER_POLICY_CONFIG,
+): number {
+  const mover = board.pieceOf(move.features.moverId);
+  const before =
+    mover === undefined
+      ? 0
+      : prospectTotal(promotionProspectByPiece(board, mover.side));
+  const after = prospectTotal(move.features.promotionProspectByPiece);
+  const repetitions = board.repetitionCountAfter(move.intent);
+  return (
+    tactical(move.features) +
+    (after - before) * config.pawnAdvanceWeight +
+    Math.max(0, repetitions - 1) * config.repetitionPenalty
+  );
+}
+
 export function legalScoredMoves(board: LivingBoard): ScoredMove[] {
   return board.legalMoves().map((intent) => ({
     intent,
@@ -44,23 +81,29 @@ export interface LeaderPolicy {
   shouldOverride(random: SeededRandom, context: LeaderContext): boolean;
 }
 
-function pickByScore(
+export function pickByScore(
+  board: LivingBoard,
   moves: readonly ScoredMove[],
+  random: SeededRandom,
   scorer: (feature: MoveFeatures) => number,
+  config: LeaderPolicyConfig = LEADER_POLICY_CONFIG,
 ): ScoredMove | undefined {
   if (moves.length === 0) return undefined;
-  const first = moves[0];
-  if (first === undefined) return undefined;
-  let best = first;
-  let bestScore = scorer(best.features);
-  for (const move of moves.slice(1)) {
-    const score = scorer(move.features);
+  let bestScore = Number.NEGATIVE_INFINITY;
+  const best: ScoredMove[] = [];
+  for (const move of moves) {
+    const score = scoreLeaderMove(board, move, scorer, config);
     if (score > bestScore) {
-      best = move;
+      best.length = 0;
+      best.push(move);
       bestScore = score;
+    } else if (score === bestScore) {
+      best.push(move);
     }
   }
-  return best;
+  const first = best[0];
+  if (first === undefined) return undefined;
+  return best.length === 1 ? first : best[random.nextInt(best.length)];
 }
 
 function tacticalScore(feature: MoveFeatures, riskWeight: number): number {
@@ -77,8 +120,8 @@ function createPolicy(style: Leader): LeaderPolicy {
     case 'tyrannical':
       return {
         style,
-        chooseMove: (_board, moves) => {
-          const chosen = pickByScore(moves, (feature) =>
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
             tacticalScore(feature, 2),
           );
           if (chosen === undefined) return undefined;
@@ -93,8 +136,8 @@ function createPolicy(style: Leader): LeaderPolicy {
     case 'supportive':
       return {
         style,
-        chooseMove: (_board, moves) => {
-          const chosen = pickByScore(moves, (feature) =>
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
             tacticalScore(feature, 25),
           );
           if (chosen === undefined) return undefined;
@@ -124,8 +167,13 @@ function createPolicy(style: Leader): LeaderPolicy {
     case 'servant':
       return {
         style,
-        chooseMove: (_board, moves) => {
-          const chosen = pickByScore(moves, (feature) => -feature.pCaptured);
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(
+            board,
+            moves,
+            random,
+            (feature) => -feature.pCaptured,
+          );
           if (chosen === undefined) return undefined;
           return {
             intent: chosen.intent,
@@ -138,8 +186,8 @@ function createPolicy(style: Leader): LeaderPolicy {
     case 'pure_tactician':
       return {
         style,
-        chooseMove: (_board, moves) => {
-          const chosen = pickByScore(moves, (feature) =>
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
             tacticalScore(feature, 0),
           );
           if (chosen === undefined) return undefined;
@@ -175,8 +223,8 @@ function createPolicy(style: Leader): LeaderPolicy {
       // High ability, low benevolence — overrides freely while winning (ADR 0024).
       return {
         style,
-        chooseMove: (_board, moves) => {
-          const chosen = pickByScore(moves, (feature) =>
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
             tacticalScore(feature, 0.25),
           );
           if (chosen === undefined) return undefined;
@@ -192,9 +240,11 @@ function createPolicy(style: Leader): LeaderPolicy {
       // Patient restoration — avoid burns, accept refusals (ADR 0030 oracle).
       return {
         style,
-        chooseMove: (_board, moves) => {
+        chooseMove: (board, moves, random) => {
           const chosen = pickByScore(
+            board,
             moves,
+            random,
             (feature) =>
               tacticalScore(feature, 3) +
               feature.kingSafetyDelta * 4 -

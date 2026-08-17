@@ -179,6 +179,14 @@ function promotionProspectByPieceThousandths(
   return result;
 }
 
+export function promotionProspectByPiece(
+  board: LivingBoard,
+  side: Side,
+  config: FeatureConfig = DEFAULT_FEATURE_CONFIG,
+): Readonly<Record<PieceId, number>> {
+  return promotionProspectByPieceThousandths(board, side, config);
+}
+
 export function promotionProspectThousandths(
   board: LivingBoard,
   square: Square,

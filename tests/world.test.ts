@@ -113,22 +113,30 @@ describe('world pairing layer', () => {
     ) {
       return;
     }
-    const whiteCarriedId = whiteFirst[0]?.id;
-    const blackCarriedId = blackFirst[0]?.id;
+    const whiteEndedRoster = pairing.endingWhiteRosters[0] ?? [];
+    const blackEndedRoster = pairing.endingBlackRosters[0] ?? [];
+    const whiteCarriedId = whiteFirst.find(
+      (piece) =>
+        whiteSecond.some((candidate) => candidate.id === piece.id) &&
+        whiteEndedRoster.some((candidate) => candidate.id === piece.id),
+    )?.id;
+    const blackCarriedId = blackFirst.find(
+      (piece) =>
+        blackSecond.some((candidate) => candidate.id === piece.id) &&
+        blackEndedRoster.some((candidate) => candidate.id === piece.id),
+    )?.id;
     expect(whiteCarriedId).toBeDefined();
     expect(blackCarriedId).toBeDefined();
-    const whiteBefore = whiteFirst.find((piece) => piece.id === whiteCarriedId);
     const whiteAfter = whiteSecond.find((piece) => piece.id === whiteCarriedId);
-    const blackBefore = blackFirst.find((piece) => piece.id === blackCarriedId);
     const blackAfter = blackSecond.find((piece) => piece.id === blackCarriedId);
-    expect(whiteAfter?.traits).toEqual(whiteBefore?.traits);
-    expect(blackAfter?.traits).toEqual(blackBefore?.traits);
-    const whiteEnded = pairing.endingWhiteRosters[0]?.find(
+    const whiteEnded = whiteEndedRoster.find(
       (piece) => piece.id === whiteCarriedId,
     );
-    const blackEnded = pairing.endingBlackRosters[0]?.find(
+    const blackEnded = blackEndedRoster.find(
       (piece) => piece.id === blackCarriedId,
     );
+    expect(whiteAfter?.traits).toEqual(whiteEnded?.traits);
+    expect(blackAfter?.traits).toEqual(blackEnded?.traits);
     expect(whiteAfter?.credence).toEqual(whiteEnded?.credence);
     expect(blackAfter?.credence).toEqual(blackEnded?.credence);
   });

@@ -15,6 +15,7 @@ export {
   kingExposureThousandths,
   materialBalance,
   promotionProspectThousandths,
+  promotionProspectByPiece,
 } from './features';
 export type {
   FeatureConfig,

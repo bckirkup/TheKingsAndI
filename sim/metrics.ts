@@ -28,6 +28,8 @@ export interface MatchMetrics {
   readonly implicitOverrides: number;
   readonly quietQuitMoves: number;
   readonly desertions: number;
+  readonly promotions: number;
+  readonly promotionToRoleCounts: Readonly<Record<string, number>>;
   readonly winningPositionDesertions: number;
   readonly cascadeLength: number;
   readonly firstDeparture: DesertionSummary;
@@ -217,6 +219,13 @@ export interface CampaignMetrics {
   readonly meanQuietQuitRate: number;
   readonly meanRefusedGoodMoveRate: number;
   readonly meanOverrideRate: number;
+  readonly meanPlies: number;
+  readonly winCount: number;
+  readonly drawCount: number;
+  readonly lossCount: number;
+  readonly meanPromotionsPerMatch: number;
+  readonly promotionMatchRate: number;
+  readonly promotionToRoleCounts: Readonly<Record<string, number>>;
   readonly meanWinScore: number;
   readonly meanDesertions: number;
   readonly meanSurvivingRosterSize: number;
@@ -244,7 +253,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate';
 
 function countEvents(
   events: readonly MatchEvent[],
@@ -255,6 +264,8 @@ function countEvents(
   implicitOverrides: number;
   quietQuitMoves: number;
   desertions: number;
+  promotions: number;
+  promotionToRoleCounts: Readonly<Record<string, number>>;
   executedOrders: number;
   orderTerminatedDesertionPlies: number;
   abilityObservations: number;
@@ -269,6 +280,8 @@ function countEvents(
   let implicitOverrides = 0;
   let quietQuitMoves = 0;
   let desertions = 0;
+  let promotions = 0;
+  const promotionToRoleCounts: Record<string, number> = {};
   let executedOrders = 0;
   let abilityObservations = 0;
   let vindicatedAbilityObservations = 0;
@@ -302,6 +315,13 @@ function countEvents(
           orderTerminatedDesertionPlies.add(event.ply);
         }
         break;
+      case 'PROMOTION':
+        if (isCommandedPiece) {
+          promotions += 1;
+          promotionToRoleCounts[event.toRole] =
+            (promotionToRoleCounts[event.toRole] ?? 0) + 1;
+        }
+        break;
       case 'ABILITY_OBSERVATION':
         if (isCommandedPiece) {
           abilityObservations += 1;
@@ -325,6 +345,8 @@ function countEvents(
     implicitOverrides,
     quietQuitMoves,
     desertions,
+    promotions,
+    promotionToRoleCounts,
     executedOrders,
     orderTerminatedDesertionPlies: orderTerminatedDesertionPlies.size,
     abilityObservations,
@@ -548,6 +570,8 @@ export function metricsFromMatch(
     implicitOverrides: counts.implicitOverrides,
     quietQuitMoves: counts.quietQuitMoves,
     desertions: counts.desertions,
+    promotions: counts.promotions,
+    promotionToRoleCounts: counts.promotionToRoleCounts,
     winningPositionDesertions: result.winningPositionDesertions,
     cascadeLength: cascadeLength(result.events),
     firstDeparture: summarizeDesertions(
@@ -761,6 +785,29 @@ function aggregateCampaignCore(
     meanQuietQuitRate: mean((metric) => metric.quietQuitRate),
     meanRefusedGoodMoveRate: mean((metric) => metric.refusedGoodMoveRate),
     meanOverrideRate: mean((metric) => metric.overrideRate),
+    meanPlies: mean((metric) => metric.plies),
+    winCount: matchMetrics.filter((metric) => metric.winScore === 100).length,
+    drawCount: matchMetrics.filter((metric) => metric.winScore === 50).length,
+    lossCount: matchMetrics.filter((metric) => metric.winScore === 0).length,
+    meanPromotionsPerMatch: mean((metric) => metric.promotions),
+    promotionMatchRate:
+      matchMetrics.filter((metric) => metric.promotions > 0).length /
+      Math.max(1, matches),
+    promotionToRoleCounts: Object.fromEntries(
+      [
+        ...new Set(
+          matchMetrics.flatMap((metric) =>
+            Object.keys(metric.promotionToRoleCounts),
+          ),
+        ),
+      ].map((role) => [
+        role,
+        matchMetrics.reduce(
+          (total, metric) => total + (metric.promotionToRoleCounts[role] ?? 0),
+          0,
+        ),
+      ]),
+    ),
     meanWinScore: mean((metric) => metric.winScore),
     meanDesertions: mean((metric) => metric.desertions),
     meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
@@ -887,6 +934,8 @@ export function renderCsv(
       metric.implicitOverrides,
       metric.quietQuitMoves,
       metric.desertions,
+      metric.promotions,
+      JSON.stringify(metric.promotionToRoleCounts),
       metric.firstDeparture.count,
       metric.firstDeparture.unknownCauseCount,
       metric.cascadeDeparture.count,

@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { LivingBoard } from '../src/chess';
+import type { MoveIntent } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
 import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
 import {
@@ -280,6 +281,26 @@ describe('match outcome scoring', () => {
     const board = LivingBoard.standard();
     expect(scoreMatchOutcome(board, 'w', true)).toBe(0);
     expect(scoreMatchOutcome(board, 'w', false)).toBe(50);
+  });
+
+  it('scores checkmate decisively but repetition and other draws as draws', () => {
+    const checkmate = LivingBoard.fromFen('7k/6Q1/5K2/8/8/8/8/8 b - - 0 1');
+    const repetition = LivingBoard.standard();
+    for (const intent of [
+      { from: 'g1', to: 'f3' },
+      { from: 'g8', to: 'f6' },
+      { from: 'f3', to: 'g1' },
+      { from: 'f6', to: 'g8' },
+      { from: 'g1', to: 'f3' },
+      { from: 'g8', to: 'f6' },
+      { from: 'f3', to: 'g1' },
+      { from: 'f6', to: 'g8' },
+    ] as MoveIntent[]) {
+      repetition.applyMove(intent);
+    }
+    // A threefold shuffle is a draw, not a parity-decided win or loss.
+    expect(scoreMatchOutcome(checkmate, 'w', false)).toBe(100);
+    expect(scoreMatchOutcome(repetition, 'w', false)).toBe(50);
   });
 });
 
@@ -698,6 +719,8 @@ function handCheckMetric(match: number): MatchMetrics {
     implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: 0,
+    promotions: 0,
+    promotionToRoleCounts: {},
     winningPositionDesertions: 0,
     cascadeLength: 0,
     firstDeparture: EMPTY_DESERTION_SUMMARY,

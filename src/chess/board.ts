@@ -212,6 +212,42 @@ export class LivingBoard {
     );
   }
 
+  isCheckmate(): boolean {
+    return this.chess.isCheckmate();
+  }
+
+  isStalemate(): boolean {
+    return this.chess.isStalemate();
+  }
+
+  isInsufficientMaterial(): boolean {
+    return this.chess.isInsufficientMaterial();
+  }
+
+  isFiftyMoveDraw(): boolean {
+    return this.chess.isDrawByFiftyMoves();
+  }
+
+  isThreefoldRepetition(): boolean {
+    return (this.positionCounts.get(this.chess.hash()) ?? 0) >= 3;
+  }
+
+  isDrawnPosition(): boolean {
+    return (
+      !this.chess.isCheckmate() &&
+      (this.isStalemate() ||
+        this.isInsufficientMaterial() ||
+        this.isFiftyMoveDraw() ||
+        this.isThreefoldRepetition())
+    );
+  }
+
+  repetitionCountAfter(intent: MoveIntent): number {
+    const next = this.clone();
+    next.applyMove(intent);
+    return next.positionCounts.get(next.chess.hash()) ?? 0;
+  }
+
   isCheck(): boolean {
     return this.chess.inCheck();
   }

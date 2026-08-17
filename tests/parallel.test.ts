@@ -34,6 +34,8 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     implicitOverrides: 0,
     quietQuitMoves: 0,
     desertions: match <= Math.ceil(length / 4) ? 1 : 0,
+    promotions: 0,
+    promotionToRoleCounts: {},
     winningPositionDesertions: 0,
     cascadeLength: 0,
     firstDeparture: EMPTY_DESERTION_SUMMARY,
