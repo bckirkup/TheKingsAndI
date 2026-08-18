@@ -60,7 +60,15 @@ describe('promotion harness metrics', () => {
     const first = roster[0];
     if (first === undefined) throw new Error('Expected a starting piece.');
     const result: HeadlessMatchResult = {
-      events: [],
+      events: [
+        {
+          t: 'ABILITY_GRADE',
+          ply: 1,
+          pieceId: first.id,
+          wasRight: true,
+          delta: 10,
+        },
+      ],
       roster: roster.map((piece) =>
         piece.id === first.id ? { ...piece, E_i: piece.E_i + 10 } : piece,
       ),
@@ -79,15 +87,7 @@ describe('promotion harness metrics', () => {
       determinismId: 'metrics-ability-test',
       enemyObservableBehaviours: [],
     };
-    const metric = metricsFromMatch(
-      1,
-      1,
-      'supportive',
-      roster,
-      result,
-      0,
-      Object.fromEntries(roster.map((piece) => [piece.id, piece.E_i])),
-    );
+    const metric = metricsFromMatch(1, 1, 'supportive', roster, result, 0);
     expect(metric.abilityMin).toBeLessThanOrEqual(metric.meanAbility ?? 0);
     expect(metric.abilityMax).toBeGreaterThan(metric.abilityMin ?? 0);
     expect(metric.abilityMovedCount).toBe(1);

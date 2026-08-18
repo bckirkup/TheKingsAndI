@@ -254,8 +254,9 @@ function compareForPolicy(
 ): number {
   let values: number[];
   const relativeAbilityDifference =
-    right.state.E_i * startingAbilityForRole(left.originRole) -
-    left.state.E_i * startingAbilityForRole(right.originRole);
+    right.state.E_i -
+    startingAbilityForRole(right.originRole) -
+    (left.state.E_i - startingAbilityForRole(left.originRole));
   if (policy === 'strongest_available') {
     values = [relativeAbilityDifference, right.state.B_i - left.state.B_i];
   } else if (policy === 'rest_traumatised') {

@@ -296,7 +296,7 @@ export function applyRosterAbilityObservations(
     const earnedAbility = shouldGradeAbility
       ? applyEarnedAbilityObservation(piece.E_i, wasRight)
       : piece.E_i;
-    if (shouldGradeAbility) {
+    if (shouldGradeAbility && earnedAbility !== piece.E_i) {
       events.push({
         t: 'ABILITY_GRADE',
         ply,

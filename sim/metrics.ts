@@ -77,6 +77,7 @@ export interface MatchMetrics {
   readonly abilityMin?: number;
   readonly abilityMax?: number;
   readonly meanAbility?: number;
+  /** Number of fielded pieces with a nonzero ability grade during this match. */
   readonly abilityMovedCount?: number;
 }
 
@@ -529,7 +530,6 @@ export function metricsFromMatch(
   rosterStart: readonly import('../src/psychology').PieceState[],
   result: HeadlessMatchResult,
   refusedGoodMoves: number,
-  birthAbilityByPieceId: Readonly<Record<string, number>> = {},
 ): MatchMetrics {
   const fieldedPieceIds = rosterStart.map((piece) => piece.id);
   const fieldedIds = new Set(fieldedPieceIds);
@@ -554,11 +554,9 @@ export function metricsFromMatch(
       )
       .map((event) => event.pieceId),
   );
-  const abilityMovedCount = abilitySnapshot.filter((piece) => {
-    if (abilityMovedPieceIds.has(piece.id)) return true;
-    const birthAbility = birthAbilityByPieceId[piece.id];
-    return birthAbility !== undefined && piece.E_i !== birthAbility;
-  }).length;
+  const abilityMovedCount = fieldedPieceIds.filter((pieceId) =>
+    abilityMovedPieceIds.has(pieceId),
+  ).length;
   const counts = countEvents(result.events, fieldedPieceIds);
   const enemyFieldedPieceIds = result.enemyFieldedPieceIds;
   const enemyCounts = countSideEvents(result.events, enemyFieldedPieceIds);

@@ -5,6 +5,7 @@ import {
   defaultRumor,
   normalizePieceState,
   ENGINE_CONFIG,
+  startingAbilityForRole,
   type PieceRole,
   type PieceState,
   type PieceTraits,
@@ -69,14 +70,11 @@ export function createFreshPieceState(
   randomUnit: number,
 ): PieceState {
   const chessRole = CHESS_ROLE_MAP[role];
-  let initialAbility = 55;
-  if (chessRole === 'P') initialAbility = 20;
-  else if (chessRole === 'K') initialAbility = 80;
   return normalizePieceState({
     id,
     role,
     traits: traitsForRole(chessRole, randomUnit),
-    E_i: initialAbility,
+    E_i: startingAbilityForRole(role),
     T_i: initialTrust,
     M_i: 70,
     B_i: 0,
