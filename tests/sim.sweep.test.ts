@@ -140,6 +140,7 @@ describe('coefficient sweep', () => {
       matches: 2,
       seed: 7,
       leader: 'tyrannical',
+      opponent: 'tyrannical',
       engineKind: 'fake',
     });
     try {
@@ -148,6 +149,7 @@ describe('coefficient sweep', () => {
         await runCampaign({
           matches: 2,
           leader: 'tyrannical',
+          opponent: 'tyrannical',
           seed: 7,
           engineKind: 'fake',
         })

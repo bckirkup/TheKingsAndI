@@ -11,9 +11,15 @@
 import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
-import { ENGINES, type Leader } from './cli';
+import {
+  ENGINES,
+  OPPONENT_ARCHETYPES,
+  opponentArchetypeForLeader,
+  type Leader,
+} from './cli';
 import { plainChessMeanWinScore } from './baseline';
 import { disposeSimEngine, type SimEngineKind } from './engine';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -60,6 +66,7 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
+  readonly opponent?: OpponentArchetype;
   readonly engineKind?: SimEngineKind;
   readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
@@ -82,6 +89,7 @@ export async function runCoefficientSweep(options: {
       const campaign = await runCampaign({
         matches: options.matches,
         leader: options.leader,
+        opponent: options.opponent ?? 'random',
         seed: options.seed,
         engineKind,
         depthCap: options.depthCap,
@@ -126,6 +134,7 @@ function parseArgs(argv: readonly string[]): {
   matches: number;
   seed: number;
   leader: Leader;
+  opponent: OpponentArchetype;
   engine: SimEngineKind;
   depthCap: number | undefined;
 } {
@@ -143,6 +152,13 @@ function parseArgs(argv: readonly string[]): {
   if (!ENGINES.includes(engine as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
+  const opponentValue = map.get('opponent') ?? 'random';
+  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentArchetype)) {
+    throw new Error(
+      `--opponent must be one of: ${OPPONENT_ARCHETYPES.join(', ')}.`,
+    );
+  }
+  const opponent = opponentArchetypeForLeader(opponentValue as Leader);
   let depthCapValue: number | undefined;
   if (map.get('depth-cap') === undefined) {
     depthCapValue = engine === 'lozza' ? 4 : undefined;
@@ -161,6 +177,7 @@ function parseArgs(argv: readonly string[]): {
     matches: Number(map.get('matches') ?? 4),
     seed: Number(map.get('seed') ?? 7),
     leader: (map.get('leader') ?? 'tyrannical') as Leader,
+    opponent,
     engine: engine as SimEngineKind,
     depthCap: depthCapValue,
   };
