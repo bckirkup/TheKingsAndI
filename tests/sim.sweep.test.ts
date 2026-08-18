@@ -52,11 +52,13 @@ describe('plain-chess baseline', () => {
       matches: 3,
       seed: 7,
       whiteLeader: 'tyrannical',
+      blackLeader: 'random',
     });
     const b = plainChessMeanWinScore({
       matches: 3,
       seed: 7,
       whiteLeader: 'tyrannical',
+      blackLeader: 'random',
     });
     expect(a).toBe(b);
   });
@@ -66,6 +68,7 @@ describe('plain-chess baseline', () => {
       matches: 3,
       seed: 7,
       whiteLeader: 'tyrannical',
+      blackLeader: 'random',
     });
     expect(scores).toEqual(
       [1, 2, 3].map(
@@ -73,6 +76,7 @@ describe('plain-chess baseline', () => {
           runPlainChessMatch({
             seed: matchSeedForCampaign(7, match),
             whiteLeader: 'tyrannical',
+            blackLeader: 'random',
           }).winScore,
       ),
     );
@@ -83,6 +87,7 @@ describe('plain-chess baseline', () => {
         matches: 3,
         seed: 7,
         whiteLeader: 'tyrannical',
+        blackLeader: 'random',
       }),
     ).toEqual(
       [1, 2, 3].map((horizon) => ({
@@ -100,13 +105,31 @@ describe('plain-chess baseline', () => {
       matches: 5,
       seed: 7,
       whiteLeader: 'supportive',
+      blackLeader: 'random',
     });
     const second = plainChessHorizonSeries({
       matches: 5,
       seed: 8,
       whiteLeader: 'supportive',
+      blackLeader: 'random',
     });
     expect(second).not.toEqual(first);
+  });
+
+  it('sensitivity: the control receives the opposing leader', () => {
+    const randomOpponent = plainChessMeanWinScore({
+      matches: 20,
+      seed: 0,
+      whiteLeader: 'tyrannical',
+      blackLeader: 'random',
+    });
+    const tyrannicalOpponent = plainChessMeanWinScore({
+      matches: 20,
+      seed: 0,
+      whiteLeader: 'tyrannical',
+      blackLeader: 'tyrannical',
+    });
+    expect(Math.abs(randomOpponent - tyrannicalOpponent)).toBeGreaterThan(5);
   });
 });
 

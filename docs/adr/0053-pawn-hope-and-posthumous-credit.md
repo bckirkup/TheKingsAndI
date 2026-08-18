@@ -1,6 +1,8 @@
 # ADR 0053 — Pawn hope, capture truth, and posthumous class credit
 
-Status: Accepted for the mechanism slice; calibration defaults remain open.
+Status: Accepted for the mechanism slice; promotion hope `500` and credence
+floor `250` are approved and shipped. The clamp ceiling remains open under
+D148.
 
 ## Context
 
@@ -30,10 +32,10 @@ makes hope leader-independent.
 
 The posthumous class-shift default is in the same family as living heroic
 credit but smaller, so a death can establish class worth without overpowering
-a living hero. The chosen promotion-hope default is **TBD** pending the D147
-sweep. The credence-floor default is provisional at `250` pending its paired
-sweep and owner approval. The “why this number” calibration rationale is
-**TBD**.
+a living hero. The approved promotion-hope default is `500`, the smallest live
+setting found by the fixed-harness D147 re-baseline. The credence-floor default
+remains `250`. The clamp ceiling and campaign-scale meaning remain open under
+D148.
 
 ## Implementation
 

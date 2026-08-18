@@ -164,6 +164,7 @@ describe('parallel campaign sharding', () => {
   const fourCampaignOptions = {
     plan: { totalMatches: 8, campaignLength: 2, campaigns: 4 },
     leader: 'supportive' as const,
+    opponent: 'random' as const,
     masterSeed: 9,
     engineKind: 'fake' as const,
     depthCap: undefined,
@@ -195,6 +196,7 @@ describe('parallel campaign sharding', () => {
     const options = {
       plan: { totalMatches: 4, campaignLength: 2, campaigns: 2 },
       leader: 'supportive' as const,
+      opponent: 'random' as const,
       masterSeed: 9,
       engineKind: 'fake' as const,
       depthCap: undefined,
@@ -218,6 +220,7 @@ describe('parallel campaign sharding', () => {
     const direct = await cannedCampaignRunner({
       matches: 2,
       leader: 'supportive',
+      opponent: 'random',
       seed: 9,
       engineKind: 'fake',
       depthCap: undefined,
@@ -225,6 +228,7 @@ describe('parallel campaign sharding', () => {
     const planned = await runShard({
       plan: { totalMatches: 2, campaignLength: 2, campaigns: 1 },
       leader: 'supportive',
+      opponent: 'random',
       masterSeed: 9,
       engineKind: 'fake',
       depthCap: undefined,
@@ -242,6 +246,7 @@ describe('parallel campaign sharding', () => {
     const options = {
       plan: { totalMatches: 12, campaignLength: 1, campaigns: 12 },
       leader: 'supportive' as const,
+      opponent: 'random' as const,
       masterSeed: 9,
       engineKind: 'fake' as const,
       depthCap: undefined,

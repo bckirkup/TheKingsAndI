@@ -1049,10 +1049,10 @@ Its ability gate uses the provisional
 reproduces the pure gate and floor `1000` makes hope leader-independent.
 Implementations are at `src/chess/features.ts:112-151`,
 `src/psychology/desertion.ts:231-333`, and
-`src/orchestration/psychologyHooks.ts:68-96`. The current promotion-hope
-default remains `0` and the credence floor remains `250`. The fixed-harness
-re-baseline proposes `500` as the smallest live setting, but that proposal is
-pending approval and does not change `src/psychology/config.ts`
+`src/orchestration/psychologyHooks.ts:68-96`. The approved promotion-hope
+default is now `500` and the credence floor remains `250`. The fixed-harness
+re-baseline selected `500` as the smallest live setting, and it is shipped in
+`src/psychology/config.ts`
 (`docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md`).
 
 ### D148 ❓ What promotion means at campaign scale (ADR 0054)
@@ -1072,9 +1072,9 @@ What remains open is the seminar-level effect and its magnitude: whether a
 witnessed promotion moves **Pawn** class prestige for every witness, and in which
 direction — "one of us made it" or "she left us behind". Also open: whether the
 promoted piece's own trust, morale, or trauma move on elevation.
-`DESERTION_PROMOTION_HOPE_PERMILLE` stays at `0` at
-`src/psychology/config.ts` until this resolves, because the in-match stake cannot
-be calibrated while the campaign-scale prize is zero
+`DESERTION_PROMOTION_HOPE_PERMILLE` is currently `500` at
+`src/psychology/config.ts`; the clamp ceiling and campaign-scale prize remain
+open questions
 (`docs/calibration/2026-08-18-pawn-hope-sweep.md`).
 
 ### D149 ❓ Can service move ability? (ADR 0054 §5)

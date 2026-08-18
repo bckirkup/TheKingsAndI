@@ -1,6 +1,6 @@
 # Does a piece's history change anything? Measured quality, and the bench that isn't there
 
-Revision: `eb0168b` (merged `main`, D147 in tree with the hope weight at `0`).
+Revision: `eb0168b` (merged `main`, D147 in tree with the hope weight at `500`).
 
 This report answers one question asked at owner level — *is a really great and
 loyal queen much better than a mediocre and somewhat abused one?* — and records
@@ -132,7 +132,7 @@ worth having if the distinctions are legible:
 
 ## Consequences for calibration
 
-`DESERTION_PROMOTION_HOPE_PERMILLE` stays at `0`. The D147 measurement showed
+`DESERTION_PROMOTION_HOPE_PERMILLE` is now `500`. The D147 measurement showed
 that even at the knob's maximum no pawn is retained, and the fix is not a larger
 coefficient: what a pawn stands to gain by promoting is currently *nothing at
 campaign scale*, so there is no defensible magnitude to pick until promotion has

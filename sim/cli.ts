@@ -365,6 +365,7 @@ async function main(): Promise<void> {
         matches: result.summary.matches,
         seed: options.seed,
         whiteLeader: options.leader,
+        blackLeader: options.opponent,
       }),
     },
   );
@@ -377,6 +378,7 @@ async function main(): Promise<void> {
         matches: result.summary.matches,
         seed: options.seed,
         whiteLeader: options.leader,
+        blackLeader: options.opponent,
       }),
     });
   }

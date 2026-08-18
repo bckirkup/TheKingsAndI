@@ -110,7 +110,8 @@ permanent benching.
 Elevation may be a gamble. It may not be a **foregone** conclusion decided by a
 constant. Hence **D149**: either service moves `E_i`, or fielding priority must
 stop being ability alone. Until one of those holds, promotion cannot be worth
-pursuing across games and `DESERTION_PROMOTION_HOPE_PERMILLE` stays at `0`.
+pursuing across games; `DESERTION_PROMOTION_HOPE_PERMILLE` is currently `500`,
+with its campaign-scale meaning still open.
 
 ### 6. What the player may know (D150 — direction, magnitudes open)
 ADR 0018 forbids showing the arithmetic; a shared market makes the *inverse*
@@ -153,10 +154,10 @@ commons*, *captive labour* and *thin market*):
 - **Frozen bench.** The same lineup is fielded every match under a policy meant
   to rotate, so squad depth is inert.
 
-**Calibration is blocked in a defined way.** `DESERTION_PROMOTION_HOPE_PERMILLE`
-and its credence floor keep their shipped values (`0` and `250`) until slice 2
-lands; the hope ceiling stays at one peer bond, because the argument for raising
-it was an in-match argument for a campaign-scale prize.
+**Calibration remains bounded in a defined way.** `DESERTION_PROMOTION_HOPE_PERMILLE`
+and its credence floor are shipped at (`500` and `250`); the hope ceiling stays
+at one peer bond, because the argument for raising it is a campaign-scale
+prize question that remains open under D148.
 
 **Moderation and privacy** enter scope with slice 4 if it is ever networked, as
 ADR 0026 §5 already records. Nothing in slices 1–4 requires a server.
