@@ -13,7 +13,7 @@ const MAX_PLIES = 200;
 export function runPlainChessMatch(options: {
   readonly seed: number;
   readonly whiteLeader: Leader;
-  readonly blackLeader?: Leader;
+  readonly blackLeader: Leader;
 }): { readonly plies: number; readonly winScore: number } {
   const board = LivingBoard.standard();
   const random = createSeededRandom(options.seed);
@@ -23,7 +23,7 @@ export function runPlainChessMatch(options: {
     redeemerSwitchMatch: 10,
   };
   const white = leaderPolicy(options.whiteLeader);
-  const black = leaderPolicy(options.blackLeader ?? 'random');
+  const black = leaderPolicy(options.blackLeader);
   let plies = 0;
 
   while (plies < MAX_PLIES && !board.isGameOver()) {
@@ -47,6 +47,7 @@ export function plainChessMeanWinScore(options: {
   readonly matches: number;
   readonly seed: number;
   readonly whiteLeader: Leader;
+  readonly blackLeader: Leader;
 }): number {
   const scores = plainChessWinScores(options);
   return scores.reduce((total, score) => total + score, 0) / scores.length;
@@ -56,6 +57,7 @@ export function plainChessWinScores(options: {
   readonly matches: number;
   readonly seed: number;
   readonly whiteLeader: Leader;
+  readonly blackLeader: Leader;
 }): readonly number[] {
   return Array.from(
     { length: options.matches },
@@ -63,6 +65,7 @@ export function plainChessWinScores(options: {
       runPlainChessMatch({
         seed: matchSeedForCampaign(options.seed, index + 1),
         whiteLeader: options.whiteLeader,
+        blackLeader: options.blackLeader,
       }).winScore,
   );
 }
@@ -71,6 +74,7 @@ export function plainChessHorizonSeries(options: {
   readonly matches: number;
   readonly seed: number;
   readonly whiteLeader: Leader;
+  readonly blackLeader: Leader;
 }): readonly ControlHorizon[] {
   const scores = plainChessWinScores(options);
   return scores.map((_, index) => {

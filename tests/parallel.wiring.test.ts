@@ -110,6 +110,7 @@ function campaignResult(seed: number) {
 const shardOptions = {
   plan: { totalMatches: 1, campaignLength: 1, campaigns: 1 },
   leader: 'supportive' as const,
+  opponent: 'random' as const,
   masterSeed: 9,
   engineKind: 'fake' as const,
   depthCap: undefined,

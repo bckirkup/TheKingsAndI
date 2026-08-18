@@ -93,7 +93,7 @@ export const ENGINE_CONFIG = {
   /** Own-future cost charged when a piece permanently exits, permille. */
   DESERTION_EXIT_PERMANENCE_PERMILLE: 625,
   /** Weight of one peer-bond equivalent of promotion hope, clamped to 1000 permille. */
-  DESERTION_PROMOTION_HOPE_PERMILLE: 0,
+  DESERTION_PROMOTION_HOPE_PERMILLE: 500,
   /** Minimum ability credence retained by promotion hope, permille. */
   DESERTION_PROMOTION_HOPE_CREDENCE_FLOOR_PERMILLE: 250,
   DESERTION_PAIN_BASE: 10,

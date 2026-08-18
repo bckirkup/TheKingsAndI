@@ -8,8 +8,8 @@ Every default in `docs/calibration/2026-08-16-exit-permanence-sweep.md` and
 `docs/calibration/2026-08-18-pawn-hope-sweep.md` was selected before the harness
 scored repetition draws truthfully and before pawns could advance, so D146's
 exit permanence and D147's promotion hope were both due re-measurement. This
-report is that re-measurement. **No default is changed by this report**; the
-proposals in the last section are pending approval.
+report is that re-measurement. Its D146 and D147 evidence is recorded below;
+D147's approved `500` default is now shipped, while D148 remains open.
 
 All cells are `--matches=20 --engine=fake`, at most two processes on the box.
 Raw CSV and TXT are retained externally in `kai-measure/rebaseline/` with the
@@ -126,12 +126,12 @@ campaign-level question (D148, ADR 0054) is really about — a pawn contemplatin
 becoming a queen is contemplating leaving its class, which is a cohort-level
 prize, not one comrade's regard.
 
-## 4. Proposals, pending approval
+## 4. Adopted calibration and remaining questions
 
 1. **D146 `DESERTION_EXIT_PERMANENCE_PERMILLE` stays 625.** Re-affirmed, not
    re-tuned: largest value clearing the no-rout guard on its worst of four
    seeds, under both opponent strengths, with warm command unaffected.
-2. **D147 `DESERTION_PROMOTION_HOPE_PERMILLE` 0 → 500**, floor unchanged at 250.
+2. **D147 `DESERTION_PROMOTION_HOPE_PERMILLE` 0 → 500, adopted**, floor unchanged at 250.
    500 is the smallest live setting; it is retentive in 4 of 5 punishing-opponent
    seeds and never worse there, and it is near-inert against the default
    opponent, so the CI smoke and its guards barely move. Adopting it makes
@@ -142,5 +142,6 @@ prize, not one comrade's regard.
    says difficulty is an opposing leader policy; measuring against a
    policy-less opponent is a fixture bug, and it has silently shaped every
    default in this repository.
-4. **The plain-chess control needs the same opponent as its subject** before
-   ADR 0030's flattery comparison or any `plain_chess_win_delta` means anything.
+4. **The plain-chess control now faces the same opponent as its subject.**
+   The matched-opponent plumbing fixes the fixture bug before ADR 0030's
+   flattery comparison or any `plain_chess_win_delta` is interpreted.

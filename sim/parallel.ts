@@ -126,7 +126,7 @@ export function resolveRunPlan(values: RunFlagValues): CampaignRunPlan {
 export interface ShardOptions {
   readonly plan: CampaignRunPlan;
   readonly leader: Leader;
-  readonly opponent?: OpponentArchetype;
+  readonly opponent: OpponentArchetype;
   readonly masterSeed: number;
   readonly engineKind: SimEngineKind;
   readonly depthCap: number | undefined;
@@ -151,6 +151,7 @@ export interface ShardManifest {
   readonly campaignCount: number;
   readonly campaignLength: number;
   readonly leader: Leader;
+  readonly opponent: OpponentArchetype;
   readonly shardIndex: number;
   readonly shardCount: number;
   readonly campaignIndices: readonly number[];
@@ -267,9 +268,7 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       const result = await campaignRunner({
         matches: options.plan.campaignLength,
         leader: options.leader,
-        ...(options.opponent === undefined
-          ? {}
-          : { opponent: options.opponent }),
+        opponent: options.opponent,
         seed: campaignSeed,
         ...(engine === undefined ? {} : { engine }),
         depthCap: options.depthCap,
@@ -288,6 +287,7 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
           matches: result.metrics.length,
           seed: campaignSeed,
           whiteLeader: options.leader,
+          blackLeader: options.opponent,
         }),
       });
     }
@@ -318,6 +318,7 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       campaignCount: options.plan.campaigns,
       campaignLength: options.plan.campaignLength,
       leader: options.leader,
+      opponent: options.opponent,
       shardIndex: options.shardIndex,
       shardCount: options.shardCount,
       campaignIndices: indices,
@@ -524,6 +525,7 @@ function identityKey(manifest: ShardManifest): string {
     manifest.campaignCount,
     manifest.campaignLength,
     manifest.leader,
+    manifest.opponent,
     manifest.commitSha,
     manifest.nodeVersion,
   ]);
@@ -624,6 +626,7 @@ export function aggregateShardArtifacts(
       campaignCount: first.campaignCount,
       campaignLength: first.campaignLength,
       leader: first.leader,
+      opponent: first.opponent,
       ...(first.commitSha === undefined ? {} : { commitSha: first.commitSha }),
       nodeVersion: first.nodeVersion,
       shardCount: artifacts.length,
@@ -644,6 +647,7 @@ export function aggregateShardArtifacts(
             matches: campaign.metrics.length,
             seed: campaign.campaignSeed,
             whiteLeader: first.leader,
+            blackLeader: first.opponent,
           }),
       ),
     ),

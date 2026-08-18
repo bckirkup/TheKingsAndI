@@ -66,7 +66,7 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent?: OpponentArchetype;
+  readonly opponent: OpponentArchetype;
   readonly engineKind?: SimEngineKind;
   readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
@@ -80,6 +80,7 @@ export async function runCoefficientSweep(options: {
     matches: options.matches,
     seed: options.seed,
     whiteLeader: options.leader,
+    blackLeader: options.opponent,
   });
   const points: SweepPoint[] = [];
   try {
@@ -89,7 +90,7 @@ export async function runCoefficientSweep(options: {
       const campaign = await runCampaign({
         matches: options.matches,
         leader: options.leader,
-        opponent: options.opponent ?? 'random',
+        opponent: options.opponent,
         seed: options.seed,
         engineKind,
         depthCap: options.depthCap,
