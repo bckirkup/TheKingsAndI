@@ -11,9 +11,15 @@
 import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
-import { ENGINES, type Leader } from './cli';
+import {
+  ENGINES,
+  OPPONENT_ARCHETYPES,
+  opponentArchetypeForLeader,
+  type Leader,
+} from './cli';
 import { plainChessMeanWinScore } from './baseline';
 import { disposeSimEngine, type SimEngineKind } from './engine';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -25,6 +31,15 @@ export interface SweepPoint {
   readonly meanOverrideRate: number;
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
+  readonly meanPlies: number;
+  readonly winCount: number;
+  readonly drawCount: number;
+  readonly lossCount: number;
+  readonly meanPromotionsPerMatch: number;
+  readonly promotionMatchRate: number;
+  readonly promotionToRoleCounts: Readonly<Record<string, number>>;
+  readonly enemyDesertionAttrition: number;
+  readonly meanEnemyDesertions: number;
   readonly plainChessWinDelta: number;
   readonly meanDripGainTotal: number;
   readonly meanAdjudicationLoss: number;
@@ -51,6 +66,7 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
+  readonly opponent?: OpponentArchetype;
   readonly engineKind?: SimEngineKind;
   readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
@@ -73,6 +89,7 @@ export async function runCoefficientSweep(options: {
       const campaign = await runCampaign({
         matches: options.matches,
         leader: options.leader,
+        opponent: options.opponent ?? 'random',
         seed: options.seed,
         engineKind,
         depthCap: options.depthCap,
@@ -88,6 +105,15 @@ export async function runCoefficientSweep(options: {
         meanOverrideRate: campaign.summary.meanOverrideRate,
         meanWinScore: campaign.summary.meanWinScore,
         meanTrustDelta: campaign.summary.meanTrustDelta,
+        meanPlies: campaign.summary.meanPlies,
+        winCount: campaign.summary.winCount,
+        drawCount: campaign.summary.drawCount,
+        lossCount: campaign.summary.lossCount,
+        meanPromotionsPerMatch: campaign.summary.meanPromotionsPerMatch,
+        promotionMatchRate: campaign.summary.promotionMatchRate,
+        promotionToRoleCounts: campaign.summary.promotionToRoleCounts,
+        enemyDesertionAttrition: campaign.summary.enemyDesertionAttrition,
+        meanEnemyDesertions: campaign.summary.meanEnemyDesertions,
         plainChessWinDelta: campaign.summary.meanWinScore - plainWin,
         meanDripGainTotal: campaign.summary.meanDripGainTotal,
         meanAdjudicationLoss: campaign.summary.meanAdjudicationLoss,
@@ -108,6 +134,7 @@ function parseArgs(argv: readonly string[]): {
   matches: number;
   seed: number;
   leader: Leader;
+  opponent: OpponentArchetype;
   engine: SimEngineKind;
   depthCap: number | undefined;
 } {
@@ -125,6 +152,13 @@ function parseArgs(argv: readonly string[]): {
   if (!ENGINES.includes(engine as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
+  const opponentValue = map.get('opponent') ?? 'random';
+  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentArchetype)) {
+    throw new Error(
+      `--opponent must be one of: ${OPPONENT_ARCHETYPES.join(', ')}.`,
+    );
+  }
+  const opponent = opponentArchetypeForLeader(opponentValue as Leader);
   let depthCapValue: number | undefined;
   if (map.get('depth-cap') === undefined) {
     depthCapValue = engine === 'lozza' ? 4 : undefined;
@@ -143,6 +177,7 @@ function parseArgs(argv: readonly string[]): {
     matches: Number(map.get('matches') ?? 4),
     seed: Number(map.get('seed') ?? 7),
     leader: (map.get('leader') ?? 'tyrannical') as Leader,
+    opponent,
     engine: engine as SimEngineKind,
     depthCap: depthCapValue,
   };
@@ -155,7 +190,7 @@ async function main(): Promise<void> {
     engineKind: options.engine,
   });
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil',
   );
   for (const point of points) {
     console.log(
@@ -169,6 +204,15 @@ async function main(): Promise<void> {
         point.meanOverrideRate.toFixed(4),
         point.meanWinScore.toFixed(1),
         point.meanTrustDelta.toFixed(2),
+        point.meanPlies.toFixed(1),
+        point.winCount,
+        point.drawCount,
+        point.lossCount,
+        point.meanPromotionsPerMatch.toFixed(3),
+        point.promotionMatchRate.toFixed(3),
+        JSON.stringify(point.promotionToRoleCounts),
+        point.enemyDesertionAttrition.toFixed(4),
+        point.meanEnemyDesertions.toFixed(2),
         point.plainChessWinDelta.toFixed(1),
         point.meanDripGainTotal.toFixed(2),
         point.meanAdjudicationLoss.toFixed(2),

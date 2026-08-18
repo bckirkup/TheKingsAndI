@@ -1014,11 +1014,15 @@ move's risk (`src/orchestration/insight.ts:179`), and the per-departure
 `pLossTeam` bump cancels out of the sign at `k = 1000`.
 
 ### D146 ✅ Exit permanence and static-exchange capture risk (ADR 0052)
-**Resolved: both candidate directions adopted.** The exit now charges an
+**Implementation resolved; calibration remains under review.** The exit now charges an
 own-future cost,
 `pain · attachment · (DESERTION_EXIT_PERMANENCE_PERMILLE / 1000) · shadow`,
-through the shared helper at `src/psychology/desertion.ts:209`; the selected
-default is `625` at `src/psychology/config.ts:90`. Capture risk is now a
+through the shared helper at `src/psychology/desertion.ts:209`; the current
+default remains `625` at `src/psychology/config.ts:90`. The original selection
+was made against the pre-fix harness; the fixed-harness re-baseline reaffirms
+`625` under both opponent strengths and multiple seeds, with no new value
+adopted:
+`docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md`. Capture risk is now a
 deterministic static-exchange classification at
 `src/chess/features.ts:137`, preserving the piece's own plain-data view while
 replacing the former defence-count threat flag. The settled specification is
@@ -1045,8 +1049,11 @@ Its ability gate uses the provisional
 reproduces the pure gate and floor `1000` makes hope leader-independent.
 Implementations are at `src/chess/features.ts:112-151`,
 `src/psychology/desertion.ts:231-333`, and
-`src/orchestration/psychologyHooks.ts:68-96`. The selected promotion-hope
-and floor defaults and rationale remain TBD pending calibration.
+`src/orchestration/psychologyHooks.ts:68-96`. The current promotion-hope
+default remains `0` and the credence floor remains `250`. The fixed-harness
+re-baseline proposes `500` as the smallest live setting, but that proposal is
+pending approval and does not change `src/psychology/config.ts`
+(`docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md`).
 
 ### D148 ❓ What promotion means at campaign scale (ADR 0054)
 **Open.** Promotion is now truthful in-match: orchestration consumes the board
