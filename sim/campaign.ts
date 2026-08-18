@@ -233,6 +233,10 @@ export async function runCampaign(
           random.nextInt(10_000) / 10_000,
         )
       : [...checkpoint.enemyRoster];
+  const birthAbilityByPieceId =
+    checkpoint === undefined
+      ? Object.fromEntries(roster.map((piece) => [piece.id, piece.E_i]))
+      : {};
   const metrics: MatchMetrics[] =
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
   const justifiedRefusalObviousness: number[] = [];
@@ -274,6 +278,7 @@ export async function runCampaign(
       rosterStart,
       result,
       result.refusedGoodMoves,
+      birthAbilityByPieceId,
     );
     metrics.push(metric);
     roster = [...result.roster];

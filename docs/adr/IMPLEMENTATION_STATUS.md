@@ -30,6 +30,7 @@ the discrepancy is corrected.
 | 0052 | Exit permanence and static-exchange capture risk | Accepted mechanism; current `625` remains in force pending the fixed-harness evidence review | **Shipped** — `src/psychology/config.ts:90`, `src/psychology/desertion.ts:209`, `src/chess/features.ts:137`; current evidence: `docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md` |
 | 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; approved/shipped hope `500` and floor `250` | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-333`, `src/orchestration/psychologyHooks.ts:68-96`; current evidence: `docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md` |
 | 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slices 1–2 render identity and service truth, emit `PROMOTION`, write in-match roles, record attained roles, and count promotions; campaign role carry is flag-gated off by default and cohort prestige is wired at zero; no player-facing bench |
+| 0055 | Earned ability from vindicated judgment | Accepted direction; calibrated magnitude remains open | **Shipped at zero magnitude** — `src/psychology/reducers.ts:65-108`, `src/orchestration/psychologyHooks.ts:270-285`, `sim/pool.ts:252-277`, and campaign spread metrics |
 
 ## Confirmed implementation gaps
 

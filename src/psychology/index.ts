@@ -64,8 +64,10 @@ export {
 export {
   defaultCredence,
   defaultRumor,
+  applyEarnedAbilityObservation,
   normalizePieceState,
   removePieceFromRoster,
+  startingAbilityForRole,
   updatePieceInRoster,
 } from './reducers';
 export { replayDigest, replayMatch } from './replay';

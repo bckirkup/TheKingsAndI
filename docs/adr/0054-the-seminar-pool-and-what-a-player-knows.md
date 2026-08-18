@@ -102,16 +102,13 @@ Once role write-back lands, a promoted pawn leaves a bracket of eight and enters
 one of **one**. She competes with the incumbent queen; the loser starts accruing
 non-selection under ADR 0051, and the Pawn quota comes up short so
 `conscriptMember` fields a stranger. That is a real and interesting cost — a
-commander who promotes has to answer for it — but today it resolves by a field
-nothing can change: `strongest_available` orders by `E_i` (`sim/pool.ts:250-254`),
-so a promoted pawn keeps ability 20, loses every comparison, and is honoured into
-permanent benching.
-
-Elevation may be a gamble. It may not be a **foregone** conclusion decided by a
-constant. Hence **D149**: either service moves `E_i`, or fielding priority must
-stop being ability alone. Until one of those holds, promotion cannot be worth
-pursuing across games; `DESERTION_PROMOTION_HOPE_PERMILLE` is currently `500`,
-with its campaign-scale meaning still open.
+commander who promotes has to answer for it. The D149 mechanism now makes that
+outcome earnable rather than foregone: `ABILITY_GRADE` events move `E_i` from
+vindicated judgment at `src/orchestration/psychologyHooks.ts:270-285`, and
+`strongest_available` compares ability relative to origin-role starting ability
+at `sim/pool.ts:252-277`. The shipped step scale is zero pending calibration,
+so this slice changes no default behavior. Promotion hope remains `500`, while
+its campaign-scale meaning and the clamp remain open under D148.
 
 ### 6. What the player may know (D150 — direction, magnitudes open)
 ADR 0018 forbids showing the arithmetic; a shared market makes the *inverse*

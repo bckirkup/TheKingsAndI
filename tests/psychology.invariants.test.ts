@@ -7,12 +7,14 @@ import {
   applyBetrayalSignal,
   applyAuthorityLoss,
   applyAbilityObservation,
+  applyEarnedAbilityObservation,
   applyCostlySignal,
   applyHeardSignal,
   applyMatchOutcomeTrust,
   applyOverride,
   applyWitnessedSacrificeEvent,
   calculateAttachment,
+  calculateEngineSearchDepth,
   calculateAttachmentPermille,
   calculatePerceivedValue,
   calculatePivotalityPermille,
@@ -112,6 +114,110 @@ function makeMove(
 }
 
 describe('psychology invariants (docs/psychology_engine.md §11)', () => {
+  it('accretes earned ability asymmetrically and with ceiling curvature', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
+    const originalCurvature = config.ABIL_EARNED_CURVATURE ?? 2;
+    const originalMultiplier = config.ABIL_EARNED_LOSS_MULTIPLIER ?? 2;
+    try {
+      config.ABIL_EARNED_STEP_SCALE = 10;
+      config.ABIL_EARNED_CURVATURE = 2;
+      config.ABIL_EARNED_LOSS_MULTIPLIER = 2;
+      const gain = applyEarnedAbilityObservation(50, true) - 50;
+      const loss = 50 - applyEarnedAbilityObservation(50, false);
+      const lowGain = applyEarnedAbilityObservation(20, true) - 20;
+      const highGain = applyEarnedAbilityObservation(90, true) - 90;
+      config.ABIL_EARNED_CURVATURE = 0;
+      const flatGain = applyEarnedAbilityObservation(90, true) - 90;
+      config.ABIL_EARNED_CURVATURE = 4;
+      const curvedGain = applyEarnedAbilityObservation(90, true) - 90;
+      config.ABIL_EARNED_LOSS_MULTIPLIER = 1;
+      const mildLoss = 50 - applyEarnedAbilityObservation(50, false);
+      config.ABIL_EARNED_LOSS_MULTIPLIER = 3;
+      const severeLoss = 50 - applyEarnedAbilityObservation(50, false);
+      expect(loss).toBeGreaterThan(gain);
+      expect(lowGain).toBeGreaterThan(highGain);
+      expect(curvedGain).toBeLessThan(flatGain);
+      expect(severeLoss).toBeGreaterThan(mildLoss);
+    } finally {
+      config.ABIL_EARNED_STEP_SCALE = originalScale;
+      config.ABIL_EARNED_CURVATURE = originalCurvature;
+      config.ABIL_EARNED_LOSS_MULTIPLIER = originalMultiplier;
+    }
+  });
+
+  it('keeps earned ability disabled as an exact no-op and bounded integer', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
+    try {
+      config.ABIL_EARNED_STEP_SCALE = 0;
+      expect(applyEarnedAbilityObservation(47.9, true)).toBe(47);
+      config.ABIL_EARNED_STEP_SCALE = 13;
+      for (const ability of [-20, 1, 50, 100, 140]) {
+        for (const wasRight of [true, false]) {
+          const result = applyEarnedAbilityObservation(ability, wasRight);
+          expect(Number.isInteger(result)).toBe(true);
+          expect(result).toBeGreaterThanOrEqual(1);
+          expect(result).toBeLessThanOrEqual(100);
+        }
+      }
+    } finally {
+      config.ABIL_EARNED_STEP_SCALE = originalScale;
+    }
+  });
+
+  it('wires earned ability scale through to search depth', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
+    try {
+      config.ABIL_EARNED_STEP_SCALE = 0;
+      const disabledAbility = applyEarnedAbilityObservation(50, true);
+      config.ABIL_EARNED_STEP_SCALE = 20;
+      const earnedAbility = applyEarnedAbilityObservation(50, true);
+      expect(earnedAbility).toBeGreaterThan(disabledAbility);
+      expect(calculateEngineSearchDepth(earnedAbility, 1)).toBeGreaterThan(
+        calculateEngineSearchDepth(disabledAbility, 1),
+      );
+    } finally {
+      config.ABIL_EARNED_STEP_SCALE = originalScale;
+    }
+  });
+
+  it('grades objector and non-objector judgments with the documented polarity', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
+    const originalMargin = config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN ?? 0.25;
+    const actor = makePiece({ id: 'w:P:e4', role: 'Pawn' });
+    const move = makeMove();
+    const grade = (challenged: boolean, played: number): boolean => {
+      config.ABIL_EARNED_STEP_SCALE = 10;
+      config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN = 10_000;
+      const result = applyRosterAbilityObservations(
+        [actor],
+        { [actor.id]: move },
+        played,
+        0,
+        0,
+        1,
+        actor.id,
+        challenged,
+      );
+      const event = result.events.find((item) => item.t === 'ABILITY_GRADE');
+      if (event?.t !== 'ABILITY_GRADE')
+        throw new Error('Missing ability grade');
+      return event.wasRight;
+    };
+    try {
+      expect(grade(true, 1_000)).toBe(false);
+      expect(grade(true, -1_000)).toBe(true);
+      expect(grade(false, 1_000)).toBe(true);
+      expect(grade(false, -1_000)).toBe(false);
+    } finally {
+      config.ABIL_EARNED_STEP_SCALE = originalScale;
+      config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN = originalMargin;
+    }
+  });
+
   it('charges justified refusal authority by the refusing piece view (golden)', () => {
     expect(justifiedRefusalObviousness(-0.5, true)).toBe(0.2);
     expect(justifiedRefusalObviousness(-2, true)).toBe(0.8);

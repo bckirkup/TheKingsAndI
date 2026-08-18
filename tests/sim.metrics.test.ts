@@ -52,4 +52,44 @@ describe('promotion harness metrics', () => {
     expect(metric.promotions).toBe(1);
     expect(metric.promotionToRoleCounts).toEqual({ Queen: 1 });
   });
+
+  it('reports fielded ability spread and movement from birth values', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const first = roster[0];
+    if (first === undefined) throw new Error('Expected a starting piece.');
+    const result: HeadlessMatchResult = {
+      events: [],
+      roster: roster.map((piece) =>
+        piece.id === first.id ? { ...piece, E_i: piece.E_i + 10 } : piece,
+      ),
+      departedRoster: [],
+      enemyRoster,
+      departedEnemyRoster: [],
+      enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+      plies: 1,
+      winScore: 50,
+      rout: false,
+      enemyRout: false,
+      refusedGoodMoves: 0,
+      winningPositionDesertions: 0,
+      justifiedRefusalObviousness: [],
+      justifiedRefusalPrivateViewLosses: [],
+      determinismId: 'metrics-ability-test',
+      enemyObservableBehaviours: [],
+    };
+    const metric = metricsFromMatch(
+      1,
+      1,
+      'supportive',
+      roster,
+      result,
+      0,
+      Object.fromEntries(roster.map((piece) => [piece.id, piece.E_i])),
+    );
+    expect(metric.abilityMin).toBeLessThanOrEqual(metric.meanAbility ?? 0);
+    expect(metric.abilityMax).toBeGreaterThan(metric.abilityMin ?? 0);
+    expect(metric.abilityMovedCount).toBe(1);
+  });
 });

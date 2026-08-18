@@ -2,6 +2,7 @@ import type { MoveFeatures } from '../chess';
 import { isObjectivelyGoodMove, isVindicatedMove } from './evaluation';
 import {
   applyAbilityDrip,
+  applyEarnedAbilityObservation,
   applyAbilityObservation,
   applyAuthorityGain,
   applyAuthorityLoss,
@@ -15,6 +16,7 @@ import {
   justifiedRefusalAuthorityLoss,
   isWitnessedSacrifice,
   normalizePieceState,
+  startingAbilityForRole,
   type CandidateMoveEvaluation,
   type PieceState,
   type SacrificeAttribution,
@@ -287,9 +289,26 @@ export function applyRosterAbilityObservations(
     if (authorityGain > 0) {
       credence = applyAuthorityGain(credence, authorityGain);
     }
+    const objected = piece.id === actorId && actorChallenged;
+    const shouldGradeAbility =
+      actorId !== undefined && (objected || nearRefusal);
+    const wasRight = objected ? !vindicated : vindicated;
+    const earnedAbility = shouldGradeAbility
+      ? applyEarnedAbilityObservation(piece.E_i, wasRight)
+      : piece.E_i;
+    if (shouldGradeAbility) {
+      events.push({
+        t: 'ABILITY_GRADE',
+        ply,
+        pieceId: piece.id,
+        wasRight,
+        delta: earnedAbility - piece.E_i,
+      });
+    }
     return normalizePieceState({
       ...piece,
       credence,
+      E_i: earnedAbility,
     });
   });
   return {
@@ -318,7 +337,7 @@ export function calculateAbilityDripGain(
   scale: number = ENGINE_CONFIG.ABIL_DRIP_SCALE,
 ): number {
   const vulnerability = moveEval?.P_captured ?? 0;
-  const roleValue = Math.max(0, Math.min(80, piece.E_i));
+  const roleValue = startingAbilityForRole(piece.role);
   const expendability = 100 - Math.trunc((roleValue * 100) / 80);
   const standing = Math.max(
     0,

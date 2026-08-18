@@ -46,6 +46,37 @@ it('applies bounded posthumous class credit only inside the look-back window', (
   expect(far.events).toHaveLength(0);
 });
 
+it('keeps ability drip role-based when earned ability differs', () => {
+  const move = makePiece();
+  const low = calculateAbilityDripGain(
+    { ...move, role: 'Queen', E_i: 20 },
+    {
+      moveNotation: 'Qh5',
+      deltaV_board: 0.2,
+      privateScoreCp: 0,
+      vLeaderImplied: 0.5,
+      deltaV_capture: 0,
+      P_captured: 0.4,
+      peerSafetyDeltas: {},
+      promotionProspect: 0,
+    },
+  );
+  const high = calculateAbilityDripGain(
+    { ...move, role: 'Queen', E_i: 95 },
+    {
+      moveNotation: 'Qh5',
+      deltaV_board: 0.2,
+      privateScoreCp: 0,
+      vLeaderImplied: 0.5,
+      deltaV_capture: 0,
+      P_captured: 0.4,
+      peerSafetyDeltas: {},
+      promotionProspect: 0,
+    },
+  );
+  expect(low).toBe(high);
+});
+
 it('wires posthumous knobs and promotion hope into measurable outputs', () => {
   const hero = makePiece({ id: 'w:P:e4', role: 'Pawn' });
   const witness = makePiece({ id: 'w:N:g1' });
