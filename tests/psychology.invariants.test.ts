@@ -39,6 +39,7 @@ import {
   type ReplayManifest,
 } from '../src/psychology';
 import {
+  applyHeededAbilityGrade,
   applyOutcomeVindication,
   applyRefusalAuthorityCost,
   applyVindicationAuthorityGain,
@@ -183,15 +184,16 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     }
   });
 
-  it('grades objector and non-objector judgments with the documented polarity', () => {
+  it('grades forced and heeded judgments with the documented polarity', () => {
     const config = ENGINE_CONFIG as unknown as Record<string, number>;
     const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
     const originalMargin = config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN ?? 0.25;
+    const originalHeededMultiplier =
+      config.ABIL_EARNED_HEEDED_GAIN_MULTIPLIER ?? 2;
     const actor = makePiece({ id: 'w:P:e4', role: 'Pawn' });
     const move = makeMove();
-    const grade = (challenged: boolean, played: number): boolean => {
+    const forcedGrade = (played: number) => {
       config.ABIL_EARNED_STEP_SCALE = 10;
-      config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN = 10_000;
       const result = applyRosterAbilityObservations(
         [actor],
         { [actor.id]: move },
@@ -200,21 +202,77 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
         0,
         1,
         actor.id,
-        challenged,
+        true,
       );
       const event = result.events.find((item) => item.t === 'ABILITY_GRADE');
       if (event?.t !== 'ABILITY_GRADE')
         throw new Error('Missing ability grade');
-      return event.wasRight;
+      expect(event.channel).toBe('forced');
+      return event;
     };
     try {
-      expect(grade(true, 1_000)).toBe(false);
-      expect(grade(true, -1_000)).toBe(true);
-      expect(grade(false, 1_000)).toBe(true);
-      expect(grade(false, -1_000)).toBe(false);
+      expect(forcedGrade(1_000).wasRight).toBe(false);
+      expect(forcedGrade(-1_000).wasRight).toBe(true);
+
+      config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN = 10_000;
+      const nearRefusal = applyRosterAbilityObservations(
+        [actor],
+        { [actor.id]: move },
+        1_000,
+        0,
+        0,
+        1,
+        actor.id,
+        false,
+      );
+      expect(
+        nearRefusal.events.some((event) => event.t === 'ABILITY_GRADE'),
+      ).toBe(false);
+
+      const heededRight = applyHeededAbilityGrade([actor], actor.id, true, 1);
+      const heededWrong = applyHeededAbilityGrade([actor], actor.id, false, 1);
+      const rightEvent = heededRight.events[0];
+      const wrongEvent = heededWrong.events[0];
+      if (
+        rightEvent?.t !== 'ABILITY_GRADE' ||
+        wrongEvent?.t !== 'ABILITY_GRADE'
+      ) {
+        throw new Error('Missing heeded ability grades');
+      }
+      expect(rightEvent.channel).toBe('heeded');
+      expect(rightEvent.wasRight).toBe(true);
+      expect(wrongEvent.channel).toBe('heeded');
+      expect(wrongEvent.wasRight).toBe(false);
+      expect(rightEvent.delta).toBeGreaterThan(forcedGrade(-1_000).delta);
+      expect(wrongEvent.delta).toBe(forcedGrade(1_000).delta);
+
+      config.ABIL_EARNED_HEEDED_GAIN_MULTIPLIER = 1;
+      const ordinaryHeededGain = applyHeededAbilityGrade(
+        [actor],
+        actor.id,
+        true,
+        1,
+      ).events.find((event) => event.t === 'ABILITY_GRADE');
+      config.ABIL_EARNED_HEEDED_GAIN_MULTIPLIER = 3;
+      const amplifiedHeededGain = applyHeededAbilityGrade(
+        [actor],
+        actor.id,
+        true,
+        1,
+      ).events.find((event) => event.t === 'ABILITY_GRADE');
+      if (
+        ordinaryHeededGain?.t !== 'ABILITY_GRADE' ||
+        amplifiedHeededGain?.t !== 'ABILITY_GRADE'
+      ) {
+        throw new Error('Missing heeded gain sensitivity grades');
+      }
+      expect(amplifiedHeededGain.delta).toBeGreaterThan(
+        ordinaryHeededGain.delta,
+      );
     } finally {
       config.ABIL_EARNED_STEP_SCALE = originalScale;
       config.ABIL_VINDICATION_NEAR_REFUSAL_MARGIN = originalMargin;
+      config.ABIL_EARNED_HEEDED_GAIN_MULTIPLIER = originalHeededMultiplier;
     }
   });
 

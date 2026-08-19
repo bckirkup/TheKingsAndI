@@ -1079,15 +1079,20 @@ open questions
 
 ### D149 ✅ Can service move ability? (ADR 0055)
 **Direction resolved; mechanism wired at zero magnitude.** A piece's `E_i` is
-earnable from her own demonstrated judgment: the existing `vindicated` position
-truth is graded with `wasRight = objected ? !vindicated : vindicated` at
-`src/orchestration/psychologyHooks.ts:270-285`, and the asymmetric integer reducer
-is implemented at `src/psychology/reducers.ts:65-108`. Nonzero judgments emit an
-`ABILITY_GRADE` event, so the event log remains the source of truth. Earned
-ability is persisted through the existing campaign state path, and fielding ranks
-ability relative to the piece's origin-role starting value
-(`sim/pool.ts:252-277`). The calibrated step scale remains open and default
-behavior is unchanged. D148 and D150 remain open.
+earnable from her own demonstrated judgment: the forced channel grades the
+existing `vindicated` position truth as `wasRight = !vindicated`, while the
+heeded channel grades the existing `justifiedRefusal` truth at
+`src/orchestration/psychologyHooks.ts:270-338`. The asymmetric integer reducer
+is implemented at `src/psychology/reducers.ts:65-108`. Forced objectors and
+accepted refusals are the two earned-ability channels; near-refusal witnesses
+remain on the credence path but are not graded for ability. Nonzero judgments
+emit an `ABILITY_GRADE` event with its channel, so the event log remains the
+source of truth. Heeded gains use the
+`ABIL_EARNED_HEEDED_GAIN_MULTIPLIER` knob at
+`src/psychology/config.ts:88-89`; the calibrated step scale remains open and
+default behavior is unchanged. Earned ability is persisted through the existing
+campaign state path, and fielding ranks ability relative to the piece's
+origin-role starting value (`sim/pool.ts:252-277`). D148 and D150 remain open.
 
 ### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
 **Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse

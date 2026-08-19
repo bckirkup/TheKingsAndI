@@ -85,6 +85,8 @@ export const ENGINE_CONFIG = {
   ABIL_EARNED_CURVATURE: 2,
   /** Multiplier applied when a piece's judgment is proved wrong. */
   ABIL_EARNED_LOSS_MULTIPLIER: 2,
+  /** Multiplier applied to gains when a justified refusal is heeded. */
+  ABIL_EARNED_HEEDED_GAIN_MULTIPLIER: 2,
   /** Trust-to-refusal threshold slope in board-value units. */
   REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */

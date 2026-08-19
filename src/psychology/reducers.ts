@@ -80,16 +80,21 @@ export function applyEarnedAbilityObservation(
   stepScale: number = ENGINE_CONFIG.ABIL_EARNED_STEP_SCALE,
   curvature: number = ENGINE_CONFIG.ABIL_EARNED_CURVATURE,
   lossMultiplier: number = ENGINE_CONFIG.ABIL_EARNED_LOSS_MULTIPLIER,
+  gainMultiplier = 1,
 ): number {
   const current = Math.max(1, Math.min(100, Math.trunc(ability)));
   const scale = Math.max(0, Math.trunc(stepScale));
   if (scale === 0) return current;
   const strength = Math.max(0, Math.trunc(curvature));
   const multiplier = Math.max(1, Math.trunc(lossMultiplier));
+  const heededMultiplier = Math.max(1, Math.trunc(gainMultiplier));
   const denominator = 100 * (strength + 1);
   const gainStep = Math.max(
     1,
-    Math.trunc((scale * (100 + strength * (100 - current))) / denominator),
+    Math.trunc(
+      (scale * heededMultiplier * (100 + strength * (100 - current))) /
+        denominator,
+    ),
   );
   const lossStep =
     Math.max(1, Math.trunc((scale * (100 + strength * current)) / 100)) *

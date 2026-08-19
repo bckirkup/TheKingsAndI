@@ -48,6 +48,7 @@ import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { scoreMatchOutcome } from './outcomeScore';
 import {
   applyDesertionWithCascade,
+  applyHeededAbilityGrade,
   applyPostMoveCredence,
   applyPosthumousClassCredit,
   applyRosterAbilityObservations,
@@ -482,6 +483,14 @@ export class MatchSession {
       ...piece,
       credence: applyNeglectSignal(piece.credence),
     }));
+    const heeded = applyHeededAbilityGrade(
+      this.roster,
+      pending.actor.id,
+      justified,
+      this.ply,
+    );
+    this.roster = heeded.roster;
+    this.events.push(...heeded.events);
     this.pending = null;
     this.phase = 'playing';
   }
