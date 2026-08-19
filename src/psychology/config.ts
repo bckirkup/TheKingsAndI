@@ -79,6 +79,12 @@ export const ENGINE_CONFIG = {
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */
   ABIL_VINDICATION_NEAR_REFUSAL_MARGIN: 0.25,
+  /** Base step scale for earned ability judgments; calibration input, off by default. */
+  ABIL_EARNED_STEP_SCALE: 0,
+  /** Integer curvature for earned ability gains and losses. */
+  ABIL_EARNED_CURVATURE: 2,
+  /** Multiplier applied when a piece's judgment is proved wrong. */
+  ABIL_EARNED_LOSS_MULTIPLIER: 2,
   /** Trust-to-refusal threshold slope in board-value units. */
   REFUSAL_THRESHOLD_TRUST_SCALE: 0.03,
   /** Desertion model (docs/desertion_model.md). */

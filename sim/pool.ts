@@ -6,7 +6,11 @@ import type {
   PieceState,
   CredenceState,
 } from '../src/psychology';
-import { clampTrust, sharedBondScalar } from '../src/psychology';
+import {
+  clampTrust,
+  sharedBondScalar,
+  startingAbilityForRole,
+} from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
@@ -34,6 +38,7 @@ export interface PoolService {
 
 export interface PoolMember {
   readonly state: PieceState;
+  readonly originRole: PieceRole;
   readonly status: 'available' | 'recovering' | 'retired';
   readonly availableAtMatch: number;
   readonly provenance: 'original' | 'conscript';
@@ -169,6 +174,7 @@ function initialPoolMembers(
           template,
           `${side}:${role}:${String(index).padStart(2, '0')}`,
         ),
+        originRole: role,
         status: 'available',
         availableAtMatch: 1,
         provenance: 'original',
@@ -247,11 +253,12 @@ function compareForPolicy(
   right: PoolMember,
 ): number {
   let values: number[];
+  const relativeAbilityDifference =
+    right.state.E_i -
+    startingAbilityForRole(right.originRole) -
+    (left.state.E_i - startingAbilityForRole(left.originRole));
   if (policy === 'strongest_available') {
-    values = [
-      right.state.E_i - left.state.E_i,
-      right.state.B_i - left.state.B_i,
-    ];
+    values = [relativeAbilityDifference, right.state.B_i - left.state.B_i];
   } else if (policy === 'rest_traumatised') {
     values = [
       left.state.B_i - right.state.B_i,
@@ -260,7 +267,7 @@ function compareForPolicy(
   } else {
     values = [
       right.service.matchesPlayed - left.service.matchesPlayed,
-      right.state.E_i - left.state.E_i,
+      relativeAbilityDifference,
     ];
   }
   return (
@@ -319,6 +326,7 @@ function conscriptMember(
         tauBenev: appraisal.tauBenev,
       },
     },
+    originRole: role,
     status: 'available',
     availableAtMatch: match,
     provenance: 'conscript',

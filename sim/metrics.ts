@@ -74,6 +74,11 @@ export interface MatchMetrics {
   readonly enemyPassedOverDistribution?: Readonly<Record<string, number>>;
   readonly obsolescenceCount?: number;
   readonly enemyObsolescenceCount?: number;
+  readonly abilityMin?: number;
+  readonly abilityMax?: number;
+  readonly meanAbility?: number;
+  /** Number of fielded pieces with a nonzero ability grade during this match. */
+  readonly abilityMovedCount?: number;
 }
 
 export interface DesertionSummary {
@@ -241,6 +246,10 @@ export interface CampaignMetrics {
   readonly meanDripGainTotal: number;
   readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
+  readonly abilityMin: number;
+  readonly abilityMax: number;
+  readonly meanAbility: number;
+  readonly abilityMovedCount: number;
   readonly meanTrustEnd: number;
   readonly meanTrustDelta: number;
   readonly classContemptDelta: number;
@@ -523,6 +532,31 @@ export function metricsFromMatch(
   refusedGoodMoves: number,
 ): MatchMetrics {
   const fieldedPieceIds = rosterStart.map((piece) => piece.id);
+  const fieldedIds = new Set(fieldedPieceIds);
+  const abilityRoster = result.roster.filter((piece) =>
+    fieldedIds.has(piece.id),
+  );
+  const abilitySnapshot =
+    abilityRoster.length > 0
+      ? abilityRoster
+      : rosterStart.filter((piece) => fieldedIds.has(piece.id));
+  const abilityValues = abilitySnapshot.map((piece) => piece.E_i);
+  const abilityMin = Math.min(...abilityValues);
+  const abilityMax = Math.max(...abilityValues);
+  const meanAbility =
+    abilityValues.reduce((sum, value) => sum + value, 0) /
+    Math.max(1, abilityValues.length);
+  const abilityMovedPieceIds = new Set(
+    result.events
+      .filter(
+        (event): event is Extract<MatchEvent, { t: 'ABILITY_GRADE' }> =>
+          event.t === 'ABILITY_GRADE' && event.delta !== 0,
+      )
+      .map((event) => event.pieceId),
+  );
+  const abilityMovedCount = fieldedPieceIds.filter((pieceId) =>
+    abilityMovedPieceIds.has(pieceId),
+  ).length;
   const counts = countEvents(result.events, fieldedPieceIds);
   const enemyFieldedPieceIds = result.enemyFieldedPieceIds;
   const enemyCounts = countSideEvents(result.events, enemyFieldedPieceIds);
@@ -607,6 +641,10 @@ export function metricsFromMatch(
         ];
       }),
     ),
+    abilityMin: abilityValues.length > 0 ? abilityMin : 0,
+    abilityMax: abilityValues.length > 0 ? abilityMax : 0,
+    meanAbility,
+    abilityMovedCount,
     fieldedPieceIds,
     desertedPieceIds: [...counts.desertedPieceIds],
     refusalRate,
@@ -833,6 +871,10 @@ function aggregateCampaignCore(
     meanDripGainTotal: mean((metric) => metric.dripGainTotal ?? 0),
     meanAdjudicationLoss: mean((metric) => metric.meanAdjudicationLoss ?? 0),
     meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
+    abilityMin: mean((metric) => metric.abilityMin ?? 0),
+    abilityMax: mean((metric) => metric.abilityMax ?? 0),
+    meanAbility: mean((metric) => metric.meanAbility ?? 0),
+    abilityMovedCount: mean((metric) => metric.abilityMovedCount ?? 0),
     meanTrustEnd: last?.meanTrustEnd ?? 0,
     meanTrustDelta: mean(
       (metric) => metric.meanTrustEnd - metric.meanTrustStart,

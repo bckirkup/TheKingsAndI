@@ -200,6 +200,10 @@ describe('coefficient sweep', () => {
       campaignSummary.enemyDesertionAttrition,
     );
     expect(point.meanEnemyDesertions).toBe(campaignSummary.meanEnemyDesertions);
+    expect(point.abilityMin).toBe(campaignSummary.abilityMin);
+    expect(point.abilityMax).toBe(campaignSummary.abilityMax);
+    expect(point.meanAbility).toBe(campaignSummary.meanAbility);
+    expect(point.abilityMovedCount).toBe(campaignSummary.abilityMovedCount);
     expect(typeof point.plainChessWinDelta).toBe('number');
   }, 60_000);
 });

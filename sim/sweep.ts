@@ -45,6 +45,10 @@ export interface SweepPoint {
   readonly meanAdjudicationLoss: number;
   readonly meanTauAbil: number;
   readonly roleTauAbil: Readonly<Record<string, number>>;
+  readonly abilityMin: number;
+  readonly abilityMax: number;
+  readonly meanAbility: number;
+  readonly abilityMovedCount: number;
 }
 
 const MUTABLE_CONFIG = ENGINE_CONFIG as unknown as Record<string, number>;
@@ -121,6 +125,10 @@ export async function runCoefficientSweep(options: {
         meanTauAbil: campaign.summary.meanTauAbil,
         roleTauAbil:
           campaign.summary.trajectoryBands.at(-1)?.meanFinalTauAbilByRole ?? {},
+        abilityMin: campaign.summary.abilityMin,
+        abilityMax: campaign.summary.abilityMax,
+        meanAbility: campaign.summary.meanAbility,
+        abilityMovedCount: campaign.summary.abilityMovedCount,
       });
     }
   } finally {
@@ -191,7 +199,7 @@ async function main(): Promise<void> {
     engineKind: options.engine,
   });
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
   );
   for (const point of points) {
     console.log(
@@ -219,6 +227,10 @@ async function main(): Promise<void> {
         point.meanAdjudicationLoss.toFixed(2),
         point.meanTauAbil.toFixed(2),
         JSON.stringify(point.roleTauAbil),
+        point.abilityMin.toFixed(2),
+        point.abilityMax.toFixed(2),
+        point.meanAbility.toFixed(2),
+        point.abilityMovedCount.toFixed(2),
       ].join(','),
     );
   }

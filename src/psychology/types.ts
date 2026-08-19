@@ -176,6 +176,13 @@ export type MatchEvent =
       readonly delta?: number;
     }
   | {
+      readonly t: 'ABILITY_GRADE';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly wasRight: boolean;
+      readonly delta: number;
+    }
+  | {
       readonly t: 'ABILITY_DRIP';
       readonly ply: number;
       readonly pieceId: PieceId;

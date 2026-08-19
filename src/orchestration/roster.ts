@@ -4,6 +4,7 @@ import {
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  startingAbilityForRole,
   type PieceRole,
   type PieceState,
   type PieceTraits,
@@ -55,14 +56,12 @@ export function createStartingRoster(
   randomUnit: number,
 ): PieceState[] {
   return board.piecesOf(side).map((piece) => {
-    let initialAbility = 55;
-    if (piece.role === 'P') initialAbility = 20;
-    else if (piece.role === 'K') initialAbility = 80;
+    const role = ROLE_MAP[piece.role];
     return normalizePieceState({
       id: piece.id,
-      role: ROLE_MAP[piece.role],
+      role,
       traits: traitsForRole(piece.role, randomUnit),
-      E_i: initialAbility,
+      E_i: startingAbilityForRole(role),
       T_i: initialTrust,
       M_i: 70,
       B_i: 0,

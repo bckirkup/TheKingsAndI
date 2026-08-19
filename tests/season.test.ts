@@ -119,6 +119,38 @@ describe('scarce season pools', () => {
     expect(restedPawnIds).toEqual([...restedPawnIds].sort());
   });
 
+  it('ranks a persisted promoted pawn by ability relative to origin role', () => {
+    const base = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'tyrannical',
+      depthFactor: 1,
+    });
+    const pawn = base.members.find((member) => member.state.role === 'Pawn');
+    const queen = base.members.find((member) => member.state.role === 'Queen');
+    if (pawn === undefined || queen === undefined) {
+      throw new Error('Expected a pawn and queen in the initial pool.');
+    }
+    const promoted = {
+      ...pawn,
+      state: { ...pawn.state, role: 'Queen' as const, E_i: 40 },
+    };
+    const pool = withMembers(
+      base,
+      base.members.map((member) =>
+        member.state.id === pawn.state.id
+          ? promoted
+          : member.state.id === queen.state.id
+            ? { ...member, state: { ...member.state, E_i: 55 } }
+            : member,
+      ),
+    );
+    const selectedQueen = fieldPool(pool, 1).lineup.find(
+      (member) => member.state.role === 'Queen',
+    );
+    expect(selectedQueen?.state.id).toBe(pawn.state.id);
+  });
+
   it('has a golden baseline and sensitivity for pool depth', () => {
     const baseline = createCommanderPool({
       id: 'w',

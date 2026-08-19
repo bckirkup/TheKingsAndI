@@ -1077,25 +1077,17 @@ promoted piece's own trust, morale, or trauma move on elevation.
 open questions
 (`docs/calibration/2026-08-18-pawn-hope-sweep.md`).
 
-### D149 ❓ Can service move ability? (ADR 0054 §5)
-**Open.** `E_i` — specified as *experience* in `docs/psychology_engine.md:17` — is
-assigned only at piece creation (`src/orchestration/roster.ts:58-65`,
-`sim/roster.ts:74-78`) and is otherwise only clamped
-(`src/psychology/reducers.ts:34`). No event, reducer, fold or campaign path moves
-it, so ability is a constant of role: pawn 20, officer 55, King 80. Traits are
-frozen at creation with ±0.1 jitter (`sim/roster.ts:29-41`). **Not wired.**
-
-Two consequences make this load-bearing rather than cosmetic. A bench cannot have
-a quality gradient, so "a much better queen" can only ever mean *more compliant
-and more resilient*, never *better counsel*
-(`docs/calibration/2026-08-19-piece-quality-and-the-bench.md`). And
-`strongest_available` orders by `E_i` (`sim/pool.ts:250-254`), so a promoted pawn
-keeps ability 20, loses the queen's chair by construction, and is honoured into
-permanent benching. Either service moves `E_i`, or fielding priority must stop
-being ability alone; resolving neither makes promotion a trap decided by a
-constant. If ability does become earnable, ADR 0043's asymmetry argument
-(quick to lose, slow to rebuild) is the shape to consider, and every desertion
-coefficient must be re-ranged afterwards.
+### D149 ✅ Can service move ability? (ADR 0055)
+**Direction resolved; mechanism wired at zero magnitude.** A piece's `E_i` is
+earnable from her own demonstrated judgment: the existing `vindicated` position
+truth is graded with `wasRight = objected ? !vindicated : vindicated` at
+`src/orchestration/psychologyHooks.ts:270-285`, and the asymmetric integer reducer
+is implemented at `src/psychology/reducers.ts:65-108`. Nonzero judgments emit an
+`ABILITY_GRADE` event, so the event log remains the source of truth. Earned
+ability is persisted through the existing campaign state path, and fielding ranks
+ability relative to the piece's origin-role starting value
+(`sim/pool.ts:252-277`). The calibrated step scale remains open and default
+behavior is unchanged. D148 and D150 remain open.
 
 ### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
 **Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
