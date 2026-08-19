@@ -290,8 +290,7 @@ export function applyRosterAbilityObservations(
       credence = applyAuthorityGain(credence, authorityGain);
     }
     const objected = piece.id === actorId && actorChallenged;
-    const shouldGradeAbility =
-      actorId !== undefined && (objected || nearRefusal);
+    const shouldGradeAbility = actorId !== undefined && objected;
     const wasRight = objected ? !vindicated : vindicated;
     const earnedAbility = shouldGradeAbility
       ? applyEarnedAbilityObservation(piece.E_i, wasRight)
@@ -303,6 +302,7 @@ export function applyRosterAbilityObservations(
         pieceId: piece.id,
         wasRight,
         delta: earnedAbility - piece.E_i,
+        channel: 'forced',
       });
     }
     return normalizePieceState({
@@ -316,6 +316,46 @@ export function applyRosterAbilityObservations(
     vindicatedCount,
     events,
     dripStreakByPiece: nextDripStreakByPiece,
+  };
+}
+
+export function applyHeededAbilityGrade(
+  roster: readonly PieceState[],
+  pieceId: string,
+  wasRight: boolean,
+  ply: number,
+): { readonly roster: PieceState[]; readonly events: MatchEvent[] } {
+  const piece = roster.find((candidate) => candidate.id === pieceId);
+  if (piece === undefined) {
+    return { roster: [...roster], events: [] };
+  }
+  const earnedAbility = applyEarnedAbilityObservation(
+    piece.E_i,
+    wasRight,
+    ENGINE_CONFIG.ABIL_EARNED_STEP_SCALE,
+    ENGINE_CONFIG.ABIL_EARNED_CURVATURE,
+    ENGINE_CONFIG.ABIL_EARNED_LOSS_MULTIPLIER,
+    wasRight ? ENGINE_CONFIG.ABIL_EARNED_HEEDED_GAIN_MULTIPLIER : 1,
+  );
+  if (earnedAbility === piece.E_i) {
+    return { roster: [...roster], events: [] };
+  }
+  return {
+    roster: roster.map((candidate) =>
+      candidate.id === pieceId
+        ? normalizePieceState({ ...candidate, E_i: earnedAbility })
+        : candidate,
+    ),
+    events: [
+      {
+        t: 'ABILITY_GRADE',
+        ply,
+        pieceId,
+        wasRight,
+        delta: earnedAbility - piece.E_i,
+        channel: 'heeded',
+      },
+    ],
   };
 }
 

@@ -181,6 +181,7 @@ export type MatchEvent =
       readonly pieceId: PieceId;
       readonly wasRight: boolean;
       readonly delta: number;
+      readonly channel: 'forced' | 'heeded';
     }
   | {
       readonly t: 'ABILITY_DRIP';

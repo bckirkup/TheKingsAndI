@@ -32,6 +32,7 @@ import { engineAuditEntry } from './heroism';
 import { chooseOpponentMove, type OpponentArchetype } from './leaderPolicy';
 import {
   applyDesertionWithCascade,
+  applyHeededAbilityGrade,
   applyPostMoveCredence,
   applyRosterAbilityObservations,
   expectedVindicationDelta,
@@ -199,11 +200,17 @@ function applyTrackedEnemyDecision(input: {
         threshold: outcome.refusalThreshold,
         perceivedValue: outcome.perceivedValue,
       });
-      return {
+      const heeded = applyHeededAbilityGrade(
         enemyRoster,
+        actor.id,
+        moveEval.deltaV_board < 0 && orderQualityCp < 0,
+        ply,
+      );
+      return {
+        enemyRoster: heeded.roster,
         departedRoster: [],
         dreadExposureByPiece: input.dreadExposureByPiece ?? {},
-        events,
+        events: [...events, ...heeded.events],
         engineAudit: [audit],
         ply,
         enemyRout: false,

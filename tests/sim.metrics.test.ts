@@ -67,6 +67,7 @@ describe('promotion harness metrics', () => {
           pieceId: first.id,
           wasRight: true,
           delta: 10,
+          channel: 'forced',
         },
       ],
       roster: roster.map((piece) =>

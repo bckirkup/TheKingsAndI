@@ -45,6 +45,7 @@ import {
   applyDesertionWithCascade,
   applyOutcomeVindication,
   applyPostMoveCredence,
+  applyHeededAbilityGrade,
   applyRosterAbilityObservations,
   applyPosthumousClassCredit,
   applyRefusalAuthorityCost,
@@ -708,6 +709,14 @@ export async function runHeadlessMatch(
               credence: applyNeglectSignal(piece.credence),
             }));
           }
+          const heeded = applyHeededAbilityGrade(
+            roster,
+            actor.id,
+            justifiedRefusal,
+            ply,
+          );
+          roster = heeded.roster;
+          events.push(...heeded.events);
           firstRefused ??= {
             actor,
             choice,
