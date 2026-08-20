@@ -1078,21 +1078,27 @@ open questions
 (`docs/calibration/2026-08-18-pawn-hope-sweep.md`).
 
 ### D149 ✅ Can service move ability? (ADR 0055)
-**Direction resolved; mechanism wired at zero magnitude.** A piece's `E_i` is
+**Resolved and calibrated at scale 2 / loss multiplier 1.** A piece's `E_i` is
 earnable from her own demonstrated judgment: the forced channel grades the
 existing `vindicated` position truth as `wasRight = !vindicated`, while the
 heeded channel grades the existing `justifiedRefusal` truth at
-`src/orchestration/psychologyHooks.ts:270-338`. The asymmetric integer reducer
+`src/orchestration/psychologyHooks.ts:270-359`. The asymmetric integer reducer
 is implemented at `src/psychology/reducers.ts:65-108`. Forced objectors and
 accepted refusals are the two earned-ability channels; near-refusal witnesses
 remain on the credence path but are not graded for ability. Nonzero judgments
 emit an `ABILITY_GRADE` event with its channel, so the event log remains the
 source of truth. Heeded gains use the
 `ABIL_EARNED_HEEDED_GAIN_MULTIPLIER` knob at
-`src/psychology/config.ts:88-89`; the calibrated step scale remains open and
-default behavior is unchanged. Earned ability is persisted through the existing
-campaign state path, and fielding ranks ability relative to the piece's
-origin-role starting value (`sim/pool.ts:252-277`). D148 and D150 remain open.
+`src/psychology/config.ts:82-95`; the calibrated defaults are scale `2` and loss
+multiplier `1`, with evidence in
+`docs/calibration/2026-08-19-earned-ability-magnitude.md`. The forced channel
+barely separates styles (`0.86` supportive vs `0.85` tyrannical right rate),
+while the heeded channel separates them completely (`0.96–1.00` vs
+`0.39–0.49`), so the mechanism measures whether a commander accepts the right
+refusals. Whether the forced channel deserves its own weight remains open.
+Earned ability is persisted through the existing campaign state path, and
+fielding ranks ability relative to the piece's origin-role starting value
+(`sim/pool.ts:252-277`). D148 and D150 remain open.
 
 ### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
 **Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse

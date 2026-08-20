@@ -69,9 +69,15 @@ describe('headless player refusal replanning', () => {
     }
     expect(moves).toHaveLength(1);
     expect(result.plies).toBe(1);
+    const grades = result.events.filter((event) => event.t === 'ABILITY_GRADE');
+    expect(grades.length).toBeGreaterThan(0);
+    expect(grades.every((event) => event.delta !== 0)).toBe(true);
+    expect(new Set(grades.map((event) => event.channel))).toEqual(
+      new Set(['forced', 'heeded']),
+    );
     expect(
-      result.events.filter((event) => event.t === 'ABILITY_GRADE'),
-    ).toHaveLength(0);
+      result.roster.every((piece) => piece.E_i >= 1 && piece.E_i <= 100),
+    ).toBe(true);
     const override = overrides[0];
     if (override?.t === 'OVERRIDE') {
       const overridden = result.roster.find(

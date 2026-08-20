@@ -1,6 +1,6 @@
 # ADR 0055 — Earned ability from vindicated judgment
 
-Status: Accepted direction; mechanism shipped at zero magnitude
+Status: Accepted and calibrated; mechanism shipped at scale 2
 
 ## Decision
 
@@ -14,9 +14,9 @@ credence adjudication path but do not stake an earned-ability judgment.
 The reducer follows ADR 0043's integer-rational, curved asymmetry. Being wrong
 costs ability quickly, while being right rebuilds it slowly and gains diminish
 near the ceiling. The mechanism is deterministic, integer-valued, and clamped
-to the existing `[1, 100]` range. It is wired at zero shipped magnitude:
-the default step scale is `0`, so default behavior remains bit-identical to the
-pre-mechanism harness. The calibrated nonzero magnitude remains open.
+to the existing `[1, 100]` range. The calibrated defaults are
+`ABIL_EARNED_STEP_SCALE = 2` and `ABIL_EARNED_LOSS_MULTIPLIER = 1`, with
+curvature `2` and heeded gain multiplier `2`.
 
 An `ABILITY_GRADE` event records the piece, ply, channel, polarity, and applied
 nonzero delta. A heeded-and-right grade multiplies only its gain step by
@@ -49,10 +49,15 @@ near-refusal population produced 761 grades per supportive campaign and 2,791
 per tyrannical campaign, with overall right rates of 0.31–0.44 versus 0.78–0.93
 for pieces that actually spoke. Under the ADR 0043 asymmetry this drove the
 whole tyrannical roster to ability `1` at scale `3` and `24` at scale `1`.
-The split channels remove that witness-driven collapse without claiming a
-calibrated magnitude. Once the magnitude is nonzero,
+The split channels remove that witness-driven collapse. Calibration at scale `2`
+shows that the forced channel barely separates leadership styles: right rates
+are `0.861–0.881` for supportive and `0.825–0.855` for tyrannical. The heeded
+channel separates them almost completely: `0.959–1.000` for supportive versus
+`0.385–0.491` for tyrannical. The mechanism therefore measures whether a
+commander accepts the right refusals. Once the magnitude is nonzero,
 `trackEnemyIdentities` (`src/orchestration/enemyTurn.ts:50`) also changes which
 highest-ability enemy pieces remain inside the memory cap.
-Because the shipped scale is zero, no calibration claim or balance threshold is
-made here. D148 (promotion's campaign-scale meaning and clamp ceiling) and D150
-(what a commander may know about a piece) remain open.
+The forced channel's separate weight remains an open question because it adds
+little leadership-style separation. D148 (promotion's campaign-scale meaning
+and clamp ceiling) and D150 (what a commander may know about a piece) remain
+open.

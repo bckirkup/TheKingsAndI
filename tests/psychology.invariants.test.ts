@@ -147,16 +147,18 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     }
   });
 
-  it('keeps earned ability disabled as an exact no-op and bounded integer', () => {
+  it('keeps explicit zero-scale ability as an exact no-op and bounds live ability', () => {
     const config = ENGINE_CONFIG as unknown as Record<string, number>;
     const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
     try {
       config.ABIL_EARNED_STEP_SCALE = 0;
-      expect(applyEarnedAbilityObservation(47.9, true)).toBe(47);
-      config.ABIL_EARNED_STEP_SCALE = 13;
+      expect(applyEarnedAbilityObservation(47.9, true, 0)).toBe(47);
+      expect(
+        applyHeededAbilityGrade([makePiece()], 'w:N:g1', true, 1).events,
+      ).toHaveLength(0);
       for (const ability of [-20, 1, 50, 100, 140]) {
         for (const wasRight of [true, false]) {
-          const result = applyEarnedAbilityObservation(ability, wasRight);
+          const result = applyEarnedAbilityObservation(ability, wasRight, 13);
           expect(Number.isInteger(result)).toBe(true);
           expect(result).toBeGreaterThanOrEqual(1);
           expect(result).toBeLessThanOrEqual(100);
@@ -168,20 +170,40 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   });
 
   it('wires earned ability scale through to search depth', () => {
-    const config = ENGINE_CONFIG as unknown as Record<string, number>;
-    const originalScale = config.ABIL_EARNED_STEP_SCALE ?? 0;
-    try {
-      config.ABIL_EARNED_STEP_SCALE = 0;
-      const disabledAbility = applyEarnedAbilityObservation(50, true);
-      config.ABIL_EARNED_STEP_SCALE = 20;
-      const earnedAbility = applyEarnedAbilityObservation(50, true);
-      expect(earnedAbility).toBeGreaterThan(disabledAbility);
-      expect(calculateEngineSearchDepth(earnedAbility, 1)).toBeGreaterThan(
-        calculateEngineSearchDepth(disabledAbility, 1),
-      );
-    } finally {
-      config.ABIL_EARNED_STEP_SCALE = originalScale;
-    }
+    const abilities = [0, 20, 40].map((scale) =>
+      applyEarnedAbilityObservation(50, true, scale, 2, 1, 1),
+    );
+    expect(abilities).toEqual(
+      [...abilities].sort((left, right) => left - right),
+    );
+    expect(new Set(abilities).size).toBe(3);
+    expect(calculateEngineSearchDepth(abilities[2] ?? 0, 1)).toBeGreaterThan(
+      calculateEngineSearchDepth(abilities[0] ?? 0, 1),
+    );
+  });
+
+  it('keeps default magnitude live while ungraded pieces retain baseline ability', () => {
+    const actor = makePiece({ id: 'w:P:e4', role: 'Pawn', E_i: 20 });
+    const witness = makePiece({ id: 'w:N:g1', role: 'Knight', E_i: 55 });
+    const result = applyRosterAbilityObservations(
+      [actor, witness],
+      { [actor.id]: makeMove() },
+      1_000,
+      0,
+      0,
+      1,
+      actor.id,
+      true,
+    );
+    expect(result.events.some((event) => event.t === 'ABILITY_GRADE')).toBe(
+      true,
+    );
+    expect(result.roster.find((piece) => piece.id === actor.id)?.E_i).not.toBe(
+      actor.E_i,
+    );
+    expect(result.roster.find((piece) => piece.id === witness.id)?.E_i).toBe(
+      witness.E_i,
+    );
   });
 
   it('grades forced and heeded judgments with the documented polarity', () => {
