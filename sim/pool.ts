@@ -1,4 +1,16 @@
 import { LivingBoard, type PieceId, type Side } from '../src/chess';
+import {
+  FIELDING_POLICIES,
+  fieldSquad,
+  foldSquadMatch,
+  highestAttainment,
+  poolRoleCounts as squadRoleCounts,
+  statusForConscript,
+  type FieldingPolicy as SquadFieldingPolicy,
+  type SquadEvent,
+  type SquadMember,
+  type SquadService,
+} from '../src/orchestration';
 import type { HeadlessMatchResult } from '../src/orchestration';
 import type {
   MatchEvent,
@@ -6,68 +18,17 @@ import type {
   PieceState,
   CredenceState,
 } from '../src/psychology';
-import {
-  clampTrust,
-  sharedBondScalar,
-  startingAbilityForRole,
-} from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
 import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
 import { createFreshPieceState } from './roster';
 
-export type FieldingPolicy =
-  | 'strongest_available'
-  | 'rest_traumatised'
-  | 'veteran_first';
-
-export const FIELDING_POLICIES: readonly FieldingPolicy[] = [
-  'strongest_available',
-  'rest_traumatised',
-  'veteran_first',
-];
-
-export interface PoolService {
-  readonly matchesPlayed: number;
-  readonly desertions: number;
-  readonly refusals: number;
-  readonly captures: number;
-  readonly consecutiveNonSelections: number;
-}
-
-export interface PoolMember {
-  readonly state: PieceState;
-  readonly originRole: PieceRole;
-  /** Highest role this member has attained through a PROMOTION event. */
-  readonly attainedRole?: PieceRole;
-  readonly status: 'available' | 'recovering' | 'retired';
-  readonly availableAtMatch: number;
-  readonly provenance: 'original' | 'conscript';
-  readonly service: PoolService;
-  readonly retirementCause?: 'trauma' | 'obsolescence';
-}
-
-export type PoolEvent =
-  | {
-      readonly t: 'POOL_TRUST_ADJUSTMENT';
-      readonly side: Side;
-      readonly match: number;
-      readonly reason: 'non_selection' | 'selection_redemption';
-      readonly pieceId: PieceId;
-      readonly selfTrustDelta: number;
-      readonly peerTrustDeltas: readonly {
-        readonly pieceId: PieceId;
-        readonly delta: number;
-      }[];
-    }
-  | {
-      readonly t: 'OBSOLESCENCE';
-      readonly side: Side;
-      readonly match: number;
-      readonly pieceId: PieceId;
-      readonly nonSelectionStreak: number;
-    };
+export type FieldingPolicy = SquadFieldingPolicy;
+export { FIELDING_POLICIES };
+export type PoolService = SquadService;
+export type PoolMember = SquadMember;
+export type PoolEvent = SquadEvent;
 
 export interface CommanderPool {
   readonly id: string;
@@ -211,15 +172,6 @@ export function poolSeasonMetrics(input: {
   };
 }
 
-const STARTING_ROLE_COUNTS: Readonly<Record<PieceRole, number>> = {
-  Pawn: 8,
-  Knight: 2,
-  Bishop: 2,
-  Rook: 2,
-  Queen: 1,
-  King: 1,
-};
-
 function fieldingPolicyForStyle(style: Leader): FieldingPolicy {
   switch (style) {
     case 'tyrannical':
@@ -273,9 +225,9 @@ function initialPoolMembers(
   }
   const members: PoolMember[] = [];
   let sequence = 0;
-  for (const role of Object.keys(STARTING_ROLE_COUNTS) as PieceRole[]) {
-    const count =
-      role === 'King' ? 1 : STARTING_ROLE_COUNTS[role] * depthFactor;
+  const roleCounts = squadRoleCounts();
+  for (const role of Object.keys(roleCounts) as PieceRole[]) {
+    const count = role === 'King' ? 1 : roleCounts[role] * depthFactor;
     for (let index = 0; index < count; index += 1) {
       const templateId = roleTemplates.get(role);
       if (templateId === undefined) {
@@ -344,85 +296,6 @@ export function createCommanderPool(options: {
   };
 }
 
-function availableAt(member: PoolMember, match: number): boolean {
-  return (
-    member.status !== 'retired' &&
-    (member.status !== 'recovering' || match >= member.availableAtMatch)
-  );
-}
-
-const FIELDING_ORDER: readonly PieceRole[] = [
-  'King',
-  'Queen',
-  'Rook',
-  'Bishop',
-  'Knight',
-  'Pawn',
-];
-
-const ATTAINMENT_RANK: Readonly<Record<PieceRole, number>> = {
-  Pawn: 1,
-  Knight: 2,
-  Bishop: 2,
-  Rook: 3,
-  Queen: 4,
-  King: 5,
-};
-
-function highestAttainment(
-  current: PieceRole | undefined,
-  candidate: PieceRole,
-): PieceRole {
-  return (ATTAINMENT_RANK[candidate] ?? 0) >
-    (ATTAINMENT_RANK[current ?? 'Pawn'] ?? 0)
-    ? candidate
-    : (current ?? candidate);
-}
-
-function statusForConscript(
-  state: PieceState,
-  desertions: ReadonlySet<PieceId>,
-  config: SeasonConfig,
-): PoolMember['status'] {
-  if (
-    state.role !== 'King' &&
-    state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-  ) {
-    return 'retired';
-  }
-  if (desertions.has(state.id)) return 'recovering';
-  return 'available';
-}
-
-function compareForPolicy(
-  policy: FieldingPolicy,
-  left: PoolMember,
-  right: PoolMember,
-): number {
-  let values: number[];
-  const relativeAbilityDifference =
-    right.state.E_i -
-    startingAbilityForRole(right.originRole) -
-    (left.state.E_i - startingAbilityForRole(left.originRole));
-  if (policy === 'strongest_available') {
-    values = [relativeAbilityDifference, right.state.B_i - left.state.B_i];
-  } else if (policy === 'rest_traumatised') {
-    values = [
-      left.state.B_i - right.state.B_i,
-      left.service.matchesPlayed - right.service.matchesPlayed,
-    ];
-  } else {
-    values = [
-      right.service.matchesPlayed - left.service.matchesPlayed,
-      relativeAbilityDifference,
-    ];
-  }
-  return (
-    values.find((value) => value !== 0) ??
-    (left.state.id < right.state.id ? -1 : 1)
-  );
-}
-
 function meanCredence(members: readonly PoolMember[]): CredenceState {
   const available = members.filter((member) => member.status !== 'retired');
   if (available.length === 0)
@@ -488,68 +361,9 @@ function conscriptMember(
 }
 
 export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
-  const lineup: PoolMember[] = [];
-  const selectedIds = new Set<PieceId>();
-  let conscriptsFielded = 0;
-  let sequence = 0;
-  for (const role of FIELDING_ORDER) {
-    const required = STARTING_ROLE_COUNTS[role];
-    const available = pool.members
-      .filter(
-        (member) =>
-          (member.originRole === role || member.attainedRole === role) &&
-          availableAt(member, match) &&
-          !selectedIds.has(member.state.id),
-      )
-      .sort((left, right) =>
-        compareForPolicy(pool.fieldingPolicy, left, right),
-      );
-    const selected = available.slice(0, required).map((member) => ({
-      ...member,
-      state: { ...member.state, role },
-    }));
-    if (role === 'King' && selected.length !== 1) {
-      throw new Error('Commander pool must always field its King.');
-    }
-    lineup.push(...selected);
-    selected.forEach((member) => selectedIds.add(member.state.id));
-    while (
-      role !== 'King' &&
-      selected.filter((member) => member.state.role === role).length < required
-    ) {
-      const conscript = conscriptMember(pool, role, match, sequence);
-      lineup.push(conscript);
-      selected.push(conscript);
-      selectedIds.add(conscript.state.id);
-      conscriptsFielded += 1;
-      sequence += 1;
-    }
-  }
-  const veteransRested = pool.members.filter(
-    (member) =>
-      availableAt(member, match) &&
-      member.service.matchesPlayed > 0 &&
-      !selectedIds.has(member.state.id),
-  ).length;
-  return { lineup, conscriptsFielded, veteransRested };
-}
-
-function updateMember(
-  member: PoolMember,
-  state: PieceState,
-  status: PoolMember['status'],
-  availableAtMatch: number,
-  service: PoolService,
-  retirementCause: PoolMember['retirementCause'] = member.retirementCause,
-): PoolMember {
-  return {
-    ...member,
-    state,
-    status,
-    availableAtMatch,
-    service,
-    ...(retirementCause === undefined ? {} : { retirementCause }),
-  };
+  return fieldSquad(pool, match, (role, conscriptionMatch, sequence) =>
+    conscriptMember(pool, role, conscriptionMatch, sequence),
+  );
 }
 
 function foldSide(
@@ -564,159 +378,26 @@ function foldSide(
   match: number,
   config: SeasonConfig,
 ): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
+  const folded = foldSquadMatch({
+    side: pool.side,
+    members: pool.members,
+    fielded,
+    resultRoster,
+    departedRoster,
+    desertions,
+    refusals,
+    fieldedIds,
+    promotions,
+    match,
+    config,
+  });
   const resultById = new Map(
     [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
   );
-  const activeIds = new Set(resultRoster.map((piece) => piece.id));
-  const erosionTargets: { pieceId: PieceId; selfTrustDelta: number }[] = [];
-  const events: PoolEvent[] = [];
-  const members = pool.members.map((member) => {
-    const wasFielded = fieldedIds.has(member.state.id);
-    const becameAvailable =
-      member.status === 'recovering' && match >= member.availableAtMatch;
-    const eligible = member.status === 'available' || becameAvailable;
-    let state = wasFielded
-      ? (resultById.get(member.state.id) ?? member.state)
-      : member.state;
-    const attainedRole = promotions.get(member.state.id);
-    let status = member.status;
-    let availableAtMatch = member.availableAtMatch;
-    let retirementCause = member.retirementCause;
-    const desertion = desertions.has(member.state.id);
-    const captured =
-      wasFielded && !desertion && !activeIds.has(member.state.id);
-    let consecutiveNonSelections = member.service.consecutiveNonSelections;
-    const service: PoolService = {
-      ...member.service,
-      matchesPlayed: member.service.matchesPlayed + (wasFielded ? 1 : 0),
-      desertions: member.service.desertions + (desertion ? 1 : 0),
-      refusals: member.service.refusals + (refusals.get(member.state.id) ?? 0),
-      captures: member.service.captures + (captured ? 1 : 0),
-    };
-
-    if (wasFielded) {
-      if (consecutiveNonSelections >= config.NON_SELECTION_TRUST_THRESHOLD) {
-        state = {
-          ...state,
-          T_i: clampTrust(
-            state.T_i + config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY,
-          ),
-        };
-        events.push({
-          t: 'POOL_TRUST_ADJUSTMENT',
-          side: pool.side,
-          match,
-          reason: 'selection_redemption',
-          pieceId: member.state.id,
-          selfTrustDelta: state.T_i - member.state.T_i,
-          peerTrustDeltas: [],
-        });
-      }
-      consecutiveNonSelections = 0;
-      if (
-        state.role !== 'King' &&
-        state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-      ) {
-        status = 'retired';
-        availableAtMatch = Number.MAX_SAFE_INTEGER;
-        retirementCause = 'trauma';
-      } else if (desertion) {
-        status = 'recovering';
-        availableAtMatch = match + config.DESERTION_ABSENCE_MATCHES + 1;
-      } else {
-        status = 'available';
-        availableAtMatch = match + 1;
-      }
-    } else if (eligible) {
-      consecutiveNonSelections += 1;
-      status = 'available';
-      availableAtMatch = match + 1;
-      if (consecutiveNonSelections === config.NON_SELECTION_TRUST_THRESHOLD) {
-        state = {
-          ...state,
-          T_i: clampTrust(state.T_i + config.NON_SELECTION_SELF_TRUST_PENALTY),
-        };
-        erosionTargets.push({
-          pieceId: member.state.id,
-          selfTrustDelta: state.T_i - member.state.T_i,
-        });
-      }
-      if (
-        state.role !== 'King' &&
-        consecutiveNonSelections >= config.OBSOLESCENCE_NON_SELECTION_THRESHOLD
-      ) {
-        status = 'retired';
-        availableAtMatch = Number.MAX_SAFE_INTEGER;
-        retirementCause = 'obsolescence';
-        events.push({
-          t: 'OBSOLESCENCE',
-          side: pool.side,
-          match,
-          pieceId: member.state.id,
-          nonSelectionStreak: consecutiveNonSelections,
-        });
-      }
-    }
-    const nextService: PoolService = {
-      ...service,
-      consecutiveNonSelections,
-    };
-    return updateMember(
-      attainedRole === undefined
-        ? member
-        : {
-            ...member,
-            attainedRole: highestAttainment(member.attainedRole, attainedRole),
-          },
-      state,
-      status,
-      availableAtMatch,
-      nextService,
-      retirementCause,
-    );
-  });
-  for (const erosion of erosionTargets) {
-    const { pieceId } = erosion;
-    const target = members.find((member) => member.state.id === pieceId);
-    if (target === undefined) continue;
-    const peerTrustDeltas: { pieceId: PieceId; delta: number }[] = [];
-    for (let index = 0; index < members.length; index += 1) {
-      const peer = members[index];
-      if (
-        peer === undefined ||
-        peer.state.id === pieceId ||
-        peer.status === 'retired'
-      ) {
-        continue;
-      }
-      const nextTrust = clampTrust(
-        peer.state.T_i +
-          config.NON_SELECTION_PEER_TRUST_PENALTY *
-            (1 + peer.state.traits.w_empathy) *
-            sharedBondScalar(peer.state, target.state),
-      );
-      const delta = nextTrust - peer.state.T_i;
-      if (delta === 0) continue;
-      peerTrustDeltas.push({ pieceId: peer.state.id, delta });
-      members[index] = {
-        ...peer,
-        state: { ...peer.state, T_i: nextTrust },
-      };
-    }
-    events.push({
-      t: 'POOL_TRUST_ADJUSTMENT',
-      side: pool.side,
-      match,
-      reason: 'non_selection',
-      pieceId,
-      selfTrustDelta: erosion.selfTrustDelta,
-      peerTrustDeltas,
-    });
-  }
-  const conscripts = fielded.lineup.filter(
+  const members = [...folded.members];
+  for (const conscript of fielded.lineup.filter(
     (member) => member.provenance === 'conscript',
-  );
-  for (const conscript of conscripts) {
+  )) {
     if (members.some((member) => member.state.id === conscript.state.id))
       continue;
     const state = resultById.get(conscript.state.id) ?? conscript.state;
@@ -744,7 +425,7 @@ function foldSide(
       },
     });
   }
-  return { pool: { ...pool, members }, events };
+  return { pool: { ...pool, members }, events: folded.events };
 }
 
 export function foldMatchIntoPools(input: {
@@ -882,5 +563,5 @@ export function poolSnapshot(
 }
 
 export function poolRoleCounts(): Readonly<Record<PieceRole, number>> {
-  return { ...STARTING_ROLE_COUNTS };
+  return squadRoleCounts();
 }
