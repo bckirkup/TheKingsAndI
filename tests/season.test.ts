@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { HeadlessMatchResult } from '../src/orchestration';
+import { fieldSquad, type HeadlessMatchResult } from '../src/orchestration';
 import {
   applyCaptureInjury,
   type MatchEvent,
@@ -50,6 +50,32 @@ function withMembers(
   members: CommanderPool['members'],
 ): CommanderPool {
   return { ...pool, members };
+}
+
+function fieldShipped(pool: CommanderPool) {
+  return fieldSquad(pool, 1, (role, match, sequence) => {
+    const template = pool.members.find((member) => member.originRole === role);
+    if (template === undefined) {
+      throw new Error(`Missing fixture template for ${role}.`);
+    }
+    return {
+      ...template,
+      state: {
+        ...template.state,
+        id: `fixture:${role}:${String(sequence)}`,
+        role,
+      },
+      originRole: role,
+      status: 'available',
+      availableAtMatch: match,
+      provenance: 'conscript',
+      service: {
+        ...template.service,
+        matchesPlayed: 0,
+        consecutiveNonSelections: 0,
+      },
+    };
+  });
 }
 
 describe('scarce season pools', () => {
@@ -178,7 +204,7 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldPool(pool, 1);
+    const fielded = fieldShipped(pool);
     const selectedQueen = fielded.lineup.find(
       (member) => member.state.role === 'Queen',
     );
@@ -215,7 +241,7 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldPool(pool, 1);
+    const fielded = fieldShipped(pool);
     const pawnChairs = fielded.lineup.filter(
       (member) => member.state.id === pawn.state.id,
     );
@@ -252,7 +278,7 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldPool(pool, 1);
+    const fielded = fieldShipped(pool);
     expect(
       fielded.lineup.find((member) => member.state.id === pawn.state.id)?.state
         .role,

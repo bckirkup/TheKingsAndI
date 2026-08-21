@@ -34,6 +34,26 @@ export {
 } from './pacingConfig';
 export { createStartingRoster } from './roster';
 export { applyPromotion } from './promotion';
+export {
+  availableAt,
+  compareForPolicy,
+  FIELDING_POLICIES,
+  fieldSquad,
+  foldSquadMatch,
+  highestAttainment,
+  poolRoleCounts,
+  SQUAD_CONFIG,
+  statusForConscript,
+} from './squadFielding';
+export type {
+  FieldingPolicy,
+  SquadConfig,
+  SquadEvent,
+  SquadFielded,
+  SquadFieldingPool,
+  SquadMember,
+  SquadService,
+} from './squadFielding';
 export type {
   HeadlessLeaderPort,
   HeadlessMatchConfig,
