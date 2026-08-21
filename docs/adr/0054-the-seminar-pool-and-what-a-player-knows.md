@@ -106,8 +106,9 @@ commander who promotes has to answer for it. The D149 mechanism now makes that
 outcome earnable rather than foregone: `ABILITY_GRADE` events move `E_i` from
 vindicated judgment at `src/orchestration/psychologyHooks.ts:270-285`, and
 `strongest_available` compares ability relative to origin-role starting ability
-at `sim/pool.ts:252-277`. The shipped step scale is zero pending calibration,
-so this slice changes no default behavior. Promotion hope remains `500`, while
+at `sim/pool.ts:252-277`. The shipped earned-ability step scale is calibrated
+at `2` with loss multiplier `1`, so this slice does not assume that ability is a
+no-op. Promotion hope remains `500`, while
 its campaign-scale meaning and the clamp remain open under D148.
 
 ### 6. What the player may know (D150 — direction, magnitudes open)

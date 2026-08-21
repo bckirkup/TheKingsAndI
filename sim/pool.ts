@@ -39,6 +39,8 @@ export interface PoolService {
 export interface PoolMember {
   readonly state: PieceState;
   readonly originRole: PieceRole;
+  /** Highest role this member has attained through a PROMOTION event. */
+  readonly attainedRole?: PieceRole;
   readonly status: 'available' | 'recovering' | 'retired';
   readonly availableAtMatch: number;
   readonly provenance: 'original' | 'conscript';
@@ -90,6 +92,123 @@ export interface PoolSnapshot {
   readonly veteransRested: number;
   readonly passedOverDistribution: Readonly<Record<string, number>>;
   readonly obsolescenceCount: number;
+  readonly fieldedMemberCount: number;
+  readonly benchUtilisation: number;
+  readonly lineupChurn: number;
+}
+
+export interface PoolSeasonMetrics {
+  readonly squadSize: number;
+  readonly distinctMembersFielded: number;
+  readonly benchUtilisation: number;
+  readonly meanLineupChurn: number;
+  readonly postPromotionSelectionRate: number;
+  readonly unpromotedOriginControlRate: number;
+  readonly crownedNeverFieldedAgain: number;
+  readonly crownedRetiredForObsolescence: number;
+  readonly promotions: number;
+  readonly promotionsWithRemainingWindow: number;
+  readonly crownedSelectionRate: number;
+}
+
+export function poolSeasonMetrics(input: {
+  readonly initialPool: CommanderPool;
+  readonly finalPool: CommanderPool;
+  readonly lineups: readonly (readonly PieceId[])[];
+  readonly promotionMatches: ReadonlyMap<PieceId, number>;
+}): PoolSeasonMetrics {
+  const fieldedById = new Map<PieceId, Set<number>>();
+  input.lineups.forEach((lineup, index) => {
+    for (const pieceId of lineup) {
+      const matches = fieldedById.get(pieceId) ?? new Set<number>();
+      matches.add(index + 1);
+      fieldedById.set(pieceId, matches);
+    }
+  });
+  const distinctMembersFielded = fieldedById.size;
+  const promotions = input.promotionMatches.size;
+  let postSelections = 0;
+  let postOpportunities = 0;
+  let crownedSelections = 0;
+  let crownedOpportunities = 0;
+  let promotionsWithRemainingWindow = 0;
+  let controlSelections = 0;
+  let controlOpportunities = 0;
+  let crownedNeverFieldedAgain = 0;
+  for (const [pieceId, promotionMatch] of input.promotionMatches) {
+    const member = input.initialPool.members.find(
+      (candidate) => candidate.state.id === pieceId,
+    );
+    const fieldedMatches = fieldedById.get(pieceId) ?? new Set<number>();
+    const laterMatches = input.lineups.length - promotionMatch;
+    const laterSelections = [...fieldedMatches].filter(
+      (match) => match > promotionMatch,
+    ).length;
+    postSelections += laterSelections;
+    postOpportunities += Math.max(0, laterMatches);
+    crownedSelections += laterSelections;
+    crownedOpportunities += Math.max(0, laterMatches);
+    if (laterMatches > 0) {
+      promotionsWithRemainingWindow += 1;
+      if (laterSelections === 0) crownedNeverFieldedAgain += 1;
+    }
+    if (member !== undefined) {
+      const controls = input.initialPool.members.filter(
+        (candidate) =>
+          candidate.originRole === member.originRole &&
+          !input.promotionMatches.has(candidate.state.id),
+      );
+      for (const control of controls) {
+        const controlMatches = fieldedById.get(control.state.id) ?? new Set();
+        for (
+          let match = promotionMatch + 1;
+          match <= input.lineups.length;
+          match += 1
+        ) {
+          controlOpportunities += 1;
+          if (controlMatches.has(match)) controlSelections += 1;
+        }
+      }
+    }
+  }
+  const retiredForObsolescence = new Set(
+    input.finalPool.members
+      .filter(
+        (member) =>
+          member.attainedRole !== undefined &&
+          member.retirementCause === 'obsolescence',
+      )
+      .map((member) => member.state.id),
+  );
+  const squadSize = input.initialPool.members.length;
+  const meanLineupChurn =
+    input.lineups.length < 2
+      ? 0
+      : input.lineups.slice(1).reduce((total, lineup, index) => {
+          const previous = new Set(input.lineups[index] ?? []);
+          return (
+            total +
+            lineup.filter((pieceId) => !previous.has(pieceId)).length /
+              Math.max(1, lineup.length)
+          );
+        }, 0) /
+        (input.lineups.length - 1);
+  return {
+    squadSize,
+    distinctMembersFielded,
+    benchUtilisation: distinctMembersFielded / Math.max(1, squadSize),
+    meanLineupChurn,
+    postPromotionSelectionRate: postSelections / Math.max(1, postOpportunities),
+    unpromotedOriginControlRate:
+      controlSelections / Math.max(1, controlOpportunities),
+    crownedNeverFieldedAgain,
+    crownedRetiredForObsolescence: [...retiredForObsolescence].filter((id) =>
+      input.promotionMatches.has(id),
+    ).length,
+    promotions,
+    promotionsWithRemainingWindow,
+    crownedSelectionRate: crownedSelections / Math.max(1, crownedOpportunities),
+  };
 }
 
 const STARTING_ROLE_COUNTS: Readonly<Record<PieceRole, number>> = {
@@ -232,6 +351,34 @@ function availableAt(member: PoolMember, match: number): boolean {
   );
 }
 
+const FIELDING_ORDER: readonly PieceRole[] = [
+  'King',
+  'Queen',
+  'Rook',
+  'Bishop',
+  'Knight',
+  'Pawn',
+];
+
+const ATTAINMENT_RANK: Readonly<Record<PieceRole, number>> = {
+  Pawn: 1,
+  Knight: 2,
+  Bishop: 2,
+  Rook: 3,
+  Queen: 4,
+  King: 5,
+};
+
+function highestAttainment(
+  current: PieceRole | undefined,
+  candidate: PieceRole,
+): PieceRole {
+  return (ATTAINMENT_RANK[candidate] ?? 0) >
+    (ATTAINMENT_RANK[current ?? 'Pawn'] ?? 0)
+    ? candidate
+    : (current ?? candidate);
+}
+
 function statusForConscript(
   state: PieceState,
   desertions: ReadonlySet<PieceId>,
@@ -342,40 +489,48 @@ function conscriptMember(
 
 export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
   const lineup: PoolMember[] = [];
+  const selectedIds = new Set<PieceId>();
   let conscriptsFielded = 0;
-  let veteransRested = 0;
   let sequence = 0;
-  for (const role of Object.keys(STARTING_ROLE_COUNTS) as PieceRole[]) {
+  for (const role of FIELDING_ORDER) {
     const required = STARTING_ROLE_COUNTS[role];
     const available = pool.members
       .filter(
-        (member) => member.state.role === role && availableAt(member, match),
+        (member) =>
+          (member.originRole === role || member.attainedRole === role) &&
+          availableAt(member, match) &&
+          !selectedIds.has(member.state.id),
       )
       .sort((left, right) =>
         compareForPolicy(pool.fieldingPolicy, left, right),
       );
-    const selected = available.slice(0, required);
+    const selected = available.slice(0, required).map((member) => ({
+      ...member,
+      state: { ...member.state, role },
+    }));
     if (role === 'King' && selected.length !== 1) {
       throw new Error('Commander pool must always field its King.');
     }
-    if (role !== 'King') {
-      veteransRested += available.filter(
-        (member) =>
-          member.service.matchesPlayed > 0 &&
-          !selected.some((candidate) => candidate.state.id === member.state.id),
-      ).length;
-    }
     lineup.push(...selected);
+    selected.forEach((member) => selectedIds.add(member.state.id));
     while (
       role !== 'King' &&
-      lineup.filter((member) => member.state.role === role).length < required
+      selected.filter((member) => member.state.role === role).length < required
     ) {
       const conscript = conscriptMember(pool, role, match, sequence);
       lineup.push(conscript);
+      selected.push(conscript);
+      selectedIds.add(conscript.state.id);
       conscriptsFielded += 1;
       sequence += 1;
     }
   }
+  const veteransRested = pool.members.filter(
+    (member) =>
+      availableAt(member, match) &&
+      member.service.matchesPlayed > 0 &&
+      !selectedIds.has(member.state.id),
+  ).length;
   return { lineup, conscriptsFielded, veteransRested };
 }
 
@@ -405,6 +560,7 @@ function foldSide(
   desertions: ReadonlySet<PieceId>,
   refusals: ReadonlyMap<PieceId, number>,
   fieldedIds: ReadonlySet<PieceId>,
+  promotions: ReadonlyMap<PieceId, PieceRole>,
   match: number,
   config: SeasonConfig,
 ): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
@@ -422,6 +578,7 @@ function foldSide(
     let state = wasFielded
       ? (resultById.get(member.state.id) ?? member.state)
       : member.state;
+    const attainedRole = promotions.get(member.state.id);
     let status = member.status;
     let availableAtMatch = member.availableAtMatch;
     let retirementCause = member.retirementCause;
@@ -505,7 +662,12 @@ function foldSide(
       consecutiveNonSelections,
     };
     return updateMember(
-      member,
+      attainedRole === undefined
+        ? member
+        : {
+            ...member,
+            attainedRole: highestAttainment(member.attainedRole, attainedRole),
+          },
       state,
       status,
       availableAtMatch,
@@ -558,9 +720,18 @@ function foldSide(
     if (members.some((member) => member.state.id === conscript.state.id))
       continue;
     const state = resultById.get(conscript.state.id) ?? conscript.state;
+    const attainedRole = promotions.get(conscript.state.id);
     members.push({
       ...conscript,
       state,
+      ...(attainedRole === undefined
+        ? {}
+        : {
+            attainedRole: highestAttainment(
+              conscript.attainedRole,
+              attainedRole,
+            ),
+          }),
       status: statusForConscript(state, desertions, config),
       availableAtMatch: desertions.has(state.id)
         ? match + config.DESERTION_ABSENCE_MATCHES + 1
@@ -614,7 +785,22 @@ export function foldMatchIntoPools(input: {
   );
   const playerRefusals = new Map<PieceId, number>();
   const enemyRefusals = new Map<PieceId, number>();
+  const playerPromotions = new Map<PieceId, PieceRole>();
+  const enemyPromotions = new Map<PieceId, PieceRole>();
   for (const event of input.result.events) {
+    if (event.t === 'PROMOTION') {
+      if (playerIds.has(event.pieceId)) {
+        playerPromotions.set(
+          event.pieceId,
+          highestAttainment(playerPromotions.get(event.pieceId), event.toRole),
+        );
+      } else if (enemyIds.has(event.pieceId)) {
+        enemyPromotions.set(
+          event.pieceId,
+          highestAttainment(enemyPromotions.get(event.pieceId), event.toRole),
+        );
+      }
+    }
     if (event.t !== 'REFUSAL') continue;
     let counts: Map<PieceId, number> | undefined;
     if (playerIds.has(event.pieceId)) {
@@ -633,6 +819,7 @@ export function foldMatchIntoPools(input: {
     playerDesertions,
     playerRefusals,
     playerIds,
+    playerPromotions,
     input.match,
     config,
   );
@@ -644,6 +831,7 @@ export function foldMatchIntoPools(input: {
     enemyDesertions,
     enemyRefusals,
     enemyIds,
+    enemyPromotions,
     input.match,
     config,
   );
@@ -657,7 +845,15 @@ export function foldMatchIntoPools(input: {
 export function poolSnapshot(
   pool: CommanderPool,
   fielded: FieldedPool,
+  previousLineupIds: readonly PieceId[] = [],
 ): PoolSnapshot {
+  const lineupIds = fielded.lineup.map((member) => member.state.id);
+  const previous = new Set(previousLineupIds);
+  const lineupChurn =
+    previousLineupIds.length === 0
+      ? 0
+      : lineupIds.filter((id) => !previous.has(id)).length /
+        Math.max(1, lineupIds.length);
   return {
     total: pool.members.length,
     available: pool.members.filter((member) => member.status === 'available')
@@ -678,6 +874,10 @@ export function poolSnapshot(
     obsolescenceCount: pool.members.filter(
       (member) => member.retirementCause === 'obsolescence',
     ).length,
+    fieldedMemberCount: new Set(lineupIds).size,
+    benchUtilisation:
+      new Set(lineupIds).size / Math.max(1, pool.members.length),
+    lineupChurn,
   };
 }
 

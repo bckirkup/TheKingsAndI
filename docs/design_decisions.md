@@ -1120,6 +1120,17 @@ testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
 and how far testimony may rationalize.
 
+### D151 ✅ How does a crowned member contest the seminar chairs? (ADR 0056)
+The harness pool keeps `originRole` as permanent identity and folds the
+highest attained role from `PROMOTION` events into `PoolMember.attainedRole`.
+Eligibility is origin-inclusive (`originRole === R || attainedRole === R`),
+chairs are filled highest-first, and selected IDs are deduplicated. The
+fielded state receives the chair role while attained identity remains separate.
+The implementation is in `sim/pool.ts:39-206`, with season metrics wired in
+`sim/season.ts:40-157` and named findings in `sim/degeneracy.ts:1-420`.
+This is the harness/pool slice only; app persistence and UI bench work remain
+open under D148/D150.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had

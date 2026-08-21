@@ -107,6 +107,10 @@ async function main(): Promise<void> {
       horizon: result.horizon,
       whiteSnapshots: result.whiteSnapshots,
       blackSnapshots: result.blackSnapshots,
+      whitePoolMetrics: result.whitePoolMetrics,
+      blackPoolMetrics: result.blackPoolMetrics,
+      whitePoolFindings: result.whitePoolFindings,
+      blackPoolFindings: result.blackPoolFindings,
       finalWhiteTrauma: result.finalWhitePool.members.map(
         (member) => member.state.B_i,
       ),

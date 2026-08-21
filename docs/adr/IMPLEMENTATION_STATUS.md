@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0054)
+# ADR implementation status (0035–0056)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -31,6 +31,7 @@ the discrepancy is corrected.
 | 0053 | Pawn hope, capture truth, and posthumous class credit | Accepted for mechanism slice; approved/shipped hope `500` and floor `250` | **Shipped** — `src/chess/features.ts:112-151`, `src/psychology/desertion.ts:231-333`, `src/orchestration/psychologyHooks.ts:68-96`; current evidence: `docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md` |
 | 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slices 1–2 render identity and service truth, emit `PROMOTION`, write in-match roles, record attained roles, and count promotions; campaign role carry is flag-gated off by default and cohort prestige is wired at zero; no player-facing bench |
 | 0055 | Earned ability from vindicated judgment | Resolved and calibrated at scale `2` / loss multiplier `1` | **Shipped** — `src/psychology/reducers.ts:65-108`, `src/orchestration/psychologyHooks.ts:270-359`, `sim/pool.ts:252-277`, and campaign spread metrics; evidence: `docs/calibration/2026-08-19-earned-ability-magnitude.md` |
+| 0056 | Origin-inclusive chair contests and the bench instrument | Accepted for harness/pool slice; app bench remains open | **Shipped in sim** — `sim/pool.ts:39-206`, `sim/season.ts:40-157`, and `sim/degeneracy.ts:1-420`; D148/D150 remain open |
 
 ## Confirmed implementation gaps
 
