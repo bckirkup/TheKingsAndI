@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { fieldSquad, type HeadlessMatchResult } from '../src/orchestration';
+import {
+  fieldSquad,
+  type HeadlessMatchResult,
+  type SquadFieldingPool,
+  type SquadMember,
+} from '../src/orchestration';
 import {
   applyCaptureInjury,
+  defaultCredence,
+  defaultRumor,
   type MatchEvent,
   type PieceState,
 } from '../src/psychology';
@@ -50,32 +57,6 @@ function withMembers(
   members: CommanderPool['members'],
 ): CommanderPool {
   return { ...pool, members };
-}
-
-function fieldShipped(pool: CommanderPool) {
-  return fieldSquad(pool, 1, (role, match, sequence) => {
-    const template = pool.members.find((member) => member.originRole === role);
-    if (template === undefined) {
-      throw new Error(`Missing fixture template for ${role}.`);
-    }
-    return {
-      ...template,
-      state: {
-        ...template.state,
-        id: `fixture:${role}:${String(sequence)}`,
-        role,
-      },
-      originRole: role,
-      status: 'available',
-      availableAtMatch: match,
-      provenance: 'conscript',
-      service: {
-        ...template.service,
-        matchesPlayed: 0,
-        consecutiveNonSelections: 0,
-      },
-    };
-  });
 }
 
 describe('scarce season pools', () => {
@@ -204,7 +185,7 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldShipped(pool);
+    const fielded = fieldPool(pool, 1);
     const selectedQueen = fielded.lineup.find(
       (member) => member.state.role === 'Queen',
     );
@@ -241,7 +222,7 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldShipped(pool);
+    const fielded = fieldPool(pool, 1);
     const pawnChairs = fielded.lineup.filter(
       (member) => member.state.id === pawn.state.id,
     );
@@ -278,7 +259,74 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const fielded = fieldShipped(pool);
+    const fielded = fieldPool(pool, 1);
+    expect(
+      fielded.lineup.find((member) => member.state.id === pawn.state.id)?.state
+        .role,
+    ).toBe('Queen');
+  });
+
+  it('exposes shipped fielding to non-sim callers', (): void => {
+    const makeMember = (
+      id: string,
+      role: PieceState['role'],
+      attainedRole?: PieceState['role'],
+    ): SquadMember => ({
+      state: {
+        id,
+        role,
+        traits: {
+          w_honor: 0.5,
+          w_courage: 0.5,
+          w_ambition: 0.5,
+          w_loyalty: 0.5,
+          w_empathy: 0.5,
+          w_prestige: 0.5,
+        },
+        E_i: 50,
+        T_i: 50,
+        M_i: 50,
+        B_i: 0,
+        dyadicAffinity: {},
+        classPrestige: {
+          Pawn: 0,
+          Knight: 0,
+          Bishop: 0,
+          Rook: 0,
+          Queen: 0,
+          King: 0,
+        },
+        engagementFactor: 1,
+        credence: defaultCredence(),
+        rumor: defaultRumor(),
+      },
+      originRole: role,
+      ...(attainedRole === undefined ? {} : { attainedRole }),
+      status: 'available',
+      availableAtMatch: 1,
+      provenance: 'original',
+      service: {
+        matchesPlayed: 0,
+        desertions: 0,
+        refusals: 0,
+        captures: 0,
+        consecutiveNonSelections: 0,
+      },
+    });
+    const pawn = makeMember('pawn', 'Pawn', 'Queen');
+    const pool: SquadFieldingPool = {
+      members: [makeMember('king', 'King'), pawn],
+      fieldingPolicy: 'strongest_available',
+    };
+    const fielded = fieldSquad(
+      pool,
+      1,
+      (role, match, sequence): SquadMember => ({
+        ...makeMember(`conscript:${role}:${String(sequence)}`, role),
+        availableAtMatch: match,
+        provenance: 'conscript',
+      }),
+    );
     expect(
       fielded.lineup.find((member) => member.state.id === pawn.state.id)?.state
         .role,
