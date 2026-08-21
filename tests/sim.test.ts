@@ -595,6 +595,7 @@ describe('degeneracy detectors', () => {
       crownedNeverFieldedAgain: 2,
       crownedRetiredForObsolescence: 1,
       promotions: 2,
+      promotionsWithRemainingWindow: 2,
       crownedSelectionRate: 0,
     };
     const healthy: PoolSeasonMetrics = {
@@ -619,6 +620,48 @@ describe('degeneracy detectors', () => {
     expect(healthyCodes).not.toContain('promotion-decoration');
     expect(healthyCodes).not.toContain('promotion-trap');
     expect(healthyCodes).not.toContain('frozen-bench');
+
+    const afterMeasurement = {
+      ...healthy,
+      postPromotionSelectionRate: 0.57,
+      unpromotedOriginControlRate: 0.499,
+      crownedSelectionRate: 0.57,
+      crownedNeverFieldedAgain: 0,
+      promotionsWithRemainingWindow: 3,
+    };
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        poolMetrics: afterMeasurement,
+      }).some((finding) => finding.code === 'promotion-trap'),
+    ).toBe(false);
+
+    const preChangeTrap = {
+      ...healthy,
+      postPromotionSelectionRate: 0.09,
+      unpromotedOriginControlRate: 0.67,
+      crownedSelectionRate: 0.09,
+      crownedNeverFieldedAgain: 0,
+      promotions: 2,
+      promotionsWithRemainingWindow: 2,
+    };
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        poolMetrics: preChangeTrap,
+      }).some((finding) => finding.code === 'promotion-trap'),
+    ).toBe(true);
+
+    const finalMatchPromotion = {
+      ...healthy,
+      promotions: 1,
+      promotionsWithRemainingWindow: 0,
+      crownedSelectionRate: 0,
+      postPromotionSelectionRate: 0,
+    };
+    const finalMatchCodes = detectDegeneracy('supportive', metrics, summary, {
+      poolMetrics: finalMatchPromotion,
+    }).map((finding) => finding.code);
+    expect(finalMatchCodes).not.toContain('promotion-decoration');
+    expect(finalMatchCodes).not.toContain('promotion-trap');
   });
 
   it('flags collinear transcript metrics with a golden pair', () => {

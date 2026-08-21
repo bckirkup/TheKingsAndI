@@ -12,6 +12,7 @@ import {
   fieldPool,
   foldMatchIntoPools,
   poolSnapshot,
+  poolSeasonMetrics,
   poolRoleCounts,
   type CommanderPool,
 } from '../sim/pool';
@@ -52,6 +53,37 @@ function withMembers(
 }
 
 describe('scarce season pools', () => {
+  it('does not count a final-match promotion as a missed return', () => {
+    const pool = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'supportive',
+      depthFactor: 1,
+    });
+    const promoted = pool.members.find(
+      (member) => member.originRole === 'Pawn',
+    );
+    if (promoted === undefined) throw new Error('Expected a pawn member.');
+    const metrics = poolSeasonMetrics({
+      initialPool: pool,
+      finalPool: pool,
+      lineups: [[promoted.state.id], [promoted.state.id]],
+      promotionMatches: new Map([[promoted.state.id, 2]]),
+    });
+    expect(metrics.promotions).toBe(1);
+    expect(metrics.promotionsWithRemainingWindow).toBe(0);
+    expect(metrics.crownedNeverFieldedAgain).toBe(0);
+
+    const noReturn = poolSeasonMetrics({
+      initialPool: pool,
+      finalPool: pool,
+      lineups: [[promoted.state.id], []],
+      promotionMatches: new Map([[promoted.state.id, 1]]),
+    });
+    expect(noReturn.promotionsWithRemainingWindow).toBe(1);
+    expect(noReturn.crownedNeverFieldedAgain).toBe(1);
+  });
+
   it('scales role depth while keeping exactly one King', () => {
     const pool = createCommanderPool({
       id: 'w',

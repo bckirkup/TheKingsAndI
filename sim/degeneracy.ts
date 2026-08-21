@@ -40,6 +40,10 @@ export const DEGENERACY_CONFIG = {
   overrideInertRefusalRateThreshold: 0.05,
   /** Crowned selection below this means elevation is a trap. */
   promotionTrapSelectionRateThreshold: 0.01,
+  /** Require more than one promotion window before declaring a trap. */
+  promotionTrapMinimumPromotions: 2,
+  /** Crowned selection below this share of control indicates a trap. */
+  promotionTrapControlRatioThreshold: 0.5,
   /** Churn below this means a deep bench is frozen. */
   frozenBenchChurnThreshold: 0.001,
 } as const;
@@ -65,6 +69,8 @@ export interface DegeneracyAssertionOptions {
   readonly overrideInertRefusalRateThreshold?: number;
   readonly poolMetrics?: PoolSeasonMetrics;
   readonly promotionTrapSelectionRateThreshold?: number;
+  readonly promotionTrapMinimumPromotions?: number;
+  readonly promotionTrapControlRatioThreshold?: number;
   readonly frozenBenchChurnThreshold?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
@@ -104,6 +110,8 @@ export function detectPoolDegeneracy(
   poolMetrics: PoolSeasonMetrics,
   options: {
     readonly promotionTrapSelectionRateThreshold?: number;
+    readonly promotionTrapMinimumPromotions?: number;
+    readonly promotionTrapControlRatioThreshold?: number;
     readonly frozenBenchChurnThreshold?: number;
   } = {},
 ): DegeneracyFinding[] {
@@ -114,9 +122,16 @@ export function detectPoolDegeneracy(
   const frozenThreshold =
     options.frozenBenchChurnThreshold ??
     DEGENERACY_CONFIG.frozenBenchChurnThreshold;
+  const minimumPromotions =
+    options.promotionTrapMinimumPromotions ??
+    DEGENERACY_CONFIG.promotionTrapMinimumPromotions;
+  const controlRatioThreshold =
+    options.promotionTrapControlRatioThreshold ??
+    DEGENERACY_CONFIG.promotionTrapControlRatioThreshold;
   if (
-    poolMetrics.promotions > 0 &&
-    poolMetrics.crownedNeverFieldedAgain === poolMetrics.promotions
+    poolMetrics.promotionsWithRemainingWindow > 0 &&
+    poolMetrics.crownedNeverFieldedAgain ===
+      poolMetrics.promotionsWithRemainingWindow
   ) {
     findings.push({
       code: 'promotion-decoration',
@@ -124,8 +139,11 @@ export function detectPoolDegeneracy(
     });
   }
   if (
-    poolMetrics.promotions > 0 &&
-    poolMetrics.crownedSelectionRate <= trapThreshold
+    poolMetrics.promotionsWithRemainingWindow >= minimumPromotions &&
+    (poolMetrics.crownedSelectionRate <= trapThreshold ||
+      (poolMetrics.unpromotedOriginControlRate > 0 &&
+        poolMetrics.crownedSelectionRate <
+          poolMetrics.unpromotedOriginControlRate * controlRatioThreshold))
   ) {
     findings.push({
       code: 'promotion-trap',
@@ -347,6 +365,12 @@ export function detectDegeneracy(
     promotionTrapSelectionRateThreshold:
       options.promotionTrapSelectionRateThreshold ??
       DEGENERACY_CONFIG.promotionTrapSelectionRateThreshold,
+    promotionTrapMinimumPromotions:
+      options.promotionTrapMinimumPromotions ??
+      DEGENERACY_CONFIG.promotionTrapMinimumPromotions,
+    promotionTrapControlRatioThreshold:
+      options.promotionTrapControlRatioThreshold ??
+      DEGENERACY_CONFIG.promotionTrapControlRatioThreshold,
     frozenBenchChurnThreshold:
       options.frozenBenchChurnThreshold ??
       DEGENERACY_CONFIG.frozenBenchChurnThreshold,
@@ -427,6 +451,9 @@ export function detectDegeneracy(
       ...detectPoolDegeneracy(options.poolMetrics, {
         promotionTrapSelectionRateThreshold:
           config.promotionTrapSelectionRateThreshold,
+        promotionTrapMinimumPromotions: config.promotionTrapMinimumPromotions,
+        promotionTrapControlRatioThreshold:
+          config.promotionTrapControlRatioThreshold,
         frozenBenchChurnThreshold: config.frozenBenchChurnThreshold,
       }),
     );

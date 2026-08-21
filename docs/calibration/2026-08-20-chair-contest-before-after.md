@@ -39,3 +39,13 @@ The after measurements show that a crowned member remains selectable after
 losing the attained chair, with the remaining spread reflecting ordinary
 policy and availability differences rather than permanent loss of origin-role
 eligibility.
+
+## Window definition
+
+Crowned opportunities count every match after promotion through the member's
+retirement or death; matches after that point are counted as missed selections.
+Control opportunities use the same window and likewise include controls after
+their retirement. Both directions therefore deflate the rates, but the two
+rates remain comparable to each other. These values must not be compared
+directly with a measurement that removes post-retirement matches from its
+window.

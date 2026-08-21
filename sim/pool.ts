@@ -107,6 +107,7 @@ export interface PoolSeasonMetrics {
   readonly crownedNeverFieldedAgain: number;
   readonly crownedRetiredForObsolescence: number;
   readonly promotions: number;
+  readonly promotionsWithRemainingWindow: number;
   readonly crownedSelectionRate: number;
 }
 
@@ -130,6 +131,7 @@ export function poolSeasonMetrics(input: {
   let postOpportunities = 0;
   let crownedSelections = 0;
   let crownedOpportunities = 0;
+  let promotionsWithRemainingWindow = 0;
   let controlSelections = 0;
   let controlOpportunities = 0;
   let crownedNeverFieldedAgain = 0;
@@ -146,7 +148,10 @@ export function poolSeasonMetrics(input: {
     postOpportunities += Math.max(0, laterMatches);
     crownedSelections += laterSelections;
     crownedOpportunities += Math.max(0, laterMatches);
-    if (laterSelections === 0) crownedNeverFieldedAgain += 1;
+    if (laterMatches > 0) {
+      promotionsWithRemainingWindow += 1;
+      if (laterSelections === 0) crownedNeverFieldedAgain += 1;
+    }
     if (member !== undefined) {
       const controls = input.initialPool.members.filter(
         (candidate) =>
@@ -175,7 +180,7 @@ export function poolSeasonMetrics(input: {
       )
       .map((member) => member.state.id),
   );
-  const initialSize = input.initialPool.members.length;
+  const squadSize = input.initialPool.members.length;
   const meanLineupChurn =
     input.lineups.length < 2
       ? 0
@@ -189,9 +194,9 @@ export function poolSeasonMetrics(input: {
         }, 0) /
         (input.lineups.length - 1);
   return {
-    squadSize: initialSize,
+    squadSize,
     distinctMembersFielded,
-    benchUtilisation: distinctMembersFielded / Math.max(1, initialSize),
+    benchUtilisation: distinctMembersFielded / Math.max(1, squadSize),
     meanLineupChurn,
     postPromotionSelectionRate: postSelections / Math.max(1, postOpportunities),
     unpromotedOriginControlRate:
@@ -201,6 +206,7 @@ export function poolSeasonMetrics(input: {
       input.promotionMatches.has(id),
     ).length,
     promotions,
+    promotionsWithRemainingWindow,
     crownedSelectionRate: crownedSelections / Math.max(1, crownedOpportunities),
   };
 }
@@ -485,7 +491,6 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
   const lineup: PoolMember[] = [];
   const selectedIds = new Set<PieceId>();
   let conscriptsFielded = 0;
-  let veteransRested = 0;
   let sequence = 0;
   for (const role of FIELDING_ORDER) {
     const required = STARTING_ROLE_COUNTS[role];
@@ -506,13 +511,6 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
     if (role === 'King' && selected.length !== 1) {
       throw new Error('Commander pool must always field its King.');
     }
-    if (role !== 'King') {
-      veteransRested += available.filter(
-        (member) =>
-          member.service.matchesPlayed > 0 &&
-          !selected.some((candidate) => candidate.state.id === member.state.id),
-      ).length;
-    }
     lineup.push(...selected);
     selected.forEach((member) => selectedIds.add(member.state.id));
     while (
@@ -527,6 +525,12 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
       sequence += 1;
     }
   }
+  const veteransRested = pool.members.filter(
+    (member) =>
+      availableAt(member, match) &&
+      member.service.matchesPlayed > 0 &&
+      !selectedIds.has(member.state.id),
+  ).length;
   return { lineup, conscriptsFielded, veteransRested };
 }
 
