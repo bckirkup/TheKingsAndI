@@ -32,6 +32,7 @@ import {
   EMPTY_DESERTION_SUMMARY,
   type MatchMetrics,
 } from '../sim/metrics';
+import type { PoolSeasonMetrics } from '../sim/pool';
 
 describe('simulation harness determinism', () => {
   it('is byte-identical when repeated with the same seed', async () => {
@@ -579,6 +580,45 @@ describe('degeneracy detectors', () => {
     expect(() =>
       assertCalibrationBounds('tyrannical', saturatedSummary),
     ).toThrow('early');
+  });
+
+  it('detects promotion decoration and the elevation trap, but not a healthy crown', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const degenerate: PoolSeasonMetrics = {
+      squadSize: 31,
+      distinctMembersFielded: 16,
+      benchUtilisation: 16 / 31,
+      meanLineupChurn: 0,
+      postPromotionSelectionRate: 0,
+      unpromotedOriginControlRate: 0.7,
+      crownedNeverFieldedAgain: 2,
+      crownedRetiredForObsolescence: 1,
+      promotions: 2,
+      crownedSelectionRate: 0,
+    };
+    const healthy: PoolSeasonMetrics = {
+      ...degenerate,
+      distinctMembersFielded: 28,
+      benchUtilisation: 28 / 31,
+      meanLineupChurn: 0.2,
+      postPromotionSelectionRate: 0.6,
+      crownedNeverFieldedAgain: 0,
+      crownedRetiredForObsolescence: 0,
+      crownedSelectionRate: 0.6,
+    };
+    const degenerateCodes = detectDegeneracy('supportive', metrics, summary, {
+      poolMetrics: degenerate,
+    }).map((finding) => finding.code);
+    expect(degenerateCodes).toContain('promotion-decoration');
+    expect(degenerateCodes).toContain('promotion-trap');
+    expect(degenerateCodes).toContain('frozen-bench');
+    const healthyCodes = detectDegeneracy('supportive', metrics, summary, {
+      poolMetrics: healthy,
+    }).map((finding) => finding.code);
+    expect(healthyCodes).not.toContain('promotion-decoration');
+    expect(healthyCodes).not.toContain('promotion-trap');
+    expect(healthyCodes).not.toContain('frozen-bench');
   });
 
   it('flags collinear transcript metrics with a golden pair', () => {

@@ -1,4 +1,5 @@
 import type { EnginePort } from '../src/engine/types';
+import type { PieceId } from '../src/chess';
 import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 import { matchSeedForCampaign } from './campaign';
@@ -7,6 +8,7 @@ import {
   disposeSimEngine,
   type SimEngineKind,
 } from './engine';
+import { detectPoolDegeneracy, type DegeneracyFinding } from './degeneracy';
 import {
   metricsFromMatch,
   buildHorizonSeries,
@@ -19,8 +21,10 @@ import {
   fieldPool,
   foldMatchIntoPools,
   poolSnapshot,
+  poolSeasonMetrics,
   type CommanderPool,
   type PoolEvent,
+  type PoolSeasonMetrics,
   type PoolSnapshot,
 } from './pool';
 import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
@@ -44,6 +48,10 @@ export interface SeasonResult {
   readonly poolEvents: readonly PoolEvent[];
   readonly finalWhitePool: CommanderPool;
   readonly finalBlackPool: CommanderPool;
+  readonly whitePoolMetrics: PoolSeasonMetrics;
+  readonly blackPoolMetrics: PoolSeasonMetrics;
+  readonly whitePoolFindings: readonly DegeneracyFinding[];
+  readonly blackPoolFindings: readonly DegeneracyFinding[];
 }
 
 export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
@@ -72,6 +80,12 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
   const whiteSnapshots: PoolSnapshot[] = [];
   const blackSnapshots: PoolSnapshot[] = [];
   const poolEvents: PoolEvent[] = [];
+  const whiteLineups: PieceId[][] = [];
+  const blackLineups: PieceId[][] = [];
+  const whitePromotions = new Map<PieceId, number>();
+  const blackPromotions = new Map<PieceId, number>();
+  const initialWhitePool = white;
+  const initialBlackPool = black;
   const engine =
     options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
   const ownedEngine = options.engine === undefined;
@@ -81,6 +95,8 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
       const blackFielded = fieldPool(blackPool, match);
       const whiteLineup = whiteFielded.lineup.map((member) => member.state);
       const blackLineup = blackFielded.lineup.map((member) => member.state);
+      whiteLineups.push(whiteFielded.lineup.map((member) => member.state.id));
+      blackLineups.push(blackFielded.lineup.map((member) => member.state.id));
       const matchSeed = matchSeedForCampaign(options.seed, match);
       const result = await runMatch({
         seed: matchSeed,
@@ -112,8 +128,24 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
         match,
         config,
       });
-      const whiteSnapshot = poolSnapshot(folded.white, whiteFielded);
-      const blackSnapshot = poolSnapshot(folded.black, blackFielded);
+      for (const event of result.events) {
+        if (event.t !== 'PROMOTION') continue;
+        if (whiteLineups[match - 1]?.includes(event.pieceId)) {
+          whitePromotions.set(event.pieceId, match);
+        } else if (blackLineups[match - 1]?.includes(event.pieceId)) {
+          blackPromotions.set(event.pieceId, match);
+        }
+      }
+      const whiteSnapshot = poolSnapshot(
+        folded.white,
+        whiteFielded,
+        whiteLineups.at(-2),
+      );
+      const blackSnapshot = poolSnapshot(
+        folded.black,
+        blackFielded,
+        blackLineups.at(-2),
+      );
       poolEvents.push(...folded.events);
       metrics.push({
         ...matchMetric,
@@ -134,6 +166,18 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
   } finally {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');
   }
+  const whitePoolMetrics = poolSeasonMetrics({
+    initialPool: initialWhitePool,
+    finalPool: whitePool,
+    lineups: whiteLineups,
+    promotionMatches: whitePromotions,
+  });
+  const blackPoolMetrics = poolSeasonMetrics({
+    initialPool: initialBlackPool,
+    finalPool: blackPool,
+    lineups: blackLineups,
+    promotionMatches: blackPromotions,
+  });
   return {
     metrics,
     horizon: buildHorizonSeries(metrics),
@@ -142,5 +186,9 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     poolEvents,
     finalWhitePool: whitePool,
     finalBlackPool: blackPool,
+    whitePoolMetrics,
+    blackPoolMetrics,
+    whitePoolFindings: detectPoolDegeneracy(whitePoolMetrics),
+    blackPoolFindings: detectPoolDegeneracy(blackPoolMetrics),
   };
 }

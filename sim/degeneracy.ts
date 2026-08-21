@@ -1,4 +1,5 @@
 import type { CampaignMetrics, MatchMetrics } from './metrics';
+import type { PoolSeasonMetrics } from './pool';
 import {
   COMMENDATION_CONFIG,
   type PlayerCommendationId,
@@ -37,6 +38,10 @@ export const DEGENERACY_CONFIG = {
   toothlessRefusalRateThreshold: 0.05,
   /** Bounded refusal rate above this makes override detection meaningful. */
   overrideInertRefusalRateThreshold: 0.05,
+  /** Crowned selection below this means elevation is a trap. */
+  promotionTrapSelectionRateThreshold: 0.01,
+  /** Churn below this means a deep bench is frozen. */
+  frozenBenchChurnThreshold: 0.001,
 } as const;
 
 export interface DegeneracyFinding {
@@ -58,6 +63,9 @@ export interface DegeneracyAssertionOptions {
   readonly refusalDeadRateThreshold?: number;
   readonly toothlessRefusalRateThreshold?: number;
   readonly overrideInertRefusalRateThreshold?: number;
+  readonly poolMetrics?: PoolSeasonMetrics;
+  readonly promotionTrapSelectionRateThreshold?: number;
+  readonly frozenBenchChurnThreshold?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -90,6 +98,51 @@ export interface DegeneracyAssertionOptions {
   readonly difficultyChangedDepth?: boolean;
   /** Dismissal occurred while mean roster trust remained high (McClellan). */
   readonly dismissalWithHighMandate?: boolean;
+}
+
+export function detectPoolDegeneracy(
+  poolMetrics: PoolSeasonMetrics,
+  options: {
+    readonly promotionTrapSelectionRateThreshold?: number;
+    readonly frozenBenchChurnThreshold?: number;
+  } = {},
+): DegeneracyFinding[] {
+  const findings: DegeneracyFinding[] = [];
+  const trapThreshold =
+    options.promotionTrapSelectionRateThreshold ??
+    DEGENERACY_CONFIG.promotionTrapSelectionRateThreshold;
+  const frozenThreshold =
+    options.frozenBenchChurnThreshold ??
+    DEGENERACY_CONFIG.frozenBenchChurnThreshold;
+  if (
+    poolMetrics.promotions > 0 &&
+    poolMetrics.crownedNeverFieldedAgain === poolMetrics.promotions
+  ) {
+    findings.push({
+      code: 'promotion-decoration',
+      message: 'Promotions occurred, but no crowned piece was fielded again.',
+    });
+  }
+  if (
+    poolMetrics.promotions > 0 &&
+    poolMetrics.crownedSelectionRate <= trapThreshold
+  ) {
+    findings.push({
+      code: 'promotion-trap',
+      message: `Crowned-piece selection rate stayed at ${poolMetrics.crownedSelectionRate.toFixed(3)} across the season.`,
+    });
+  }
+  if (
+    poolMetrics.squadSize > 16 &&
+    poolMetrics.meanLineupChurn <= frozenThreshold
+  ) {
+    findings.push({
+      code: 'frozen-bench',
+      message:
+        'A deep squad fielded the same lineup every match under a rotating pool policy.',
+    });
+  }
+  return findings;
 }
 
 type TranscriptMetricKey =
@@ -291,6 +344,12 @@ export function detectDegeneracy(
     overrideInertRefusalRateThreshold:
       options.overrideInertRefusalRateThreshold ??
       DEGENERACY_CONFIG.overrideInertRefusalRateThreshold,
+    promotionTrapSelectionRateThreshold:
+      options.promotionTrapSelectionRateThreshold ??
+      DEGENERACY_CONFIG.promotionTrapSelectionRateThreshold,
+    frozenBenchChurnThreshold:
+      options.frozenBenchChurnThreshold ??
+      DEGENERACY_CONFIG.frozenBenchChurnThreshold,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -361,6 +420,16 @@ export function detectDegeneracy(
       message:
         'Tyrannical leader has refusals but almost never overrides — override path may be mis-tuned.',
     });
+  }
+
+  if (options.poolMetrics !== undefined) {
+    findings.push(
+      ...detectPoolDegeneracy(options.poolMetrics, {
+        promotionTrapSelectionRateThreshold:
+          config.promotionTrapSelectionRateThreshold,
+        frozenBenchChurnThreshold: config.frozenBenchChurnThreshold,
+      }),
+    );
   }
 
   const trustDeltas = metrics.map(

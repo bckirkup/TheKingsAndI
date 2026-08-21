@@ -133,7 +133,8 @@ describe('scarce season pools', () => {
     }
     const promoted = {
       ...pawn,
-      state: { ...pawn.state, role: 'Queen' as const, E_i: 40 },
+      attainedRole: 'Queen' as const,
+      state: { ...pawn.state, role: 'Pawn' as const, E_i: 40 },
     };
     const pool = withMembers(
       base,
@@ -145,10 +146,85 @@ describe('scarce season pools', () => {
             : member,
       ),
     );
-    const selectedQueen = fieldPool(pool, 1).lineup.find(
+    const fielded = fieldPool(pool, 1);
+    const selectedQueen = fielded.lineup.find(
       (member) => member.state.role === 'Queen',
     );
     expect(selectedQueen?.state.id).toBe(pawn.state.id);
+    expect(
+      fielded.lineup.filter((member) => member.state.id === pawn.state.id),
+    ).toHaveLength(1);
+    expect(selectedQueen?.state.role).toBe('Queen');
+  });
+
+  it('falls a crowned member back to her origin chair after losing the crown chair', () => {
+    const base = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'tyrannical',
+      depthFactor: 1,
+    });
+    const pawn = base.members.find((member) => member.originRole === 'Pawn');
+    const queen = base.members.find((member) => member.originRole === 'Queen');
+    if (pawn === undefined || queen === undefined) {
+      throw new Error('Expected a pawn and queen.');
+    }
+    const pool = withMembers(
+      base,
+      base.members.map((member) =>
+        member.state.id === pawn.state.id
+          ? {
+              ...member,
+              attainedRole: 'Queen' as const,
+              state: { ...member.state, E_i: 1 },
+            }
+          : member.state.id === queen.state.id
+            ? { ...member, state: { ...member.state, E_i: 99 } }
+            : member,
+      ),
+    );
+    const fielded = fieldPool(pool, 1);
+    const pawnChairs = fielded.lineup.filter(
+      (member) => member.state.id === pawn.state.id,
+    );
+    expect(pawnChairs).toHaveLength(1);
+    expect(pawnChairs[0]?.state.role).toBe('Pawn');
+    expect(
+      fielded.lineup.filter((member) => member.state.role === 'King'),
+    ).toHaveLength(1);
+  });
+
+  it('fills chairs highest-first before origin fallback', () => {
+    const base = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'tyrannical',
+      depthFactor: 1,
+    });
+    const pawn = base.members.find((member) => member.originRole === 'Pawn');
+    const queen = base.members.find((member) => member.originRole === 'Queen');
+    if (pawn === undefined || queen === undefined) {
+      throw new Error('Expected a pawn and queen.');
+    }
+    const pool = withMembers(
+      base,
+      base.members.map((member) =>
+        member.state.id === pawn.state.id
+          ? {
+              ...member,
+              attainedRole: 'Queen' as const,
+              state: { ...member.state, E_i: 99 },
+            }
+          : member.state.id === queen.state.id
+            ? { ...member, state: { ...member.state, E_i: 1 } }
+            : member,
+      ),
+    );
+    const fielded = fieldPool(pool, 1);
+    expect(
+      fielded.lineup.find((member) => member.state.id === pawn.state.id)?.state
+        .role,
+    ).toBe('Queen');
   });
 
   it('has a golden baseline and sensitivity for pool depth', () => {
