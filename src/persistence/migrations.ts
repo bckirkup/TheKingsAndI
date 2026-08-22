@@ -1,6 +1,7 @@
 import type { LivingChessDatabase } from './db';
 import { PLAYER_LEADER_ID } from '../core/ids';
 import { defaultCredence } from '../psychology';
+import { identityCreationSeed } from '../orchestration';
 import { SCHEMA_VERSION } from './types';
 
 export interface MigrationStep {
@@ -40,7 +41,9 @@ export const MIGRATIONS: readonly MigrationStep[] = [
             disposition;
           return {
             ...identity,
-            identityCreationSeed: identity.identityCreationSeed ?? 0,
+            identityCreationSeed:
+              identity.identityCreationSeed ??
+              identityCreationSeed(0, identity.id),
             disposition,
             relationshipAccounts: {
               ...(identity.relationshipAccounts ?? {}),

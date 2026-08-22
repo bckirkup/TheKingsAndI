@@ -298,33 +298,38 @@ describe('career squad fielding', () => {
     }
   });
 
-  it('changes the strongest lineup when disposition spread widens', () => {
-    const neutral = bootstrapRoster(40, 0);
-    const spread = bootstrapRoster(40, 100);
-    const flatten = (roster: readonly StoredPieceState[]): StoredPieceState[] =>
-      roster.map((piece) => ({ ...piece, E_i: 50, B_i: 0 }));
-    const neutralSelection = selectPlayerSquad({
-      roster: flatten(neutral.roster),
-      identities: neutral.identities,
-      matches: [],
-      match: 1,
-      careerSeed: 40,
-      dispositionSpread: 0,
-    });
-    const spreadSelection = selectPlayerSquad({
-      roster: flatten(spread.roster),
-      identities: spread.identities,
-      matches: [],
-      match: 1,
-      careerSeed: 40,
-      dispositionSpread: 100,
-    });
+  it('keeps disposition carriage separate from fielding', () => {
+    const spreads = [0, 50, 100];
+    const dispositions = spreads.map((spread) => bootstrapRoster(40, spread));
+    const neutral = dispositions[0];
+    const medium = dispositions[1];
+    const wide = dispositions[2];
+    if (neutral === undefined || medium === undefined || wide === undefined) {
+      throw new Error('expected disposition probes');
+    }
+    const deviation = (roster: (typeof dispositions)[number]): number =>
+      roster.identities.reduce(
+        (sum, identity) =>
+          sum +
+          Math.abs((identity.disposition?.tauAbil ?? 50) - 50) +
+          Math.abs((identity.disposition?.tauBenev ?? 50) - 50),
+        0,
+      );
+    expect(deviation(neutral)).toBe(0);
+    expect(deviation(medium)).toBeGreaterThan(0);
+    expect(deviation(wide)).toBeGreaterThanOrEqual(deviation(medium));
 
-    expect(
-      spreadSelection.fielded.lineup.map((member) => member.state.id),
-    ).not.toEqual(
-      neutralSelection.fielded.lineup.map((member) => member.state.id),
+    const lineups = [neutral, medium, wide].map((roster) =>
+      selectPlayerSquad({
+        roster: roster.roster,
+        identities: roster.identities,
+        matches: [],
+        match: 1,
+        careerSeed: 40,
+      }).fielded.lineup.map((member) => member.state.id),
     );
+    expect(lineups[1]).toEqual(lineups[0]);
+    expect(lineups[2]).toEqual(lineups[0]);
   });
 
   it('folds passed-over streaks, redemption, and obsolescence from events', () => {

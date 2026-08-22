@@ -64,6 +64,7 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     id: 'white-commander',
     side: 'w',
     style: options.whiteStyle,
+    careerSeed: options.seed,
     depthFactor: options.depthFactor ?? config.POOL_DEPTH_FACTOR,
     randomUnit: whiteRandomUnit,
   });
@@ -71,6 +72,7 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     id: 'black-commander',
     side: 'b',
     style: options.blackStyle,
+    careerSeed: options.seed,
     depthFactor: options.depthFactor ?? config.POOL_DEPTH_FACTOR,
     randomUnit: blackRandomUnit,
   });

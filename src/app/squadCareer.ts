@@ -11,7 +11,6 @@ import {
   availableAt,
   fieldSquad,
   foldSquadMatch,
-  SQUAD_CONFIG,
   type SquadFielded,
   type SquadMember,
   type SquadService,
@@ -380,7 +379,6 @@ export function selectPlayerSquad(input: {
   readonly careerSeed: number;
   readonly policy?: FieldingPolicy;
   readonly pinnedMemberIds?: ReadonlySet<PieceId>;
-  readonly dispositionSpread?: number;
 }): PlayerSquadSelection {
   const members = foldPlayerSquad(
     input.roster,
@@ -403,15 +401,11 @@ export function selectPlayerSquad(input: {
       ? {
           members: checkedOutMembers,
           fieldingPolicy: input.policy ?? 'strongest_available',
-          dispositionSpread:
-            input.dispositionSpread ?? SQUAD_CONFIG.DISPOSITION_SPREAD,
         }
       : {
           members: checkedOutMembers,
           fieldingPolicy: input.policy ?? 'strongest_available',
           pinnedMemberIds: input.pinnedMemberIds,
-          dispositionSpread:
-            input.dispositionSpread ?? SQUAD_CONFIG.DISPOSITION_SPREAD,
         };
   const conscriptNames = new Map<PieceId, string>();
   const fielded = fieldSquad(

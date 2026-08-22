@@ -40,6 +40,7 @@ export interface CommanderPool {
   readonly side: Side;
   readonly style: Leader;
   readonly fieldingPolicy: FieldingPolicy;
+  readonly careerSeed: number;
   readonly members: readonly PoolMember[];
 }
 
@@ -217,6 +218,7 @@ function initialPoolMembers(
   style: Leader,
   depthFactor: number,
   randomUnit: number,
+  careerSeed: number,
 ): PoolMember[] {
   if (!Number.isSafeInteger(depthFactor) || depthFactor < 1) {
     throw new Error('POOL_DEPTH_FACTOR must be a positive integer.');
@@ -247,9 +249,9 @@ function initialPoolMembers(
       );
       const memberId = `${side}:${role}:${String(index).padStart(2, '0')}`;
       const credenceIdentity: CredenceIdentity = {
-        identityCreationSeed: identityCreationSeed(0, memberId),
+        identityCreationSeed: identityCreationSeed(careerSeed, memberId),
         disposition: dispositionForIdentitySeed(
-          identityCreationSeed(0, memberId),
+          identityCreationSeed(careerSeed, memberId),
         ),
         relationshipAccounts: {},
       };
@@ -298,17 +300,21 @@ export function createCommanderPool(options: {
   readonly style: Leader;
   readonly depthFactor?: number;
   readonly randomUnit?: number;
+  readonly careerSeed?: number;
 }): CommanderPool {
+  const careerSeed = options.careerSeed ?? 0;
   return {
     id: options.id,
     side: options.side,
     style: options.style,
     fieldingPolicy: fieldingPolicyForStyle(options.style),
+    careerSeed,
     members: initialPoolMembers(
       options.side,
       options.style,
       options.depthFactor ?? SEASON_CONFIG.POOL_DEPTH_FACTOR,
       options.randomUnit ?? 0.5,
+      careerSeed,
     ),
   };
 }
@@ -375,8 +381,10 @@ function conscriptMember(
       consecutiveNonSelections: 0,
     },
     credenceIdentity: {
-      identityCreationSeed: identityCreationSeed(0, id),
-      disposition: dispositionForIdentitySeed(identityCreationSeed(0, id)),
+      identityCreationSeed: identityCreationSeed(pool.careerSeed, id),
+      disposition: dispositionForIdentitySeed(
+        identityCreationSeed(pool.careerSeed, id),
+      ),
       relationshipAccounts: {},
     },
   };
@@ -396,7 +404,6 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
     {
       ...pool,
       members,
-      dispositionSpread: SEASON_CONFIG.DISPOSITION_SPREAD,
     },
     match,
     (role, conscriptionMatch, sequence) =>

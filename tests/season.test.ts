@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   fieldSquad,
+  identityCreationSeed,
   type HeadlessMatchResult,
   type SquadFieldingPool,
   type SquadMember,
@@ -355,6 +356,35 @@ describe('scarce season pools', () => {
       new Set(pawnTraits.map((traits) => JSON.stringify(traits))).size,
     ).toBeGreaterThan(1);
     expect(poolSnapshot(baseline, fieldPool(baseline, 1)).total).toBe(31);
+  });
+
+  it('threads the season seed into identity creation', () => {
+    const first = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'servant',
+      careerSeed: 7,
+    });
+    const second = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'servant',
+      careerSeed: 8,
+    });
+    const firstMember = first.members[0];
+    const secondMember = second.members[0];
+    if (firstMember === undefined || secondMember === undefined) {
+      throw new Error('expected initial pool members');
+    }
+    expect(firstMember.credenceIdentity?.identityCreationSeed).toBe(
+      identityCreationSeed(7, firstMember.state.id),
+    );
+    expect(secondMember.credenceIdentity?.identityCreationSeed).toBe(
+      identityCreationSeed(8, secondMember.state.id),
+    );
+    expect(firstMember.credenceIdentity?.identityCreationSeed).not.toBe(
+      secondMember.credenceIdentity?.identityCreationSeed,
+    );
   });
 
   it('threads the pool-depth config through season output', async () => {

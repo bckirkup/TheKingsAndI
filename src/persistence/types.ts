@@ -1,5 +1,6 @@
 import type {
   CampaignCultureDriftVector,
+  CredenceState,
   MatchEvent,
   PieceRole,
   PieceState,
@@ -56,11 +57,9 @@ export interface PieceIdentityRecord {
   /** Stable seed minted when this identity was created. */
   readonly identityCreationSeed?: number;
   /** Stable individual prior, before any commander-specific evidence. */
-  readonly disposition?: import('../psychology').CredenceState;
+  readonly disposition?: CredenceState;
   /** Learned credence keyed by stable commander identity. */
-  readonly relationshipAccounts?: Readonly<
-    Record<LeaderId, import('../psychology').CredenceState>
-  >;
+  readonly relationshipAccounts?: Readonly<Record<LeaderId, CredenceState>>;
 }
 
 export interface StoredPieceState extends PieceState {

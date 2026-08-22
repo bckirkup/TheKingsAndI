@@ -19,14 +19,14 @@ export interface CredenceIdentity {
   readonly relationshipAccounts?: Readonly<Record<LeaderId, CredenceState>>;
 }
 
-function digestUnit(value: unknown, offset: number): number {
-  const encoded = digest(value).slice(offset, offset + 8);
+function digestUnit(value: unknown): number {
+  const encoded = digest(value).slice(0, 8);
   return Number.parseInt(encoded, 16) / 0xffffffff;
 }
 
 function centeredOffset(value: unknown, spread: number): number {
   const boundedSpread = Math.max(0, Math.trunc(spread));
-  return Math.trunc((digestUnit(value, 0) * 2 - 1) * boundedSpread);
+  return Math.trunc((digestUnit(value) * 2 - 1) * boundedSpread);
 }
 
 export function identityCreationSeed(

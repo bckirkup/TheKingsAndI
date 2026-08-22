@@ -115,8 +115,8 @@ export function applyRecruit(input: {
   readonly freeAgent: StoredPieceState;
   readonly roster: readonly StoredPieceState[];
   readonly leaderAbilityTrust: number;
-  readonly identity?: PieceIdentityRecord;
-  readonly leaderId?: LeaderId;
+  readonly identity: PieceIdentityRecord;
+  readonly leaderId: LeaderId;
 }): {
   readonly roster: StoredPieceState[];
   readonly event: MatchEvent;

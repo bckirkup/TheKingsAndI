@@ -9,6 +9,7 @@ import {
   resetDatabaseForTests,
   SCHEMA_VERSION,
 } from '../src/persistence';
+import { identityCreationSeed } from '../src/orchestration';
 import { defaultCredence } from '../src/psychology';
 
 describe('persistence repository', () => {
@@ -309,6 +310,9 @@ describe('schema migrations', () => {
 
     const migrated = await db.pieceIdentities.get(identity.id);
     expect(migrated?.disposition).toEqual(defaultCredence());
+    expect(migrated?.identityCreationSeed).toBe(
+      identityCreationSeed(0, identity.id),
+    );
     expect(migrated?.relationshipAccounts?.['player:career']).toEqual(
       legacyCredence,
     );
