@@ -1151,24 +1151,25 @@ forward-only schema-v2 migration. This is the offline/private bench subset
 only; shared market behavior is Slice 4. D148 and D150 remain open.
 
 ### D153 ❓ What stock does a career start with, and is it drafted? (ADR 0059 §1)
-**Open — not wired.** Shipped today is a doubled standard army: one King, two
-Queens, four of each officer, sixteen pawns
-(`src/app/careerBootstrap.ts:54-70`), lifted from the harness's
-`POOL_DEPTH_FACTOR: 2` by ADR 0057 and never decided. It contradicts D7 ("a
-bench built up over time, not a fixed 16"). ADR 0059 proposes one legal army
-plus a small reserve, drafted rather than issued, with the King appointed rather
-than drafted (ADR 0021). Open: reserve depth, and whether the first cycle is a
-draft at all or an issued army with the draft beginning at cycle two.
+**Partly wired — magnitudes remain open.** The app and harness now share a
+one-legal-army-plus-apportioned-reserve composition helper
+(`src/orchestration/squadFielding.ts:180-218`), with no King in the reserve.
+`RESERVE_DEPTH` defaults to `15`, preserving today's doubled standard army and
+all existing IDs, names, dispositions, and seeds; `POOL_DEPTH_FACTOR` remains a
+legacy mapping to reserve depth. The reserve magnitude and whether the first
+cycle is a draft or an issued army remain open.
 
 ADR 0061 brings D153 due in step 1, the scarcity step.
 
 ### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
-**Open — not wired.** ADR 0059 proposes two currencies of opposite sign:
+**Partly wired — magnitudes remain open.** ADR 0059 proposes two currencies of opposite sign:
 priority and purse from *inverse* standing (the NBA device), and acceptance —
 a discount on a piece's price — from reputation, read through ADR 0058's
 relationship account or the disposition prior plus testimony. The stabilisers
-proposed with it are the green levy replacing free conscription
-(`src/app/squadCareer.ts:282-345` is unlimited and free today), a cap on purse
+now include a shared green levy helper
+(`src/orchestration/squadFielding.ts:37-42,234-320`) replacing free
+conscription, with zero standing cost and full inheritance defaults so current
+behaviour is unchanged. A cap on purse
 carried between cycles, and the non-selection tax that already prices a deep
 bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
 acceptance discount. Tanking must be measurably dominated, not merely

@@ -2,6 +2,7 @@ import { LivingBoard, type PieceId, type Side } from '../src/chess';
 import {
   FIELDING_POLICIES,
   fieldSquad,
+  applyLevyStandingCost,
   checkInCredence,
   checkOutCredence,
   dispositionForIdentitySeed,
@@ -9,6 +10,10 @@ import {
   foldSquadMatch,
   highestAttainment,
   poolRoleCounts as squadRoleCounts,
+  poolRoleCountsForReserveDepth,
+  reserveDepthForConfig,
+  reserveDepthForPoolDepthFactor,
+  stateForLevy,
   statusForConscript,
   type FieldingPolicy as SquadFieldingPolicy,
   type SquadEvent,
@@ -17,12 +22,7 @@ import {
   type CredenceIdentity,
 } from '../src/orchestration';
 import type { HeadlessMatchResult } from '../src/orchestration';
-import type {
-  MatchEvent,
-  PieceRole,
-  PieceState,
-  CredenceState,
-} from '../src/psychology';
+import type { MatchEvent, PieceRole, PieceState } from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
@@ -41,6 +41,7 @@ export interface CommanderPool {
   readonly style: Leader;
   readonly fieldingPolicy: FieldingPolicy;
   readonly careerSeed: number;
+  readonly config: SeasonConfig;
   readonly members: readonly PoolMember[];
 }
 
@@ -48,6 +49,7 @@ export interface FieldedPool {
   readonly lineup: readonly PoolMember[];
   readonly conscriptsFielded: number;
   readonly veteransRested: number;
+  readonly chargedMembers?: readonly PoolMember[];
 }
 
 export interface PoolSnapshot {
@@ -66,6 +68,7 @@ export interface PoolSnapshot {
 
 export interface PoolSeasonMetrics {
   readonly squadSize: number;
+  readonly firstCycleLevies?: number;
   readonly distinctMembersFielded: number;
   readonly benchUtilisation: number;
   readonly meanLineupChurn: number;
@@ -83,6 +86,7 @@ export function poolSeasonMetrics(input: {
   readonly finalPool: CommanderPool;
   readonly lineups: readonly (readonly PieceId[])[];
   readonly promotionMatches: ReadonlyMap<PieceId, number>;
+  readonly firstCycleLevies?: number;
 }): PoolSeasonMetrics {
   const fieldedById = new Map<PieceId, Set<number>>();
   input.lineups.forEach((lineup, index) => {
@@ -162,6 +166,7 @@ export function poolSeasonMetrics(input: {
         (input.lineups.length - 1);
   return {
     squadSize,
+    firstCycleLevies: input.firstCycleLevies ?? 0,
     distinctMembersFielded,
     benchUtilisation: distinctMembersFielded / Math.max(1, squadSize),
     meanLineupChurn,
@@ -216,13 +221,10 @@ function pieceRoleName(role: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K'): PieceRole {
 function initialPoolMembers(
   side: Side,
   style: Leader,
-  depthFactor: number,
+  reserveDepth: number,
   randomUnit: number,
   careerSeed: number,
 ): PoolMember[] {
-  if (!Number.isSafeInteger(depthFactor) || depthFactor < 1) {
-    throw new Error('POOL_DEPTH_FACTOR must be a positive integer.');
-  }
   const board = LivingBoard.standard();
   const trust = leaderTrustBias(style);
   const roleTemplates = new Map<PieceRole, PieceState['id']>();
@@ -232,9 +234,9 @@ function initialPoolMembers(
   }
   const members: PoolMember[] = [];
   let sequence = 0;
-  const roleCounts = squadRoleCounts();
+  const roleCounts = poolRoleCountsForReserveDepth(reserveDepth);
   for (const role of Object.keys(roleCounts) as PieceRole[]) {
-    const count = role === 'King' ? 1 : roleCounts[role] * depthFactor;
+    const count = roleCounts[role];
     for (let index = 0; index < count; index += 1) {
       const templateId = roleTemplates.get(role);
       if (templateId === undefined) {
@@ -299,44 +301,32 @@ export function createCommanderPool(options: {
   readonly side: Side;
   readonly style: Leader;
   readonly depthFactor?: number;
+  readonly reserveDepth?: number;
+  readonly config?: SeasonConfig;
   readonly randomUnit?: number;
   readonly careerSeed?: number;
 }): CommanderPool {
   const careerSeed = options.careerSeed ?? 0;
+  const config = options.config ?? SEASON_CONFIG;
+  const reserveDepth =
+    options.reserveDepth ??
+    (options.depthFactor === undefined
+      ? reserveDepthForConfig(config)
+      : reserveDepthForPoolDepthFactor(options.depthFactor));
   return {
     id: options.id,
     side: options.side,
     style: options.style,
     fieldingPolicy: fieldingPolicyForStyle(options.style),
     careerSeed,
+    config,
     members: initialPoolMembers(
       options.side,
       options.style,
-      options.depthFactor ?? SEASON_CONFIG.POOL_DEPTH_FACTOR,
+      reserveDepth,
       options.randomUnit ?? 0.5,
       careerSeed,
     ),
-  };
-}
-
-function meanCredence(members: readonly PoolMember[]): CredenceState {
-  const available = members.filter((member) => member.status !== 'retired');
-  if (available.length === 0)
-    return { tauAbil: 50, tauBenev: 50, abilityObservationCount: 0 };
-  return {
-    tauAbil: Math.trunc(
-      available.reduce(
-        (sum, member) => sum + member.state.credence.tauAbil,
-        0,
-      ) / available.length,
-    ),
-    tauBenev: Math.trunc(
-      available.reduce(
-        (sum, member) => sum + member.state.credence.tauBenev,
-        0,
-      ) / available.length,
-    ),
-    abilityObservationCount: 0,
   };
 }
 
@@ -346,7 +336,6 @@ function conscriptMember(
   match: number,
   sequence: number,
 ): PoolMember {
-  const appraisal = meanCredence(pool.members);
   const existingIds = new Set(pool.members.map((member) => member.state.id));
   let suffix = sequence;
   let id = `${pool.side}:${role}:conscript:${match}:${pool.members.length}:${String(suffix).padStart(2, '0')}`;
@@ -362,12 +351,7 @@ function conscriptMember(
   );
   return {
     state: {
-      ...fresh,
-      credence: {
-        ...fresh.credence,
-        tauAbil: appraisal.tauAbil,
-        tauBenev: appraisal.tauBenev,
-      },
+      ...stateForLevy(fresh, pool.members, pool.config),
     },
     originRole: role,
     status: 'available',
@@ -400,7 +384,7 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
           state: checkOutCredence(identity, pool.id, member.state),
         };
   });
-  return fieldSquad(
+  const fielded = fieldSquad(
     {
       ...pool,
       members,
@@ -409,6 +393,29 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
     (role, conscriptionMatch, sequence) =>
       conscriptMember(pool, role, conscriptionMatch, sequence),
   );
+  const chargedMembers = applyLevyStandingCost(
+    members,
+    fielded.conscriptsFielded,
+    pool.config,
+  );
+  const chargedById = new Map(
+    chargedMembers.map((member) => [member.state.id, member]),
+  );
+  const chargedFielded = {
+    ...fielded,
+    lineup: fielded.lineup.map((member) => {
+      const charged = chargedById.get(member.state.id);
+      return charged === undefined
+        ? member
+        : {
+            ...charged,
+            state: { ...charged.state, role: member.state.role },
+          };
+    }),
+  };
+  return fielded.conscriptsFielded === 0
+    ? chargedFielded
+    : { ...chargedFielded, chargedMembers };
 }
 
 function foldSide(
@@ -425,7 +432,7 @@ function foldSide(
 ): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
   const folded = foldSquadMatch({
     side: pool.side,
-    members: pool.members,
+    members: fielded.chargedMembers ?? pool.members,
     fielded,
     resultRoster,
     departedRoster,

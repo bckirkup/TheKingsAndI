@@ -2,6 +2,7 @@ import type { PieceId, Side } from '../chess';
 import type { CredenceIdentity } from './credence';
 import type { PieceRole, PieceState } from '../psychology';
 import {
+  clampCredence,
   clampTrust,
   sharedBondScalar,
   startingAbilityForRole,
@@ -20,6 +21,10 @@ export const FIELDING_POLICIES: readonly FieldingPolicy[] = [
 
 export interface SquadConfig {
   readonly POOL_DEPTH_FACTOR: number;
+  readonly RESERVE_DEPTH: number;
+  readonly LEVY_INHERITED_TRUST_PERMILLE: number;
+  readonly LEVY_INHERITED_CREDENCE_PERMILLE: number;
+  readonly LEVY_STANDING_COST: number;
   readonly DESERTION_ABSENCE_MATCHES: number;
   readonly RETIREMENT_TRAUMA_THRESHOLD: number;
   readonly NON_SELECTION_TRUST_THRESHOLD: number;
@@ -31,6 +36,10 @@ export interface SquadConfig {
 
 export const SQUAD_CONFIG: SquadConfig = {
   POOL_DEPTH_FACTOR: 2,
+  RESERVE_DEPTH: 15,
+  LEVY_INHERITED_TRUST_PERMILLE: 1000,
+  LEVY_INHERITED_CREDENCE_PERMILLE: 1000,
+  LEVY_STANDING_COST: 0,
   DESERTION_ABSENCE_MATCHES: 2,
   RETIREMENT_TRAUMA_THRESHOLD: 100,
   NON_SELECTION_TRUST_THRESHOLD: 2,
@@ -123,6 +132,188 @@ const ATTAINMENT_RANK: Readonly<Record<PieceRole, number>> = {
 
 export function poolRoleCounts(): Readonly<Record<PieceRole, number>> {
   return { ...STARTING_ROLE_COUNTS };
+}
+
+const RESERVE_ALLOCATION_ORDER: readonly PieceRole[] = [
+  'Queen',
+  'Rook',
+  'Bishop',
+  'Knight',
+  'Pawn',
+];
+
+const ARMY_NON_KING_WEIGHT_TOTAL = 15;
+
+function nonNegativeInteger(value: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative integer.`);
+  }
+  return value;
+}
+
+/**
+ * Convert the legacy doubled-army control into the equivalent reserve depth.
+ * A factor of one is one legal army; each further factor adds fifteen spares.
+ */
+export function reserveDepthForPoolDepthFactor(depthFactor: number): number {
+  if (!Number.isSafeInteger(depthFactor) || depthFactor < 1) {
+    throw new Error('POOL_DEPTH_FACTOR must be a positive integer.');
+  }
+  return (depthFactor - 1) * ARMY_NON_KING_WEIGHT_TOTAL;
+}
+
+/**
+ * The legacy factor remains an override for callers that still provide it.
+ * New callers use RESERVE_DEPTH directly when the factor has its default.
+ */
+export function reserveDepthForConfig(config: SquadConfig): number {
+  if (config.POOL_DEPTH_FACTOR !== 2) {
+    return reserveDepthForPoolDepthFactor(config.POOL_DEPTH_FACTOR);
+  }
+  return nonNegativeInteger(config.RESERVE_DEPTH, 'RESERVE_DEPTH');
+}
+
+/**
+ * Add an apportioned reserve to one legal army. Kings are never reserved.
+ * Largest-remainder ties follow the stable role order above.
+ */
+export function poolRoleCountsForReserveDepth(
+  reserveDepth: number = SQUAD_CONFIG.RESERVE_DEPTH,
+): Readonly<Record<PieceRole, number>> {
+  const depth = nonNegativeInteger(reserveDepth, 'RESERVE_DEPTH');
+  const counts: Record<PieceRole, number> = { ...STARTING_ROLE_COUNTS };
+  const allocations = RESERVE_ALLOCATION_ORDER.map((role, order) => {
+    const weighted = depth * STARTING_ROLE_COUNTS[role];
+    return {
+      role,
+      order,
+      whole: Math.floor(weighted / ARMY_NON_KING_WEIGHT_TOTAL),
+      remainder: weighted % ARMY_NON_KING_WEIGHT_TOTAL,
+    };
+  });
+  let allocated = 0;
+  for (const allocation of allocations) {
+    counts[allocation.role] += allocation.whole;
+    allocated += allocation.whole;
+  }
+  allocations
+    .sort(
+      (left, right) =>
+        right.remainder - left.remainder || left.order - right.order,
+    )
+    .slice(0, depth - allocated)
+    .forEach((allocation) => {
+      counts[allocation.role] += 1;
+    });
+  return counts;
+}
+
+function interpolateInteger(
+  baseline: number,
+  inherited: number,
+  permille: number,
+): number {
+  const weight = Math.max(0, Math.min(1000, Math.trunc(permille)));
+  return baseline + Math.trunc(((inherited - baseline) * weight) / 1000);
+}
+
+function averageValue(
+  members: readonly SquadMember[],
+  value: (member: SquadMember) => number,
+): number | undefined {
+  if (members.length === 0) return undefined;
+  return Math.trunc(
+    members.reduce((sum, member) => sum + value(member), 0) / members.length,
+  );
+}
+
+/**
+ * Apply the green levy inheritance rules to a fresh role-baseline state.
+ * The helper is shared by the app and harness so their levy cannot diverge.
+ */
+export function stateForLevy(
+  freshState: PieceState,
+  members: readonly SquadMember[],
+  config: SquadConfig = SQUAD_CONFIG,
+): PieceState {
+  const living = members.filter((member) => member.status !== 'retired');
+  const source = living.length === 0 ? members : living;
+  const inheritedTrust = averageValue(source, (member) => member.state.T_i);
+  const inheritedCredence = {
+    tauAbil: averageValue(source, (member) => member.state.credence.tauAbil),
+    tauBenev: averageValue(source, (member) => member.state.credence.tauBenev),
+    abilityObservationCount: averageValue(
+      source,
+      (member) => member.state.credence.abilityObservationCount,
+    ),
+  };
+  const baselineCredence = freshState.credence;
+  return {
+    ...freshState,
+    T_i: clampTrust(
+      interpolateInteger(
+        freshState.T_i,
+        inheritedTrust ?? freshState.T_i,
+        config.LEVY_INHERITED_TRUST_PERMILLE,
+      ),
+    ),
+    credence: {
+      ...baselineCredence,
+      tauAbil: clampCredence(
+        interpolateInteger(
+          baselineCredence.tauAbil,
+          inheritedCredence.tauAbil ?? baselineCredence.tauAbil,
+          config.LEVY_INHERITED_CREDENCE_PERMILLE,
+        ),
+      ),
+      tauBenev: clampCredence(
+        interpolateInteger(
+          baselineCredence.tauBenev,
+          inheritedCredence.tauBenev ?? baselineCredence.tauBenev,
+          config.LEVY_INHERITED_CREDENCE_PERMILLE,
+        ),
+      ),
+      abilityObservationCount: Math.max(
+        0,
+        interpolateInteger(
+          baselineCredence.abilityObservationCount,
+          inheritedCredence.abilityObservationCount ??
+            baselineCredence.abilityObservationCount,
+          config.LEVY_INHERITED_CREDENCE_PERMILLE,
+        ),
+      ),
+    },
+  };
+}
+
+/**
+ * Debit the existing living roster once for each levied chair. A commander
+ * standing/register fold belongs to ADR 0061 step 2; this uses the credence
+ * state already persisted today instead of introducing that register early.
+ */
+export function applyLevyStandingCost(
+  members: readonly SquadMember[],
+  levies: number,
+  config: SquadConfig = SQUAD_CONFIG,
+): readonly SquadMember[] {
+  const count = Math.max(0, Math.trunc(levies));
+  const cost = Math.max(0, Math.trunc(config.LEVY_STANDING_COST));
+  if (count === 0 || cost === 0) return members;
+  const debit = count * cost;
+  return members.map((member) =>
+    member.status === 'retired'
+      ? member
+      : {
+          ...member,
+          state: {
+            ...member.state,
+            credence: {
+              ...member.state.credence,
+              tauBenev: clampCredence(member.state.credence.tauBenev - debit),
+            },
+          },
+        },
+  );
 }
 
 export function highestAttainment(

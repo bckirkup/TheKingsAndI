@@ -4,7 +4,8 @@ import {
   DISPOSITION_SPREAD,
   dispositionForIdentitySeed,
   identityCreationSeed,
-  poolRoleCounts,
+  poolRoleCountsForReserveDepth,
+  reserveDepthForConfig,
   SQUAD_CONFIG,
 } from '../orchestration';
 import type { PieceRole } from '../psychology';
@@ -63,11 +64,11 @@ export function bootstrapRoster(
   const roster: StoredPieceState[] = [];
   const identities: PieceIdentityRecord[] = [];
   let index = 0;
+  const roleCounts = poolRoleCountsForReserveDepth(
+    reserveDepthForConfig(SQUAD_CONFIG),
+  );
   for (const originRole of roleOrder()) {
-    const required =
-      originRole === 'King'
-        ? 1
-        : (poolRoleCounts()[originRole] ?? 0) * SQUAD_CONFIG.POOL_DEPTH_FACTOR;
+    const required = originRole === 'King' ? 1 : (roleCounts[originRole] ?? 0);
     for (let memberIndex = 0; memberIndex < required; memberIndex += 1) {
       const id = `w:${originRole}:${String(memberIndex).padStart(2, '0')}`;
       const memberUnit = unitForIndex(randomUnit, index);

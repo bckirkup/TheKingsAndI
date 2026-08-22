@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyLevyStandingCost,
   fieldSquad,
   identityCreationSeed,
+  poolRoleCountsForReserveDepth,
+  stateForLevy,
   type HeadlessMatchResult,
   type SquadFieldingPool,
   type SquadMember,
@@ -25,6 +28,7 @@ import {
   type CommanderPool,
 } from '../sim/pool';
 import { runSeason } from '../sim/season';
+import { detectPoolDegeneracy } from '../sim/degeneracy';
 
 function emptyResult(
   roster: readonly PieceState[],
@@ -61,6 +65,160 @@ function withMembers(
 }
 
 describe('scarce season pools', () => {
+  it('apportions a reserve across non-King roles by largest remainder', () => {
+    const depths = [0, 7, 15, 30];
+    const totals = depths.map((depth) =>
+      Object.values(poolRoleCountsForReserveDepth(depth)).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+    );
+    expect(totals).toEqual([16, 23, 31, 46]);
+    expect(poolRoleCountsForReserveDepth(15)).toMatchObject({
+      King: 1,
+      Queen: 2,
+      Rook: 4,
+      Bishop: 4,
+      Knight: 4,
+      Pawn: 16,
+    });
+    expect(poolRoleCountsForReserveDepth(7).Pawn).toBeGreaterThan(
+      poolRoleCountsForReserveDepth(7).Queen,
+    );
+  });
+
+  it('keeps the cycle-one levy detector quiet by default and trips on thin stock', () => {
+    const defaultPool = createCommanderPool({
+      id: 'default',
+      side: 'w',
+      style: 'servant',
+    });
+    expect(fieldPool(defaultPool, 1).conscriptsFielded).toBe(0);
+    const thinPool = createCommanderPool({
+      id: 'thin',
+      side: 'w',
+      style: 'servant',
+      reserveDepth: 0,
+    });
+    const depleted = withMembers(
+      thinPool,
+      thinPool.members.map((member) =>
+        member.state.role === 'Pawn'
+          ? { ...member, status: 'retired' as const }
+          : member,
+      ),
+    );
+    const fielded = fieldPool(depleted, 1);
+    expect(fielded.conscriptsFielded).toBeGreaterThan(0);
+    const metrics = poolSeasonMetrics({
+      initialPool: depleted,
+      finalPool: depleted,
+      lineups: [fielded.lineup.map((member) => member.state.id)],
+      promotionMatches: new Map(),
+      firstCycleLevies: fielded.conscriptsFielded,
+    });
+    expect(
+      detectPoolDegeneracy(metrics).some(
+        (finding) => finding.code === 'cycle-one-unplayability',
+      ),
+    ).toBe(true);
+  });
+
+  it('probes each levy inheritance and standing-cost control', () => {
+    const source = createCommanderPool({
+      id: 'w',
+      side: 'w',
+      style: 'supportive',
+      depthFactor: 1,
+      config: {
+        ...SEASON_CONFIG,
+        LEVY_INHERITED_TRUST_PERMILLE: 1000,
+        LEVY_INHERITED_CREDENCE_PERMILLE: 1000,
+      },
+    });
+    const retiredPawns = source.members
+      .filter((member) => member.state.role === 'Pawn')
+      .map((member) => member.state.id);
+    const tuned = withMembers(
+      source,
+      source.members.map((member) => ({
+        ...member,
+        status: retiredPawns.includes(member.state.id)
+          ? ('retired' as const)
+          : member.status,
+        state: {
+          ...member.state,
+          T_i: 80,
+          credence: {
+            ...member.state.credence,
+            tauAbil: 20,
+            tauBenev: 80,
+            abilityObservationCount: 12,
+          },
+        },
+      })),
+    );
+    const levies = [0, 500, 1000].map((weight) =>
+      fieldPool(
+        {
+          ...tuned,
+          config: {
+            ...SEASON_CONFIG,
+            LEVY_INHERITED_TRUST_PERMILLE: weight,
+            LEVY_INHERITED_CREDENCE_PERMILLE: weight,
+          },
+        },
+        1,
+      ),
+    );
+    const conscripts = levies.map((fielded) =>
+      fielded.lineup.find((member) => member.provenance === 'conscript'),
+    );
+    expect(conscripts.map((member) => member?.state.T_i)).toEqual([40, 60, 80]);
+    expect(conscripts.map((member) => member?.state.credence.tauAbil)).toEqual([
+      50, 35, 20,
+    ]);
+    expect(
+      conscripts.map(
+        (member) => member?.state.credence.abilityObservationCount,
+      ),
+    ).toEqual([0, 6, 12]);
+    const costs = [0, 2, 5].map((cost) =>
+      fieldPool(
+        {
+          ...tuned,
+          config: { ...SEASON_CONFIG, LEVY_STANDING_COST: cost },
+        },
+        1,
+      ),
+    );
+    const firstMemberId = tuned.members.find(
+      (member) => member.status !== 'retired',
+    )?.state.id;
+    if (firstMemberId === undefined) throw new Error('expected source member');
+    expect(
+      costs.map((fielded) => {
+        const member = fielded.chargedMembers?.find(
+          (candidate) => candidate.state.id === firstMemberId,
+        );
+        return member?.state.credence.tauBenev;
+      }),
+    ).toEqual([50, 34, 10]);
+    const baselineState = tuned.members.find(
+      (member) => member.status !== 'retired',
+    )?.state;
+    if (baselineState === undefined) throw new Error('expected baseline state');
+    expect(stateForLevy(baselineState, tuned.members, SEASON_CONFIG).T_i).toBe(
+      80,
+    );
+    expect(
+      applyLevyStandingCost(tuned.members, 0, {
+        ...SEASON_CONFIG,
+        LEVY_STANDING_COST: 5,
+      }),
+    ).toEqual(tuned.members);
+  });
+
   it('does not count a final-match promotion as a missed return', () => {
     const pool = createCommanderPool({
       id: 'w',
