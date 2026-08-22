@@ -36,12 +36,25 @@ function parseInteger(
   return value;
 }
 
+function parseNonNegativeInteger(
+  values: ReadonlyMap<string, string>,
+  name: string,
+): number {
+  const raw = valueFor(values, name);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`--${name} must be a non-negative integer.`);
+  }
+  return value;
+}
+
 function parseArguments(argumentsList: readonly string[]): {
   readonly seed: number;
   readonly matches: number;
   readonly whiteStyle: OpponentArchetype;
   readonly blackStyle: OpponentArchetype;
   readonly depthFactor: number;
+  readonly reserveDepth?: number;
   readonly engineKind: SimEngineKind;
 } {
   const values = new Map<string, string>();
@@ -64,6 +77,7 @@ function parseArguments(argumentsList: readonly string[]): {
     'black-style',
     'pool-depth',
     'depth-factor',
+    'reserve-depth',
     'engine',
   ]);
   for (const name of values.keys()) {
@@ -84,6 +98,9 @@ function parseArguments(argumentsList: readonly string[]): {
   if (!['fake', 'lozza', 'stockfish'].includes(engineKind)) {
     throw new Error('--engine must be fake, lozza, or stockfish.');
   }
+  const reserveDepth = values.has('reserve-depth')
+    ? parseNonNegativeInteger(values, 'reserve-depth')
+    : undefined;
   return {
     seed,
     matches: parseInteger(values, 'matches', 20),
@@ -94,6 +111,7 @@ function parseArguments(argumentsList: readonly string[]): {
       'pool-depth',
       Number(values.get('depth-factor') ?? '2'),
     ),
+    ...(reserveDepth === undefined ? {} : { reserveDepth }),
     engineKind: engineKind as SimEngineKind,
   };
 }

@@ -52,6 +52,11 @@ export {
   foldSquadMatch,
   highestAttainment,
   poolRoleCounts,
+  poolRoleCountsForReserveDepth,
+  reserveDepthForConfig,
+  reserveDepthForPoolDepthFactor,
+  stateForLevy,
+  applyLevyStandingCost,
   SQUAD_CONFIG,
   statusForConscript,
 } from './squadFielding';

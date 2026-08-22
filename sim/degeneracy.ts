@@ -160,6 +160,12 @@ export function detectPoolDegeneracy(
         'A deep squad fielded the same lineup every match under a rotating pool policy.',
     });
   }
+  if (poolMetrics.firstCycleLevies > 0) {
+    findings.push({
+      code: 'cycle-one-unplayability',
+      message: `The first cycle required ${poolMetrics.firstCycleLevies} green levy member(s) to fill the legal army.`,
+    });
+  }
   return findings;
 }
 

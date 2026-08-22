@@ -587,6 +587,7 @@ describe('degeneracy detectors', () => {
     const summary = aggregateCampaign('supportive', 7, metrics);
     const degenerate: PoolSeasonMetrics = {
       squadSize: 31,
+      firstCycleLevies: 1,
       distinctMembersFielded: 16,
       benchUtilisation: 16 / 31,
       meanLineupChurn: 0,
@@ -600,6 +601,7 @@ describe('degeneracy detectors', () => {
     };
     const healthy: PoolSeasonMetrics = {
       ...degenerate,
+      firstCycleLevies: 0,
       distinctMembersFielded: 28,
       benchUtilisation: 28 / 31,
       meanLineupChurn: 0.2,
@@ -614,6 +616,7 @@ describe('degeneracy detectors', () => {
     expect(degenerateCodes).toContain('promotion-decoration');
     expect(degenerateCodes).toContain('promotion-trap');
     expect(degenerateCodes).toContain('frozen-bench');
+    expect(degenerateCodes).toContain('cycle-one-unplayability');
     const healthyCodes = detectDegeneracy('supportive', metrics, summary, {
       poolMetrics: healthy,
     }).map((finding) => finding.code);

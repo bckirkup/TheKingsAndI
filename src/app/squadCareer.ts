@@ -9,12 +9,16 @@ import type {
 import type { MatchEvent, PieceRole, PieceState } from '../psychology';
 import {
   availableAt,
+  applyLevyStandingCost,
   fieldSquad,
   foldSquadMatch,
+  stateForLevy,
+  SQUAD_CONFIG,
   type SquadFielded,
   type SquadMember,
   type SquadService,
   type FieldingPolicy,
+  type SquadConfig,
 } from '../orchestration/squadFielding';
 import {
   checkInCredence,
@@ -285,38 +289,9 @@ function conscript(
   careerSeed: number,
   match: number,
   sequence: number,
+  config: SquadConfig,
 ): SquadMember {
   const id = `w:${roleName}:conscript:${careerSeed}:${match}:${String(sequence).padStart(2, '0')}`;
-  const living = members.filter((member) => member.status !== 'retired');
-  const trustSource = living.length === 0 ? members : living;
-  const initialTrust =
-    trustSource.length === 0
-      ? 20
-      : Math.trunc(
-          trustSource.reduce((sum, member) => sum + member.state.T_i, 0) /
-            trustSource.length,
-        );
-  const appraisalSource = trustSource.length === 0 ? members : trustSource;
-  const appraisal = {
-    tauAbil:
-      appraisalSource.length === 0
-        ? 50
-        : Math.trunc(
-            appraisalSource.reduce(
-              (sum, member) => sum + member.state.credence.tauAbil,
-              0,
-            ) / appraisalSource.length,
-          ),
-    tauBenev:
-      appraisalSource.length === 0
-        ? 50
-        : Math.trunc(
-            appraisalSource.reduce(
-              (sum, member) => sum + member.state.credence.tauBenev,
-              0,
-            ) / appraisalSource.length,
-          ),
-  };
   const memberUnit = unitForIndex(
     (careerSeed % 1000) / 1000,
     match * 31 + sequence,
@@ -324,18 +299,11 @@ function conscript(
   const fresh = createFreshPieceState(
     id,
     roleName,
-    initialTrust,
+    20,
     memberUnit,
     Math.trunc(memberUnit * 11) - 5,
   );
-  const state = {
-    ...fresh,
-    credence: {
-      ...fresh.credence,
-      tauAbil: appraisal.tauAbil,
-      tauBenev: appraisal.tauBenev,
-    },
-  };
+  const state = stateForLevy(fresh, members, config);
   return {
     state,
     originRole: roleName,
@@ -379,7 +347,9 @@ export function selectPlayerSquad(input: {
   readonly careerSeed: number;
   readonly policy?: FieldingPolicy;
   readonly pinnedMemberIds?: ReadonlySet<PieceId>;
+  readonly config?: SquadConfig;
 }): PlayerSquadSelection {
+  const config = input.config ?? SQUAD_CONFIG;
   const members = foldPlayerSquad(
     input.roster,
     input.identities,
@@ -418,6 +388,7 @@ export function selectPlayerSquad(input: {
         input.careerSeed,
         match,
         sequence,
+        config,
       );
       conscriptNames.set(
         member.state.id,
@@ -426,16 +397,39 @@ export function selectPlayerSquad(input: {
       return member;
     },
   );
-  const selectedIds = new Set(fielded.lineup.map((member) => member.state.id));
-  const chairById = new Map(
-    fielded.lineup.map((member) => [member.state.id, member.state.role]),
+  // Charge the working roster's tauBenev, matching the harness pool debit.
+  const chargedMembers = applyLevyStandingCost(
+    checkedOutMembers,
+    fielded.conscriptsFielded,
+    config,
   );
-  const eligibleMembers = checkedOutMembers.filter((member) =>
+  const chargedById = new Map(
+    chargedMembers.map((member) => [member.state.id, member]),
+  );
+  const chargedFielded = {
+    ...fielded,
+    lineup: fielded.lineup.map((member) => {
+      const charged = chargedById.get(member.state.id);
+      return charged === undefined
+        ? member
+        : {
+            ...charged,
+            state: { ...charged.state, role: member.state.role },
+          };
+    }),
+  };
+  const selectedIds = new Set(
+    chargedFielded.lineup.map((member) => member.state.id),
+  );
+  const chairById = new Map(
+    chargedFielded.lineup.map((member) => [member.state.id, member.state.role]),
+  );
+  const eligibleMembers = chargedMembers.filter((member) =>
     availableAt(member, input.match),
   );
   const events = [
     ...eligibleMembers,
-    ...fielded.lineup.filter(
+    ...chargedFielded.lineup.filter(
       (member) =>
         !members.some((candidate) => candidate.state.id === member.state.id),
     ),
@@ -455,7 +449,7 @@ export function selectPlayerSquad(input: {
     };
   });
   const rosterById = new Map(input.roster.map((piece) => [piece.id, piece]));
-  for (const member of checkedOutMembers) {
+  for (const member of chargedMembers) {
     const previous = rosterById.get(member.state.id);
     if (previous !== undefined) {
       rosterById.set(member.state.id, {
@@ -464,40 +458,55 @@ export function selectPlayerSquad(input: {
       });
     }
   }
-  for (const member of fielded.lineup) {
+  for (const member of chargedFielded.lineup) {
     if (!rosterById.has(member.state.id)) {
       rosterById.set(member.state.id, { ...member.state, status: 'ACTIVE' });
     }
   }
   return {
-    members: checkedOutMembers,
-    fielded,
+    members: chargedMembers,
+    fielded: chargedFielded,
     roster: [...rosterById.values()],
-    identities: input.identities.concat(
-      fielded.lineup
-        .filter(
-          (member) =>
-            !input.identities.some(
-              (identity) => identity.id === member.state.id,
+    identities: input.identities
+      .map((identity) => {
+        const charged = chargedById.get(identity.id);
+        const original = members.find(
+          (member) => member.state.id === identity.id,
+        );
+        if (
+          charged === undefined ||
+          original === undefined ||
+          charged.state.credence.tauBenev === original.state.credence.tauBenev
+        ) {
+          return identity;
+        }
+        return checkInCredence(identity, PLAYER_LEADER_ID, charged.state);
+      })
+      .concat(
+        chargedFielded.lineup
+          .filter(
+            (member) =>
+              !input.identities.some(
+                (identity) => identity.id === member.state.id,
+              ),
+          )
+          .map((member) => ({
+            id: member.state.id,
+            name:
+              conscriptNames.get(member.state.id) ??
+              `Newcomer ${member.originRole} ${input.match}`,
+            bornInMatch: input.match,
+            originRole: member.originRole,
+            identityCreationSeed: identityCreationSeed(
+              input.careerSeed,
+              member.state.id,
             ),
-        )
-        .map((member) => ({
-          id: member.state.id,
-          name:
-            conscriptNames.get(member.state.id) ??
-            `Newcomer ${member.originRole} ${input.match}`,
-          bornInMatch: input.match,
-          originRole: member.originRole,
-          identityCreationSeed: identityCreationSeed(
-            input.careerSeed,
-            member.state.id,
-          ),
-          disposition: dispositionForIdentitySeed(
-            identityCreationSeed(input.careerSeed, member.state.id),
-          ),
-          relationshipAccounts: {},
-        })),
-    ),
+            disposition: dispositionForIdentitySeed(
+              identityCreationSeed(input.careerSeed, member.state.id),
+            ),
+            relationshipAccounts: {},
+          })),
+      ),
     events,
   };
 }

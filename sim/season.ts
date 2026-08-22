@@ -35,6 +35,7 @@ export interface SeasonOptions {
   readonly whiteStyle: OpponentArchetype;
   readonly blackStyle: OpponentArchetype;
   readonly depthFactor?: number;
+  readonly reserveDepth?: number;
   readonly config?: SeasonConfig;
   readonly engine?: EnginePort;
   readonly engineKind?: SimEngineKind;
@@ -65,7 +66,13 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     side: 'w',
     style: options.whiteStyle,
     careerSeed: options.seed,
-    depthFactor: options.depthFactor ?? config.POOL_DEPTH_FACTOR,
+    ...(options.depthFactor === undefined
+      ? {}
+      : { depthFactor: options.depthFactor }),
+    ...(options.reserveDepth === undefined
+      ? {}
+      : { reserveDepth: options.reserveDepth }),
+    config,
     randomUnit: whiteRandomUnit,
   });
   const black = createCommanderPool({
@@ -73,7 +80,13 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     side: 'b',
     style: options.blackStyle,
     careerSeed: options.seed,
-    depthFactor: options.depthFactor ?? config.POOL_DEPTH_FACTOR,
+    ...(options.depthFactor === undefined
+      ? {}
+      : { depthFactor: options.depthFactor }),
+    ...(options.reserveDepth === undefined
+      ? {}
+      : { reserveDepth: options.reserveDepth }),
+    config,
     randomUnit: blackRandomUnit,
   });
   let whitePool = white;
@@ -173,12 +186,14 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
     finalPool: whitePool,
     lineups: whiteLineups,
     promotionMatches: whitePromotions,
+    firstCycleLevies: whiteSnapshots[0]?.conscriptsFielded ?? 0,
   });
   const blackPoolMetrics = poolSeasonMetrics({
     initialPool: initialBlackPool,
     finalPool: blackPool,
     lineups: blackLineups,
     promotionMatches: blackPromotions,
+    firstCycleLevies: blackSnapshots[0]?.conscriptsFielded ?? 0,
   });
   return {
     metrics,
