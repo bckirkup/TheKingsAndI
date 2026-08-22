@@ -4,10 +4,7 @@ import {
   type MoveFeatures,
   type MoveIntent,
   type PieceId,
-  type PieceIdFactory,
-  type Role,
   type Side,
-  type Square,
 } from '../chess';
 import type { SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
@@ -26,6 +23,7 @@ import {
   type MatchEvent,
   type PieceState,
 } from '../psychology';
+import { lineupPieceIdFactory } from './lineup';
 
 import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
@@ -162,47 +160,6 @@ function updatePiece(
   return roster.map((piece) =>
     piece.id === pieceId ? normalizePieceState(updater(piece)) : piece,
   );
-}
-
-function lineupPieceIdFactory(
-  lineups: Readonly<Partial<Record<Side, readonly PieceState[]>>>,
-): PieceIdFactory {
-  const roleNameFor = (role: Role): PieceState['role'] => {
-    switch (role) {
-      case 'P':
-        return 'Pawn';
-      case 'N':
-        return 'Knight';
-      case 'B':
-        return 'Bishop';
-      case 'R':
-        return 'Rook';
-      case 'Q':
-        return 'Queen';
-      case 'K':
-        return 'King';
-    }
-  };
-  const counts: Record<string, number> = {};
-  return ({
-    side,
-    role,
-    square,
-  }: {
-    readonly side: Side;
-    readonly role: Role;
-    readonly square: Square;
-  }) => {
-    const key = `${side}:${role}`;
-    const index = counts[key] ?? 0;
-    counts[key] = index + 1;
-    const lineup = lineups[side];
-    const roleName = roleNameFor(role);
-    const candidates = lineup?.filter((piece) => piece.role === roleName) ?? [];
-    const piece = candidates[index];
-    if (piece !== undefined) return piece.id;
-    return `${side}:${role}:${square}`;
-  };
 }
 
 function applyPlayerOverride(

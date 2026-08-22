@@ -2,8 +2,9 @@ import { createSeededRandom } from '../core/random';
 
 import { getDatabase } from './db';
 import { buildCampaignDebrief, foldMatchAudit } from './folds';
-import { stampSchemaVersion } from './migrations';
+import { MIGRATIONS, stampSchemaVersion } from './migrations';
 import { normalizePieceState } from '../psychology';
+import type { PieceRole } from '../psychology';
 import type {
   ActRecord,
   ActTerminalState,
@@ -36,7 +37,7 @@ function meanTrust(roster: readonly StoredPieceState[]): number {
   return roster.reduce((sum, piece) => sum + piece.T_i, 0) / roster.length;
 }
 
-const ATTAINMENT_RANK: Readonly<Record<string, number>> = {
+const ATTAINMENT_RANK: Readonly<Record<PieceRole, number>> = {
   Pawn: 1,
   Knight: 2,
   Bishop: 2,
@@ -46,11 +47,11 @@ const ATTAINMENT_RANK: Readonly<Record<string, number>> = {
 };
 
 function highestAttainment(
-  current: string | undefined,
-  candidate: string,
-): string {
+  current: PieceRole | undefined,
+  candidate: PieceRole,
+): PieceRole {
   return (ATTAINMENT_RANK[candidate] ?? 0) >
-    (ATTAINMENT_RANK[current ?? ''] ?? 0)
+    (current === undefined ? 0 : ATTAINMENT_RANK[current])
     ? candidate
     : (current ?? candidate);
 }
@@ -75,6 +76,12 @@ export class CareerRepository {
 
   async init(): Promise<void> {
     await this.db.open();
+    const stored = await this.db.settings.get('schemaVersion');
+    const version =
+      stored === undefined ? SCHEMA_VERSION : Number(stored.value);
+    for (const migration of MIGRATIONS) {
+      if (migration.version > version) await migration.upgrade(this.db);
+    }
     await stampSchemaVersion(this.db);
   }
 
@@ -220,6 +227,7 @@ export class CareerRepository {
     readonly seed: number;
     readonly rosterSnapshot: readonly StoredPieceState[];
     readonly rosterEnd: readonly StoredPieceState[];
+    readonly identities?: readonly PieceIdentityRecord[];
     readonly events: MatchRecord['events'];
     readonly engineAudit?: MatchRecord['engineAudit'];
     readonly result: MatchRecord['result'];
@@ -283,7 +291,10 @@ export class CareerRepository {
           await this.db.acts.put(nextAct);
         }
         await this.db.pieceStates.bulkPut([...input.rosterEnd]);
-        const promotedById = new Map<string, string>();
+        if (input.identities !== undefined) {
+          await this.db.pieceIdentities.bulkPut([...input.identities]);
+        }
+        const promotedById = new Map<string, PieceRole>();
         for (const event of input.events) {
           if (event.t !== 'PROMOTION') continue;
           promotedById.set(

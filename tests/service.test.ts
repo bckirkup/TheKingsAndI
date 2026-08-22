@@ -157,6 +157,15 @@ describe('foldPieceServiceRecords', () => {
       { t: 'ROSTER_FIRE', pieceId: hero.id },
       { t: 'ROSTER_RECRUIT', pieceId: hero.id },
       {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: hero.id,
+        decision: 'passed_over',
+        originRole: 'Pawn',
+        provenance: 'original',
+      },
+      {
         t: 'HEROISM_NOMINATION',
         ply: 11,
         pieceId: hero.id,
@@ -201,6 +210,7 @@ describe('foldPieceServiceRecords', () => {
       timesRecruited: 1,
       promotions: 1,
       deserted: true,
+      timesPassedOver: 1,
     });
     expect(folded.foldVersion).toBe(SERVICE_RECORD_FOLD_VERSION);
   });

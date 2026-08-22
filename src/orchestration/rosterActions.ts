@@ -7,6 +7,7 @@ import {
 import type {
   BenchPreview,
   FirePreview,
+  PieceIdentityRecord,
   StoredPieceState,
 } from '../persistence/types';
 
@@ -17,18 +18,11 @@ import {
 } from './campaignPolicy';
 import { ENGINE_CONFIG } from '../psychology';
 
-const ROLE_BY_ID: Readonly<Record<string, PieceState['role']>> = {
-  P: 'Pawn',
-  N: 'Knight',
-  B: 'Bishop',
-  R: 'Rook',
-  Q: 'Queen',
-  K: 'King',
-};
-
-function chairRole(piece: StoredPieceState): PieceState['role'] {
-  const token = piece.id.split(':')[1];
-  return (token === undefined ? undefined : ROLE_BY_ID[token]) ?? piece.role;
+function chairRole(
+  piece: StoredPieceState,
+  identities: ReadonlyMap<string, PieceIdentityRecord>,
+): PieceState['role'] {
+  return identities.get(piece.id)?.originRole ?? piece.role;
 }
 
 /** Keep a failing piece — costly signal `retained_piece` (trust_dynamics §3). */
@@ -160,8 +154,12 @@ export function mergeRosterAfterMatch(
   lineupRoster: readonly StoredPieceState[],
   matchRoster: readonly PieceState[],
   events: readonly MatchEvent[],
+  identities: readonly PieceIdentityRecord[] = [],
 ): StoredPieceState[] {
   const matchById = new Map(matchRoster.map((piece) => [piece.id, piece]));
+  const identitiesById = new Map(
+    identities.map((identity) => [identity.id, identity]),
+  );
   const desertedIds = new Set(
     events
       .filter((event) => event.t === 'DESERTION')
@@ -179,7 +177,7 @@ export function mergeRosterAfterMatch(
         ...(updated === undefined ||
         ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
           ? {}
-          : { role: chairRole(piece) }),
+          : { role: chairRole(piece, identitiesById) }),
         status: 'DESERTED' as const,
       };
     }
@@ -191,7 +189,7 @@ export function mergeRosterAfterMatch(
       ...updated,
       role: ENGINE_CONFIG.PROMOTION_ROLE_PERSISTS_ACROSS_MATCHES
         ? updated.role
-        : chairRole(piece),
+        : chairRole(piece, identitiesById),
       status: 'ACTIVE' as const,
     };
   });

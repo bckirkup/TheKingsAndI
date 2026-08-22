@@ -14,6 +14,13 @@ export const MIGRATIONS: readonly MigrationStep[] = [
       // v1 is created by Dexie's version(1) stores definition.
     },
   },
+  {
+    version: 2,
+    upgrade: async () => {
+      // v2 keeps legacy members and their identity roles intact. Squad depth
+      // applies only to newly bootstrapped careers.
+    },
+  },
 ];
 
 export async function assertSchemaVersion(

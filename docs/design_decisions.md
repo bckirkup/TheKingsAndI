@@ -1131,6 +1131,20 @@ The implementation is in `sim/pool.ts:39-206`, with season metrics wired in
 This is the harness/pool slice only; app persistence and UI bench work remain
 open under D148/D150.
 
+### D152 ✅ How does the offline career field its private squad? (ADR 0057)
+
+New careers bootstrap a deterministic depth-two private squad and field exactly
+sixteen chairs through the shipped origin-inclusive selector. The player's
+fallback policy is `strongest_available`; pinned IDs are available to future
+commander controls but no picker ships in this slice. Capture removes a member
+for one match rather than retiring her, while trauma and obsolescence are
+permanent retirement causes. Availability, passed-over streaks, redemption,
+service, and conscription provenance are folded from the match event log in
+`src/app/squadCareer.ts:180-480`; psychological snapshots remain in
+`pieceStates`. Legacy sixteen-member careers stay depth one through the
+forward-only schema-v2 migration. This is the offline/private bench subset
+only; shared market behavior is Slice 4. D148 and D150 remain open.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had

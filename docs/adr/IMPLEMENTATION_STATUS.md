@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0056)
+# ADR implementation status (0035–0057)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -32,6 +32,7 @@ the discrepancy is corrected.
 | 0054 | The seminar pool and what a player knows | Accepted direction; staging and magnitudes proposed | **Partly wired** — slices 1–2 render identity and service truth, emit `PROMOTION`, write in-match roles, record attained roles, and count promotions; campaign role carry is flag-gated off by default and cohort prestige is wired at zero; no player-facing bench |
 | 0055 | Earned ability from vindicated judgment | Resolved and calibrated at scale `2` / loss multiplier `1` | **Shipped** — `src/psychology/reducers.ts:65-108`, `src/orchestration/psychologyHooks.ts:270-359`, `sim/pool.ts:252-277`, and campaign spread metrics; evidence: `docs/calibration/2026-08-19-earned-ability-magnitude.md` |
 | 0056 | Origin-inclusive chair contests and the bench instrument | Accepted for harness/pool slice; app bench remains open | **Shipped in sim** — `sim/pool.ts:39-206`, `sim/season.ts:40-157`, and `sim/degeneracy.ts:1-420`; D148/D150 remain open |
+| 0057 | App-side private squad fielding | Accepted for offline/private bench slice; shared market remains out of scope | **Shipped** — `src/app/careerBootstrap.ts:49-79`, `src/app/squadCareer.ts:180-480`, `src/orchestration/matchSession.ts:45-66`, `src/persistence/service.ts:33-185`, and `src/persistence/migrations.ts:8-31`; D148/D150 remain open |
 
 ## Confirmed implementation gaps
 
@@ -65,9 +66,9 @@ These are status distinctions, not new design decisions:
 - **Experience does not grow.** `E_i` is assigned only when a piece is created
   (`src/orchestration/roster.ts:58-65`, `sim/roster.ts:71-78`) and is otherwise
   only clamped (`src/psychology/reducers.ts:32-35`), so ability remains fixed.
-- **There is no shipped bench.** `activeLineup` fields every `ACTIVE` piece
-  (`src/orchestration/rosterActions.ts:132-141`), while `listFreeAgents`
-  returns the player's own `DESERTED` pieces
+- **The shared market is not shipped.** The offline/private app bench is folded
+  from match events by `src/app/squadCareer.ts:180-480`; `listFreeAgents`
+  continues to expose only the existing roster-management free-agent surface
   (`src/persistence/repository.ts:354-357`).
 - **Piece names are partly wired.** Names are stored in
   `src/app/careerBootstrap.ts:44-49` and now render in the roster and piece

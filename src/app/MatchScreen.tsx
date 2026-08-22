@@ -5,6 +5,7 @@ import { createFakeEnginePort } from '../engine/fake';
 import { lineFor } from '../narrative';
 import type {
   MatchResult,
+  MatchRecord,
   OpponentArchetype,
   PieceIdentityRecord,
   StoredPieceState,
@@ -15,10 +16,8 @@ import {
 } from '../orchestration/matchSession';
 import { classifyMatchResult } from '../orchestration/terminalState';
 import type { MatchEvent } from '../psychology';
-import {
-  activeLineup,
-  mergeRosterAfterMatch,
-} from '../orchestration/rosterActions';
+import { activeLineup } from '../orchestration/rosterActions';
+import { mergePlayerSquadAfterMatch } from './squadCareer';
 import { ChessgroundBoard } from '../ui/board/ChessgroundBoard';
 import { PieceOverlay } from '../ui/overlays/PieceOverlay';
 import {
@@ -47,6 +46,7 @@ function phaseLabel(
 function useMatchSession(
   seed: number,
   initialRoster: readonly StoredPieceState[],
+  initialLineup: readonly StoredPieceState[] | undefined,
   opponentArchetype: OpponentArchetype,
   rosterPreamble: readonly MatchEvent[],
 ): {
@@ -59,7 +59,21 @@ function useMatchSession(
       new MatchSession({
         seed,
         engine: createFakeEnginePort('ui-fake/depth-fixed'),
-        initialRoster: activeLineup(initialRoster),
+        initialRoster:
+          initialLineup === undefined
+            ? activeLineup(initialRoster)
+            : initialLineup.map(({ status, ...piece }) => {
+                void status;
+                return piece;
+              }),
+        ...(initialLineup === undefined
+          ? {}
+          : {
+              initialLineup: initialLineup.map(({ status, ...piece }) => {
+                void status;
+                return piece;
+              }),
+            }),
         opponentArchetype,
         rosterPreamble,
       }),
@@ -72,9 +86,12 @@ function useMatchSession(
 export interface MatchScreenProps {
   readonly seed?: number;
   readonly initialRoster?: readonly StoredPieceState[];
+  readonly initialLineup?: readonly StoredPieceState[];
+  readonly matchIndex?: number;
   readonly opponentArchetype?: OpponentArchetype;
   readonly rosterPreamble?: readonly MatchEvent[];
   readonly identities?: readonly PieceIdentityRecord[];
+  readonly matches?: readonly MatchRecord[];
   readonly onMatchFinished?: (input: {
     readonly events: MatchSessionSnapshot['events'];
     readonly rosterEnd: StoredPieceState[];
@@ -87,15 +104,19 @@ export interface MatchScreenProps {
 export function MatchScreen({
   seed = 42,
   initialRoster,
+  initialLineup,
+  matchIndex = 1,
   opponentArchetype = 'random',
   rosterPreamble = [],
   identities = [],
+  matches = [],
   onMatchFinished,
 }: MatchScreenProps): JSX.Element {
   const rosterForMatch = initialRoster ?? [];
   const { snapshot, session, refresh } = useMatchSession(
     seed,
     rosterForMatch,
+    initialLineup,
     opponentArchetype,
     rosterPreamble,
   );
@@ -136,11 +157,15 @@ export function MatchScreen({
       return;
     }
 
-    const rosterEnd = mergeRosterAfterMatch(
-      rosterForMatch,
-      roster,
-      snapshot.events,
-    );
+    const merged = mergePlayerSquadAfterMatch({
+      roster: rosterForMatch,
+      identities,
+      matches,
+      fieldedRoster: initialLineup ?? rosterForMatch,
+      matchRoster: roster,
+      events: snapshot.events,
+      match: matchIndex,
+    });
     const result = classifyMatchResult({
       rout: snapshot.rout,
       winScore: snapshot.winScore,
@@ -148,8 +173,8 @@ export function MatchScreen({
     });
     setReported(true);
     onMatchFinished({
-      events: snapshot.events,
-      rosterEnd,
+      events: [...snapshot.events, ...merged.events],
+      rosterEnd: merged.roster,
       result,
       winScore: snapshot.winScore,
       engineAudit: snapshot.engineAudit,
@@ -160,6 +185,10 @@ export function MatchScreen({
     reported,
     roster,
     rosterForMatch,
+    initialLineup,
+    identities,
+    matches,
+    matchIndex,
     snapshot.events,
     snapshot.rout,
     snapshot.winScore,

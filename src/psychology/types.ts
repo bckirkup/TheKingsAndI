@@ -168,6 +168,23 @@ export type MatchEvent =
       readonly toRole: PieceRole;
     }
   | {
+      readonly t: 'SQUAD_FIELDING';
+      readonly match: number;
+      readonly side: 'w' | 'b';
+      readonly pieceId: PieceId;
+      readonly decision: 'fielded' | 'passed_over';
+      readonly chair?: PieceRole;
+      readonly originRole: PieceRole;
+      readonly provenance: 'original' | 'conscript';
+    }
+  | {
+      readonly t: 'SQUAD_OBSOLESCENCE';
+      readonly match: number;
+      readonly side: 'w' | 'b';
+      readonly pieceId: PieceId;
+      readonly nonSelectionStreak: number;
+    }
+  | {
       readonly t: 'ABILITY_OBSERVATION';
       readonly ply: number;
       readonly pieceId: PieceId;

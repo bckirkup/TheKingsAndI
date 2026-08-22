@@ -149,6 +149,14 @@ describe('roster actions', () => {
             toRole: 'Queen',
           },
         ],
+        [
+          {
+            id: base.id,
+            name: 'Pawn',
+            bornInMatch: 0,
+            originRole: 'Pawn',
+          },
+        ],
       );
       expect(merged[0]?.role).toBe('Pawn');
       expect(merged[0]?.T_i).toBe(40);

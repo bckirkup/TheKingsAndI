@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createFakeEnginePort } from '../src/engine/fake';
 import { LivingBoard } from '../src/chess';
 import { MatchSession } from '../src/orchestration/matchSession';
+import { createStartingRoster } from '../src/orchestration/roster';
 import { buildDests, intentFromKeys } from '../src/ui/board/boardAdapter';
 
 describe('match session', () => {
@@ -16,6 +17,22 @@ describe('match session', () => {
     expect(snapshot.roster).toHaveLength(16);
     expect(snapshot.board.turn()).toBe('w');
     expect(snapshot.determinismId).toContain('fake-engine');
+  });
+
+  it('installs selected lineup identities on the standard board', () => {
+    const standard = LivingBoard.standard();
+    const lineup = createStartingRoster(standard, 'w', 20, 0.5);
+    const selected = lineup.map((piece) =>
+      piece.id === 'w:P:e2' ? { ...piece, id: 'w:Pawn:00' } : piece,
+    );
+    const session = new MatchSession({
+      seed: 5,
+      engine: createFakeEnginePort(),
+      initialRoster: selected,
+      initialLineup: selected,
+    });
+
+    expect(session.snapshot().board.pieceAt('e2')?.id).toBe('w:Pawn:00');
   });
 
   it('accepts a legal opening move and advances the opponent', async () => {
