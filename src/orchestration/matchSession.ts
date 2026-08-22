@@ -65,6 +65,7 @@ import {
 import { createStartingRoster } from './roster';
 import { kingExposureAfterWithdrawals } from './kingExposure';
 import { applyPromotion } from './promotion';
+import { lineupPieceIdFactory } from './lineup';
 
 export type MatchPhase =
   | 'playing'
@@ -147,6 +148,7 @@ export interface MatchSessionConfig {
   readonly initialBoard?: LivingBoard;
   readonly initialTrust?: number;
   readonly initialRoster?: readonly PieceState[];
+  readonly initialLineup?: readonly PieceState[];
   readonly initialEnemyRoster?: readonly PieceState[];
   readonly opponentArchetype?: OpponentArchetype;
   readonly rosterPreamble?: readonly MatchEvent[];
@@ -214,7 +216,13 @@ export class MatchSession {
     this.kingTauAbil = config.kingTauAbil ?? 50;
     this.rivalLeaderId =
       config.rivalLeaderId ?? `opponent:${this.opponentArchetype}`;
-    this.board = config.initialBoard ?? LivingBoard.standard();
+    this.board =
+      config.initialBoard ??
+      (config.initialLineup === undefined
+        ? LivingBoard.standard()
+        : LivingBoard.standard(
+            lineupPieceIdFactory({ [this.playerSide]: config.initialLineup }),
+          ));
     this.roster =
       config.initialRoster !== undefined
         ? config.initialRoster.map(normalizePieceState)

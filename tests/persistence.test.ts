@@ -56,7 +56,7 @@ describe('persistence repository', () => {
     const loaded = await repo.loadActiveCampaign();
     expect(loaded).not.toBeNull();
     expect(loaded?.matchCount).toBe(0);
-    expect(loaded?.roster).toHaveLength(16);
+    expect(loaded?.roster).toHaveLength(31);
   });
 
   it('migrates legacy credence accounts with zero ability observations', async () => {
@@ -255,5 +255,24 @@ describe('schema migrations', () => {
     expect(career?.seed).toBe(42);
     const campaign = await db.campaigns.get(fixture.campaign.id);
     expect(campaign?.targetMatches).toBe(5);
+  });
+
+  it('preserves a legacy sixteen-member roster without inventing depth', async () => {
+    const repo = new CareerRepository();
+    await repo.init();
+    const bootstrapped = bootstrapRoster(43);
+    const legacyRoster = bootstrapped.roster.slice(0, 16);
+    const legacyIdentities = bootstrapped.identities.slice(0, 16);
+    await repo.createCareer({
+      seed: 43,
+      roster: legacyRoster,
+      identities: legacyIdentities,
+      targetMatches: 1,
+    });
+
+    expect(await repo.getRoster()).toHaveLength(16);
+    expect(
+      await repo.getIdentities(legacyRoster.map((piece) => piece.id)),
+    ).toHaveLength(16);
   });
 });

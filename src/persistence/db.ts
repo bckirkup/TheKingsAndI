@@ -29,6 +29,15 @@ export class LivingChessDatabase extends Dexie {
       pieceStates: 'id, status',
       settings: 'key',
     });
+    this.version(2).stores({
+      careers: 'id, createdAt',
+      acts: 'id, careerId',
+      campaigns: 'id, actId',
+      matches: 'id, campaignId, actId, schemaVersion',
+      pieceIdentities: 'id',
+      pieceStates: 'id, status',
+      settings: 'key',
+    });
   }
 }
 

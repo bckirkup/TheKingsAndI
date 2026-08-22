@@ -101,6 +101,9 @@ export function RosterScreen({
     if (record.promotions > 0) {
       lines.push(`Promotions: ${record.promotions}`);
     }
+    if (record.timesPassedOver > 0) {
+      lines.push(`Passed over: ${record.timesPassedOver}`);
+    }
     if (record.deserted) lines.push('Deserted');
     return lines;
   };

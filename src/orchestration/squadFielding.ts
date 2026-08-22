@@ -52,7 +52,7 @@ export interface SquadMember {
   readonly originRole: PieceRole;
   /** Highest role this member has attained through a PROMOTION event. */
   readonly attainedRole?: PieceRole;
-  readonly status: 'available' | 'recovering' | 'retired';
+  readonly status: 'available' | 'recovering' | 'retired' | 'benched' | 'fired';
   readonly availableAtMatch: number;
   readonly provenance: 'original' | 'conscript';
   readonly service: SquadService;
@@ -89,6 +89,7 @@ export interface SquadFielded {
 export interface SquadFieldingPool {
   readonly members: readonly SquadMember[];
   readonly fieldingPolicy: FieldingPolicy;
+  readonly pinnedMemberIds?: ReadonlySet<PieceId>;
 }
 
 const STARTING_ROLE_COUNTS: Readonly<Record<PieceRole, number>> = {
@@ -134,7 +135,7 @@ export function highestAttainment(
 
 export function availableAt(member: SquadMember, match: number): boolean {
   return (
-    member.status !== 'retired' &&
+    (member.status === 'available' || member.status === 'recovering') &&
     (member.status !== 'recovering' || match >= member.availableAtMatch)
   );
 }
@@ -205,9 +206,12 @@ export function fieldSquad(
           availableAt(member, match) &&
           !selectedIds.has(member.state.id),
       )
-      .sort((left, right) =>
-        compareForPolicy(pool.fieldingPolicy, left, right),
-      );
+      .sort((left, right) => {
+        const leftPinned = pool.pinnedMemberIds?.has(left.state.id) ? 1 : 0;
+        const rightPinned = pool.pinnedMemberIds?.has(right.state.id) ? 1 : 0;
+        if (leftPinned !== rightPinned) return rightPinned - leftPinned;
+        return compareForPolicy(pool.fieldingPolicy, left, right);
+      });
     const selected = available.slice(0, required).map((member) => ({
       ...member,
       state: { ...member.state, role },

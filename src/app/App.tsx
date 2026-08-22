@@ -21,6 +21,7 @@ import type {
   StoredPieceState,
 } from '../persistence';
 import type { MatchEvent } from '../psychology';
+import { selectPlayerSquad } from './squadCareer';
 
 type AppScreen =
   | { readonly kind: 'hub' }
@@ -43,7 +44,9 @@ type AppScreen =
       readonly act: ActRecord;
       readonly campaign: CampaignRecord;
       readonly roster: StoredPieceState[];
+      readonly initialLineup: readonly StoredPieceState[];
       readonly identities: readonly PieceIdentityRecord[];
+      readonly matches: readonly MatchRecord[];
       readonly matchIndex: number;
       readonly seed: number;
       readonly rosterPreamble: readonly MatchEvent[];
@@ -109,17 +112,30 @@ export function App(): JSX.Element {
           onConfirm={(roster, preambleEvents) => {
             void (async () => {
               await repo.init();
-              await repo.saveRoster(roster);
+              const matches = await repo.listMatches(screen.campaign.id);
+              const selection = selectPlayerSquad({
+                roster,
+                identities: screen.identities,
+                matches,
+                match: screen.matchIndex,
+                careerSeed: screen.career.seed,
+              });
+              await repo.saveRoster(selection.roster);
               setScreen({
                 kind: 'match',
                 career: screen.career,
                 act: screen.act,
                 campaign: screen.campaign,
-                roster,
-                identities: screen.identities,
+                roster: [...selection.roster],
+                initialLineup: selection.fielded.lineup.map((member) => ({
+                  ...member.state,
+                  status: 'ACTIVE' as const,
+                })),
+                identities: [...selection.identities],
+                matches,
                 matchIndex: screen.matchIndex,
                 seed: screen.seed,
-                rosterPreamble: preambleEvents,
+                rosterPreamble: [...preambleEvents, ...selection.events],
               });
             })();
           }}
@@ -130,9 +146,12 @@ export function App(): JSX.Element {
         <MatchScreen
           seed={screen.seed}
           initialRoster={screen.roster}
+          initialLineup={screen.initialLineup}
+          matchIndex={screen.matchIndex}
           opponentArchetype={screen.act.opponentArchetype}
           rosterPreamble={screen.rosterPreamble}
           identities={screen.identities}
+          matches={screen.matches}
           onMatchFinished={(result) => {
             void (async () => {
               await repo.init();
@@ -144,6 +163,7 @@ export function App(): JSX.Element {
                 seed: screen.seed,
                 rosterSnapshot: screen.roster,
                 rosterEnd: result.rosterEnd,
+                identities: screen.identities,
                 events,
                 engineAudit: result.engineAudit,
                 result: result.result,

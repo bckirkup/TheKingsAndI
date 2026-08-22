@@ -34,6 +34,7 @@ export {
 } from './pacingConfig';
 export { createStartingRoster } from './roster';
 export { applyPromotion } from './promotion';
+export { lineupPieceIdFactory } from './lineup';
 export {
   availableAt,
   compareForPolicy,

@@ -16,6 +16,7 @@ export interface PieceServiceRecord {
   readonly timesRecruited: number;
   readonly promotions: number;
   readonly deserted: boolean;
+  readonly timesPassedOver: number;
 }
 
 export interface PieceServiceRecordSet {
@@ -40,6 +41,7 @@ function emptyRecord(): PieceServiceRecord {
     timesRecruited: 0,
     promotions: 0,
     deserted: false,
+    timesPassedOver: 0,
   };
 }
 
@@ -94,6 +96,14 @@ export function foldPieceServiceRecords(
       if (pieceId === undefined || !records.has(pieceId)) continue;
 
       switch (event.t) {
+        case 'SQUAD_FIELDING':
+          if (event.decision === 'passed_over') {
+            update(pieceId, (record) => ({
+              ...record,
+              timesPassedOver: record.timesPassedOver + 1,
+            }));
+          }
+          break;
         case 'PROMOTION':
           update(pieceId, (record) => ({
             ...record,

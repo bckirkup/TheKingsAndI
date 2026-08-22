@@ -1,11 +1,12 @@
 import type {
   CampaignCultureDriftVector,
   MatchEvent,
+  PieceRole,
   PieceState,
 } from '../psychology';
 import type { EngineAuditEntry } from '../engine';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
@@ -15,7 +16,7 @@ export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
 export const DETERMINISM_ID = 'heuristic-eval-v1';
 export const COMMENDATION_FOLD_VERSION = 'commendations-v1';
 export const LEARNING_DELTA_FOLD_VERSION = 'learning-delta-v1';
-export const SERVICE_RECORD_FOLD_VERSION = 'service-record-v1';
+export const SERVICE_RECORD_FOLD_VERSION = 'service-record-v2';
 
 /** Why a commander was dismissed (ADR 0024 §3). */
 export type DismissalCause = 'dismissed_by_room' | 'dismissed_by_king';
@@ -25,7 +26,8 @@ export type PieceStatus =
   | 'BENCHED'
   | 'CAPTURED'
   | 'DESERTED'
-  | 'FIRED';
+  | 'FIRED'
+  | 'RETIRED';
 
 export type MatchResult =
   | 'WIN'
@@ -48,8 +50,8 @@ export interface PieceIdentityRecord {
   readonly id: string;
   readonly name: string;
   readonly bornInMatch: number;
-  readonly originRole: string;
-  readonly attainedRole?: string;
+  readonly originRole: PieceRole;
+  readonly attainedRole?: PieceRole;
 }
 
 export interface StoredPieceState extends PieceState {
