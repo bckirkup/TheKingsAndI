@@ -1188,6 +1188,30 @@ versus undesirable postings are an intended instrument (patronage versus legible
 discipline). Demotion waits on D148, which fixes the sign and magnitude of
 prestige movement; without it a demotion is a label. Both follow the draft.
 
+### D157 ❓ What is disclosed about the honours, and when? (ADR 0060 §1-§4)
+**Open — not wired.** Refines D93 (ADR 0031 §3), which stands. D93 forbids
+publishing a *standing* during play; it does not settle whether a *charter* may
+be known. ADR 0060 proposes: the crude public register (wins, margin, material,
+promotions, streak, cohort rank) is disclosed continuously **because** it is the
+leaderboard a commander keeps anyway, and it is deceptive by emphasis rather
+than by falsehood — it also sets reverse-order draft priority (ADR 0059 §2), so
+leading it costs purse. The behavioural honours stay sealed within a cycle and
+may open only on **settlement** (the verdict can no longer change), and then only
+when won; a settled loss waits for the debrief. Across cycles the debrief itself
+is the charter, with a recorded facilitator override to unseal one award.
+`repaired_breach` is never heralded. Open: charter depth open by cycle *n*, and
+whether settled-won disclosure happens at all.
+
+### D158 ❓ What does a piece observe of her commander's record? (ADR 0060 §5)
+**Open — not wired.** Never an award, a standing, or a criterion. Public record
+and conduct only — results, who was fielded and who sat, promotions, captures,
+expenditure, desertions — attended to in a subset weighted by class prejudice,
+dyadic affinity, and what she witnessed; rumor still carries appraisals only
+(ADR 0016). Consequence for ADR 0059: market acceptance is priced off reputation
+*as perceived*, not off the true record. Piece-level honours (ADR 0050 heroism
+nominations) remain observable; commander commendations do not. Open: the
+salience weights across class, bond, and witness.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had

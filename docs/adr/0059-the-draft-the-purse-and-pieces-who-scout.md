@@ -153,6 +153,33 @@ postings are a real instrument — a punishment posting is legible discipline, a
 prestige loan is patronage. Demotion cannot mean anything until D148 fixes the
 sign and magnitude of prestige movement. Both come after the draft ships.
 
+### 9. The open magnitudes are a search space, not a set of rulings
+
+> **"All of these 'decisions' are actually just the seeds for a heuristic search
+> in the parameter space, attempting to find useful space where the experience is
+> fun and instructive."**
+
+Recorded as the standing method for this ADR's numbers. Each knob ships as a
+**seed with a bracket and a probe**, and the search is a harness sweep
+(`pnpm sim:sweep`) scored against measurable proxies for "fun and instructive"
+rather than against a chosen default:
+
+| Knob | Seed | Bracket |
+|---|---|---|
+| Reserve depth above the sixteen | 4 | 0–10 |
+| Purse spread across the standing order | moderate | flat → steep |
+| Purse carry between cycles | partial | none → full |
+| Acceptance discount from reputation | moderate | none → dominant |
+| Consultations per cycle | small | 1 → unbounded |
+| Charter depth open by cycle *n* (ADR 0060 §3) | none | none → full |
+
+The objective is the conjunction of the detectors, not a single score: no
+dominating policy (ADR 0031 §1), every award live into the final third (ADR 0060),
+no purse runaway, tanking dominated, no price collapse, and informant counsel
+informative without being oracular. A cell that satisfies all of them is
+*candidate* space; which candidate is fun is a playtesting question and is not
+settled by measurement.
+
 ## Consequences
 
 **Slice 4b is resequenced.** The draft comes *before* free agency, because a
