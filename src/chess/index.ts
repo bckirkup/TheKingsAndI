@@ -3,6 +3,7 @@ export {
   IllegalMoveError,
   IllegalSanError,
   LivingBoard,
+  parsePieceId,
   startingSquarePieceId,
 } from './board';
 export {

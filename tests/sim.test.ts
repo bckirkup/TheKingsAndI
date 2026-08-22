@@ -988,6 +988,7 @@ function registerFor(value: number): PublicRegister {
     materialLost: 0,
     largestMaterialMargin: value,
     ownPiecesLost: 0,
+    unattributedCaptures: 0,
     promotionsReached: 0,
     currentWinStreak: value,
     longestWinStreak: value,

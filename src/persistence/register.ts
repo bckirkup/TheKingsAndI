@@ -1,3 +1,5 @@
+import { parsePieceId } from '../chess';
+import type { Role } from '../chess';
 import type { PieceRole } from '../psychology';
 import type { MatchRecord, MatchResult } from './types';
 
@@ -33,6 +35,7 @@ export interface PublicRegister {
   readonly materialLost: number;
   readonly largestMaterialMargin: number;
   readonly ownPiecesLost: number;
+  readonly unattributedCaptures: number;
   readonly promotionsReached: number;
   readonly currentWinStreak: number;
   readonly longestWinStreak: number;
@@ -48,48 +51,25 @@ export const PUBLIC_REGISTER_COLUMNS = [
   'materialLost',
   'largestMaterialMargin',
   'ownPiecesLost',
+  'unattributedCaptures',
   'promotionsReached',
   'currentWinStreak',
   'longestWinStreak',
 ] as const satisfies readonly (keyof Omit<PublicRegister, 'foldVersion'>)[];
 
-const ROLE_VALUES: Readonly<Record<PieceRole, number>> = {
-  Pawn: 1,
-  Knight: 3,
-  Bishop: 3,
-  Rook: 5,
-  Queen: 9,
-  King: 0,
+const ROLE_VALUES: Readonly<Record<Role, number>> = {
+  P: 1,
+  N: 3,
+  B: 3,
+  R: 5,
+  Q: 9,
+  K: 0,
 };
 
-function roleFromPieceId(pieceId: string): PieceRole | null {
-  const role = pieceId.split(':')[1];
-  return role !== undefined && role in ROLE_VALUES ? (role as PieceRole) : null;
-}
-
-function sideOfPiece(pieceId: string): 'w' | 'b' | null {
-  const side = pieceId.split(':')[0];
-  return side === 'w' || side === 'b' ? side : null;
-}
-
-function publicResultForSide(
-  result: MatchResult,
-  side: 'w' | 'b',
-): MatchResult {
-  if (side === 'w') return result;
-  switch (result) {
-    case 'WIN':
-      return 'LOSS';
-    case 'LOSS':
-      return 'WIN';
-    case 'ROUT':
-      return 'WIN';
-    default:
-      return result;
-  }
-}
-
-/** Extract only public, non-psychological facts needed by the register fold. */
+/**
+ * Extract public, non-psychological facts for the commander represented by
+ * `side`; the record result is already that commander's result.
+ */
 export function publicMatchFactsFromRecord(
   match: MatchRecord,
   side: 'w' | 'b',
@@ -102,7 +82,10 @@ export function publicMatchFactsFromRecord(
         victim: event.victim,
         by: event.by,
       });
-    } else if (event.t === 'PROMOTION' && sideOfPiece(event.pieceId) === side) {
+    } else if (
+      event.t === 'PROMOTION' &&
+      parsePieceId(event.pieceId)?.side === side
+    ) {
       events.push({
         t: 'PROMOTION',
         pieceId: event.pieceId,
@@ -111,11 +94,7 @@ export function publicMatchFactsFromRecord(
       });
     }
   }
-  return {
-    side,
-    result: publicResultForSide(match.result, side),
-    events,
-  };
+  return { side, result: match.result, events };
 }
 
 function emptyRegister(): PublicRegister {
@@ -130,6 +109,7 @@ function emptyRegister(): PublicRegister {
     materialLost: 0,
     largestMaterialMargin: 0,
     ownPiecesLost: 0,
+    unattributedCaptures: 0,
     promotionsReached: 0,
     currentWinStreak: 0,
     longestWinStreak: 0,
@@ -147,6 +127,7 @@ export function foldPublicRegister(
   let materialTaken = 0;
   let materialLost = 0;
   let ownPiecesLost = 0;
+  let unattributedCaptures = 0;
   let promotionsReached = 0;
   let wins = 0;
   let losses = 0;
@@ -168,14 +149,17 @@ export function foldPublicRegister(
     let lost = 0;
     for (const event of match.events) {
       if (event.t === 'PROMOTION') {
-        if (sideOfPiece(event.pieceId) === match.side) {
+        if (parsePieceId(event.pieceId)?.side === match.side) {
           promotionsReached += 1;
         }
         continue;
       }
-      const victimValue = ROLE_VALUES[roleFromPieceId(event.victim) ?? 'King'];
-      if (sideOfPiece(event.by) === match.side) taken += victimValue;
-      if (sideOfPiece(event.victim) === match.side) {
+      const victim = parsePieceId(event.victim);
+      const by = parsePieceId(event.by);
+      if (victim === null || by === null) unattributedCaptures += 1;
+      const victimValue = victim === null ? 0 : ROLE_VALUES[victim.role];
+      if (by?.side === match.side && victim !== null) taken += victimValue;
+      if (victim?.side === match.side) {
         lost += victimValue;
         ownPiecesLost += 1;
       }
@@ -199,6 +183,7 @@ export function foldPublicRegister(
     materialLost,
     largestMaterialMargin,
     ownPiecesLost,
+    unattributedCaptures,
     promotionsReached,
     currentWinStreak,
     longestWinStreak,
