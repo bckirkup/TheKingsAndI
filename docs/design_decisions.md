@@ -1147,6 +1147,97 @@ service, and conscription provenance are folded from the match event log in
 forward-only schema-v2 migration. This is the offline/private bench subset
 only; shared market behavior is Slice 4. D148 and D150 remain open.
 
+### D153 ❓ What stock does a career start with, and is it drafted? (ADR 0059 §1)
+**Open — not wired.** Shipped today is a doubled standard army: one King, two
+Queens, four of each officer, sixteen pawns
+(`src/app/careerBootstrap.ts:54-70`), lifted from the harness's
+`POOL_DEPTH_FACTOR: 2` by ADR 0057 and never decided. It contradicts D7 ("a
+bench built up over time, not a fixed 16"). ADR 0059 proposes one legal army
+plus a small reserve, drafted rather than issued, with the King appointed rather
+than drafted (ADR 0021). Open: reserve depth, and whether the first cycle is a
+draft at all or an issued army with the draft beginning at cycle two.
+
+### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
+**Open — not wired.** ADR 0059 proposes two currencies of opposite sign:
+priority and purse from *inverse* standing (the NBA device), and acceptance —
+a discount on a piece's price — from reputation, read through ADR 0058's
+relationship account or the disposition prior plus testimony. The stabilisers
+proposed with it are the green levy replacing free conscription
+(`src/app/squadCareer.ts:282-345` is unlimited and free today), a cap on purse
+carried between cycles, and the non-selection tax that already prices a deep
+bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
+acceptance discount. Tanking must be measurably dominated, not merely
+discouraged.
+
+### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)
+**Open — not wired.** The public record is identical for every commander
+(name, origin and attained role, status, commanders served, and the folded
+service record). Private counsel comes from pieces he already holds and is
+computed from their state — dyadic affinity, class prejudice, the rumor
+appraisal with its existing affinity/class credibility weight
+(`src/psychology/belief.ts:14-41`), credence in *him*, and chair rivalry under
+origin-inclusive eligibility (ADR 0056). Qualitative only (ADR 0018), no new
+RNG. This answers D150's public half by construction and proposes an answer to
+its private half. Open: the consultation budget per cycle, and how strongly
+rivalry may distort counsel.
+
+### D156 ❓ How do temporary duty assignments and demotion work? (ADR 0059 §8)
+**Open — not wired.** TDY needs no new state: lending a piece for a cycle is
+carried by ADR 0058's per-commander accounts plus global trauma. Desirable
+versus undesirable postings are an intended instrument (patronage versus legible
+discipline). Demotion waits on D148, which fixes the sign and magnitude of
+prestige movement; without it a demotion is a label. Both follow the draft.
+
+### D157 ❓ What is disclosed about the honours, and when? (ADR 0060 §1-§4)
+**Open — not wired.** Refines D93 (ADR 0031 §3), which stands. D93 forbids
+publishing a *standing* during play; it does not settle whether a *charter* may
+be known. ADR 0060 proposes: the crude public register (wins, margin, material,
+promotions, streak, cohort rank) is disclosed continuously **because** it is the
+leaderboard a commander keeps anyway. Every achievement on it is a real
+achievement — the register is honest but *partial*, and the deception is in its
+apparent sufficiency, never in its content; the game must not sneer at
+competence. It also sets reverse-order draft priority (ADR 0059 §2), so leading
+it costs purse. The governing rule for the sealed set is **orthogonality, not
+opposition**: an honour earns its place only if it is substantially uncorrelated
+with the public columns across seeds and policies — correlated and it merely
+re-skins the scoreboard, strongly anti-correlated and it punishes winning, which
+ADR 0024 forbids. Honours sit *outside* the register rather than between those
+failure modes: on axes it does not span, never as a softer version of winning.
+That bound is a measurable detector, not a taste.
+
+The behavioural honours stay sealed within a cycle and may open only on
+**settlement** (the verdict can no longer change), and then only
+when won; a settled loss waits for the debrief. A student typically plays one
+cycle, so the cross-cycle charter belongs to the facilitator rather than to him,
+and **an award nobody earned is never mentioned** — the debrief reads only the
+honours given, which keeps unearned awards unfarmable and makes ADR 0031's
+unwinnable-award detector harness-only. A facilitator may unseal one award
+deliberately as a recorded act. `repaired_breach` is never heralded. Open:
+whether settled-won disclosure happens at all, and whether the consumer campaign
+(no facilitator, so the charter leaks by repetition) opens the charter or rotates
+which honours are live.
+
+ADR 0060 §6 splits the register into four kinds, and only the sealed behavioural
+honours must stay hidden: the crude public register; the sealed honours; **guild
+awards** where a class honours the commander who best served its own idea of good
+chess (the rooks for castling, the bishops for the queen's diagonals), published
+in advance because farming them means playing more interesting chess, and voted
+with each piece's credence and class prejudice as the weight rather than by a
+neutral judge; and **people's choice** voted by the students, wanted but needing
+a collusion guard. Facilitator awards follow the ADR 0050 pattern — software
+nominates a bounded shortlist with evidence, the human confers. Open: the guild
+criteria and their vote weighting, and the people's-choice ballot guard.
+
+### D158 ❓ What does a piece observe of her commander's record? (ADR 0060 §5)
+**Open — not wired.** Never an award, a standing, or a criterion. Public record
+and conduct only — results, who was fielded and who sat, promotions, captures,
+expenditure, desertions — attended to in a subset weighted by class prejudice,
+dyadic affinity, and what she witnessed; rumor still carries appraisals only
+(ADR 0016). Consequence for ADR 0059: market acceptance is priced off reputation
+*as perceived*, not off the true record. Piece-level honours (ADR 0050 heroism
+nominations) remain observable; commander commendations do not. Open: the
+salience weights across class, bond, and witness.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had
