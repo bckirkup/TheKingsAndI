@@ -1147,6 +1147,47 @@ service, and conscription provenance are folded from the match event log in
 forward-only schema-v2 migration. This is the offline/private bench subset
 only; shared market behavior is Slice 4. D148 and D150 remain open.
 
+### D153 ❓ What stock does a career start with, and is it drafted? (ADR 0059 §1)
+**Open — not wired.** Shipped today is a doubled standard army: one King, two
+Queens, four of each officer, sixteen pawns
+(`src/app/careerBootstrap.ts:54-70`), lifted from the harness's
+`POOL_DEPTH_FACTOR: 2` by ADR 0057 and never decided. It contradicts D7 ("a
+bench built up over time, not a fixed 16"). ADR 0059 proposes one legal army
+plus a small reserve, drafted rather than issued, with the King appointed rather
+than drafted (ADR 0021). Open: reserve depth, and whether the first cycle is a
+draft at all or an issued army with the draft beginning at cycle two.
+
+### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
+**Open — not wired.** ADR 0059 proposes two currencies of opposite sign:
+priority and purse from *inverse* standing (the NBA device), and acceptance —
+a discount on a piece's price — from reputation, read through ADR 0058's
+relationship account or the disposition prior plus testimony. The stabilisers
+proposed with it are the green levy replacing free conscription
+(`src/app/squadCareer.ts:282-345` is unlimited and free today), a cap on purse
+carried between cycles, and the non-selection tax that already prices a deep
+bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
+acceptance discount. Tanking must be measurably dominated, not merely
+discouraged.
+
+### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)
+**Open — not wired.** The public record is identical for every commander
+(name, origin and attained role, status, commanders served, and the folded
+service record). Private counsel comes from pieces he already holds and is
+computed from their state — dyadic affinity, class prejudice, the rumor
+appraisal with its existing affinity/class credibility weight
+(`src/psychology/belief.ts:14-41`), credence in *him*, and chair rivalry under
+origin-inclusive eligibility (ADR 0056). Qualitative only (ADR 0018), no new
+RNG. This answers D150's public half by construction and proposes an answer to
+its private half. Open: the consultation budget per cycle, and how strongly
+rivalry may distort counsel.
+
+### D156 ❓ How do temporary duty assignments and demotion work? (ADR 0059 §8)
+**Open — not wired.** TDY needs no new state: lending a piece for a cycle is
+carried by ADR 0058's per-commander accounts plus global trauma. Desirable
+versus undesirable postings are an intended instrument (patronage versus legible
+discipline). Demotion waits on D148, which fixes the sign and magnitude of
+prestige movement; without it a demotion is a label. Both follow the draft.
+
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
    whose absence would have presented as a mysterious psychology bug, and it had

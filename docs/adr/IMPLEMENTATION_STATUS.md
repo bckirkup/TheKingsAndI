@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0058)
+# ADR implementation status (0035–0059)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -34,6 +34,7 @@ the discrepancy is corrected.
 | 0056 | Origin-inclusive chair contests and the bench instrument | Accepted for harness/pool slice; app bench remains open | **Shipped in sim** — `sim/pool.ts:39-206`, `sim/season.ts:40-157`, and `sim/degeneracy.ts:1-420`; D148/D150 remain open |
 | 0057 | App-side private squad fielding | Accepted for offline/private bench slice; shared market remains out of scope | **Shipped** — `src/app/careerBootstrap.ts:49-79`, `src/app/squadCareer.ts:180-480`, `src/orchestration/matchSession.ts:45-66`, `src/persistence/service.ts:33-185`, and `src/persistence/migrations.ts:8-31`; D148/D150 remain open |
 | 0058 | Three-channel credence wiring | Accepted for identity/persistence wiring; disposition distribution remains open | **Shipped** — `src/orchestration/credence.ts:1-101`, `src/persistence/types.ts:48-70`, and `src/persistence/migrations.ts:25-52`; shared market remains out of scope |
+| 0059 | The draft, the purse, and pieces who scout | **Proposed** — design only; magnitudes owner-owned | **Not shipped** — a career still bootstraps a doubled army (`src/app/careerBootstrap.ts:54-70`) and unfilled chairs are still met by free unlimited conscription (`src/app/squadCareer.ts:282-345`); D153–D156 open |
 
 ## Confirmed implementation gaps
 
