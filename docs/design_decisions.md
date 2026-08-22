@@ -1193,10 +1193,18 @@ prestige movement; without it a demotion is a label. Both follow the draft.
 publishing a *standing* during play; it does not settle whether a *charter* may
 be known. ADR 0060 proposes: the crude public register (wins, margin, material,
 promotions, streak, cohort rank) is disclosed continuously **because** it is the
-leaderboard a commander keeps anyway, and it is deceptive by emphasis rather
-than by falsehood — it also sets reverse-order draft priority (ADR 0059 §2), so
-leading it costs purse. The behavioural honours stay sealed within a cycle and
-may open only on **settlement** (the verdict can no longer change), and then only
+leaderboard a commander keeps anyway. Every achievement on it is a real
+achievement — the register is honest but *partial*, and the deception is in its
+apparent sufficiency, never in its content; the game must not sneer at
+competence. It also sets reverse-order draft priority (ADR 0059 §2), so leading
+it costs purse. The governing rule for the sealed set is **orthogonality, not
+opposition**: an honour earns its place only if it is substantially uncorrelated
+with the public columns across seeds and policies — correlated and it merely
+re-skins the scoreboard, strongly anti-correlated and it punishes winning, which
+ADR 0024 forbids. That bound is a measurable detector, not a taste.
+
+The behavioural honours stay sealed within a cycle and may open only on
+**settlement** (the verdict can no longer change), and then only
 when won; a settled loss waits for the debrief. A student typically plays one
 cycle, so the cross-cycle charter belongs to the facilitator rather than to him,
 and **an award nobody earned is never mentioned** — the debrief reads only the

@@ -1,4 +1,4 @@
-# ADR 0060 — The scoreboard is the trap: what is disclosed, when, and what a piece can see
+# ADR 0060 — An honest, partial scoreboard: what is disclosed, when, and what a piece can see
 
 - **Status:** Proposed. The shape is owner-directed; disclosure depth per cycle
   and the salience weights are **open** and belong to the parameter search
@@ -41,7 +41,7 @@ head whether or not we print one.
 
 ## Decision
 
-### 1. The public register is the crude one, and it is the trap (D157)
+### 1. The public register is the crude one, and it is honest but partial (D157)
 
 What is disclosed in advance, continuously, to everyone, is the **obvious**
 record: wins and losses, margin, material taken and lost, promotions reached,
@@ -50,42 +50,48 @@ here is a psychological quantity (ADR 0018), and all of it is a fold over the
 public event log.
 
 It is disclosed **because** it is the leaderboard a commander is already
-keeping, and printing it makes the deception legible rather than accidental:
+keeping, and printing it makes its incompleteness legible rather than accidental:
 
-- every fact on it is true;
-- the ranking it implies — that the commander at the top is the best commander —
-  is **not**, and the debrief is where that is answered;
-- chasing it actively costs the sealed honours, which measure what the register
-  cannot see: who was never asked, who was kept from drowning, who was rebuilt.
+- every fact on it is true, and every achievement on it is a real achievement —
+  winning, taking material and bringing your people home are **good**;
+- what it cannot do is rank *commanders*, because it cannot see who was never
+  asked, who was kept from drowning, who was rebuilt after a breach;
+- so the register is not a dishonour roll and the game must never sneer at
+  competence. It is an honest, partial record that a reader will over-read.
 
-This is deception by *emphasis*, not by falsehood, and it is the same deception
-the world performs on a real manager. It also has teeth rather than being
-scenery: the register is what sets **reverse-order draft priority** (ADR 0059
-§2), so leading it costs purse next cycle. The visible scoreboard is
-simultaneously the status object and the handicap.
+The deception is in the *sufficiency*, not the content: a leader reads a
+complete-looking ranking off an incomplete instrument, which is exactly what the
+world does to a real manager. The register also has teeth rather than being
+scenery: it sets **reverse-order draft priority** (ADR 0059 §2), so leading it
+costs purse next cycle — a handicap for excellence, not a penalty for vice.
 
-**The crudest columns are the most deceptive, because they are the most
-credible.** So the register is designed rather than merely permitted: each column
-is chosen with the vice it induces and the sealed honour it works against named
-alongside it.
+**Design rule — orthogonality, not opposition.** A sealed honour earns its place
+only if it is *substantially uncorrelated* with the public columns across the
+harness's seeds and leader policies. This replaces an earlier and worse framing
+in which each column was paired with a vice:
 
-| Public column | Vice it rewards | Sealed honour it opposes |
+- an honour that **correlates** with the register is a re-skin of the scoreboard:
+  it teaches nothing the visible board did not already say;
+- an honour that **anti-correlates** strongly is a trap that punishes winning,
+  which contradicts ADR 0024 (a cold, highly able leader must be able to win a
+  career) and would make the curriculum adversarial to competence;
+- the useful honours live in between, where a commander can hold both or either,
+  and the correlation bound is a **measurable** property rather than a taste.
+
+| Public column | What it cannot see | Substantially orthogonal honour |
 |---|---|---|
-| Most wins | Grinding weak opposition; winning by any means | `overall_improvement`, `grit_and_endurance` |
-| Most points from captures | Material greed over position; spending pieces to take pieces | `nobody_drowned` |
-| **Fewest pieces lost** | Timidity dressed as care — never risking anyone, which is indistinguishable from never committing | `honest_sacrifice` |
-| Largest margin | Humiliating a beaten opponent | `evenness_of_attention` |
-| Longest streak | Fielding only the strongest, never developing anyone | `evenness_of_attention`, `best_of_the_best` |
+| Most wins | At what cost, and to whom | `overall_improvement` |
+| Most material taken | Whether anyone was spent carelessly | `nobody_drowned` |
+| Fewest pieces lost | Whether anything was ever risked *for* them | `honest_sacrifice` |
+| Largest margin | Who was on the board while it was won | `evenness_of_attention` |
+| Longest streak | Whether anyone grew during it | `best_of_the_best` |
 
-"Fewest pieces lost" is the sharpest of them, because it is the one a decent
-person would adopt on purpose: it looks like exactly the care the seminar is
-teaching, and it is directly opposed by `honest_sacrifice` — a piece spent for a
-genuine win whose trust survived. A commander who protects his roster by never
-risking it scores well on the board he can see and forfeits the honour that
-measures what protection was *for*.
-
-**Design rule:** a public column may not be added unless the sealed honour it
-opposes exists. An unopposed column is an instruction, not a trap.
+`fewest_pieces_lost` is the most interesting pairing rather than the most
+perverse: keeping your people alive is genuinely good, and it still cannot
+distinguish a commander who protected his roster from one who never committed it
+to anything — which is precisely what `honest_sacrifice` (a piece spent for a
+genuine win whose trust survived) sees and the column does not. A commander may
+hold both; the point is that holding one tells you nothing about the other.
 
 ### 2. The honours stay sealed within a cycle, and settlement is the trigger
 
@@ -185,8 +191,9 @@ commander is buying trust with a trophy.
 This splits the register into four kinds with different disclosure rules,
 different judges, and — the useful part — different attitudes to being farmed.
 
-**a. The public register (§1).** Crude, continuous, deceptive by emphasis. Judge:
-arithmetic. Farming it is the trap.
+**a. The public register (§1).** Crude, continuous, honest, partial. Judge:
+arithmetic. Pursuing it is legitimate; mistaking it for the whole account is the
+error.
 
 **b. The sealed behavioural honours (§2, ADR 0031).** Judge: the fold over the
 event log. Farming them destroys the conduct they measure, which is precisely
@@ -263,9 +270,11 @@ shipped folds show three concrete failures:
   perfectly with the true record, §5's salience filter is decoration and the
   market's acceptance price carries no information — the same failure as ADR
   0059's informant sycophancy detector.
-- **Register capture.** If the policy that tops the public register also takes
-  most sealed honours, the register is not a trap and ADR 0031's non-domination
-  property has failed.
+- **Register capture / register mirroring.** The §1 orthogonality rule as a
+  measurement: across seeds and leader policies, each sealed honour's correlation
+  with each public column must sit inside a band. Above it the honour mirrors the
+  scoreboard and teaches nothing (and ADR 0031's non-domination property has
+  failed); far below it the honour punishes winning, which ADR 0024 forbids.
 
 - **Guild capture.** If one leadership policy takes most guild awards as well as
   topping the register, the guilds are measuring competence rather than taste and
