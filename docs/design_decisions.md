@@ -1079,6 +1079,9 @@ promoted piece's own trust, morale, or trauma move on elevation.
 open questions
 (`docs/calibration/2026-08-18-pawn-hope-sweep.md`).
 
+ADR 0061 places D148 on the critical path for postings and demotion (step 6)
+only; it does not block the draft, the market, or the honours.
+
 ### D149 ✅ Can service move ability? (ADR 0055)
 **Resolved and calibrated at scale 2 / loss multiplier 1.** A piece's `E_i` is
 earnable from her own demonstrated judgment: the forced channel grades the
@@ -1157,6 +1160,8 @@ plus a small reserve, drafted rather than issued, with the King appointed rather
 than drafted (ADR 0021). Open: reserve depth, and whether the first cycle is a
 draft at all or an issued army with the draft beginning at cycle two.
 
+ADR 0061 brings D153 due in step 1, the scarcity step.
+
 ### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
 **Open — not wired.** ADR 0059 proposes two currencies of opposite sign:
 priority and purse from *inverse* standing (the NBA device), and acceptance —
@@ -1168,6 +1173,8 @@ carried between cycles, and the non-selection tax that already prices a deep
 bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
 acceptance discount. Tanking must be measurably dominated, not merely
 discouraged.
+
+ADR 0061 brings D154 due in step 3, the draft.
 
 ### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)
 **Open — not wired.** The public record is identical for every commander
@@ -1181,12 +1188,16 @@ RNG. This answers D150's public half by construction and proposes an answer to
 its private half. Open: the consultation budget per cycle, and how strongly
 rivalry may distort counsel.
 
+ADR 0061 brings D155 due in step 3, the draft.
+
 ### D156 ❓ How do temporary duty assignments and demotion work? (ADR 0059 §8)
 **Open — not wired.** TDY needs no new state: lending a piece for a cycle is
 carried by ADR 0058's per-commander accounts plus global trauma. Desirable
 versus undesirable postings are an intended instrument (patronage versus legible
 discipline). Demotion waits on D148, which fixes the sign and magnitude of
 prestige movement; without it a demotion is a label. Both follow the draft.
+
+ADR 0061 brings D156 due in step 6, postings and demotion.
 
 ### D157 ❓ What is disclosed about the honours, and when? (ADR 0060 §1-§4)
 **Open — not wired.** Refines D93 (ADR 0031 §3), which stands. D93 forbids
@@ -1217,6 +1228,9 @@ whether settled-won disclosure happens at all, and whether the consumer campaign
 (no facilitator, so the charter leaks by repetition) opens the charter or rotates
 which honours are live.
 
+ADR 0061 brings D157 due in step 5, the honours; the public-register fold and
+orthogonality probe arrive in step 2.
+
 ADR 0060 §6 splits the register into four kinds, and only the sealed behavioural
 honours must stay hidden: the crude public register; the sealed honours; **guild
 awards** where a class honours the commander who best served its own idea of good
@@ -1237,6 +1251,9 @@ dyadic affinity, and what she witnessed; rumor still carries appraisals only
 *as perceived*, not off the true record. Piece-level honours (ADR 0050 heroism
 nominations) remain observable; commander commendations do not. Open: the
 salience weights across class, bond, and witness.
+
+ADR 0061 brings D158 due in step 5, the honours; the public-register fold and
+orthogonality probe arrive in step 2.
 
 1. **D52** — before persistence and before any dialogue is authored. D49 is
    resolved by ADR 0035, D50 by ADR 0036, and D48 by ADR 0034: it was the one
