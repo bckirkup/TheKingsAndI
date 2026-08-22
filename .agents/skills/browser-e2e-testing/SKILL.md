@@ -16,9 +16,10 @@ pnpm dev            # Vite on http://localhost:5173 (localhost only —
 ## Reset to a fresh career
 
 Career state lives in an IndexedDB database named `living-chess`. To force a
-fresh 16-piece bootstrap (seed 42, names Aethelgard…Petra), run this in the
-browser console and reload — `await` at top level fails over CDP, so use a
-promise chain:
+fresh 31-member bootstrap (seed 42, names Aethelgard…Petra; 1 King, 2 Queens,
+4 Rooks, 4 Bishops, 4 Knights, 16 Pawns — 16 of them are fielded on the board),
+run this in the browser console and reload — `await` at top level fails over
+CDP, so use a promise chain:
 
 ```js
 indexedDB.databases().then(dbs => {
@@ -30,7 +31,7 @@ indexedDB.databases().then(dbs => {
 ## Screen path
 
 Campaign hub → "Begin first match" → Roster screen (click a row to see its
-service record + bench/fire consequence preview) → "Confirm lineup (16 active)"
+service record + bench/fire consequence preview) → "Confirm lineup (31 active)"
 → Match screen → terminal state → "Fast-forward to end" (succession) → Match
 audit → "Continue" → Campaign hub.
 
@@ -41,7 +42,10 @@ Chessground needs a real press-move-release: `mouse_move` to the origin square,
 intermediate `mouse_move` steps, then `left_mouse_up` on the destination.
 After `left_mouse_down`, take a screenshot: chessground draws green dots on the
 legal destinations, which is the reliable way to calibrate square centres
-(rank/file centres are easy to get off by one square).
+(rank/file centres are easy to get off by one square). Read
+`document.querySelector('cg-board').getBoundingClientRect()` and scale it by
+1024/1600 to convert board geometry into computer-tool coordinates rather than
+eyeballing the squares.
 
 Known blocker (present at least through the promotion-truth slice): the piece
 overlays in `src/app/tacticalBlueprint.css`
