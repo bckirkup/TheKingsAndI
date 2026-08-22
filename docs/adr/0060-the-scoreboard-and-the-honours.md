@@ -75,8 +75,11 @@ in which each column was paired with a vice:
 - an honour that **anti-correlates** strongly is a trap that punishes winning,
   which contradicts ADR 0024 (a cold, highly able leader must be able to win a
   career) and would make the curriculum adversarial to competence;
-- the useful honours live in between, where a commander can hold both or either,
-  and the correlation bound is a **measurable** property rather than a taste.
+- the useful honours do not live *between* those two — "between" would make an
+  honour a compromise on the register's own axis, a weaker version of winning.
+  They live **outside** it: on axes the register does not span at all, so a
+  commander can hold either, both, or neither, and the correlation bound is a
+  **measurable** property rather than a taste.
 
 | Public column | What it cannot see | Substantially orthogonal honour |
 |---|---|---|
@@ -91,7 +94,8 @@ perverse: keeping your people alive is genuinely good, and it still cannot
 distinguish a commander who protected his roster from one who never committed it
 to anything — which is precisely what `honest_sacrifice` (a piece spent for a
 genuine win whose trust survived) sees and the column does not. A commander may
-hold both; the point is that holding one tells you nothing about the other.
+hold both; the point is that the honour is measuring a different dimension
+altogether rather than a softer version of the same one.
 
 ### 2. The honours stay sealed within a cycle, and settlement is the trigger
 
@@ -272,9 +276,11 @@ shipped folds show three concrete failures:
   0059's informant sycophancy detector.
 - **Register capture / register mirroring.** The §1 orthogonality rule as a
   measurement: across seeds and leader policies, each sealed honour's correlation
-  with each public column must sit inside a band. Above it the honour mirrors the
-  scoreboard and teaches nothing (and ADR 0031's non-domination property has
-  failed); far below it the honour punishes winning, which ADR 0024 forbids.
+  with each public column must sit inside a band around zero — the honour is a
+  dimension *outside* the register's span, not a midpoint on it. Above the band
+  the honour mirrors the scoreboard and teaches nothing (and ADR 0031's
+  non-domination property has failed); below it the honour punishes winning,
+  which ADR 0024 forbids.
 
 - **Guild capture.** If one leadership policy takes most guild awards as well as
   topping the register, the guilds are measuring competence rather than taste and

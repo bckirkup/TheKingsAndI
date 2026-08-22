@@ -1201,7 +1201,9 @@ it costs purse. The governing rule for the sealed set is **orthogonality, not
 opposition**: an honour earns its place only if it is substantially uncorrelated
 with the public columns across seeds and policies — correlated and it merely
 re-skins the scoreboard, strongly anti-correlated and it punishes winning, which
-ADR 0024 forbids. That bound is a measurable detector, not a taste.
+ADR 0024 forbids. Honours sit *outside* the register rather than between those
+failure modes: on axes it does not span, never as a softer version of winning.
+That bound is a measurable detector, not a taste.
 
 The behavioural honours stay sealed within a cycle and may open only on
 **settlement** (the verdict can no longer change), and then only
