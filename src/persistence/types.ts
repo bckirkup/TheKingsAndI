@@ -16,7 +16,7 @@ export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
 export const DETERMINISM_ID = 'heuristic-eval-v1';
-export const COMMENDATION_FOLD_VERSION = 'commendations-v1';
+export const COMMENDATION_FOLD_VERSION = 'commendations-v2';
 export const LEARNING_DELTA_FOLD_VERSION = 'learning-delta-v1';
 export const SERVICE_RECORD_FOLD_VERSION = 'service-record-v2';
 

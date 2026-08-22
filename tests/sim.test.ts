@@ -27,6 +27,11 @@ import {
   DEGENERACY_CONFIG,
   detectDegeneracy,
 } from '../sim/degeneracy';
+import type {
+  PlayerCommendationId,
+  PlayerCommendationSet,
+  PublicRegister,
+} from '../src/persistence';
 import {
   aggregateCampaign,
   EMPTY_DESERTION_SUMMARY,
@@ -720,6 +725,137 @@ describe('degeneracy detectors', () => {
     expect(DEGENERACY_CONFIG.metricCorrelationThreshold).toBe(0.95);
   });
 
+  it('detects early verdict stability, but stays quiet with live or sparse awards', () => {
+    const stability = (bestOfBest: number) => ({
+      evenness_of_attention: bestOfBest,
+      best_of_the_best: bestOfBest,
+      nobody_drowned: bestOfBest,
+      overcoming_a_weakness: bestOfBest,
+      grit_and_endurance: bestOfBest,
+      overall_improvement: bestOfBest,
+      honest_sacrifice: bestOfBest,
+      repaired_breach: bestOfBest,
+    });
+    const early = [1, 2, 3, 4].map((index) => ({
+      leader: `leader-${index}`,
+      cycleMatches: 6,
+      verdictStability: stability(1),
+    }));
+    const live = early.map((career) => ({
+      ...career,
+      verdictStability: stability(6),
+    }));
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCommendationLiveness: early,
+      }).some((finding) => finding.code === 'commendation-dead-by-match-two'),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCommendationLiveness: live,
+      }).some((finding) => finding.code === 'commendation-dead-by-match-two'),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCommendationLiveness: early.slice(0, 3),
+      }).some((finding) => finding.code === 'commendation-dead-by-match-two'),
+    ).toBe(false);
+    expect(DEGENERACY_CONFIG.commendationLivenessMinimumCareers).toBe(4);
+  });
+
+  it('changes verdict-liveness findings at the configured fraction', () => {
+    const stability = (bestOfBest: number) => ({
+      evenness_of_attention: bestOfBest,
+      best_of_the_best: bestOfBest,
+      nobody_drowned: bestOfBest,
+      overcoming_a_weakness: bestOfBest,
+      grit_and_endurance: bestOfBest,
+      overall_improvement: bestOfBest,
+      honest_sacrifice: bestOfBest,
+      repaired_breach: bestOfBest,
+    });
+    const careers = [1, 2, 3, 6].map((bestOfBest) => ({
+      leader: `leader-${bestOfBest}`,
+      cycleMatches: 6,
+      verdictStability: stability(bestOfBest),
+    }));
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCommendationLiveness: careers,
+      }).some((finding) => finding.code === 'commendation-dead-by-match-two'),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCommendationLiveness: careers,
+        commendationLivenessFraction: 0.5,
+      }).some((finding) => finding.code === 'commendation-dead-by-match-two'),
+    ).toBe(true);
+  });
+
+  it('detects signed register mirroring and anti-correlation independently', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const entries = (scores: readonly number[]) =>
+      scores.map((score, index) => ({
+        leader: `leader-${index}`,
+        register: registerFor(index + 1),
+        commendations: commendationsWithBestScore(score),
+      }));
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: entries([1, 2, 3, 4, 5]),
+      }).some((finding) => finding.code === 'register-mirroring'),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: entries([5, 4, 3, 2, 1]),
+      }).some((finding) => finding.code === 'register-anti-correlation'),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: entries([0, 1, 0, 1, 0]),
+      }).some((finding) => finding.code.startsWith('register-')),
+    ).toBe(false);
+  });
+
+  it('skips zero-variance register columns and awards, and respects correlation sensitivity', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const entries = [1, 2, 3, 4, 5].map((_, index) => ({
+      leader: `leader-${index}`,
+      register: registerFor(1),
+      commendations: commendationsWithBestScore(1),
+    }));
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: entries,
+      }).some((finding) => finding.code.startsWith('register-')),
+    ).toBe(false);
+
+    const varying = [1, 2, 3, 4, 5].map((value) => ({
+      leader: `leader-${value}`,
+      register: registerFor(value),
+      commendations: commendationsWithBestScore(value),
+    }));
+    expect(DEGENERACY_CONFIG.registerCorrelationThreshold).toBe(0.8);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: varying,
+        registerCorrelationThreshold: 1,
+      }).some((finding) => finding.code.startsWith('register-')),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleRegisterCommendations: varying,
+        registerCorrelationThreshold: 0.8,
+      }).some((finding) => finding.code === 'register-mirroring'),
+    ).toBe(true);
+  });
+
   it('flags a redeemer with no movement between trajectory bands', () => {
     const metrics = [1, 2, 3, 4].map((match) => ({
       ...handCheckMetric(match),
@@ -837,5 +973,50 @@ function handCheckMetric(match: number): MatchMetrics {
     winScore: 50,
     rout: false,
     archetype: 'caretaker',
+  };
+}
+
+function registerFor(value: number): PublicRegister {
+  return {
+    foldVersion: 'test-register',
+    matchesPlayed: value,
+    wins: value,
+    losses: 0,
+    draws: 0,
+    routs: 0,
+    materialTaken: value,
+    materialLost: 0,
+    largestMaterialMargin: value,
+    ownPiecesLost: 0,
+    unattributedCaptures: 0,
+    promotionsReached: 0,
+    currentWinStreak: value,
+    longestWinStreak: value,
+  };
+}
+
+function commendationsWithBestScore(score: number): PlayerCommendationSet {
+  const ids: readonly PlayerCommendationId[] = [
+    'evenness_of_attention',
+    'best_of_the_best',
+    'nobody_drowned',
+    'overcoming_a_weakness',
+    'grit_and_endurance',
+    'overall_improvement',
+    'honest_sacrifice',
+    'repaired_breach',
+  ];
+  const awards = ids.map((id) => ({
+    id,
+    label: id,
+    earned: false,
+    score: id === 'best_of_the_best' ? score : 0,
+    threshold: 1,
+  }));
+  return {
+    foldVersion: 'test-commendations',
+    awards,
+    earnedIds: [],
+    learningDelta: null,
   };
 }

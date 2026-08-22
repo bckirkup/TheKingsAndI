@@ -10,14 +10,25 @@ export {
 } from './commendationConfig';
 export {
   commendationLabelsForLeakageScan,
+  commendationVerdictStability,
   foldFacilitatorCommendations,
   foldPlayerCommendations,
   type CommendationAward,
+  type CommendationVerdictStability,
   type FacilitatorCommendationId,
   type FacilitatorCommendationStub,
   type PlayerCommendationId,
   type PlayerCommendationSet,
 } from './commendations';
+export {
+  foldPublicRegister,
+  publicMatchFactsFromRecord,
+  type PublicMatchEvent,
+  type PublicMatchFacts,
+  type PublicRegister,
+  PUBLIC_REGISTER_COLUMNS,
+  PUBLIC_REGISTER_FOLD_VERSION,
+} from './register';
 export {
   buildCampaignDebrief,
   foldCampaignCultureDrift,

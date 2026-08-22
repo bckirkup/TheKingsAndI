@@ -2,8 +2,11 @@ import type { CampaignMetrics, MatchMetrics } from './metrics';
 import type { PoolSeasonMetrics } from './pool';
 import {
   COMMENDATION_CONFIG,
+  PUBLIC_REGISTER_COLUMNS,
   type PlayerCommendationId,
   type PlayerCommendationSet,
+  type PublicRegister,
+  type CommendationVerdictStability,
 } from '../src/persistence';
 import {
   evaluateConsumerPacing,
@@ -46,6 +49,14 @@ export const DEGENERACY_CONFIG = {
   promotionTrapControlRatioThreshold: 0.5,
   /** Churn below this means a deep bench is frozen. */
   frozenBenchChurnThreshold: 0.001,
+  /** Fraction of careers stable before the final third before liveness fires. */
+  commendationLivenessFraction: 0.75,
+  /** Minimum careers needed before an award liveness claim is meaningful. */
+  commendationLivenessMinimumCareers: 4,
+  /** Absolute signed correlation above this indicates register capture. */
+  registerCorrelationThreshold: 0.8,
+  /** Minimum careers needed before a register correlation is meaningful. */
+  registerCorrelationMinimumCareers: 5,
 } as const;
 
 export interface DegeneracyFinding {
@@ -72,6 +83,10 @@ export interface DegeneracyAssertionOptions {
   readonly promotionTrapMinimumPromotions?: number;
   readonly promotionTrapControlRatioThreshold?: number;
   readonly frozenBenchChurnThreshold?: number;
+  readonly commendationLivenessFraction?: number;
+  readonly commendationLivenessMinimumCareers?: number;
+  readonly registerCorrelationThreshold?: number;
+  readonly registerCorrelationMinimumCareers?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -80,6 +95,18 @@ export interface DegeneracyAssertionOptions {
   /** Per-oracle commendation sets for non-domination checks (ADR 0031). */
   readonly oracleCommendations?: readonly {
     readonly leader: string;
+    readonly commendations: PlayerCommendationSet;
+  }[];
+  /** Per-career verdict stability prefixes for the dead-by-match-two detector. */
+  readonly oracleCommendationLiveness?: readonly {
+    readonly leader: string;
+    readonly cycleMatches: number;
+    readonly verdictStability: CommendationVerdictStability;
+  }[];
+  /** Per-career public registers and sealed commendations for orthogonality. */
+  readonly oracleRegisterCommendations?: readonly {
+    readonly leader: string;
+    readonly register: PublicRegister;
     readonly commendations: PlayerCommendationSet;
   }[];
   /** Student-facing strings scanned for live commendation leakage (D93). */
@@ -202,7 +229,7 @@ const TRANSCRIPT_METRICS: readonly TranscriptMetricKey[] = [
   'winScore',
 ];
 
-function pearsonSquared(
+export function pearsonCorrelation(
   left: readonly number[],
   right: readonly number[],
 ): number | null {
@@ -220,7 +247,15 @@ function pearsonSquared(
     rightVariance += rightDelta * rightDelta;
   }
   if (leftVariance === 0 || rightVariance === 0) return null;
-  return (numerator * numerator) / (leftVariance * rightVariance);
+  return numerator / Math.sqrt(leftVariance * rightVariance);
+}
+
+function pearsonSquared(
+  left: readonly number[],
+  right: readonly number[],
+): number | null {
+  const correlation = pearsonCorrelation(left, right);
+  return correlation === null ? null : correlation * correlation;
 }
 
 function metricCollinearityFinding(
@@ -380,6 +415,18 @@ export function detectDegeneracy(
     frozenBenchChurnThreshold:
       options.frozenBenchChurnThreshold ??
       DEGENERACY_CONFIG.frozenBenchChurnThreshold,
+    commendationLivenessFraction:
+      options.commendationLivenessFraction ??
+      DEGENERACY_CONFIG.commendationLivenessFraction,
+    commendationLivenessMinimumCareers:
+      options.commendationLivenessMinimumCareers ??
+      DEGENERACY_CONFIG.commendationLivenessMinimumCareers,
+    registerCorrelationThreshold:
+      options.registerCorrelationThreshold ??
+      DEGENERACY_CONFIG.registerCorrelationThreshold,
+    registerCorrelationMinimumCareers:
+      options.registerCorrelationMinimumCareers ??
+      DEGENERACY_CONFIG.registerCorrelationMinimumCareers,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -515,6 +562,22 @@ export function detectDegeneracy(
   const unwinnable = unwinnableAwardFinding(options.oracleCommendations ?? []);
   if (unwinnable !== null) findings.push(unwinnable);
 
+  findings.push(
+    ...commendationLivenessFindings(
+      options.oracleCommendationLiveness ?? [],
+      config.commendationLivenessFraction,
+      config.commendationLivenessMinimumCareers,
+    ),
+  );
+
+  findings.push(
+    ...registerOrthogonalityFindings(
+      options.oracleRegisterCommendations ?? [],
+      config.registerCorrelationThreshold,
+      config.registerCorrelationMinimumCareers,
+    ),
+  );
+
   if (options.pacingMatches !== undefined) {
     const pacing = evaluateConsumerPacing(options.pacingMatches);
     if (pacing.cliff) {
@@ -639,6 +702,97 @@ function unwinnableAwardFinding(
     }
   }
   return null;
+}
+
+function commendationLivenessFindings(
+  careers: readonly {
+    readonly leader: string;
+    readonly cycleMatches: number;
+    readonly verdictStability: CommendationVerdictStability;
+  }[],
+  fractionThreshold: number,
+  minimumCareers: number,
+): DegeneracyFinding[] {
+  if (careers.length < minimumCareers) return [];
+  const awardIds: readonly PlayerCommendationId[] = [
+    'evenness_of_attention',
+    'best_of_the_best',
+    'nobody_drowned',
+    'overcoming_a_weakness',
+    'grit_and_endurance',
+    'overall_improvement',
+    'honest_sacrifice',
+    'repaired_breach',
+  ];
+  const findings: DegeneracyFinding[] = [];
+  for (const id of awardIds) {
+    const measured = careers.filter(
+      (career) =>
+        career.cycleMatches > 0 && career.verdictStability[id] !== undefined,
+    );
+    if (measured.length < minimumCareers) continue;
+    const early = measured.filter((career) => {
+      const finalThirdStart = Math.ceil((career.cycleMatches * 2) / 3);
+      return career.verdictStability[id] < finalThirdStart;
+    }).length;
+    const fraction = early / measured.length;
+    if (fraction <= fractionThreshold) continue;
+    findings.push({
+      code: 'commendation-dead-by-match-two',
+      message: `Commendation ${id} was verdict-stable before the final third in ${(fraction * 100).toFixed(0)}% of careers.`,
+    });
+  }
+  return findings;
+}
+
+function registerOrthogonalityFindings(
+  entries: readonly {
+    readonly leader: string;
+    readonly register: PublicRegister;
+    readonly commendations: PlayerCommendationSet;
+  }[],
+  threshold: number,
+  minimumCareers: number,
+): DegeneracyFinding[] {
+  if (entries.length < minimumCareers) return [];
+  const findings: DegeneracyFinding[] = [];
+  const awardIds: readonly PlayerCommendationId[] = [
+    'evenness_of_attention',
+    'best_of_the_best',
+    'nobody_drowned',
+    'overcoming_a_weakness',
+    'grit_and_endurance',
+    'overall_improvement',
+    'honest_sacrifice',
+    'repaired_breach',
+  ];
+  for (const awardId of awardIds) {
+    const scores = new Map(
+      entries.flatMap((entry) => {
+        const award = entry.commendations.awards.find(
+          (candidate) => candidate.id === awardId,
+        );
+        return award === undefined ? [] : [[entry, award.score] as const];
+      }),
+    );
+    for (const column of PUBLIC_REGISTER_COLUMNS) {
+      const rows = [...scores.entries()];
+      if (rows.length < minimumCareers) continue;
+      const correlation = pearsonCorrelation(
+        rows.map(([, score]) => score),
+        rows.map(([entry]) => entry.register[column]),
+      );
+      if (correlation === null || Math.abs(correlation) <= threshold) {
+        continue;
+      }
+      findings.push({
+        code:
+          correlation > 0 ? 'register-mirroring' : 'register-anti-correlation',
+        message: `Commendation ${awardId} has signed correlation ${correlation.toFixed(2)} with public ${column}.`,
+      });
+    }
+  }
+  return findings;
 }
 
 export function assertSmokeBounds(

@@ -89,14 +89,28 @@ function consultationCounts(
   return counts;
 }
 
-function finalRoster(matches: readonly MatchRecord[]): StoredPieceState[] {
-  const last = matches.at(-1);
-  return last === undefined ? [] : [...last.rosterEnd];
+interface CycleRosterEntry {
+  readonly start: StoredPieceState;
+  readonly end: StoredPieceState;
 }
 
-function initialRoster(matches: readonly MatchRecord[]): StoredPieceState[] {
-  const first = matches[0];
-  return first === undefined ? [] : [...first.rosterSnapshot];
+function cycleRoster(
+  matches: readonly MatchRecord[],
+): readonly CycleRosterEntry[] {
+  const pieces = new Map<string, CycleRosterEntry>();
+  const observe = (piece: StoredPieceState): void => {
+    const existing = pieces.get(piece.id);
+    if (existing === undefined) {
+      pieces.set(piece.id, { start: piece, end: piece });
+    } else {
+      pieces.set(piece.id, { start: existing.start, end: piece });
+    }
+  };
+  for (const match of matches) {
+    for (const piece of match.rosterSnapshot) observe(piece);
+    for (const piece of match.rosterEnd) observe(piece);
+  }
+  return [...pieces.values()];
 }
 
 function evennessScore(matches: readonly MatchRecord[]): number {
@@ -106,7 +120,8 @@ function evennessScore(matches: readonly MatchRecord[]): number {
 }
 
 function bestOfBestRatio(matches: readonly MatchRecord[]): number {
-  const start = initialRoster(matches);
+  const roster = cycleRoster(matches);
+  const start = roster.map((piece) => piece.start);
   if (start.length === 0) return 0;
   const byTrust = [...start].sort((a, b) => b.T_i - a.T_i);
   const quartile = Math.max(1, Math.ceil(byTrust.length / 4));
@@ -127,26 +142,23 @@ function lowestCredence(piece: StoredPieceState): number {
 }
 
 function nobodyDrownedScore(matches: readonly MatchRecord[]): number {
-  const end = finalRoster(matches);
+  const end = cycleRoster(matches).map((piece) => piece.end);
   if (end.length === 0) return 0;
   const retirements = end.filter((piece) => piece.status === 'FIRED').length;
-  if (retirements > 0) return 0;
+  if (retirements > COMMENDATION_CONFIG.NOBODY_DROWNED_RETIREMENT_TOLERANCE) {
+    return 0;
+  }
   const floor = COMMENDATION_CONFIG.NOBODY_DROWNED_CREDENCE_FLOOR;
   const lowest = Math.min(...end.map(lowestCredence));
   return lowest >= floor ? lowest / 100 : 0;
 }
 
 function overcomingScore(matches: readonly MatchRecord[]): number {
-  const start = initialRoster(matches);
-  const endById = new Map(
-    finalRoster(matches).map((piece) => [piece.id, piece]),
-  );
+  const roster = cycleRoster(matches);
   let best = 0;
-  for (const piece of start) {
-    if (piece.B_i < COMMENDATION_CONFIG.OVERCOMING_TRAUMA_FLOOR) continue;
-    const ended = endById.get(piece.id);
-    if (ended === undefined) continue;
-    const recovery = piece.B_i - ended.B_i;
+  for (const { start, end } of roster) {
+    if (start.B_i < COMMENDATION_CONFIG.OVERCOMING_TRAUMA_FLOOR) continue;
+    const recovery = start.B_i - end.B_i;
     if (recovery > best) best = recovery;
   }
   return best / 100;
@@ -192,19 +204,15 @@ function honestSacrificeScore(matches: readonly MatchRecord[]): number {
 }
 
 function repairedBreachScore(matches: readonly MatchRecord[]): number {
-  const start = initialRoster(matches);
-  const end = finalRoster(matches);
-  const endById = new Map(end.map((piece) => [piece.id, piece]));
+  const roster = cycleRoster(matches);
   let best = 0;
-  for (const piece of start) {
-    const ended = endById.get(piece.id);
-    if (ended === undefined) continue;
-    const startAff = mean(Object.values(piece.dyadicAffinity));
-    const endAff = mean(Object.values(ended.dyadicAffinity));
+  for (const { start, end } of roster) {
+    const startAff = mean(Object.values(start.dyadicAffinity));
+    const endAff = mean(Object.values(end.dyadicAffinity));
     const gain = endAff - startAff;
     if (
-      piece.T_i < 0 &&
-      ended.T_i > piece.T_i &&
+      start.T_i < 0 &&
+      end.T_i > start.T_i &&
       gain >= COMMENDATION_CONFIG.REPAIRED_BREACH_AFFINITY_GAIN
     ) {
       best = Math.max(best, gain / 100);
@@ -301,6 +309,40 @@ export function foldPlayerCommendations(
     earnedIds: awards.filter((item) => item.earned).map((item) => item.id),
     learningDelta,
   };
+}
+
+export type CommendationVerdictStability = Readonly<
+  Record<PlayerCommendationId, number>
+>;
+
+/**
+ * Last prefix index whose earned verdict changed. This is verdict stability,
+ * a lower bound on settlement rather than proof that future play cannot change.
+ */
+export function commendationVerdictStability(
+  matches: readonly MatchRecord[],
+): CommendationVerdictStability {
+  const lastChanged: Record<PlayerCommendationId, number> = {
+    evenness_of_attention: 0,
+    best_of_the_best: 0,
+    nobody_drowned: 0,
+    overcoming_a_weakness: 0,
+    grit_and_endurance: 0,
+    overall_improvement: 0,
+    honest_sacrifice: 0,
+    repaired_breach: 0,
+  };
+  const prior = new Map<PlayerCommendationId, boolean>();
+  for (let length = 1; length <= matches.length; length += 1) {
+    const awards = foldPlayerCommendations(matches.slice(0, length)).awards;
+    for (const item of awards) {
+      if (prior.get(item.id) !== item.earned) {
+        lastChanged[item.id] = length;
+      }
+      prior.set(item.id, item.earned);
+    }
+  }
+  return lastChanged;
 }
 
 /** Facilitator awards — unavailable until the world/cohort model exists. */

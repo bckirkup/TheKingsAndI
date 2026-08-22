@@ -1201,10 +1201,10 @@ prestige movement; without it a demotion is a label. Both follow the draft.
 ADR 0061 brings D156 due in step 6, postings and demotion.
 
 ### D157 ❓ What is disclosed about the honours, and when? (ADR 0060 §1-§4)
-**Open — not wired.** Refines D93 (ADR 0031 §3), which stands. D93 forbids
+**Partly wired.** Refines D93 (ADR 0031 §3), which stands. D93 forbids
 publishing a *standing* during play; it does not settle whether a *charter* may
 be known. ADR 0060 proposes: the crude public register (wins, margin, material,
-promotions, streak, cohort rank) is disclosed continuously **because** it is the
+promotions, streak) is disclosed continuously **because** it is the
 leaderboard a commander keeps anyway. Every achievement on it is a real
 achievement — the register is honest but *partial*, and the deception is in its
 apparent sufficiency, never in its content; the game must not sneer at
@@ -1229,8 +1229,14 @@ whether settled-won disclosure happens at all, and whether the consumer campaign
 (no facilitator, so the charter leaks by repetition) opens the charter or rotates
 which honours are live.
 
-ADR 0061 brings D157 due in step 5, the honours; the public-register fold and
-orthogonality probe arrive in step 2.
+ADR 0061 step 2 wires the own-record public register
+(`src/persistence/register.ts:1-196`), verdict-stability lower-bound probe and
+dead-by-match-two detector (`src/persistence/commendations.ts:316-346`,
+`sim/degeneracy.ts:565-579,707-745`), and provisional register-mirroring and
+anti-correlation detector (`sim/degeneracy.ts:573-579,748-796`). Cohort rank is not
+implemented. The orthogonality band is a detector threshold only and remains
+provisional for ADR 0059 §9's parameter search; no honours catalogue, guild or
+people's-choice awards, or charter-leakage extension is included.
 
 ADR 0060 §6 splits the register into four kinds, and only the sealed behavioural
 honours must stay hidden: the crude public register; the sealed honours; **guild

@@ -88,6 +88,34 @@ export function startingSquarePieceId(seed: {
   return `${seed.side}:${seed.role}:${seed.square}`;
 }
 
+const LONG_ROLE_BY_SHORT_ROLE: Readonly<Record<Role, string>> = {
+  K: 'King',
+  Q: 'Queen',
+  R: 'Rook',
+  B: 'Bishop',
+  N: 'Knight',
+  P: 'Pawn',
+};
+
+/**
+ * Parse the identity encodings used by the board and roster layers.
+ * Board identities use short roles (`w:P:e2`); persisted roster identities
+ * use long roles (`w:Pawn:00`), with levy suffixes after the role.
+ */
+export function parsePieceId(
+  pieceId: PieceId,
+): { readonly side: Side; readonly role: Role } | null {
+  const [side, roleSegment] = pieceId.split(':');
+  if (side !== 'w' && side !== 'b') return null;
+  if (roleSegment === undefined) return null;
+  for (const role of Object.keys(LONG_ROLE_BY_SHORT_ROLE) as Role[]) {
+    if (roleSegment === role || roleSegment === LONG_ROLE_BY_SHORT_ROLE[role]) {
+      return { side, role };
+    }
+  }
+  return null;
+}
+
 function enPassantVictimSquare(move: Move): Square {
   const file = move.to.charAt(0);
   const rank = move.from.charAt(1);
