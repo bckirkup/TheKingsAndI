@@ -274,7 +274,6 @@ export function foldPlayerSquad(
 
 function conscript(
   members: readonly SquadMember[],
-  identities: readonly PieceIdentityRecord[],
   roleName: PieceRole,
   careerSeed: number,
   match: number,
@@ -394,7 +393,6 @@ export function selectPlayerSquad(input: {
     (roleName, match, sequence) => {
       const member = conscript(
         members,
-        input.identities,
         roleName,
         input.careerSeed,
         match,
