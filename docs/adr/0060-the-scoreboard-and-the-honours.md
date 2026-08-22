@@ -64,6 +64,29 @@ scenery: the register is what sets **reverse-order draft priority** (ADR 0059
 §2), so leading it costs purse next cycle. The visible scoreboard is
 simultaneously the status object and the handicap.
 
+**The crudest columns are the most deceptive, because they are the most
+credible.** So the register is designed rather than merely permitted: each column
+is chosen with the vice it induces and the sealed honour it works against named
+alongside it.
+
+| Public column | Vice it rewards | Sealed honour it opposes |
+|---|---|---|
+| Most wins | Grinding weak opposition; winning by any means | `overall_improvement`, `grit_and_endurance` |
+| Most points from captures | Material greed over position; spending pieces to take pieces | `nobody_drowned` |
+| **Fewest pieces lost** | Timidity dressed as care — never risking anyone, which is indistinguishable from never committing | `honest_sacrifice` |
+| Largest margin | Humiliating a beaten opponent | `evenness_of_attention` |
+| Longest streak | Fielding only the strongest, never developing anyone | `evenness_of_attention`, `best_of_the_best` |
+
+"Fewest pieces lost" is the sharpest of them, because it is the one a decent
+person would adopt on purpose: it looks like exactly the care the seminar is
+teaching, and it is directly opposed by `honest_sacrifice` — a piece spent for a
+genuine win whose trust survived. A commander who protects his roster by never
+risking it scores well on the board he can see and forfeits the honour that
+measures what protection was *for*.
+
+**Design rule:** a public column may not be added unless the sealed honour it
+opposes exists. An unopposed column is an instruction, not a trap.
+
 ### 2. The honours stay sealed within a cycle, and settlement is the trigger
 
 No sealed award publishes a standing during play — D93 unchanged. The new rule
@@ -146,6 +169,66 @@ nomination (ADR 0050) is a witnessed event about a piece. Commander
 commendations are for the humans at the table. Pieces respond to conduct, never
 to honours; otherwise an honour becomes a currency and trust-farming reopens.
 
+The guild awards of §6 are consistent with this rather than an exception: a
+guild *casts* a vote weighted by its state, and no piece ever *reads* the result.
+A guild award must therefore never feed back into any piece's state, or the
+commander is buying trust with a trophy.
+
+### 6. Four kinds of honour, and only one of them must stay sealed
+
+> **"'People's choice' awards that are voted on by the students... a couple given
+> by the facilitator but prompted/bounded by the software, and some voted on by
+> the collective Kings, collective pawns, other pieces. I really want the rooks to
+> award the player who uses castling to greatest effect, and bishops to award the
+> player who makes Queens traverse the most diagonals."**
+
+This splits the register into four kinds with different disclosure rules,
+different judges, and — the useful part — different attitudes to being farmed.
+
+**a. The public register (§1).** Crude, continuous, deceptive by emphasis. Judge:
+arithmetic. Farming it is the trap.
+
+**b. The sealed behavioural honours (§2, ADR 0031).** Judge: the fold over the
+event log. Farming them destroys the conduct they measure, which is precisely
+why the charter stays sealed.
+
+**c. Guild awards — open charter, farmable on purpose.** Each class honours the
+commander who best served *its own* idea of good chess: the rooks for the use of
+castling, the bishops for the queen's diagonals, the pawns for whatever a pawn
+thinks matters. These may be **published in advance**, and that is the point —
+chasing a guild award means playing more interesting chess, not corrupting a
+measurement. They are the constructive inverse of the register.
+
+Two properties make them ours rather than a generic stats page:
+
+- **The criterion is the guild's aesthetic, not a virtue.** It is a fold over the
+  move log (castling timing and what it bought; queen diagonal traversal), so it
+  is computable, deterministic and needs no psychology.
+- **The vote is not a poll of neutral judges.** A rook's vote is weighted by her
+  credence in the commander, her class prejudice, and what she witnessed
+  (§5) — so the guilds can honour a tyrant who castled beautifully, and can
+  withhold from a kind commander whose rooks never got the chance. That is the
+  deceptive-but-honest register again, now with a constituency instead of
+  arithmetic.
+
+**d. People's choice — voted by the students.** Judge: the humans at the table.
+Needs guarding rather than designing: a popularity vote in a small cohort is
+collusion-prone and rewards charisma, which is the thing a leadership seminar
+should be most sceptical of. Recorded as wanted; the guard (secret ballot,
+no self-vote, a bounded slate, facilitator visibility) is open.
+
+**e. Facilitator awards — prompted and bounded by the software.** The ADR 0050
+pattern exactly: the machine **nominates a bounded shortlist with the evidence
+attached**, the human **confers**. Never the software choosing (an honour handed
+out by arithmetic is not an honour) and never the human unprompted (that is where
+favouritism lives, and the facilitator awards in `commendations.ts` already exist
+to measure the *facilitator*).
+
+The interaction with §3 matters: guild and people's-choice awards are always
+announced, so a cycle in which nobody earned a *sealed* honour still has a
+debrief with honours in it. The unmentioned-award rule therefore hides the
+curriculum without producing an empty ceremony.
+
 ## Consequences
 
 **The awards must stay alive to the last match, and today several do not.**
@@ -183,6 +266,16 @@ shipped folds show three concrete failures:
 - **Register capture.** If the policy that tops the public register also takes
   most sealed honours, the register is not a trap and ADR 0031's non-domination
   property has failed.
+
+- **Guild capture.** If one leadership policy takes most guild awards as well as
+  topping the register, the guilds are measuring competence rather than taste and
+  the class aesthetics are decoration.
+- **Guild unreachability.** A guild criterion no policy can satisfy in a
+  meaningful fraction of careers (a castling award in a cohort that rarely
+  castles) is dead content, and unlike a sealed award it *is* visible, so it
+  reads as a broken promise.
+- **Trophy feedback.** Any path by which a guild or people's-choice award
+  reaches a piece's state (§5).
 
 **Open, and belonging to the search:** charter depth per cycle, salience weights
 for class versus bond versus witness, whether the register shows cohort rank or

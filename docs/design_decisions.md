@@ -1207,6 +1207,17 @@ whether settled-won disclosure happens at all, and whether the consumer campaign
 (no facilitator, so the charter leaks by repetition) opens the charter or rotates
 which honours are live.
 
+ADR 0060 §6 splits the register into four kinds, and only the sealed behavioural
+honours must stay hidden: the crude public register; the sealed honours; **guild
+awards** where a class honours the commander who best served its own idea of good
+chess (the rooks for castling, the bishops for the queen's diagonals), published
+in advance because farming them means playing more interesting chess, and voted
+with each piece's credence and class prejudice as the weight rather than by a
+neutral judge; and **people's choice** voted by the students, wanted but needing
+a collusion guard. Facilitator awards follow the ADR 0050 pattern — software
+nominates a bounded shortlist with evidence, the human confers. Open: the guild
+criteria and their vote weighting, and the people's-choice ballot guard.
+
 ### D158 ❓ What does a piece observe of her commander's record? (ADR 0060 §5)
 **Open — not wired.** Never an award, a standing, or a criterion. Public record
 and conduct only — results, who was fielded and who sat, promotions, captures,
