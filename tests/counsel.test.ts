@@ -6,12 +6,15 @@ import {
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  type CounselOpinion,
+  type PieceCounsel,
   type PieceState,
 } from '../src/psychology';
 import {
   consultWithBudget,
   DRAFT_CONFIG,
   type CounselConsultationRequest,
+  type DraftConfig,
 } from '../src/orchestration';
 import { foldCounselMetrics } from '../sim/metrics';
 
@@ -52,14 +55,24 @@ const candidate = {
   originRole: 'Pawn' as const,
 };
 
+function spokenOpinion(counsel: PieceCounsel): CounselOpinion {
+  if (!('opinion' in counsel)) throw new Error('expected spoken counsel');
+  return counsel.opinion;
+}
+
+function spokenCounsel(counsel: PieceCounsel) {
+  if (!('opinion' in counsel)) throw new Error('expected spoken counsel');
+  return counsel;
+}
+
 describe('private informant counsel', () => {
   it('names affinity and keeps the arithmetic private', () => {
     const statement = counselForCandidate(
       holder({ credence: { ...defaultCredence(), tauBenev: 100 } }),
       candidate,
     );
-    expect(statement.opinion).toBe('strongly_recommend');
-    expect(statement.reason).toBe('personal affinity');
+    expect(spokenOpinion(statement)).toBe('strongly_recommend');
+    expect(spokenCounsel(statement).reason).toBe('personal affinity');
     expect(statement).not.toHaveProperty('score');
     expect(statement).not.toHaveProperty('tauBenev');
   });
@@ -73,18 +86,16 @@ describe('private informant counsel', () => {
       holder({ credence: { ...defaultCredence(), tauBenev: 25 } }),
       candidate,
     );
-    expect(counselOpinionValue(high.opinion)).toBeGreaterThan(
-      counselOpinionValue(low.opinion),
+    expect(counselOpinionValue(spokenOpinion(high))).toBe(
+      counselOpinionValue(spokenOpinion(low)),
     );
     expect(high.volunteering).toBe('forthcoming');
     expect(low.volunteering).toBe('reluctant');
-    expect(low.reason).toBe('low credence');
-    expect(
-      counselForCandidate(
-        holder({ credence: { ...defaultCredence(), tauBenev: 0 } }),
-        candidate,
-      ).volunteering,
-    ).toBe('silent');
+    const silent = counselForCandidate(
+      holder({ credence: { ...defaultCredence(), tauBenev: 0 } }),
+      candidate,
+    );
+    expect(silent).toEqual({ volunteering: 'silent' });
     expect([
       counselOpinionValue('strongly_recommend'),
       counselOpinionValue('recommend'),
@@ -108,26 +119,143 @@ describe('private informant counsel', () => {
       }),
       candidate,
     );
-    expect(rivalry.reason).toBe('chair rivalry');
-    expect(classBiased.reason).toBe('class prejudice');
+    expect(spokenCounsel(rivalry).reason).toBe('chair rivalry');
+    expect(spokenCounsel(classBiased).reason).toBe('class prejudice');
   });
 
-  it('names rumour or mixed evidence when those are the leading causes', () => {
-    const rumour = counselForCandidate(
-      holder({
-        dyadicAffinity: {},
-        rumor: { ...defaultRumor(), leaderAppraisal: 80 },
-        credence: { ...defaultCredence(), tauBenev: 100 },
-      }),
-      candidate,
-    );
+  it('names mixed evidence when affinity and class evidence are absent', () => {
     const mixed = counselForCandidate(
       holder({ dyadicAffinity: {} }),
       candidate,
     );
-    expect(rumour.reason).toBe('rumour appraisal');
-    expect(mixed.opinion).toBe('caution');
-    expect(mixed.reason).toBe('mixed evidence');
+    expect(spokenOpinion(mixed)).toBe('caution');
+    expect(spokenCounsel(mixed).reason).toBe('mixed evidence');
+  });
+
+  it('does not substitute the holder appraisal for candidate rumour', () => {
+    const withoutRumour = counselForCandidate(
+      holder({ dyadicAffinity: {} }),
+      candidate,
+    );
+    const withLeaderAppraisal = counselForCandidate(
+      holder({
+        dyadicAffinity: {},
+        rumor: { ...holder().rumor, leaderAppraisal: 100 },
+      }),
+      candidate,
+    );
+    expect(withLeaderAppraisal).toEqual(withoutRumour);
+  });
+
+  it('uses origin-inclusive eligibility for a promoted candidate', () => {
+    const rivalry = counselForCandidate(
+      holder({ dyadicAffinity: {}, role: 'Pawn' }),
+      { ...candidate, attainedRole: 'Pawn' },
+    );
+    expect(spokenCounsel(rivalry).reason).toBe('chair rivalry');
+  });
+
+  it('wires each counsel magnitude as a live draft search seed', () => {
+    const opinionValue = (config: DraftConfig) =>
+      counselOpinionValue(
+        spokenOpinion(
+          counselForCandidate(holder({ role: 'Pawn' }), candidate, config),
+        ),
+      );
+    expect(
+      [0, 40, 80].map((penalty) =>
+        opinionValue({
+          ...DRAFT_CONFIG,
+          COUNSEL_RIVALRY_PENALTY: penalty,
+        }),
+      ),
+    ).toEqual([2, 1, 0]);
+
+    const nonRival = (config: DraftConfig) =>
+      counselOpinionValue(
+        spokenOpinion(
+          counselForCandidate(
+            holder({ dyadicAffinity: { candidate: 40 } }),
+            candidate,
+            config,
+          ),
+        ),
+      );
+    expect(
+      [20, 40, 60].map((threshold) =>
+        nonRival({
+          ...DRAFT_CONFIG,
+          COUNSEL_STRONGLY_RECOMMEND_THRESHOLD: threshold,
+        }),
+      ),
+    ).toEqual([2, 2, 1]);
+    expect(
+      [0, 30, 70].map((threshold) =>
+        nonRival({
+          ...DRAFT_CONFIG,
+          COUNSEL_RECOMMEND_THRESHOLD: threshold,
+        }),
+      ),
+    ).toEqual([1, 1, 0]);
+    expect(
+      [-30, -20, 10].map((threshold) =>
+        counselOpinionValue(
+          spokenOpinion(
+            counselForCandidate(holder({ dyadicAffinity: {} }), candidate, {
+              ...DRAFT_CONFIG,
+              COUNSEL_CAUTION_THRESHOLD: threshold,
+            }),
+          ),
+        ),
+      ),
+    ).toEqual([0, 0, -1]);
+
+    const volunteeringValue = (config: DraftConfig, tauBenev: number) =>
+      ({
+        silent: 0,
+        reluctant: 1,
+        guarded: 2,
+        forthcoming: 3,
+      })[
+        counselForCandidate(
+          holder({ credence: { ...defaultCredence(), tauBenev } }),
+          candidate,
+          config,
+        ).volunteering
+      ];
+    expect(
+      [40, 75, 90].map((threshold) =>
+        volunteeringValue(
+          {
+            ...DRAFT_CONFIG,
+            COUNSEL_FORTHCOMING_CREDENCE: threshold,
+          },
+          80,
+        ),
+      ),
+    ).toEqual([3, 3, 2]);
+    expect(
+      [30, 50, 90].map((threshold) =>
+        volunteeringValue(
+          {
+            ...DRAFT_CONFIG,
+            COUNSEL_GUARDED_CREDENCE: threshold,
+          },
+          60,
+        ),
+      ),
+    ).toEqual([2, 2, 1]);
+    expect(
+      [10, 25, 70].map((threshold) =>
+        volunteeringValue(
+          {
+            ...DRAFT_CONFIG,
+            COUNSEL_RELUCTANT_CREDENCE: threshold,
+          },
+          40,
+        ),
+      ),
+    ).toEqual([1, 1, 0]);
   });
 
   it('keeps consultations at zero by default and grades the budget', () => {
@@ -139,6 +267,7 @@ describe('private informant counsel', () => {
     const counts = [0, 1, 2].map(
       (budget) =>
         consultWithBudget(requests, {
+          ...DRAFT_CONFIG,
           CONSULTATIONS_PER_CYCLE: budget,
         }).granted,
     );

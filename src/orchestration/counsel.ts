@@ -32,7 +32,7 @@ export function consultWithBudget(
     holderId: request.holder.id,
     candidateId: request.candidate.id,
     counsel: {
-      ...counselForCandidate(request.holder, request.candidate),
+      ...counselForCandidate(request.holder, request.candidate, config),
     },
   }));
   return {

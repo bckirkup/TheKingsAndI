@@ -1,4 +1,6 @@
 import type { PieceRole, PieceState } from './types';
+import { DRAFT_CONFIG, type DraftConfig } from '../core/draftConfig';
+import { isEligibleForChair } from '../core/roleEligibility';
 
 export interface CounselCandidate {
   readonly id: string;
@@ -15,8 +17,6 @@ export type CounselOpinion =
 export type CounselReason =
   | 'personal affinity'
   | 'class prejudice'
-  | 'rumour appraisal'
-  | 'low credence'
   | 'chair rivalry'
   | 'mixed evidence';
 
@@ -26,11 +26,15 @@ export type CounselVolunteering =
   | 'reluctant'
   | 'silent';
 
-export interface PieceCounsel {
-  readonly opinion: CounselOpinion;
-  readonly reason: CounselReason;
-  readonly volunteering: CounselVolunteering;
-}
+export type PieceCounsel =
+  | {
+      readonly volunteering: 'silent';
+    }
+  | {
+      readonly opinion: CounselOpinion;
+      readonly reason: CounselReason;
+      readonly volunteering: Exclude<CounselVolunteering, 'silent'>;
+    };
 
 const OPINION_VALUES: Readonly<Record<CounselOpinion, number>> = {
   strongly_recommend: 2,
@@ -47,66 +51,58 @@ export function counselOpinionValue(opinion: CounselOpinion): number {
   return OPINION_VALUES[opinion];
 }
 
-function isChairRival(
-  holder: PieceState,
-  candidate: CounselCandidate,
-): boolean {
-  return (
-    candidate.originRole === holder.role ||
-    candidate.attainedRole === holder.role
-  );
-}
-
-function volunteeringForCredence(tauBenev: number): CounselVolunteering {
-  if (tauBenev >= 75) return 'forthcoming';
-  if (tauBenev >= 50) return 'guarded';
-  if (tauBenev >= 25) return 'reluctant';
+function volunteeringForCredence(
+  tauBenev: number,
+  config: DraftConfig,
+): CounselVolunteering {
+  if (tauBenev >= config.COUNSEL_FORTHCOMING_CREDENCE) return 'forthcoming';
+  if (tauBenev >= config.COUNSEL_GUARDED_CREDENCE) return 'guarded';
+  if (tauBenev >= config.COUNSEL_RELUCTANT_CREDENCE) return 'reluctant';
   return 'silent';
 }
 
-function opinionForSignal(signal: number): CounselOpinion {
-  if (signal >= 50) return 'strongly_recommend';
-  if (signal >= 10) return 'recommend';
-  if (signal >= -20) return 'caution';
+function opinionForSignal(signal: number, config: DraftConfig): CounselOpinion {
+  if (signal >= config.COUNSEL_STRONGLY_RECOMMEND_THRESHOLD)
+    return 'strongly_recommend';
+  if (signal >= config.COUNSEL_RECOMMEND_THRESHOLD) return 'recommend';
+  if (signal >= config.COUNSEL_CAUTION_THRESHOLD) return 'caution';
   return 'discourage';
 }
 
 /**
  * Give deterministic, qualitative counsel from the holder's private state.
- * Credence in the commander attenuates what the holder volunteers; rivalry is
- * structural because origin-inclusive chair eligibility makes the candidate a
- * direct competitor.
+ * Credence in the commander controls disclosure only; rivalry is structural
+ * because origin-inclusive chair eligibility makes the candidate a competitor.
  */
 export function counselForCandidate(
   holder: PieceState,
   candidate: CounselCandidate,
+  config: DraftConfig = DRAFT_CONFIG,
 ): PieceCounsel {
   const affinity = holder.dyadicAffinity[candidate.id] ?? 0;
   const classBias = holder.classPrestige[candidate.originRole];
-  const rumour = holder.rumor.leaderAppraisal;
   const credence = Math.max(0, Math.min(100, holder.credence.tauBenev));
-  const informedSignal = Math.trunc(
-    ((affinity + classBias + rumour) * credence) / 100,
-  );
-  const rivalryPenalty = isChairRival(holder, candidate) ? 60 : 0;
-  const signal = informedSignal - rivalryPenalty;
-  const opinion = opinionForSignal(signal);
-  const credibilityLoss = Math.abs(
-    affinity + classBias + rumour - informedSignal,
-  );
+  const rivalryPenalty = isEligibleForChair(
+    candidate.originRole,
+    candidate.attainedRole,
+    holder.role,
+  )
+    ? config.COUNSEL_RIVALRY_PENALTY
+    : 0;
+  const signal = affinity + classBias - rivalryPenalty;
+  const volunteering = volunteeringForCredence(credence, config);
+  if (volunteering === 'silent') return { volunteering };
+  const opinion = opinionForSignal(signal, config);
   let reason: CounselReason = 'mixed evidence';
   if (
     rivalryPenalty > 0 &&
-    rivalryPenalty >= Math.max(Math.abs(classBias), Math.abs(informedSignal))
+    rivalryPenalty >= Math.max(Math.abs(classBias), Math.abs(affinity))
   ) {
     reason = 'chair rivalry';
-  } else if (credibilityLoss >= 25 && credence < 50) {
-    reason = 'low credence';
   } else {
     const magnitudes: readonly [CounselReason, number][] = [
       ['personal affinity', Math.abs(affinity)],
       ['class prejudice', Math.abs(classBias)],
-      ['rumour appraisal', Math.abs(rumour)],
     ];
     const strongest = magnitudes.reduce(
       (best, current) => (current[1] > best[1] ? current : best),
@@ -117,6 +113,6 @@ export function counselForCandidate(
   return {
     opinion,
     reason,
-    volunteering: volunteeringForCredence(credence),
+    volunteering,
   };
 }

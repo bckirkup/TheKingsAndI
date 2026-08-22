@@ -1122,7 +1122,9 @@ knowledge about pieces the commander has never led. The public candidate slate
 is folded from identity, lifecycle, relationship-account keys, and service
 records (`src/persistence/candidateSlate.ts:14-117`); private counsel is
 qualitative and deterministic (`src/psychology/counsel.ts:3-139`). Testimony,
-rumor, and earned-knowledge projections remain open here.
+candidate rumour appraisals, and earned-knowledge projections remain open here.
+The existing rumour channel appraises the commander rather than a candidate,
+so it is not substituted into candidate counsel.
 ADR 0054 §6 still proposes earned knowledge as
 testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
@@ -1184,19 +1186,23 @@ ADR 0061 brings D154 due in step 3, the draft.
 **Partly wired — magnitudes remain open.** The public record is identical for every commander
 (name, origin and attained role, status, commanders served, and the folded
 service record). Private counsel comes from pieces he already holds and is
-computed from their state — dyadic affinity, class prejudice, the rumor
-appraisal with its existing affinity/class credibility weight
-(`src/psychology/belief.ts:14-41`), credence in *him*, and chair rivalry under
-origin-inclusive eligibility (ADR 0056). The public slate and private counsel
+computed from their state — dyadic affinity and class prejudice, with chair
+rivalry using the shared origin-inclusive eligibility helper
+(`src/core/roleEligibility.ts:1-8`). Credence in *him* controls disclosure
+only: silence returns no opinion. The existing rumour channel appraises the
+commander rather than the candidate, so candidate rumour appraisal state is an
+open item and is not used as a stand-in. The public slate and private counsel
 are implemented in `src/persistence/candidateSlate.ts:14-117` and
 `src/psychology/counsel.ts:3-139`; consultations use a zero-default attention
-budget (`src/orchestration/draftConfig.ts:1-11`,
+budget (`src/core/draftConfig.ts:1-29`,
 `src/orchestration/counsel.ts:1-43`) and heeded outcomes fold only into
-harness telemetry (`sim/metrics.ts:70-95`). Harness detectors for decorative and
-oracular counsel are provisional search instruments for the ADR 0059 §9
-calibration search in `sim/degeneracy.ts:659-701`; their thresholds are not game
-magnitudes. Open: the consultation budget, rivalry magnitude, and all economy
-mechanics.
+harness telemetry (`sim/metrics.ts:70-95`). Rivalry, opinion bands, and
+disclosure cutoffs are provisional ADR 0059 §9 search seeds in
+`src/core/draftConfig.ts:1-29`, not rulings. Harness detectors for decorative
+and oracular counsel are likewise provisional search instruments in
+`sim/degeneracy.ts:659-701`; their thresholds are not game magnitudes. Open:
+candidate rumour appraisals, the consultation budget, counsel magnitudes, and
+all economy mechanics.
 
 ADR 0061 brings D155 due in step 3, the draft.
 

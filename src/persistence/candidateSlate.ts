@@ -26,15 +26,7 @@ export interface PublicCandidateSlate {
   readonly candidates: readonly PublicCandidateSlateEntry[];
 }
 
-export interface PublicCandidateSlateInput {
-  readonly id: string;
-  readonly name: string;
-  readonly originRole: PieceRole;
-  readonly attainedRole?: PieceRole;
-  readonly status: PieceStatus;
-  readonly commandersServed: readonly LeaderId[];
-  readonly serviceRecord: PieceServiceRecord;
-}
+export type PublicCandidateSlateInput = PublicCandidateSlateEntry;
 
 /**
  * Fold public candidate facts without accepting a psychological or engine
@@ -42,7 +34,7 @@ export interface PublicCandidateSlateInput {
  * account keys, which are the existing record of service by commander.
  */
 export function foldPublicCandidateSlate(
-  candidates: readonly PublicCandidateSlateInput[],
+  candidates: readonly PublicCandidateSlateEntry[],
 ): PublicCandidateSlate {
   return {
     candidates: candidates.map((candidate) => ({
