@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0057)
+# ADR implementation status (0035–0058)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -11,7 +11,7 @@ the discrepancy is corrected.
 
 | ADR | Topic | Decision | Live code |
 |---|---|---|---|
-| 0035 | Three-channel keyed credence (D49) | Accepted | **Not wired** — `CredenceState` is still `{tauBenev, tauAbil, abilityObservationCount}`; reputation transfer averages scalars |
+| 0035 | Three-channel keyed credence (D49) | Accepted | **Shipped** — `src/orchestration/credence.ts:1-101`; identity-carried disposition and commander-keyed accounts with orchestration check-out/check-in |
 | 0036 | Separate engine audit stream (D50) | Accepted | **Shipped** — `src/engine/types.ts:27-35`, `src/orchestration/headlessMatch.ts:418-421`, `src/orchestration/matchSession.ts:190-192`, `src/persistence/repository.ts:217-231` |
 | 0037 | Private evaluation profiles | Accepted | **Shipped** — `privateEvaluation.ts` on both match paths |
 | 0038 | Justified refusal authority | Accepted | **Shipped** — authority loss/gain hooks |
@@ -33,6 +33,7 @@ the discrepancy is corrected.
 | 0055 | Earned ability from vindicated judgment | Resolved and calibrated at scale `2` / loss multiplier `1` | **Shipped** — `src/psychology/reducers.ts:65-108`, `src/orchestration/psychologyHooks.ts:270-359`, `sim/pool.ts:252-277`, and campaign spread metrics; evidence: `docs/calibration/2026-08-19-earned-ability-magnitude.md` |
 | 0056 | Origin-inclusive chair contests and the bench instrument | Accepted for harness/pool slice; app bench remains open | **Shipped in sim** — `sim/pool.ts:39-206`, `sim/season.ts:40-157`, and `sim/degeneracy.ts:1-420`; D148/D150 remain open |
 | 0057 | App-side private squad fielding | Accepted for offline/private bench slice; shared market remains out of scope | **Shipped** — `src/app/careerBootstrap.ts:49-79`, `src/app/squadCareer.ts:180-480`, `src/orchestration/matchSession.ts:45-66`, `src/persistence/service.ts:33-185`, and `src/persistence/migrations.ts:8-31`; D148/D150 remain open |
+| 0058 | Three-channel credence wiring | Accepted for identity/persistence wiring; disposition distribution remains open | **Shipped** — `src/orchestration/credence.ts:1-101`, `src/persistence/types.ts:48-70`, and `src/persistence/migrations.ts:25-52`; shared market remains out of scope |
 
 ## Confirmed implementation gaps
 

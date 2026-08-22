@@ -9,6 +9,7 @@ import {
   resetDatabaseForTests,
   SCHEMA_VERSION,
 } from '../src/persistence';
+import { defaultCredence } from '../src/psychology';
 
 describe('persistence repository', () => {
   let testCounter = 0;
@@ -274,5 +275,42 @@ describe('schema migrations', () => {
     expect(
       await repo.getIdentities(legacyRoster.map((piece) => piece.id)),
     ).toHaveLength(16);
+  });
+
+  it('migrates legacy credence into the player commander account', async () => {
+    const db = getDatabase();
+    await db.open();
+    const bootstrapped = bootstrapRoster(44);
+    const identity = bootstrapped.identities[0];
+    const piece = bootstrapped.roster[0];
+    if (identity === undefined || piece === undefined) {
+      throw new Error('expected legacy fixture');
+    }
+    const {
+      identityCreationSeed: _seed,
+      disposition: _disposition,
+      relationshipAccounts: _accounts,
+      ...legacyIdentity
+    } = identity;
+    void _seed;
+    void _disposition;
+    void _accounts;
+    const legacyCredence = {
+      ...defaultCredence(),
+      tauAbil: 17,
+      tauBenev: 73,
+      abilityObservationCount: 6,
+    };
+    await db.pieceIdentities.put(legacyIdentity);
+    await db.pieceStates.put({ ...piece, credence: legacyCredence });
+    await db.settings.put({ key: 'schemaVersion', value: '2' });
+
+    await new CareerRepository(db).init();
+
+    const migrated = await db.pieceIdentities.get(identity.id);
+    expect(migrated?.disposition).toEqual(defaultCredence());
+    expect(migrated?.relationshipAccounts?.['player:career']).toEqual(
+      legacyCredence,
+    );
   });
 });

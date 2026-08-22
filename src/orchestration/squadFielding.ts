@@ -1,4 +1,5 @@
 import type { PieceId, Side } from '../chess';
+import type { CredenceIdentity } from './credence';
 import type { PieceRole, PieceState } from '../psychology';
 import {
   clampTrust,
@@ -26,6 +27,8 @@ export interface SquadConfig {
   readonly NON_SELECTION_PEER_TRUST_PENALTY: number;
   readonly NON_SELECTION_REDEMPTION_TRUST_RECOVERY: number;
   readonly OBSOLESCENCE_NON_SELECTION_THRESHOLD: number;
+  /** Natural disposition band; zero preserves the neutral prior. */
+  readonly DISPOSITION_SPREAD: number;
 }
 
 export const SQUAD_CONFIG: SquadConfig = {
@@ -37,6 +40,7 @@ export const SQUAD_CONFIG: SquadConfig = {
   NON_SELECTION_PEER_TRUST_PENALTY: -2,
   NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 4,
   OBSOLESCENCE_NON_SELECTION_THRESHOLD: 6,
+  DISPOSITION_SPREAD: 0,
 };
 
 export interface SquadService {
@@ -57,6 +61,7 @@ export interface SquadMember {
   readonly provenance: 'original' | 'conscript';
   readonly service: SquadService;
   readonly retirementCause?: 'trauma' | 'obsolescence';
+  readonly credenceIdentity?: CredenceIdentity;
 }
 
 export type SquadEvent =
@@ -90,6 +95,7 @@ export interface SquadFieldingPool {
   readonly members: readonly SquadMember[];
   readonly fieldingPolicy: FieldingPolicy;
   readonly pinnedMemberIds?: ReadonlySet<PieceId>;
+  readonly dispositionSpread?: number;
 }
 
 const STARTING_ROLE_COUNTS: Readonly<Record<PieceRole, number>> = {
@@ -159,6 +165,7 @@ export function compareForPolicy(
   policy: FieldingPolicy,
   left: SquadMember,
   right: SquadMember,
+  includeDisposition = false,
 ): number {
   let values: number[];
   const relativeAbilityDifference =
@@ -166,7 +173,16 @@ export function compareForPolicy(
     startingAbilityForRole(right.originRole) -
     (left.state.E_i - startingAbilityForRole(left.originRole));
   if (policy === 'strongest_available') {
-    values = [relativeAbilityDifference, right.state.B_i - left.state.B_i];
+    values = [
+      relativeAbilityDifference,
+      right.state.B_i - left.state.B_i,
+      ...(includeDisposition
+        ? [
+            right.state.credence.tauAbil - left.state.credence.tauAbil,
+            right.state.credence.tauBenev - left.state.credence.tauBenev,
+          ]
+        : []),
+    ];
   } else if (policy === 'rest_traumatised') {
     values = [
       left.state.B_i - right.state.B_i,
@@ -176,6 +192,12 @@ export function compareForPolicy(
     values = [
       right.service.matchesPlayed - left.service.matchesPlayed,
       relativeAbilityDifference,
+      ...(includeDisposition
+        ? [
+            right.state.credence.tauAbil - left.state.credence.tauAbil,
+            right.state.credence.tauBenev - left.state.credence.tauBenev,
+          ]
+        : []),
     ];
   }
   return (
@@ -210,7 +232,12 @@ export function fieldSquad(
         const leftPinned = pool.pinnedMemberIds?.has(left.state.id) ? 1 : 0;
         const rightPinned = pool.pinnedMemberIds?.has(right.state.id) ? 1 : 0;
         if (leftPinned !== rightPinned) return rightPinned - leftPinned;
-        return compareForPolicy(pool.fieldingPolicy, left, right);
+        return compareForPolicy(
+          pool.fieldingPolicy,
+          left,
+          right,
+          pool.dispositionSpread !== 0,
+        );
       });
     const selected = available.slice(0, required).map((member) => ({
       ...member,

@@ -33,6 +33,15 @@ export {
   PACING_CONFIG,
 } from './pacingConfig';
 export { createStartingRoster } from './roster';
+export {
+  checkInCredence,
+  checkOutCredence,
+  dispositionForIdentitySeed,
+  ensureCredenceIdentity,
+  identityCreationSeed,
+  DISPOSITION_SPREAD,
+} from './credence';
+export type { CredenceIdentity } from './credence';
 export { applyPromotion } from './promotion';
 export { lineupPieceIdFactory } from './lineup';
 export {

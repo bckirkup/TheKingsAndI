@@ -1,4 +1,6 @@
 import type { LivingChessDatabase } from './db';
+import { PLAYER_LEADER_ID } from '../core/ids';
+import { defaultCredence } from '../psychology';
 import { SCHEMA_VERSION } from './types';
 
 export interface MigrationStep {
@@ -19,6 +21,34 @@ export const MIGRATIONS: readonly MigrationStep[] = [
     upgrade: async () => {
       // v2 keeps legacy members and their identity roles intact. Squad depth
       // applies only to newly bootstrapped careers.
+    },
+  },
+  {
+    version: 3,
+    upgrade: async (db) => {
+      const identities = await db.pieceIdentities.toArray();
+      const pieces = new Map(
+        (await db.pieceStates.toArray()).map((piece) => [piece.id, piece]),
+      );
+      await db.pieceIdentities.bulkPut(
+        identities.map((identity) => {
+          const piece = pieces.get(identity.id);
+          const disposition = identity.disposition ?? defaultCredence();
+          const account =
+            identity.relationshipAccounts?.[PLAYER_LEADER_ID] ??
+            piece?.credence ??
+            disposition;
+          return {
+            ...identity,
+            identityCreationSeed: identity.identityCreationSeed ?? 0,
+            disposition,
+            relationshipAccounts: {
+              ...(identity.relationshipAccounts ?? {}),
+              [PLAYER_LEADER_ID]: { ...account },
+            },
+          };
+        }),
+      );
     },
   },
 ];

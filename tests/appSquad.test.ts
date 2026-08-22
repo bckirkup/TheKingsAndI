@@ -298,6 +298,35 @@ describe('career squad fielding', () => {
     }
   });
 
+  it('changes the strongest lineup when disposition spread widens', () => {
+    const neutral = bootstrapRoster(40, 0);
+    const spread = bootstrapRoster(40, 100);
+    const flatten = (roster: readonly StoredPieceState[]): StoredPieceState[] =>
+      roster.map((piece) => ({ ...piece, E_i: 50, B_i: 0 }));
+    const neutralSelection = selectPlayerSquad({
+      roster: flatten(neutral.roster),
+      identities: neutral.identities,
+      matches: [],
+      match: 1,
+      careerSeed: 40,
+      dispositionSpread: 0,
+    });
+    const spreadSelection = selectPlayerSquad({
+      roster: flatten(spread.roster),
+      identities: spread.identities,
+      matches: [],
+      match: 1,
+      careerSeed: 40,
+      dispositionSpread: 100,
+    });
+
+    expect(
+      spreadSelection.fielded.lineup.map((member) => member.state.id),
+    ).not.toEqual(
+      neutralSelection.fielded.lineup.map((member) => member.state.id),
+    );
+  });
+
   it('folds passed-over streaks, redemption, and obsolescence from events', () => {
     const { roster, identities } = bootstrapRoster(35);
     const target = roster.find((piece) => piece.id === 'w:Pawn:00');

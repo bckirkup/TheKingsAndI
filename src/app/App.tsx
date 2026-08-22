@@ -163,7 +163,7 @@ export function App(): JSX.Element {
                 seed: screen.seed,
                 rosterSnapshot: screen.roster,
                 rosterEnd: result.rosterEnd,
-                identities: screen.identities,
+                identities: result.identities,
                 events,
                 engineAudit: result.engineAudit,
                 result: result.result,

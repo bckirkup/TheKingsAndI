@@ -165,7 +165,9 @@ free now; a migration and a psychology rewrite later. Interacts with D27
 relationship account, `Record<LeaderId, {benev, abil}>`, initialized from a
 stable identity-seeded disposition prior. `B_i` remains global damage rather
 than part of a relationship account. The disposition is not player-facing as a
-number; facilitator exposure remains a separate open question.
+number; facilitator exposure remains a separate open question. The wiring lives
+at `src/orchestration/credence.ts:39-101`; `DISPOSITION_SPREAD` ships at zero,
+while its distribution and floor remain open and owner-owned.
 
 ### D50 ✅ Does the true evaluation get persisted in the event log? (ADR 0036)
 The audit needs it (ADR 0018) and the trust-farming detector needs it

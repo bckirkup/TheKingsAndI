@@ -5,8 +5,9 @@ import type {
   PieceState,
 } from '../psychology';
 import type { EngineAuditEntry } from '../engine';
+import type { LeaderId } from '../core/ids';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
@@ -52,6 +53,14 @@ export interface PieceIdentityRecord {
   readonly bornInMatch: number;
   readonly originRole: PieceRole;
   readonly attainedRole?: PieceRole;
+  /** Stable seed minted when this identity was created. */
+  readonly identityCreationSeed?: number;
+  /** Stable individual prior, before any commander-specific evidence. */
+  readonly disposition?: import('../psychology').CredenceState;
+  /** Learned credence keyed by stable commander identity. */
+  readonly relationshipAccounts?: Readonly<
+    Record<LeaderId, import('../psychology').CredenceState>
+  >;
 }
 
 export interface StoredPieceState extends PieceState {

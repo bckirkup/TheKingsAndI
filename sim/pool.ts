@@ -2,6 +2,10 @@ import { LivingBoard, type PieceId, type Side } from '../src/chess';
 import {
   FIELDING_POLICIES,
   fieldSquad,
+  checkInCredence,
+  checkOutCredence,
+  dispositionForIdentitySeed,
+  identityCreationSeed,
   foldSquadMatch,
   highestAttainment,
   poolRoleCounts as squadRoleCounts,
@@ -10,6 +14,7 @@ import {
   type SquadEvent,
   type SquadMember,
   type SquadService,
+  type CredenceIdentity,
 } from '../src/orchestration';
 import type { HeadlessMatchResult } from '../src/orchestration';
 import type {
@@ -240,10 +245,21 @@ function initialPoolMembers(
         trust,
         memberUnit,
       );
+      const memberId = `${side}:${role}:${String(index).padStart(2, '0')}`;
+      const credenceIdentity: CredenceIdentity = {
+        identityCreationSeed: identityCreationSeed(0, memberId),
+        disposition: dispositionForIdentitySeed(
+          identityCreationSeed(0, memberId),
+        ),
+        relationshipAccounts: {},
+      };
       members.push({
         state: stateWithId(
-          template,
-          `${side}:${role}:${String(index).padStart(2, '0')}`,
+          {
+            ...template,
+            credence: credenceIdentity.disposition ?? template.credence,
+          },
+          memberId,
         ),
         originRole: role,
         status: 'available',
@@ -256,6 +272,7 @@ function initialPoolMembers(
           captures: 0,
           consecutiveNonSelections: 0,
         },
+        credenceIdentity,
       });
       sequence += 1;
     }
@@ -357,12 +374,33 @@ function conscriptMember(
       captures: 0,
       consecutiveNonSelections: 0,
     },
+    credenceIdentity: {
+      identityCreationSeed: identityCreationSeed(0, id),
+      disposition: dispositionForIdentitySeed(identityCreationSeed(0, id)),
+      relationshipAccounts: {},
+    },
   };
 }
 
 export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
-  return fieldSquad(pool, match, (role, conscriptionMatch, sequence) =>
-    conscriptMember(pool, role, conscriptionMatch, sequence),
+  const members = pool.members.map((member) => {
+    const identity = member.credenceIdentity;
+    return identity === undefined
+      ? member
+      : {
+          ...member,
+          state: checkOutCredence(identity, pool.id, member.state),
+        };
+  });
+  return fieldSquad(
+    {
+      ...pool,
+      members,
+      dispositionSpread: SEASON_CONFIG.DISPOSITION_SPREAD,
+    },
+    match,
+    (role, conscriptionMatch, sequence) =>
+      conscriptMember(pool, role, conscriptionMatch, sequence),
   );
 }
 
@@ -394,7 +432,15 @@ function foldSide(
   const resultById = new Map(
     [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
   );
-  const members = [...folded.members];
+  const members = [...folded.members].map((member) => {
+    const identity = member.credenceIdentity;
+    return identity === undefined
+      ? member
+      : {
+          ...member,
+          credenceIdentity: checkInCredence(identity, pool.id, member.state),
+        };
+  });
   for (const conscript of fielded.lineup.filter(
     (member) => member.provenance === 'conscript',
   )) {
@@ -402,6 +448,10 @@ function foldSide(
       continue;
     const state = resultById.get(conscript.state.id) ?? conscript.state;
     const attainedRole = promotions.get(conscript.state.id);
+    const checkedInIdentity =
+      conscript.credenceIdentity === undefined
+        ? undefined
+        : checkInCredence(conscript.credenceIdentity, pool.id, state);
     members.push({
       ...conscript,
       state,
@@ -423,6 +473,9 @@ function foldSide(
         refusals: refusals.get(conscript.state.id) ?? 0,
         consecutiveNonSelections: 0,
       },
+      ...(checkedInIdentity === undefined
+        ? {}
+        : { credenceIdentity: checkedInIdentity }),
     });
   }
   return { pool: { ...pool, members }, events: folded.events };

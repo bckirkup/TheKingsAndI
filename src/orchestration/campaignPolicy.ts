@@ -1,4 +1,6 @@
 import type { PieceState } from '../psychology';
+import { checkOutCredence, type CredenceIdentity } from './credence';
+import type { LeaderId } from '../core/ids';
 
 import { CAMPAIGN_CONFIG } from './campaignConfig';
 import type {
@@ -101,15 +103,36 @@ export function applyReputationTransfer(
   piece: StoredPieceState,
   leaderAbilityTrust: number,
   rosterBenevolenceAppraisal: number,
+  identity?: CredenceIdentity,
+  leaderId?: LeaderId,
 ): StoredPieceState {
+  if (identity === undefined || leaderId === undefined) {
+    return {
+      ...piece,
+      credence: {
+        ...piece.credence,
+        tauAbil: Math.round((piece.credence.tauAbil + leaderAbilityTrust) / 2),
+        tauBenev: Math.round(
+          (piece.credence.tauBenev + rosterBenevolenceAppraisal) / 2,
+        ),
+      },
+    };
+  }
+  const prior = checkOutCredence(identity, leaderId, piece);
+  const rumorAppraisal = Math.max(
+    0,
+    Math.min(100, 50 + piece.rumor.leaderAppraisal / 2),
+  );
+  const accountExists = identity.relationshipAccounts?.[leaderId] !== undefined;
+  const benevolenceInput = accountExists
+    ? prior.credence.tauBenev
+    : rumorAppraisal;
   return {
     ...piece,
     credence: {
-      ...piece.credence,
-      tauAbil: Math.round((piece.credence.tauAbil + leaderAbilityTrust) / 2),
-      tauBenev: Math.round(
-        (piece.credence.tauBenev + rosterBenevolenceAppraisal) / 2,
-      ),
+      ...prior.credence,
+      tauAbil: Math.round((prior.credence.tauAbil + leaderAbilityTrust) / 2),
+      tauBenev: Math.round((prior.credence.tauBenev + benevolenceInput) / 2),
     },
   };
 }

@@ -1,4 +1,5 @@
 import type { PieceId, Side } from '../chess';
+import { PLAYER_LEADER_ID } from '../core/ids';
 import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
 import type {
   MatchRecord,
@@ -10,11 +11,18 @@ import {
   availableAt,
   fieldSquad,
   foldSquadMatch,
+  SQUAD_CONFIG,
   type SquadFielded,
   type SquadMember,
   type SquadService,
   type FieldingPolicy,
 } from '../orchestration/squadFielding';
+import {
+  checkInCredence,
+  checkOutCredence,
+  dispositionForIdentitySeed,
+  identityCreationSeed,
+} from '../orchestration';
 import { SQUAD_NAMES } from './careerBootstrap';
 
 const EMPTY_SERVICE: SquadService = {
@@ -372,19 +380,38 @@ export function selectPlayerSquad(input: {
   readonly careerSeed: number;
   readonly policy?: FieldingPolicy;
   readonly pinnedMemberIds?: ReadonlySet<PieceId>;
+  readonly dispositionSpread?: number;
 }): PlayerSquadSelection {
   const members = foldPlayerSquad(
     input.roster,
     input.identities,
     input.matches,
   );
+  const checkedOutMembers = members.map((member) => {
+    const identity = input.identities.find(
+      (candidate) => candidate.id === member.state.id,
+    );
+    return identity === undefined
+      ? member
+      : {
+          ...member,
+          state: checkOutCredence(identity, PLAYER_LEADER_ID, member.state),
+        };
+  });
   const fieldingPool =
     input.pinnedMemberIds === undefined
-      ? { members, fieldingPolicy: input.policy ?? 'strongest_available' }
+      ? {
+          members: checkedOutMembers,
+          fieldingPolicy: input.policy ?? 'strongest_available',
+          dispositionSpread:
+            input.dispositionSpread ?? SQUAD_CONFIG.DISPOSITION_SPREAD,
+        }
       : {
-          members,
+          members: checkedOutMembers,
           fieldingPolicy: input.policy ?? 'strongest_available',
           pinnedMemberIds: input.pinnedMemberIds,
+          dispositionSpread:
+            input.dispositionSpread ?? SQUAD_CONFIG.DISPOSITION_SPREAD,
         };
   const conscriptNames = new Map<PieceId, string>();
   const fielded = fieldSquad(
@@ -392,7 +419,7 @@ export function selectPlayerSquad(input: {
     input.match,
     (roleName, match, sequence) => {
       const member = conscript(
-        members,
+        checkedOutMembers,
         roleName,
         input.careerSeed,
         match,
@@ -409,7 +436,7 @@ export function selectPlayerSquad(input: {
   const chairById = new Map(
     fielded.lineup.map((member) => [member.state.id, member.state.role]),
   );
-  const eligibleMembers = members.filter((member) =>
+  const eligibleMembers = checkedOutMembers.filter((member) =>
     availableAt(member, input.match),
   );
   const events = [
@@ -434,13 +461,22 @@ export function selectPlayerSquad(input: {
     };
   });
   const rosterById = new Map(input.roster.map((piece) => [piece.id, piece]));
+  for (const member of checkedOutMembers) {
+    const previous = rosterById.get(member.state.id);
+    if (previous !== undefined) {
+      rosterById.set(member.state.id, {
+        ...member.state,
+        status: previous.status,
+      });
+    }
+  }
   for (const member of fielded.lineup) {
     if (!rosterById.has(member.state.id)) {
       rosterById.set(member.state.id, { ...member.state, status: 'ACTIVE' });
     }
   }
   return {
-    members,
+    members: checkedOutMembers,
     fielded,
     roster: [...rosterById.values()],
     identities: input.identities.concat(
@@ -458,6 +494,14 @@ export function selectPlayerSquad(input: {
             `Newcomer ${member.originRole} ${input.match}`,
           bornInMatch: input.match,
           originRole: member.originRole,
+          identityCreationSeed: identityCreationSeed(
+            input.careerSeed,
+            member.state.id,
+          ),
+          disposition: dispositionForIdentitySeed(
+            identityCreationSeed(input.careerSeed, member.state.id),
+          ),
+          relationshipAccounts: {},
         })),
     ),
     events,
@@ -475,6 +519,7 @@ export function mergePlayerSquadAfterMatch(input: {
 }): {
   readonly roster: StoredPieceState[];
   readonly events: readonly MatchEvent[];
+  readonly identities: readonly PieceIdentityRecord[];
 } {
   const identityById = new Map(
     input.identities.map((identity) => [identity.id, identity]),
@@ -575,5 +620,19 @@ export function mergePlayerSquadAfterMatch(input: {
         ]
       : [],
   );
-  return { roster: nextRoster, events: lifecycleEvents };
+  const checkedInIdentities = input.identities.map((identity) => {
+    const result = input.matchRoster.find((piece) => piece.id === identity.id);
+    const fallback = input.fieldedRoster.find(
+      (piece) => piece.id === identity.id,
+    );
+    const piece = result ?? fallback;
+    return piece === undefined
+      ? identity
+      : checkInCredence(identity, PLAYER_LEADER_ID, piece);
+  });
+  return {
+    roster: nextRoster,
+    events: lifecycleEvents,
+    identities: checkedInIdentities,
+  };
 }
