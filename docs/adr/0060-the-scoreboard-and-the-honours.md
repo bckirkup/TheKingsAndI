@@ -78,18 +78,46 @@ is *when* a charter or verdict may open:
   award is measuring.
 - **Never by schedule.** "Reveal at match 5" is farmable in matches 1–4.
 
-### 3. Across cycles the debrief is the disclosure, and that clock is a knob
+### 3. The cross-cycle clock belongs to the facilitator, not the student
 
-Having sat through one debrief *is* the charter. A returning commander knows
-what is honoured; a newcomer does not. This asymmetry is intended — it is how a
-curriculum accumulates — and it is also a mixed-cohort fairness risk, so the
-depth of charter that is open by cycle 2, 3, and 4 is a search parameter rather
-than a constant (ADR 0059 §9).
+> **"The facilitator should mostly have experienced cycles before... there might
+> be commendations that are not disclosed at all in a cycle where they aren't
+> given... all other participants only go through this once, typically."**
 
-A **facilitator may unseal one award deliberately** for a cohort. Steering is
-their job and D93 already grants them live sight; what this adds is that
-unsealing is a recorded, deliberate act with a cost — the unsealed award becomes
-farmable and must be read as instruction rather than as measurement thereafter.
+A student sees **one** cycle. So there is no "how much is open by cycle 3" to
+tune for him: the charter he ends with is whatever his debrief reveals, and the
+asymmetry is structural rather than scheduled — the facilitator has been round
+before and holds the full charter; the cohort does not.
+
+**An award nobody earned is never mentioned.** The honours read at debrief are
+the honours *given*. A student never learns what he missed, which is what keeps
+an unearned award unfarmable in perpetuity rather than only until the first
+debrief, and it removes the consolation-prize reading of a list of empty rows.
+
+Two consequences follow.
+
+- ADR 0031's **unwinnable-award detector** loses its player-visible symptom
+  entirely: an award no policy ever earns now looks identical, from inside a
+  seminar, to an award that is merely hard. It can only be caught in the harness,
+  so that detector becomes load-bearing rather than a nicety.
+- A **facilitator may unseal one award deliberately** for a cohort. Steering is
+  their job and D93 already grants them live sight; what this adds is that
+  unsealing is a recorded, deliberate act with a cost — the unsealed award
+  becomes farmable and must be read as instruction rather than as measurement
+  thereafter.
+
+### 3a. The consumer campaign has no facilitator, so it needs a different default
+
+In the seminar the asymmetry is held by a person. In the consumer campaign the
+player *is* the returning veteran: he plays cycle after cycle, so the charter
+leaks to him by repetition no matter what we do, and by cycle three he knows the
+full set. The two products therefore want different disclosure defaults — and
+the consumer one has to survive a player who knows every charter, which is the
+harder test and the one the harness should be pointed at.
+
+Recorded, not decided: whether the consumer campaign leans into that (open
+charter, difficulty carried by the awards genuinely trading off against each
+other, per ADR 0031 §1) or rotates which honours are live per cycle.
 
 ### 4. Some honours are never heralded at all
 

@@ -171,7 +171,7 @@ rather than against a chosen default:
 | Purse carry between cycles | partial | none → full |
 | Acceptance discount from reputation | moderate | none → dominant |
 | Consultations per cycle | small | 1 → unbounded |
-| Charter depth open by cycle *n* (ADR 0060 §3) | none | none → full |
+| Consumer-campaign charter openness (ADR 0060 §3a) | sealed | sealed → full |
 
 The objective is the conjunction of the detectors, not a single score: no
 dominating policy (ADR 0031 §1), every award live into the final third (ADR 0060),

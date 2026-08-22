@@ -1197,10 +1197,15 @@ leaderboard a commander keeps anyway, and it is deceptive by emphasis rather
 than by falsehood — it also sets reverse-order draft priority (ADR 0059 §2), so
 leading it costs purse. The behavioural honours stay sealed within a cycle and
 may open only on **settlement** (the verdict can no longer change), and then only
-when won; a settled loss waits for the debrief. Across cycles the debrief itself
-is the charter, with a recorded facilitator override to unseal one award.
-`repaired_breach` is never heralded. Open: charter depth open by cycle *n*, and
-whether settled-won disclosure happens at all.
+when won; a settled loss waits for the debrief. A student typically plays one
+cycle, so the cross-cycle charter belongs to the facilitator rather than to him,
+and **an award nobody earned is never mentioned** — the debrief reads only the
+honours given, which keeps unearned awards unfarmable and makes ADR 0031's
+unwinnable-award detector harness-only. A facilitator may unseal one award
+deliberately as a recorded act. `repaired_breach` is never heralded. Open:
+whether settled-won disclosure happens at all, and whether the consumer campaign
+(no facilitator, so the charter leaks by repetition) opens the charter or rotates
+which honours are live.
 
 ### D158 ❓ What does a piece observe of her commander's record? (ADR 0060 §5)
 **Open — not wired.** Never an award, a standing, or a criterion. Public record
