@@ -116,7 +116,11 @@ function emptyRegister(): PublicRegister {
   };
 }
 
-/** Fold narrow public facts; psychology and engine truth are not inputs. */
+/**
+ * Fold narrow public facts; psychology and engine truth are not inputs.
+ * Material values come from the identity in the capture event, which carries
+ * the piece's origin role, so a promoted pawn is still valued as a pawn.
+ */
 export function foldPublicRegister(
   matches: readonly PublicMatchFacts[],
 ): PublicRegister {
