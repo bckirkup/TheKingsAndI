@@ -1,4 +1,6 @@
 import type { PieceState } from '../psychology';
+import { checkOutCredence, type CredenceIdentity } from './credence';
+import type { LeaderId } from '../core/ids';
 
 import { CAMPAIGN_CONFIG } from './campaignConfig';
 import type {
@@ -101,14 +103,17 @@ export function applyReputationTransfer(
   piece: StoredPieceState,
   leaderAbilityTrust: number,
   rosterBenevolenceAppraisal: number,
+  identity: CredenceIdentity,
+  leaderId: LeaderId,
 ): StoredPieceState {
+  const prior = checkOutCredence(identity, leaderId, piece);
   return {
     ...piece,
     credence: {
-      ...piece.credence,
-      tauAbil: Math.round((piece.credence.tauAbil + leaderAbilityTrust) / 2),
+      ...prior.credence,
+      tauAbil: Math.round((prior.credence.tauAbil + leaderAbilityTrust) / 2),
       tauBenev: Math.round(
-        (piece.credence.tauBenev + rosterBenevolenceAppraisal) / 2,
+        (prior.credence.tauBenev + rosterBenevolenceAppraisal) / 2,
       ),
     },
   };

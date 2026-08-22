@@ -4,6 +4,7 @@ import {
   assertKingDepthInvariant,
   CAMPAIGN_CONFIG,
 } from '../src/orchestration/campaignConfig';
+import { applyReputationTransfer } from '../src/orchestration/campaignPolicy';
 import {
   evaluateCareerVictory,
   evaluateReinstatement,
@@ -16,6 +17,7 @@ import {
   defaultRumor,
   normalizePieceState,
 } from '../src/psychology';
+import type { PieceIdentityRecord, StoredPieceState } from '../src/persistence';
 
 function makePiece(trust: number) {
   return normalizePieceState({
@@ -46,6 +48,14 @@ function makePiece(trust: number) {
     credence: defaultCredence(),
     rumor: defaultRumor(),
   });
+}
+
+function makeStoredPiece(credence = defaultCredence()): StoredPieceState {
+  return {
+    ...makePiece(40),
+    credence,
+    status: 'DESERTED',
+  };
 }
 
 describe('campaign config', () => {
@@ -105,5 +115,41 @@ describe('campaign policy', () => {
     }));
     expect(rosterLaunderingRisk(incoming, 30)).toBe(true);
     expect(rosterLaunderingRisk(incoming.slice(0, 1), 8)).toBe(false);
+  });
+
+  it('uses disposition and peer testimony for an unserved commander', () => {
+    const piece = makeStoredPiece({
+      tauBenev: 20,
+      tauAbil: 30,
+      abilityObservationCount: 2,
+    });
+    const identity: PieceIdentityRecord = {
+      id: piece.id,
+      name: 'Una',
+      bornInMatch: 0,
+      originRole: 'Knight',
+      disposition: {
+        tauBenev: 40,
+        tauAbil: 60,
+        abilityObservationCount: 3,
+      },
+      relationshipAccounts: {
+        'other:commander': {
+          tauBenev: 5,
+          tauAbil: 5,
+          abilityObservationCount: 9,
+        },
+      },
+    };
+    const transferred = applyReputationTransfer(
+      piece,
+      80,
+      20,
+      identity,
+      'new:commander',
+    );
+    expect(transferred.credence.tauBenev).toBe(30);
+    expect(transferred.credence.tauAbil).toBe(70);
+    expect(transferred.credence.abilityObservationCount).toBe(3);
   });
 });

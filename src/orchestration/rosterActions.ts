@@ -10,6 +10,7 @@ import type {
   PieceIdentityRecord,
   StoredPieceState,
 } from '../persistence/types';
+import type { LeaderId } from '../core/ids';
 
 import {
   applyReputationTransfer,
@@ -114,6 +115,8 @@ export function applyRecruit(input: {
   readonly freeAgent: StoredPieceState;
   readonly roster: readonly StoredPieceState[];
   readonly leaderAbilityTrust: number;
+  readonly identity: PieceIdentityRecord;
+  readonly leaderId: LeaderId;
 }): {
   readonly roster: StoredPieceState[];
   readonly event: MatchEvent;
@@ -126,6 +129,8 @@ export function applyRecruit(input: {
     { ...input.freeAgent, status: 'ACTIVE' as const },
     input.leaderAbilityTrust,
     benevolence,
+    input.identity,
+    input.leaderId,
   );
   const roster = [...input.roster, recruited];
   const benchDepth = roster.filter(

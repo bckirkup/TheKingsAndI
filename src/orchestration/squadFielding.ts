@@ -1,4 +1,5 @@
 import type { PieceId, Side } from '../chess';
+import type { CredenceIdentity } from './credence';
 import type { PieceRole, PieceState } from '../psychology';
 import {
   clampTrust,
@@ -57,6 +58,7 @@ export interface SquadMember {
   readonly provenance: 'original' | 'conscript';
   readonly service: SquadService;
   readonly retirementCause?: 'trauma' | 'obsolescence';
+  readonly credenceIdentity?: CredenceIdentity;
 }
 
 export type SquadEvent =

@@ -1,6 +1,12 @@
 import { createSeededRandom } from '../core/random';
 import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
-import { poolRoleCounts, SQUAD_CONFIG } from '../orchestration';
+import {
+  DISPOSITION_SPREAD,
+  dispositionForIdentitySeed,
+  identityCreationSeed,
+  poolRoleCounts,
+  SQUAD_CONFIG,
+} from '../orchestration';
 import type { PieceRole } from '../psychology';
 import type {
   PieceIdentityRecord,
@@ -45,7 +51,10 @@ function roleOrder(): readonly PieceRole[] {
   return ['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King'];
 }
 
-export function bootstrapRoster(seed: number): {
+export function bootstrapRoster(
+  seed: number,
+  dispositionSpread = DISPOSITION_SPREAD,
+): {
   readonly roster: StoredPieceState[];
   readonly identities: PieceIdentityRecord[];
 } {
@@ -62,6 +71,11 @@ export function bootstrapRoster(seed: number): {
     for (let memberIndex = 0; memberIndex < required; memberIndex += 1) {
       const id = `w:${originRole}:${String(memberIndex).padStart(2, '0')}`;
       const memberUnit = unitForIndex(randomUnit, index);
+      const creationSeed = identityCreationSeed(seed, id);
+      const disposition = dispositionForIdentitySeed(
+        creationSeed,
+        dispositionSpread,
+      );
       roster.push({
         ...createFreshPieceState(
           id,
@@ -70,6 +84,7 @@ export function bootstrapRoster(seed: number): {
           memberUnit,
           Math.trunc(memberUnit * 11) - 5,
         ),
+        credence: disposition,
         status: 'ACTIVE',
       });
       identities.push({
@@ -77,6 +92,9 @@ export function bootstrapRoster(seed: number): {
         name: SQUAD_NAMES[index] ?? `Squad member ${index + 1}`,
         bornInMatch: 0,
         originRole,
+        identityCreationSeed: creationSeed,
+        disposition,
+        relationshipAccounts: {},
       });
       index += 1;
     }

@@ -95,6 +95,7 @@ export interface MatchScreenProps {
   readonly onMatchFinished?: (input: {
     readonly events: MatchSessionSnapshot['events'];
     readonly rosterEnd: StoredPieceState[];
+    readonly identities: readonly PieceIdentityRecord[];
     readonly result: MatchResult;
     readonly winScore: number;
     readonly engineAudit: MatchSessionSnapshot['engineAudit'];
@@ -175,6 +176,7 @@ export function MatchScreen({
     onMatchFinished({
       events: [...snapshot.events, ...merged.events],
       rosterEnd: merged.roster,
+      identities: merged.identities,
       result,
       winScore: snapshot.winScore,
       engineAudit: snapshot.engineAudit,

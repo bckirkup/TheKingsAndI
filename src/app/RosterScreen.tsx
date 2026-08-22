@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { PLAYER_LEADER_ID } from '../core/ids';
 import {
   activeLineup,
   applyBench,
@@ -123,10 +124,14 @@ export function RosterScreen({
                   type="button"
                   className="btn"
                   onClick={() => {
+                    const identity = identityById.get(agent.id);
+                    if (identity === undefined) return;
                     const result = applyRecruit({
                       freeAgent: agent,
                       roster: draft,
                       leaderAbilityTrust,
+                      identity,
+                      leaderId: PLAYER_LEADER_ID,
                     });
                     setDraft([...result.roster]);
                     setPreambleEvents([...preambleEvents, result.event]);
