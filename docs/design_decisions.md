@@ -1106,7 +1106,7 @@ fielding ranks ability relative to the piece's origin-role starting value
 (`sim/pool.ts:252-277`). D148 and D150 remain open.
 
 ### D150 ❓ What may a commander know about a piece? (ADR 0054 §6)
-**Open.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
+**Partly wired.** ADR 0018 forbids showing the arithmetic, and a market makes the inverse
 failure equally bad: a bench nobody can read is a bench nobody can use. Shipped
 today: role, qualitative trust and status on the roster screen
 (`src/app/RosterScreen.tsx:146-163`), names and origin in the roster plus names
@@ -1118,8 +1118,11 @@ The verdict, override, and quiet-quit panels now explain judgement gap,
 objection strength, sight, and override cost without arithmetic
 (`src/ui/panels/VerdictPanels.tsx:1-205`,
 `src/app/MatchScreen.tsx:235-273`). These panels provide a readable reason, not
-knowledge about pieces the commander has never led. Slice 1 does not implement
-testimony, rumor, or earned-knowledge projections; those remain open here.
+knowledge about pieces the commander has never led. The public candidate slate
+is folded from identity, lifecycle, relationship-account keys, and service
+records (`src/persistence/candidateSlate.ts:14-117`); private counsel is
+qualitative and deterministic (`src/psychology/counsel.ts:3-139`). Testimony,
+rumor, and earned-knowledge projections remain open here.
 ADR 0054 §6 still proposes earned knowledge as
 testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
@@ -1178,16 +1181,22 @@ discouraged.
 ADR 0061 brings D154 due in step 3, the draft.
 
 ### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)
-**Open — not wired.** The public record is identical for every commander
+**Partly wired — magnitudes remain open.** The public record is identical for every commander
 (name, origin and attained role, status, commanders served, and the folded
 service record). Private counsel comes from pieces he already holds and is
 computed from their state — dyadic affinity, class prejudice, the rumor
 appraisal with its existing affinity/class credibility weight
 (`src/psychology/belief.ts:14-41`), credence in *him*, and chair rivalry under
-origin-inclusive eligibility (ADR 0056). Qualitative only (ADR 0018), no new
-RNG. This answers D150's public half by construction and proposes an answer to
-its private half. Open: the consultation budget per cycle, and how strongly
-rivalry may distort counsel.
+origin-inclusive eligibility (ADR 0056). The public slate and private counsel
+are implemented in `src/persistence/candidateSlate.ts:14-117` and
+`src/psychology/counsel.ts:3-139`; consultations use a zero-default attention
+budget (`src/orchestration/draftConfig.ts:1-11`,
+`src/orchestration/counsel.ts:1-43`) and heeded outcomes fold only into
+harness telemetry (`sim/metrics.ts:70-95`). Harness detectors for decorative and
+oracular counsel are provisional search instruments for the ADR 0059 §9
+calibration search in `sim/degeneracy.ts:659-701`; their thresholds are not game
+magnitudes. Open: the consultation budget, rivalry magnitude, and all economy
+mechanics.
 
 ADR 0061 brings D155 due in step 3, the draft.
 

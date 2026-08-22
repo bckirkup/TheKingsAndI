@@ -34,6 +34,13 @@ export {
 } from './pacingConfig';
 export { createStartingRoster } from './roster';
 export {
+  consultWithBudget,
+  type ConsultationLedger,
+  type CounselConsultation,
+  type CounselConsultationRequest,
+} from './counsel';
+export { DRAFT_CONFIG, type DraftConfig } from './draftConfig';
+export {
   checkInCredence,
   checkOutCredence,
   dispositionForIdentitySeed,

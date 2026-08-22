@@ -57,6 +57,12 @@ export const DEGENERACY_CONFIG = {
   registerCorrelationThreshold: 0.8,
   /** Minimum careers needed before a register correlation is meaningful. */
   registerCorrelationMinimumCareers: 5,
+  /** Positive correlation above this makes counsel oracular. */
+  counselOracularCorrelationThreshold: 0.8,
+  /** Absolute correlation below this makes counsel decorative. */
+  counselDecorativeCorrelationThreshold: 0.1,
+  /** Minimum counsel observations before correlation is meaningful. */
+  counselCorrelationMinimumCareers: 5,
 } as const;
 
 export interface DegeneracyFinding {
@@ -87,6 +93,9 @@ export interface DegeneracyAssertionOptions {
   readonly commendationLivenessMinimumCareers?: number;
   readonly registerCorrelationThreshold?: number;
   readonly registerCorrelationMinimumCareers?: number;
+  readonly counselOracularCorrelationThreshold?: number;
+  readonly counselDecorativeCorrelationThreshold?: number;
+  readonly counselCorrelationMinimumCareers?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -108,6 +117,12 @@ export interface DegeneracyAssertionOptions {
     readonly leader: string;
     readonly register: PublicRegister;
     readonly commendations: PlayerCommendationSet;
+  }[];
+  /** Per-career counsel signals and realized candidate contributions. */
+  readonly oracleCounsel?: readonly {
+    readonly leader: string;
+    readonly counsel: number;
+    readonly realizedContribution: number;
   }[];
   /** Student-facing strings scanned for live commendation leakage (D93). */
   readonly studentFacingStrings?: readonly string[];
@@ -427,6 +442,15 @@ export function detectDegeneracy(
     registerCorrelationMinimumCareers:
       options.registerCorrelationMinimumCareers ??
       DEGENERACY_CONFIG.registerCorrelationMinimumCareers,
+    counselOracularCorrelationThreshold:
+      options.counselOracularCorrelationThreshold ??
+      DEGENERACY_CONFIG.counselOracularCorrelationThreshold,
+    counselDecorativeCorrelationThreshold:
+      options.counselDecorativeCorrelationThreshold ??
+      DEGENERACY_CONFIG.counselDecorativeCorrelationThreshold,
+    counselCorrelationMinimumCareers:
+      options.counselCorrelationMinimumCareers ??
+      DEGENERACY_CONFIG.counselCorrelationMinimumCareers,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -578,6 +602,15 @@ export function detectDegeneracy(
     ),
   );
 
+  findings.push(
+    ...counselInformationFindings(
+      options.oracleCounsel ?? [],
+      config.counselOracularCorrelationThreshold,
+      config.counselDecorativeCorrelationThreshold,
+      config.counselCorrelationMinimumCareers,
+    ),
+  );
+
   if (options.pacingMatches !== undefined) {
     const pacing = evaluateConsumerPacing(options.pacingMatches);
     if (pacing.cliff) {
@@ -620,6 +653,38 @@ export function detectDegeneracy(
     });
   }
 
+  return findings;
+}
+
+function counselInformationFindings(
+  entries: readonly {
+    readonly leader: string;
+    readonly counsel: number;
+    readonly realizedContribution: number;
+  }[],
+  oracularThreshold: number,
+  decorativeThreshold: number,
+  minimumCareers: number,
+): DegeneracyFinding[] {
+  if (entries.length < minimumCareers) return [];
+  const correlation = pearsonCorrelation(
+    entries.map((entry) => entry.counsel),
+    entries.map((entry) => entry.realizedContribution),
+  );
+  if (correlation === null) return [];
+  const findings: DegeneracyFinding[] = [];
+  if (correlation > oracularThreshold) {
+    findings.push({
+      code: 'counsel-oracular',
+      message: `Informant counsel is too predictive of realized contribution (r=${correlation.toFixed(2)}).`,
+    });
+  }
+  if (Math.abs(correlation) <= decorativeThreshold) {
+    findings.push({
+      code: 'counsel-decorative',
+      message: `Informant counsel is unrelated to realized contribution (r=${correlation.toFixed(2)}).`,
+    });
+  }
   return findings;
 }
 

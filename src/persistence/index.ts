@@ -45,6 +45,13 @@ export {
   type PieceServiceRecordSet,
 } from './service';
 export {
+  foldPublicCandidateSlate,
+  publicCandidateSlateFromRecords,
+  type PublicCandidateSlate,
+  type PublicCandidateSlateEntry,
+  type PublicCandidateSlateInput,
+} from './candidateSlate';
+export {
   assertSchemaVersion,
   MIGRATIONS,
   stampSchemaVersion,
