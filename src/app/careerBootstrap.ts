@@ -1,6 +1,7 @@
 import { createSeededRandom } from '../core/random';
 import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
 import {
+  DISPOSITION_SPREAD,
   dispositionForIdentitySeed,
   identityCreationSeed,
   poolRoleCounts,
@@ -52,7 +53,7 @@ function roleOrder(): readonly PieceRole[] {
 
 export function bootstrapRoster(
   seed: number,
-  dispositionSpread = SQUAD_CONFIG.DISPOSITION_SPREAD,
+  dispositionSpread = DISPOSITION_SPREAD,
 ): {
   readonly roster: StoredPieceState[];
   readonly identities: PieceIdentityRecord[];

@@ -27,8 +27,6 @@ export interface SquadConfig {
   readonly NON_SELECTION_PEER_TRUST_PENALTY: number;
   readonly NON_SELECTION_REDEMPTION_TRUST_RECOVERY: number;
   readonly OBSOLESCENCE_NON_SELECTION_THRESHOLD: number;
-  /** Natural disposition band; zero preserves the neutral prior. */
-  readonly DISPOSITION_SPREAD: number;
 }
 
 export const SQUAD_CONFIG: SquadConfig = {
@@ -40,7 +38,6 @@ export const SQUAD_CONFIG: SquadConfig = {
   NON_SELECTION_PEER_TRUST_PENALTY: -2,
   NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 4,
   OBSOLESCENCE_NON_SELECTION_THRESHOLD: 6,
-  DISPOSITION_SPREAD: 0,
 };
 
 export interface SquadService {
