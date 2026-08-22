@@ -1187,7 +1187,8 @@ ADR 0061 brings D154 due in step 3, the draft.
 (name, origin and attained role, status, commanders served, and the folded
 service record). Private counsel comes from pieces he already holds and is
 computed from their state — dyadic affinity and class prejudice, with chair
-rivalry using the shared origin-inclusive eligibility helper
+rivalry using the shared origin-inclusive eligibility helper on both candidate
+and holder sides
 (`src/core/roleEligibility.ts:1-8`). Credence in *him* controls disclosure
 only: silence returns no opinion. The existing rumour channel appraises the
 commander rather than the candidate, so candidate rumour appraisal state is an

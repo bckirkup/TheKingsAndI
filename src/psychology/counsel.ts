@@ -78,15 +78,23 @@ export function counselForCandidate(
   holder: PieceState,
   candidate: CounselCandidate,
   config: DraftConfig = DRAFT_CONFIG,
+  holderOriginRole: PieceRole = holder.role,
 ): PieceCounsel {
   const affinity = holder.dyadicAffinity[candidate.id] ?? 0;
   const classBias = holder.classPrestige[candidate.originRole];
   const credence = Math.max(0, Math.min(100, holder.credence.tauBenev));
-  const rivalryPenalty = isEligibleForChair(
-    candidate.originRole,
-    candidate.attainedRole,
-    holder.role,
-  )
+  const candidateContestsHolderChair =
+    isEligibleForChair(
+      candidate.originRole,
+      candidate.attainedRole,
+      holderOriginRole,
+    ) ||
+    isEligibleForChair(
+      candidate.originRole,
+      candidate.attainedRole,
+      holder.role,
+    );
+  const rivalryPenalty = candidateContestsHolderChair
     ? config.COUNSEL_RIVALRY_PENALTY
     : 0;
   const signal = affinity + classBias - rivalryPenalty;

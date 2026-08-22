@@ -155,6 +155,16 @@ describe('private informant counsel', () => {
     expect(spokenCounsel(rivalry).reason).toBe('chair rivalry');
   });
 
+  it('uses origin-inclusive eligibility for a promoted holder', () => {
+    const rivalry = counselForCandidate(
+      holder({ dyadicAffinity: {}, role: 'Knight' }),
+      candidate,
+      DRAFT_CONFIG,
+      'Pawn',
+    );
+    expect(spokenCounsel(rivalry).reason).toBe('chair rivalry');
+  });
+
   it('wires each counsel magnitude as a live draft search seed', () => {
     const opinionValue = (config: DraftConfig) =>
       counselOpinionValue(
@@ -260,7 +270,11 @@ describe('private informant counsel', () => {
 
   it('keeps consultations at zero by default and grades the budget', () => {
     const requests: CounselConsultationRequest[] = [
-      { holder: holder(), candidate },
+      {
+        holder: holder({ dyadicAffinity: {} }),
+        holderOriginRole: 'Pawn',
+        candidate,
+      },
       { holder: holder({ id: 'holder-2' }), candidate },
     ];
     expect(consultWithBudget(requests).granted).toBe(0);
@@ -273,6 +287,12 @@ describe('private informant counsel', () => {
     );
     expect(counts).toEqual([0, 1, 2]);
     expect(DRAFT_CONFIG.CONSULTATIONS_PER_CYCLE).toBe(0);
+    const granted = consultWithBudget(requests, {
+      ...DRAFT_CONFIG,
+      CONSULTATIONS_PER_CYCLE: 1,
+    }).consultations[0];
+    if (granted === undefined) throw new Error('expected granted consultation');
+    expect(spokenCounsel(granted.counsel).reason).toBe('chair rivalry');
   });
 
   it('folds heeded counsel on the harness side only', () => {

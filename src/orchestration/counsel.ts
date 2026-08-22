@@ -1,9 +1,15 @@
-import type { CounselCandidate, PieceCounsel, PieceState } from '../psychology';
+import type {
+  CounselCandidate,
+  PieceCounsel,
+  PieceRole,
+  PieceState,
+} from '../psychology';
 import { counselForCandidate } from '../psychology';
 import { DRAFT_CONFIG, type DraftConfig } from './draftConfig';
 
 export interface CounselConsultationRequest {
   readonly holder: PieceState;
+  readonly holderOriginRole?: PieceRole;
   readonly candidate: CounselCandidate;
 }
 
@@ -32,7 +38,12 @@ export function consultWithBudget(
     holderId: request.holder.id,
     candidateId: request.candidate.id,
     counsel: {
-      ...counselForCandidate(request.holder, request.candidate, config),
+      ...counselForCandidate(
+        request.holder,
+        request.candidate,
+        config,
+        request.holderOriginRole,
+      ),
     },
   }));
   return {
