@@ -23,6 +23,8 @@ export const COMMENDATION_CONFIG = {
   HONEST_SACRIFICE_TRUST_FLOOR: 0,
   /** Affinity gain required to count a repaired breach. */
   REPAIRED_BREACH_AFFINITY_GAIN: 25,
+  /** Provisional/open magnitude; retirements tolerated before nobody drowned is lost. */
+  NOBODY_DROWNED_RETIREMENT_TOLERANCE: 0,
   /** Fraction of awards one policy may hold before dominating-strategy fires. */
   DOMINATING_AWARD_FRACTION: 0.75,
 } as const;

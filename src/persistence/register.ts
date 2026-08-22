@@ -1,0 +1,206 @@
+import type { PieceRole } from '../psychology';
+import type { MatchRecord, MatchResult } from './types';
+
+export const PUBLIC_REGISTER_FOLD_VERSION = 'public-register-v1';
+
+export type PublicMatchEvent =
+  | {
+      readonly t: 'CAPTURE';
+      readonly victim: string;
+      readonly by: string;
+    }
+  | {
+      readonly t: 'PROMOTION';
+      readonly pieceId: string;
+      readonly fromRole: PieceRole;
+      readonly toRole: PieceRole;
+    };
+
+export interface PublicMatchFacts {
+  readonly side: 'w' | 'b';
+  readonly result: MatchResult;
+  readonly events: readonly PublicMatchEvent[];
+}
+
+export interface PublicRegister {
+  readonly foldVersion: string;
+  readonly matchesPlayed: number;
+  readonly wins: number;
+  readonly losses: number;
+  readonly draws: number;
+  readonly routs: number;
+  readonly materialTaken: number;
+  readonly materialLost: number;
+  readonly largestMaterialMargin: number;
+  readonly ownPiecesLost: number;
+  readonly promotionsReached: number;
+  readonly currentWinStreak: number;
+  readonly longestWinStreak: number;
+}
+
+export const PUBLIC_REGISTER_COLUMNS = [
+  'matchesPlayed',
+  'wins',
+  'losses',
+  'draws',
+  'routs',
+  'materialTaken',
+  'materialLost',
+  'largestMaterialMargin',
+  'ownPiecesLost',
+  'promotionsReached',
+  'currentWinStreak',
+  'longestWinStreak',
+] as const satisfies readonly (keyof Omit<PublicRegister, 'foldVersion'>)[];
+
+const ROLE_VALUES: Readonly<Record<PieceRole, number>> = {
+  Pawn: 1,
+  Knight: 3,
+  Bishop: 3,
+  Rook: 5,
+  Queen: 9,
+  King: 0,
+};
+
+function roleFromPieceId(pieceId: string): PieceRole | null {
+  const role = pieceId.split(':')[1];
+  return role !== undefined && role in ROLE_VALUES ? (role as PieceRole) : null;
+}
+
+function sideOfPiece(pieceId: string): 'w' | 'b' | null {
+  const side = pieceId.split(':')[0];
+  return side === 'w' || side === 'b' ? side : null;
+}
+
+function publicResultForSide(
+  result: MatchResult,
+  side: 'w' | 'b',
+): MatchResult {
+  if (side === 'w') return result;
+  switch (result) {
+    case 'WIN':
+      return 'LOSS';
+    case 'LOSS':
+      return 'WIN';
+    case 'ROUT':
+      return 'WIN';
+    default:
+      return result;
+  }
+}
+
+/** Extract only public, non-psychological facts needed by the register fold. */
+export function publicMatchFactsFromRecord(
+  match: MatchRecord,
+  side: 'w' | 'b',
+): PublicMatchFacts {
+  const events: PublicMatchEvent[] = [];
+  for (const event of match.events) {
+    if (event.t === 'CAPTURE') {
+      events.push({
+        t: 'CAPTURE',
+        victim: event.victim,
+        by: event.by,
+      });
+    } else if (event.t === 'PROMOTION' && sideOfPiece(event.pieceId) === side) {
+      events.push({
+        t: 'PROMOTION',
+        pieceId: event.pieceId,
+        fromRole: event.fromRole,
+        toRole: event.toRole,
+      });
+    }
+  }
+  return {
+    side,
+    result: publicResultForSide(match.result, side),
+    events,
+  };
+}
+
+function emptyRegister(): PublicRegister {
+  return {
+    foldVersion: PUBLIC_REGISTER_FOLD_VERSION,
+    matchesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    routs: 0,
+    materialTaken: 0,
+    materialLost: 0,
+    largestMaterialMargin: 0,
+    ownPiecesLost: 0,
+    promotionsReached: 0,
+    currentWinStreak: 0,
+    longestWinStreak: 0,
+  };
+}
+
+/** Fold narrow public facts; psychology and engine truth are not inputs. */
+export function foldPublicRegister(
+  matches: readonly PublicMatchFacts[],
+): PublicRegister {
+  const register = emptyRegister();
+  let currentWinStreak = 0;
+  let longestWinStreak = 0;
+  let largestMaterialMargin = 0;
+  let materialTaken = 0;
+  let materialLost = 0;
+  let ownPiecesLost = 0;
+  let promotionsReached = 0;
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  let routs = 0;
+  let hasMargin = false;
+  for (const match of matches) {
+    if (match.result === 'WIN') {
+      wins += 1;
+      currentWinStreak += 1;
+      longestWinStreak = Math.max(longestWinStreak, currentWinStreak);
+    } else {
+      currentWinStreak = 0;
+      if (match.result === 'LOSS') losses += 1;
+      if (match.result === 'DRAW') draws += 1;
+      if (match.result === 'ROUT') routs += 1;
+    }
+    let taken = 0;
+    let lost = 0;
+    for (const event of match.events) {
+      if (event.t === 'PROMOTION') {
+        if (sideOfPiece(event.pieceId) === match.side) {
+          promotionsReached += 1;
+        }
+        continue;
+      }
+      const victimValue = ROLE_VALUES[roleFromPieceId(event.victim) ?? 'King'];
+      if (sideOfPiece(event.by) === match.side) taken += victimValue;
+      if (sideOfPiece(event.victim) === match.side) {
+        lost += victimValue;
+        ownPiecesLost += 1;
+      }
+    }
+    materialTaken += taken;
+    materialLost += lost;
+    const margin = taken - lost;
+    largestMaterialMargin = hasMargin
+      ? Math.max(largestMaterialMargin, margin)
+      : margin;
+    hasMargin = true;
+  }
+  return {
+    ...register,
+    matchesPlayed: matches.length,
+    wins,
+    losses,
+    draws,
+    routs,
+    materialTaken,
+    materialLost,
+    largestMaterialMargin,
+    ownPiecesLost,
+    promotionsReached,
+    currentWinStreak,
+    longestWinStreak,
+  };
+}

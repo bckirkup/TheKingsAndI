@@ -9,6 +9,8 @@ import {
 import {
   AUDIT_FOLD_VERSION,
   COMMENDATION_CONFIG,
+  COMMENDATION_FOLD_VERSION,
+  commendationVerdictStability,
   foldFacilitatorCommendations,
   foldLearningDelta,
   foldPlayerCommendations,
@@ -95,6 +97,29 @@ function makeMatch(
     psychConfigVersion: 'engine-config-v1',
     schemaVersion: 1,
   };
+}
+
+function makeRosterMatch(
+  index: number,
+  snapshot: StoredPieceState[],
+  end: StoredPieceState[],
+  events: MatchEvent[] = [],
+  result: MatchRecord['result'] = 'DRAW',
+): MatchRecord {
+  return {
+    ...makeMatch(index, events, snapshot, {}, result),
+    rosterSnapshot: snapshot,
+    rosterEnd: end,
+  };
+}
+
+function awardScore(
+  set: ReturnType<typeof foldPlayerCommendations>,
+  id: string,
+): number {
+  const award = set.awards.find((candidate) => candidate.id === id);
+  if (award === undefined) throw new Error(`missing award ${id}`);
+  return award.score;
 }
 
 describe('player commendations (ADR 0031)', () => {
@@ -189,6 +214,146 @@ describe('player commendations (ADR 0031)', () => {
       expect(award.label.toLowerCase()).not.toContain('compassionate');
       expect(award.label.toLowerCase()).not.toContain('empathy');
     }
+  });
+
+  it('keeps the three roster-union folds equivalent on a static roster', () => {
+    const starts = [
+      makePiece('star', 90),
+      makePiece('weak', 40, { B_i: 40 }),
+      makePiece('breach', -20, { dyadicAffinity: { ally: -40 } }),
+      makePiece('anchor', 10),
+    ];
+    const ends = [
+      makePiece('star', 90),
+      makePiece('weak', 40, { B_i: 10 }),
+      makePiece('breach', 10, { dyadicAffinity: { ally: 20 } }),
+      makePiece('anchor', 10),
+    ];
+    const set = foldPlayerCommendations([
+      makeRosterMatch(1, starts, starts, [
+        {
+          t: 'MOVE',
+          ply: 1,
+          san: 'Nf3',
+          pieceId: 'star',
+          verdict: 'COMPLIANT_EXECUTION',
+          orderQualityCp: 80,
+        },
+      ]),
+      makeRosterMatch(2, starts, ends),
+    ]);
+    expect(set.foldVersion).toBe(COMMENDATION_FOLD_VERSION);
+    expect(awardScore(set, 'best_of_the_best')).toBe(0.8);
+    expect(awardScore(set, 'overcoming_a_weakness')).toBe(0.3);
+    expect(awardScore(set, 'repaired_breach')).toBe(0.6);
+  });
+
+  it('allows a mid-cycle joiner to earn all three roster-union awards', () => {
+    const anchor = makePiece('anchor', 10);
+    const star = makePiece('star', 90);
+    const weak = makePiece('weak', 40, { B_i: 40 });
+    const breach = makePiece('breach', -20, {
+      dyadicAffinity: { ally: -40 },
+    });
+    const weakEnd = makePiece('weak', 40, { B_i: 10 });
+    const breachEnd = makePiece('breach', 10, {
+      dyadicAffinity: { ally: 20 },
+    });
+    const set = foldPlayerCommendations([
+      makeRosterMatch(1, [anchor], [anchor]),
+      makeRosterMatch(
+        2,
+        [anchor, star, weak, breach],
+        [anchor, star, weakEnd, breachEnd],
+        [
+          {
+            t: 'MOVE',
+            ply: 1,
+            san: 'Nf3',
+            pieceId: star.id,
+            verdict: 'COMPLIANT_EXECUTION',
+            orderQualityCp: 100,
+          },
+        ],
+      ),
+    ]);
+    expect(awardScore(set, 'best_of_the_best')).toBeGreaterThan(0);
+    expect(awardScore(set, 'overcoming_a_weakness')).toBeGreaterThan(0);
+    expect(awardScore(set, 'repaired_breach')).toBeGreaterThan(0);
+  });
+
+  it('counts a retirement dropped before the final roster in the union', () => {
+    const retired = makePiece('retired', 40, { status: 'FIRED' });
+    const matches = [
+      makeRosterMatch(1, [retired], [retired]),
+      makeRosterMatch(2, [], []),
+    ];
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.NOBODY_DROWNED_RETIREMENT_TOLERANCE ?? 0;
+    try {
+      config.NOBODY_DROWNED_RETIREMENT_TOLERANCE = 0;
+      expect(
+        foldPlayerCommendations(matches).awards.find(
+          (award) => award.id === 'nobody_drowned',
+        )?.earned,
+      ).toBe(false);
+      config.NOBODY_DROWNED_RETIREMENT_TOLERANCE = 1;
+      expect(
+        foldPlayerCommendations(matches).awards.find(
+          (award) => award.id === 'nobody_drowned',
+        )?.earned,
+      ).toBe(true);
+    } finally {
+      config.NOBODY_DROWNED_RETIREMENT_TOLERANCE = original;
+    }
+  });
+
+  it('keeps nobody-drowned retirement tolerance sensitive and zero by default', () => {
+    const retired = makePiece('retired', 40, { status: 'FIRED' });
+    const config = COMMENDATION_CONFIG as unknown as Record<string, number>;
+    const original = config.NOBODY_DROWNED_RETIREMENT_TOLERANCE ?? 0;
+    try {
+      const scores = [0, 1, 2].map((tolerance) => {
+        config.NOBODY_DROWNED_RETIREMENT_TOLERANCE = tolerance;
+        return awardScore(
+          foldPlayerCommendations([
+            makeRosterMatch(1, [retired], [retired]),
+            makeRosterMatch(2, [], []),
+          ]),
+          'nobody_drowned',
+        );
+      });
+      expect(scores[0]).toBe(0);
+      expect(scores[1]).toBeGreaterThan(scores[0] ?? 0);
+      expect(scores[2]).toBe(scores[1]);
+    } finally {
+      config.NOBODY_DROWNED_RETIREMENT_TOLERANCE = original;
+    }
+  });
+
+  it('reports verdict stability as a lower bound on settlement', () => {
+    const star = makePiece('star', 90);
+    const roster = [star, makePiece('other', 10)];
+    const matches = [
+      makeRosterMatch(1, roster, roster),
+      makeRosterMatch(2, roster, roster),
+      makeRosterMatch(3, roster, roster),
+      makeRosterMatch(4, roster, roster),
+      makeRosterMatch(5, roster, roster),
+      makeRosterMatch(6, roster, roster, [
+        {
+          t: 'MOVE',
+          ply: 1,
+          san: 'Nf3',
+          pieceId: star.id,
+          verdict: 'COMPLIANT_EXECUTION',
+          orderQualityCp: 100,
+        },
+      ]),
+    ];
+    const stability = commendationVerdictStability(matches);
+    expect(stability.nobody_drowned).toBe(1);
+    expect(stability.best_of_the_best).toBe(6);
   });
 });
 
