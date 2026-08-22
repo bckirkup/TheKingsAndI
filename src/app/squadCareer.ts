@@ -303,9 +303,7 @@ function conscript(
     memberUnit,
     Math.trunc(memberUnit * 11) - 5,
   );
-  const state = {
-    ...stateForLevy(fresh, members, config),
-  };
+  const state = stateForLevy(fresh, members, config);
   return {
     state,
     originRole: roleName,
@@ -399,6 +397,7 @@ export function selectPlayerSquad(input: {
       return member;
     },
   );
+  // Charge the working roster's tauBenev, matching the harness pool debit.
   const chargedMembers = applyLevyStandingCost(
     checkedOutMembers,
     fielded.conscriptsFielded,

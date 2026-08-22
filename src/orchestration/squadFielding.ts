@@ -242,10 +242,6 @@ export function stateForLevy(
   const inheritedCredence = {
     tauAbil: averageValue(source, (member) => member.state.credence.tauAbil),
     tauBenev: averageValue(source, (member) => member.state.credence.tauBenev),
-    abilityObservationCount: averageValue(
-      source,
-      (member) => member.state.credence.abilityObservationCount,
-    ),
   };
   const baselineCredence = freshState.credence;
   return {
@@ -273,15 +269,8 @@ export function stateForLevy(
           config.LEVY_INHERITED_CREDENCE_PERMILLE,
         ),
       ),
-      abilityObservationCount: Math.max(
-        0,
-        interpolateInteger(
-          baselineCredence.abilityObservationCount,
-          inheritedCredence.abilityObservationCount ??
-            baselineCredence.abilityObservationCount,
-          config.LEVY_INHERITED_CREDENCE_PERMILLE,
-        ),
-      ),
+      // Observation count is personal evidence; a new levy has none.
+      abilityObservationCount: baselineCredence.abilityObservationCount,
     },
   };
 }

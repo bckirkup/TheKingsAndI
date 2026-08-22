@@ -5,6 +5,7 @@ import {
   fieldSquad,
   identityCreationSeed,
   poolRoleCountsForReserveDepth,
+  reserveDepthForConfig,
   stateForLevy,
   type HeadlessMatchResult,
   type SquadFieldingPool,
@@ -85,6 +86,13 @@ describe('scarce season pools', () => {
     expect(poolRoleCountsForReserveDepth(7).Pawn).toBeGreaterThan(
       poolRoleCountsForReserveDepth(7).Queen,
     );
+    expect(
+      reserveDepthForConfig({
+        ...SEASON_CONFIG,
+        POOL_DEPTH_FACTOR: 3,
+        RESERVE_DEPTH: 0,
+      }),
+    ).toBe(30);
   });
 
   it('keeps the cycle-one levy detector quiet by default and trips on thin stock', () => {
@@ -94,6 +102,7 @@ describe('scarce season pools', () => {
       style: 'servant',
     });
     expect(fieldPool(defaultPool, 1).conscriptsFielded).toBe(0);
+    expect(fieldPool(defaultPool, 1).chargedMembers).toBeUndefined();
     const thinPool = createCommanderPool({
       id: 'thin',
       side: 'w',
@@ -182,7 +191,7 @@ describe('scarce season pools', () => {
       conscripts.map(
         (member) => member?.state.credence.abilityObservationCount,
       ),
-    ).toEqual([0, 6, 12]);
+    ).toEqual([0, 0, 0]);
     const costs = [0, 2, 5].map((cost) =>
       fieldPool(
         {
@@ -198,12 +207,13 @@ describe('scarce season pools', () => {
     if (firstMemberId === undefined) throw new Error('expected source member');
     expect(
       costs.map((fielded) => {
-        const member = fielded.chargedMembers?.find(
+        const member = (fielded.chargedMembers ?? tuned.members).find(
           (candidate) => candidate.state.id === firstMemberId,
         );
         return member?.state.credence.tauBenev;
       }),
-    ).toEqual([50, 34, 10]);
+    ).toEqual([80, 64, 40]);
+    expect(costs[0]?.chargedMembers).toBeUndefined();
     const baselineState = tuned.members.find(
       (member) => member.status !== 'retired',
     )?.state;

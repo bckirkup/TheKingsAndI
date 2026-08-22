@@ -68,7 +68,7 @@ export interface PoolSnapshot {
 
 export interface PoolSeasonMetrics {
   readonly squadSize: number;
-  readonly firstCycleLevies?: number;
+  readonly firstCycleLevies: number;
   readonly distinctMembersFielded: number;
   readonly benchUtilisation: number;
   readonly meanLineupChurn: number;
@@ -350,9 +350,7 @@ function conscriptMember(
     unitForIndex(match * 0.173 + pool.members.length * 0.011, sequence),
   );
   return {
-    state: {
-      ...stateForLevy(fresh, pool.members, pool.config),
-    },
+    state: stateForLevy(fresh, pool.members, pool.config),
     originRole: role,
     status: 'available',
     availableAtMatch: match,
@@ -393,29 +391,34 @@ export function fieldPool(pool: CommanderPool, match: number): FieldedPool {
     (role, conscriptionMatch, sequence) =>
       conscriptMember(pool, role, conscriptionMatch, sequence),
   );
+  const standingCost = Math.max(0, Math.trunc(pool.config.LEVY_STANDING_COST));
+  if (fielded.conscriptsFielded === 0 || standingCost === 0) return fielded;
+  // Charge persisted pool states; checkout is transient and must not reach
+  // the fold.
   const chargedMembers = applyLevyStandingCost(
-    members,
+    pool.members,
     fielded.conscriptsFielded,
     pool.config,
   );
   const chargedById = new Map(
     chargedMembers.map((member) => [member.state.id, member]),
   );
-  const chargedFielded = {
+  return {
     ...fielded,
     lineup: fielded.lineup.map((member) => {
       const charged = chargedById.get(member.state.id);
       return charged === undefined
         ? member
         : {
-            ...charged,
-            state: { ...charged.state, role: member.state.role },
+            ...member,
+            state: {
+              ...member.state,
+              credence: { ...charged.state.credence },
+            },
           };
     }),
+    chargedMembers,
   };
-  return fielded.conscriptsFielded === 0
-    ? chargedFielded
-    : { ...chargedFielded, chargedMembers };
 }
 
 function foldSide(
