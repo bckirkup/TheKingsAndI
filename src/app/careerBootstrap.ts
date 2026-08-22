@@ -1,6 +1,5 @@
-import { LivingBoard } from '../chess';
 import { createSeededRandom } from '../core/random';
-import { createStartingRoster } from '../orchestration/roster';
+import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
 import { poolRoleCounts, SQUAD_CONFIG } from '../orchestration';
 import type { PieceRole } from '../psychology';
 import type {
@@ -8,7 +7,7 @@ import type {
   StoredPieceState,
 } from '../persistence/types';
 
-const DEFAULT_NAMES = [
+export const SQUAD_NAMES = [
   'Aethelgard',
   'Baldric',
   'Caelum',
@@ -50,18 +49,8 @@ export function bootstrapRoster(seed: number): {
   readonly roster: StoredPieceState[];
   readonly identities: PieceIdentityRecord[];
 } {
-  const board = LivingBoard.standard();
   const random = createSeededRandom(seed);
-  const psychologyRoster = createStartingRoster(
-    board,
-    'w',
-    20,
-    random.nextInt(10_000) / 10_000,
-  );
-  const templates = new Map<PieceRole, (typeof psychologyRoster)[number]>();
-  for (const piece of psychologyRoster) {
-    if (!templates.has(piece.role)) templates.set(piece.role, piece);
-  }
+  const randomUnit = random.nextInt(10_000) / 10_000;
   const roster: StoredPieceState[] = [];
   const identities: PieceIdentityRecord[] = [];
   let index = 0;
@@ -70,22 +59,22 @@ export function bootstrapRoster(seed: number): {
       originRole === 'King'
         ? 1
         : (poolRoleCounts()[originRole] ?? 0) * SQUAD_CONFIG.POOL_DEPTH_FACTOR;
-    const template = templates.get(originRole);
-    if (template === undefined) {
-      throw new Error(`Missing ${originRole} bootstrap template.`);
-    }
     for (let memberIndex = 0; memberIndex < required; memberIndex += 1) {
       const id = `w:${originRole}:${String(memberIndex).padStart(2, '0')}`;
-      const piece = {
-        ...template,
-        id,
-        role: originRole,
-        status: 'ACTIVE' as const,
-      };
-      roster.push(piece);
+      const memberUnit = unitForIndex(randomUnit, index);
+      roster.push({
+        ...createFreshPieceState(
+          id,
+          originRole,
+          20,
+          memberUnit,
+          Math.trunc(memberUnit * 11) - 5,
+        ),
+        status: 'ACTIVE',
+      });
       identities.push({
         id,
-        name: DEFAULT_NAMES[index] ?? `Squad member ${index + 1}`,
+        name: SQUAD_NAMES[index] ?? `Squad member ${index + 1}`,
         bornInMatch: 0,
         originRole,
       });

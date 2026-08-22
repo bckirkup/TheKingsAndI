@@ -27,17 +27,24 @@ chair-role write-back. The default player policy is
 `strongest_available`. Optional pinned IDs model explicit commander choices,
 but no UI sets them in this slice.
 
-Each squad member receives one `SQUAD_FIELDING` event per match: either the
-selected chair or `passed_over`. Availability, service, non-selection streaks,
+Each eligible squad member receives one `SQUAD_FIELDING` event per match:
+either the selected chair or `passed_over`; benched, fired, and retired
+members receive no fielding decision because they were not eligible for a
+chair. Availability, service, non-selection streaks,
 redemption after return, recovery after desertion, capture return, and
 obsolescence are reconstructed by folding match events. `pieceStates` remains
 the persisted psychological snapshot, not a second availability table.
 
 Capture removes a member for the match but does not permanently retire her.
 Retirement is permanent for trauma at the shipped threshold or for the
-configured obsolescence streak; its event distinguishes the obsolescence
-cause. Conscription fills any genuinely empty non-King chair deterministically
+configured obsolescence streak. An obsolescence event records that cause when
+present, but a retired snapshot without that event does not establish a cause.
+Conscription fills any genuinely empty non-King chair deterministically
 from the career match sequence and records identity and provenance.
+
+Benching is an explicit commander decision and therefore causes no
+non-selection erosion. A passed-over member was eligible but overlooked and
+does accrue the configured erosion; the distinction is intentional.
 
 The private bench is offline and player-local. Shared market/free-agent
 behavior, campaign-scale promotion/cohort prestige (D148), and commander

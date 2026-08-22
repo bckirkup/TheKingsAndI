@@ -9,6 +9,7 @@ import {
 import { SQUAD_CONFIG } from '../src/orchestration';
 import {
   AUDIT_FOLD_VERSION,
+  foldPieceServiceRecords,
   type MatchRecord,
   type StoredPieceState,
 } from '../src/persistence';
@@ -64,6 +65,17 @@ describe('career squad fielding', () => {
     expect(first.identities.map((identity) => identity.name)).toEqual(
       second.identities.map((identity) => identity.name),
     );
+    const pawns = first.roster.filter((piece) => piece.role === 'Pawn');
+    expect(new Set(pawns.map((piece) => piece.E_i)).size).toBeGreaterThan(1);
+    expect(
+      new Set(pawns.map((piece) => piece.traits.w_courage)).size,
+    ).toBeGreaterThan(1);
+    const ids = new Set(first.roster.map((piece) => piece.id));
+    expect(
+      first.roster.every((piece) =>
+        Object.keys(piece.dyadicAffinity).every((peerId) => ids.has(peerId)),
+      ),
+    ).toBe(true);
   });
 
   it('fields exactly sixteen chairs and lets a crowned pawn fall back', () => {
@@ -78,7 +90,9 @@ describe('career squad fielding', () => {
         ? { ...piece, E_i: 20 }
         : piece.id === queen.id
           ? { ...piece, E_i: 100 }
-          : piece,
+          : piece.role === 'Pawn'
+            ? { ...piece, E_i: 10 }
+            : piece,
     );
     const crownedIdentities = identities.map((identity) =>
       identity.id === pawn.id
@@ -142,7 +156,20 @@ describe('career squad fielding', () => {
 
   it('persists deterministic conscripts when a chair has no eligible member', () => {
     const { roster, identities } = bootstrapRoster(38);
-    const retiredRoster = roster.map((piece) =>
+    const veteran = roster.find((piece) => piece.id === 'w:Pawn:00');
+    if (veteran === undefined) throw new Error('expected veteran template');
+    const tunedRoster = roster.map((piece) =>
+      piece.id === veteran.id
+        ? {
+            ...piece,
+            T_i: 91,
+            B_i: 100,
+            dyadicAffinity: { 'w:Pawn:01': 80 },
+            credence: { ...piece.credence, tauAbil: 99, tauBenev: 99 },
+          }
+        : piece,
+    );
+    const retiredRoster = tunedRoster.map((piece) =>
       piece.role === 'King' ? piece : { ...piece, status: 'RETIRED' as const },
     );
     const selection = selectPlayerSquad({
@@ -157,11 +184,56 @@ describe('career squad fielding', () => {
     expect(selection.fielded.conscriptsFielded).toBe(15);
     expect(selection.roster).toHaveLength(46);
     expect(selection.identities).toHaveLength(46);
+    const conscripts = selection.fielded.lineup.filter(
+      (member) => member.provenance === 'conscript',
+    );
     expect(
-      selection.fielded.lineup
-        .filter((member) => member.provenance === 'conscript')
-        .every((member) => member.state.id.includes(':conscript:38:1:')),
+      conscripts.every((member) =>
+        member.state.id.includes(':conscript:38:1:'),
+      ),
     ).toBe(true);
+    expect(
+      conscripts.every(
+        (member) => Object.keys(member.state.dyadicAffinity).length === 0,
+      ),
+    ).toBe(true);
+    expect(conscripts.every((member) => member.state.B_i === 0)).toBe(true);
+    expect(conscripts.every((member) => member.state.T_i === 20)).toBe(true);
+    expect(
+      conscripts.every((member) => member.state.credence.tauAbil === 50),
+    ).toBe(true);
+    expect(
+      conscripts.every((member) =>
+        selection.identities.some(
+          (identity) =>
+            identity.id === member.state.id &&
+            !identity.name.startsWith('Conscript '),
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not log a fired member as passed over', () => {
+    const { roster, identities } = bootstrapRoster(39);
+    const fired = roster.find((piece) => piece.id === 'w:Pawn:00');
+    if (fired === undefined) throw new Error('expected fired member');
+    const firedRoster = roster.map((piece) =>
+      piece.id === fired.id ? { ...piece, status: 'FIRED' as const } : piece,
+    );
+    const selection = selectPlayerSquad({
+      roster: firedRoster,
+      identities,
+      matches: [],
+      match: 1,
+      careerSeed: 39,
+    });
+    expect(selection.events.some((event) => event.pieceId === fired.id)).toBe(
+      false,
+    );
+    const records = foldPieceServiceRecords([
+      makeMatch(firedRoster, selection.events, 1),
+    ]).records.get(fired.id);
+    expect(records?.timesPassedOver).toBe(0);
   });
 
   it('pinned members win an eligible chair and fallback policy is sensitive', () => {

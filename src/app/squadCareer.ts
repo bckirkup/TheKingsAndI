@@ -1,4 +1,5 @@
 import type { PieceId, Side } from '../chess';
+import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
 import type {
   MatchRecord,
   PieceIdentityRecord,
@@ -6,6 +7,7 @@ import type {
 } from '../persistence';
 import type { MatchEvent, PieceRole, PieceState } from '../psychology';
 import {
+  availableAt,
   fieldSquad,
   foldSquadMatch,
   type SquadFielded,
@@ -13,6 +15,7 @@ import {
   type SquadService,
   type FieldingPolicy,
 } from '../orchestration/squadFielding';
+import { SQUAD_NAMES } from './careerBootstrap';
 
 const EMPTY_SERVICE: SquadService = {
   matchesPlayed: 0,
@@ -64,7 +67,6 @@ function memberFrom(
     availableAtMatch: 1,
     provenance: piece.id.includes(':conscript:') ? 'conscript' : 'original',
     service,
-    ...(piece.status === 'RETIRED' ? { retirementCause: 'trauma' } : {}),
   };
 }
 
@@ -113,31 +115,6 @@ function membersForMatch(
       .filter(([id]) => !members.some((member) => member.state.id === id))
       .map(([, piece]) => memberFrom(piece, identities.get(piece.id))),
   ];
-}
-
-function applyLoggedPsychologyDeltas(
-  members: readonly SquadMember[],
-  match: MatchRecord,
-): SquadMember[] {
-  const deltas = new Map<PieceId, Partial<Record<string, number>>>();
-  for (const event of match.events) {
-    if (event.t !== 'PSYCH_DELTA') continue;
-    const fields = deltas.get(event.pieceId) ?? {};
-    fields[event.field] = (fields[event.field] ?? 0) + (event.delta ?? 0);
-    deltas.set(event.pieceId, fields);
-  }
-  return members.map((member) => {
-    const fields = deltas.get(member.state.id);
-    if (fields === undefined) return member;
-    const state = { ...member.state };
-    for (const [field, delta] of Object.entries(fields)) {
-      if (field === 'B_i') state.B_i += delta ?? 0;
-      else if (field === 'T_i') state.T_i += delta ?? 0;
-      else if (field === 'M_i') state.M_i += delta ?? 0;
-      else if (field === 'E_i') state.E_i += delta ?? 0;
-    }
-    return { ...member, state };
-  });
 }
 
 function fieldedForMatch(
@@ -210,8 +187,7 @@ export function foldPlayerSquad(
   );
   for (const match of orderedMatches) {
     const matchMembers = membersForMatch(members, match, identityMap);
-    const loggedMembers = applyLoggedPsychologyDeltas(matchMembers, match);
-    const { fielded, fieldedIds } = fieldedForMatch(loggedMembers, match, side);
+    const { fielded, fieldedIds } = fieldedForMatch(matchMembers, match, side);
     const desertions = new Set(
       match.events
         .filter(
@@ -230,7 +206,7 @@ export function foldPlayerSquad(
       if (event.t === 'PROMOTION') promotions.set(event.pieceId, event.toRole);
     }
     const resultIds = new Set(match.rosterEnd.map((piece) => piece.id));
-    const departedRoster = loggedMembers
+    const departedRoster = matchMembers
       .filter(
         (member) =>
           fieldedIds.has(member.state.id) && !resultIds.has(member.state.id),
@@ -238,7 +214,7 @@ export function foldPlayerSquad(
       .map((member) => member.state);
     const folded = foldSquadMatch({
       side,
-      members: loggedMembers,
+      members: matchMembers,
       fielded,
       resultRoster: match.rosterEnd,
       departedRoster,
@@ -261,10 +237,30 @@ export function foldPlayerSquad(
       .filter((piece) => !knownIds.has(piece.id))
       .map((piece) => memberFrom(piece, identityMap.get(piece.id))),
   ];
+  const obsolescenceIds = new Set(
+    matches
+      .flatMap((match) => match.events)
+      .filter(
+        (event): event is Extract<MatchEvent, { t: 'SQUAD_OBSOLESCENCE' }> =>
+          event.t === 'SQUAD_OBSOLESCENCE' && event.side === side,
+      )
+      .map((event) => event.pieceId),
+  );
   const currentById = new Map(initialRoster.map((piece) => [piece.id, piece]));
   return members.map((member) => {
     const current = currentById.get(member.state.id);
     if (current === undefined) return member;
+    if (current.status === 'RETIRED') {
+      return {
+        ...member,
+        status: 'retired' as const,
+        availableAtMatch: Number.MAX_SAFE_INTEGER,
+        ...(member.retirementCause === undefined &&
+        obsolescenceIds.has(member.state.id)
+          ? { retirementCause: 'obsolescence' as const }
+          : {}),
+      };
+    }
     return {
       ...member,
       ...(current.status === 'BENCHED'
@@ -278,17 +274,63 @@ export function foldPlayerSquad(
 
 function conscript(
   members: readonly SquadMember[],
+  identities: readonly PieceIdentityRecord[],
   roleName: PieceRole,
   careerSeed: number,
   match: number,
   sequence: number,
 ): SquadMember {
-  const template = members.find((member) => member.originRole === roleName);
-  if (template === undefined) throw new Error(`No template for ${roleName}.`);
   const id = `w:${roleName}:conscript:${careerSeed}:${match}:${String(sequence).padStart(2, '0')}`;
-  const state = { ...template.state, id, role: roleName };
+  const living = members.filter((member) => member.status !== 'retired');
+  const trustSource = living.length === 0 ? members : living;
+  const initialTrust =
+    trustSource.length === 0
+      ? 20
+      : Math.trunc(
+          trustSource.reduce((sum, member) => sum + member.state.T_i, 0) /
+            trustSource.length,
+        );
+  const appraisalSource = trustSource.length === 0 ? members : trustSource;
+  const appraisal = {
+    tauAbil:
+      appraisalSource.length === 0
+        ? 50
+        : Math.trunc(
+            appraisalSource.reduce(
+              (sum, member) => sum + member.state.credence.tauAbil,
+              0,
+            ) / appraisalSource.length,
+          ),
+    tauBenev:
+      appraisalSource.length === 0
+        ? 50
+        : Math.trunc(
+            appraisalSource.reduce(
+              (sum, member) => sum + member.state.credence.tauBenev,
+              0,
+            ) / appraisalSource.length,
+          ),
+  };
+  const memberUnit = unitForIndex(
+    (careerSeed % 1000) / 1000,
+    match * 31 + sequence,
+  );
+  const fresh = createFreshPieceState(
+    id,
+    roleName,
+    initialTrust,
+    memberUnit,
+    Math.trunc(memberUnit * 11) - 5,
+  );
+  const state = {
+    ...fresh,
+    credence: {
+      ...fresh.credence,
+      tauAbil: appraisal.tauAbil,
+      tauBenev: appraisal.tauBenev,
+    },
+  };
   return {
-    ...template,
     state,
     originRole: roleName,
     status: 'available',
@@ -296,6 +338,23 @@ function conscript(
     provenance: 'conscript',
     service: EMPTY_SERVICE,
   };
+}
+
+function conscriptName(
+  identities: readonly PieceIdentityRecord[],
+  match: number,
+  sequence: number,
+): string {
+  const usedNames = new Set(identities.map((identity) => identity.name));
+  const baseName =
+    SQUAD_NAMES[(match + sequence) % SQUAD_NAMES.length] ?? 'Newcomer';
+  let name = baseName;
+  let suffix = 2;
+  while (usedNames.has(name)) {
+    name = `${baseName} ${suffix}`;
+    suffix += 1;
+  }
+  return name;
 }
 
 export interface PlayerSquadSelection {
@@ -328,18 +387,35 @@ export function selectPlayerSquad(input: {
           fieldingPolicy: input.policy ?? 'strongest_available',
           pinnedMemberIds: input.pinnedMemberIds,
         };
+  const conscriptNames = new Map<PieceId, string>();
   const fielded = fieldSquad(
     fieldingPool,
     input.match,
-    (roleName, match, sequence) =>
-      conscript(members, roleName, input.careerSeed, match, sequence),
+    (roleName, match, sequence) => {
+      const member = conscript(
+        members,
+        input.identities,
+        roleName,
+        input.careerSeed,
+        match,
+        sequence,
+      );
+      conscriptNames.set(
+        member.state.id,
+        conscriptName(input.identities, match, sequence),
+      );
+      return member;
+    },
   );
   const selectedIds = new Set(fielded.lineup.map((member) => member.state.id));
   const chairById = new Map(
     fielded.lineup.map((member) => [member.state.id, member.state.role]),
   );
+  const eligibleMembers = members.filter((member) =>
+    availableAt(member, input.match),
+  );
   const events = [
-    ...members,
+    ...eligibleMembers,
     ...fielded.lineup.filter(
       (member) =>
         !members.some((candidate) => candidate.state.id === member.state.id),
@@ -379,7 +455,9 @@ export function selectPlayerSquad(input: {
         )
         .map((member) => ({
           id: member.state.id,
-          name: `Conscript ${member.originRole} ${input.match}-${member.state.id.split(':').at(-1) ?? '0'}`,
+          name:
+            conscriptNames.get(member.state.id) ??
+            `Newcomer ${member.originRole} ${input.match}`,
           bornInMatch: input.match,
           originRole: member.originRole,
         })),
@@ -426,33 +504,20 @@ export function mergePlayerSquadAfterMatch(input: {
       )
       .map((event) => [event.pieceId, event.chair]),
   );
+  const resultById = stateMap(input.matchRoster);
   const lineup = input.fieldedRoster
     .filter((piece) => fieldedIds.has(piece.id))
-    .map((piece) => ({
-      ...memberFrom(piece, identityById.get(piece.id)),
-      state: { ...piece, role: chairById.get(piece.id) ?? piece.role },
-    }));
-  const deltaById = new Map<PieceId, Partial<Record<string, number>>>();
-  for (const event of input.events) {
-    if (event.t !== 'PSYCH_DELTA') continue;
-    const fields = deltaById.get(event.pieceId) ?? {};
-    fields[event.field] = (fields[event.field] ?? 0) + (event.delta ?? 0);
-    deltaById.set(event.pieceId, fields);
-  }
-  const adjustedLineup = lineup.map((member) => {
-    const fields = deltaById.get(member.state.id);
-    if (fields === undefined) return member;
-    const state = { ...member.state };
-    for (const [field, delta] of Object.entries(fields)) {
-      if (field === 'B_i') state.B_i += delta ?? 0;
-      else if (field === 'T_i') state.T_i += delta ?? 0;
-      else if (field === 'M_i') state.M_i += delta ?? 0;
-      else if (field === 'E_i') state.E_i += delta ?? 0;
-    }
-    return { ...member, state };
-  });
-  const resultById = stateMap(input.matchRoster);
-  const departed = adjustedLineup
+    .map((piece) => {
+      const result = resultById.get(piece.id);
+      return {
+        ...memberFrom(piece, identityById.get(piece.id)),
+        state: {
+          ...(result ?? piece),
+          role: chairById.get(piece.id) ?? result?.role ?? piece.role,
+        },
+      };
+    });
+  const departed = lineup
     .filter((member) => !resultById.has(member.state.id))
     .map((member) => member.state);
   const desertions = new Set(
@@ -476,7 +541,7 @@ export function mergePlayerSquadAfterMatch(input: {
     side: 'w',
     members,
     fielded: {
-      lineup: adjustedLineup,
+      lineup,
       conscriptsFielded: 0,
       veteransRested: 0,
     },
