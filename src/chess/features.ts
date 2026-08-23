@@ -122,22 +122,23 @@ function promotionProspectForPieceThousandths(
   config: FeatureConfig,
 ): number {
   if (piece.role !== 'P') return 0;
-  const rank = piece.square.charCodeAt(1) - 48;
+  const rankCode = piece.square.codePointAt(1) ?? 0;
+  const rank = rankCode - 48;
   const advanced = piece.side === 'w' ? rank - 2 : 7 - rank;
   const base = Math.max(
     0,
     Math.min(RISK_SCALE, Math.trunc((advanced * RISK_SCALE) / 5)),
   );
   if (base === 0) return 0;
-  const file = piece.square.charCodeAt(0);
-  const rankCode = piece.square.charCodeAt(1);
-  const blocked = pieces.some(
-    (other) =>
-      other.square.charCodeAt(0) === file &&
-      (piece.side === 'w'
-        ? other.square.charCodeAt(1) > rankCode
-        : other.square.charCodeAt(1) < rankCode),
-  );
+  const file = piece.square.codePointAt(0) ?? 0;
+  const blocked = pieces.some((other) => {
+    const otherFile = other.square.codePointAt(0) ?? 0;
+    const otherRank = other.square.codePointAt(1) ?? 0;
+    return (
+      otherFile === file &&
+      (piece.side === 'w' ? otherRank > rankCode : otherRank < rankCode)
+    );
+  });
   if (!blocked) return base;
   const damper = Math.max(
     0,

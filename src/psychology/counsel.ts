@@ -101,7 +101,7 @@ export function counselForCandidate(
   const volunteering = volunteeringForCredence(credence, config);
   if (volunteering === 'silent') return { volunteering };
   const opinion = opinionForSignal(signal, config);
-  let reason: CounselReason = 'mixed evidence';
+  let reason: CounselReason;
   if (
     rivalryPenalty > 0 &&
     rivalryPenalty >= Math.max(Math.abs(classBias), Math.abs(affinity))

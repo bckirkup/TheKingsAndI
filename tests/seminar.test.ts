@@ -123,11 +123,11 @@ describe('seminar spine', () => {
     expect(weeks.weeks).toHaveLength(2);
     expect(matches.weeks[0]?.records['w:commander:00']).toHaveLength(2);
     expect(commanders.commanders).toHaveLength(4);
-    expect(weeks.weeks.length).not.toBe(base.config.WEEKS_PER_SEMESTER);
-    expect(matches.weeks[0]?.records['w:commander:00']?.length).not.toBe(
+    expect(weeks.weeks).not.toHaveLength(base.config.WEEKS_PER_SEMESTER);
+    expect(matches.weeks[0]?.records['w:commander:00']).not.toHaveLength(
       base.config.MATCHES_PER_WEEK,
     );
-    expect(commanders.commanders.length).not.toBe(
+    expect(commanders.commanders).not.toHaveLength(
       base.config.COMMANDERS_PER_COHORT * 2,
     );
   });

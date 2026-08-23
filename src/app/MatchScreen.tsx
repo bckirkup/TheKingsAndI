@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Side } from '../chess';
 import { createFakeEnginePort } from '../engine/fake';
@@ -28,6 +28,14 @@ import {
 } from '../ui/panels/VerdictPanels';
 import { RelationshipInspector } from '../ui/panels/RelationshipInspector';
 
+function stripStoredStatus(
+  piece: StoredPieceState,
+): Omit<StoredPieceState, 'status'> {
+  return Object.fromEntries(
+    Object.entries(piece).filter(([key]) => key !== 'status'),
+  ) as Omit<StoredPieceState, 'status'>;
+}
+
 function phaseLabel(
   phase: MatchSessionSnapshot['phase'],
   playerSide: Side,
@@ -54,30 +62,23 @@ function useMatchSession(
   readonly session: MatchSession;
   readonly refresh: () => void;
 } {
-  const [session] = useState(
-    () =>
-      new MatchSession({
-        seed,
-        engine: createFakeEnginePort('ui-fake/depth-fixed'),
-        initialRoster:
-          initialLineup === undefined
-            ? activeLineup(initialRoster)
-            : initialLineup.map(({ status, ...piece }) => {
-                void status;
-                return piece;
-              }),
-        ...(initialLineup === undefined
-          ? {}
-          : {
-              initialLineup: initialLineup.map(({ status, ...piece }) => {
-                void status;
-                return piece;
-              }),
-            }),
-        opponentArchetype,
-        rosterPreamble,
-      }),
-  );
+  const sessionRef = useRef<MatchSession | null>(null);
+  sessionRef.current ??= new MatchSession({
+    seed,
+    engine: createFakeEnginePort('ui-fake/depth-fixed'),
+    initialRoster:
+      initialLineup === undefined
+        ? activeLineup(initialRoster)
+        : initialLineup.map(stripStoredStatus),
+    ...(initialLineup === undefined
+      ? {}
+      : {
+          initialLineup: initialLineup.map(stripStoredStatus),
+        }),
+    opponentArchetype,
+    rosterPreamble,
+  });
+  const session = sessionRef.current;
   const [, setRevision] = useState(0);
   const refresh = (): void => setRevision((value) => value + 1);
   return { snapshot: session.snapshot(), session, refresh };

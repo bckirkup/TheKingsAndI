@@ -426,8 +426,10 @@ const isMain =
   import.meta.url.endsWith(process.argv[1].replaceAll('\\', '/'));
 
 if (isMain) {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  });
+  }
 }

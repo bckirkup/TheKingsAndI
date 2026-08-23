@@ -179,7 +179,9 @@ function enemyDesertionTurn(input: {
   readonly actor: PieceState;
   readonly san: string;
   readonly moveEval: CandidateMoveEvaluation;
-  readonly desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>;
+  readonly desertionMoveEvals: Readonly<
+    Record<string, CandidateMoveEvaluation>
+  >;
   readonly desertionDecision: ReturnType<typeof shouldDesert>;
   readonly ply: number;
   readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
@@ -220,11 +222,7 @@ function enemyDesertionTurn(input: {
     input.board.cedeTurn();
   }
   return {
-    enemyRoster: syncSideRoster(
-      input.board,
-      cascade.roster,
-      input.enemySide,
-    ),
+    enemyRoster: syncSideRoster(input.board, cascade.roster, input.enemySide),
     departedRoster: cascade.departed,
     dreadExposureByPiece: input.dreadExposureByPiece ?? {},
     events,
@@ -243,7 +241,9 @@ function enemyCompliantTurn(input: {
   readonly actor: PieceState;
   readonly san: string;
   readonly moveEval: CandidateMoveEvaluation;
-  readonly desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>;
+  readonly desertionMoveEvals: Readonly<
+    Record<string, CandidateMoveEvaluation>
+  >;
   readonly outcome: ReturnType<typeof evaluateMoveResponse>;
   readonly ply: number;
   readonly overrideRefusals: boolean;
@@ -401,8 +401,16 @@ function applyTrackedEnemyDecision(input: {
     scoreDepth: 8,
     bestScoreDepth: SHARED_SEARCH_D_MAX,
   });
-  const desertionContext = desertionContextFor(actor, moveEval, input.enemyRoster);
-  const desertionDecision = shouldDesert(actor, desertionContext, input.enemyRoster);
+  const desertionContext = desertionContextFor(
+    actor,
+    moveEval,
+    input.enemyRoster,
+  );
+  const desertionDecision = shouldDesert(
+    actor,
+    desertionContext,
+    input.enemyRoster,
+  );
   let outcome = evaluateMoveResponse(
     actor,
     moveEval,

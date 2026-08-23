@@ -168,9 +168,7 @@ function accumulatePromotionSeasonCounters(input: {
   };
 }
 
-function meanLineupChurnRate(
-  lineups: readonly (readonly PieceId[])[],
-): number {
+function meanLineupChurnRate(lineups: readonly (readonly PieceId[])[]): number {
   if (lineups.length < 2) return 0;
   return (
     lineups.slice(1).reduce((total, lineup, index) => {

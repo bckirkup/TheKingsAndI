@@ -59,7 +59,9 @@ const SUPPORTED_FLAGS = new Set([
   'engine',
 ]);
 
-function collectFlagValues(argumentsList: readonly string[]): Map<string, string> {
+function collectFlagValues(
+  argumentsList: readonly string[],
+): Map<string, string> {
   const values = new Map<string, string>();
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
