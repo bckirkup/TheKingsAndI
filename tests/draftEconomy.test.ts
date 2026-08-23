@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DRAFT_CONFIG,
   acceptanceDiscountPermille,
+  acceptancePriceBand,
   acceptedPrice,
   bidForLot,
   carryPurse,
@@ -123,6 +124,90 @@ describe('draft economy', () => {
     expect(acceptedPrice(100, servedBadly)).toBeGreaterThan(
       acceptedPrice(100, servedWell),
     );
+  });
+
+  it('bands acceptance discounts without exposing a point estimate', () => {
+    const servedDiscount = acceptanceDiscountPermille({
+      relationshipAccount: credence(40),
+      disposition: credence(0),
+      rosterTestimony: 0,
+    });
+    const unservedDiscount = acceptanceDiscountPermille({
+      disposition: credence(40),
+      rosterTestimony: 40,
+    });
+    expect(acceptancePriceBand(servedDiscount)).toBe('drives_a_hard_bargain');
+    expect(acceptancePriceBand(unservedDiscount)).toBe('drives_a_hard_bargain');
+    const discounts = [30, 35, 40].map((tauBenev) =>
+      acceptanceDiscountPermille({
+        disposition: credence(tauBenev),
+        rosterTestimony: tauBenev,
+      }),
+    );
+    expect(new Set(discounts).size).toBe(3);
+    expect(discounts.map((discount) => acceptancePriceBand(discount))).toEqual([
+      'drives_a_hard_bargain',
+      'drives_a_hard_bargain',
+      'drives_a_hard_bargain',
+    ]);
+  });
+
+  it('keeps acceptance bands monotone as benevolence warms', () => {
+    const rank = {
+      will_come_cheap: 0,
+      asks_the_going_rate: 1,
+      drives_a_hard_bargain: 2,
+      wants_danger_money: 3,
+    } as const;
+    const bands = [0, 20, 40, 60, 80, 100].map((tauBenev) =>
+      acceptancePriceBand(
+        acceptanceDiscountPermille({
+          disposition: credence(tauBenev),
+          rosterTestimony: tauBenev,
+        }),
+      ),
+    );
+    expect(bands.map((band) => rank[band])).toEqual(
+      [...bands].map((band) => rank[band]).sort((left, right) => right - left),
+    );
+  });
+
+  it('wires each acceptance band threshold as a live config key', () => {
+    expect(
+      acceptancePriceBand(350, {
+        ...DRAFT_CONFIG,
+        ACCEPTANCE_BAND_CHEAP_PERMILLE: 600,
+      }),
+    ).toBe('will_come_cheap');
+    expect(
+      acceptancePriceBand(250, {
+        ...DRAFT_CONFIG,
+        ACCEPTANCE_BAND_GOING_RATE_PERMILLE: 600,
+      }),
+    ).toBe('drives_a_hard_bargain');
+    expect(
+      acceptancePriceBand(125, {
+        ...DRAFT_CONFIG,
+        ACCEPTANCE_BAND_HARD_BARGAIN_PERMILLE: 300,
+      }),
+    ).toBe('wants_danger_money');
+  });
+
+  it('handles acceptance band boundaries and no available discount', () => {
+    expect(acceptancePriceBand(500)).toBe('will_come_cheap');
+    expect(acceptancePriceBand(375)).toBe('will_come_cheap');
+    expect(acceptancePriceBand(374)).toBe('asks_the_going_rate');
+    expect(acceptancePriceBand(250)).toBe('asks_the_going_rate');
+    expect(acceptancePriceBand(249)).toBe('drives_a_hard_bargain');
+    expect(acceptancePriceBand(125)).toBe('drives_a_hard_bargain');
+    expect(acceptancePriceBand(124)).toBe('wants_danger_money');
+    expect(acceptancePriceBand(0)).toBe('wants_danger_money');
+    expect(
+      acceptancePriceBand(0, {
+        ...DRAFT_CONFIG,
+        ACCEPTANCE_DISCOUNT_PERMILLE: 0,
+      }),
+    ).toBe('wants_danger_money');
   });
 
   it('wires each economy magnitude to a quantitative result', () => {

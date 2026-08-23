@@ -120,6 +120,7 @@ describe('private informant counsel', () => {
       candidate,
     );
     expect(spokenCounsel(rivalry).reason).toBe('chair rivalry');
+    expect(spokenOpinion(rivalry)).toBe('caution');
     expect(spokenCounsel(classBiased).reason).toBe('class prejudice');
   });
 

@@ -24,6 +24,12 @@ export interface AcceptanceEvidence {
   readonly rosterTestimony: number;
 }
 
+export type AcceptancePriceBand =
+  | 'will_come_cheap'
+  | 'asks_the_going_rate'
+  | 'drives_a_hard_bargain'
+  | 'wants_danger_money';
+
 export interface DraftLot {
   readonly lotId: string;
   readonly basePrice: number;
@@ -134,6 +140,49 @@ export function acceptedPrice(
         1000,
     ),
   );
+}
+
+/**
+ * Fold a private acceptance discount into a qualitative salary negotiation
+ * label. Thresholds are fractions of the configured maximum discount, not
+ * raw prices or raw discounts.
+ */
+export function acceptancePriceBand(
+  discountPermille: number,
+  config: DraftConfig = DRAFT_CONFIG,
+): AcceptancePriceBand {
+  const maximumDiscount = boundedInteger(
+    config.ACCEPTANCE_DISCOUNT_PERMILLE,
+    0,
+    1000,
+  );
+  if (maximumDiscount === 0) return 'wants_danger_money';
+  const discount = boundedInteger(discountPermille, 0, maximumDiscount);
+  const cheapThreshold = boundedInteger(
+    config.ACCEPTANCE_BAND_CHEAP_PERMILLE,
+    0,
+    1000,
+  );
+  const goingRateThreshold = boundedInteger(
+    config.ACCEPTANCE_BAND_GOING_RATE_PERMILLE,
+    0,
+    1000,
+  );
+  const hardBargainThreshold = boundedInteger(
+    config.ACCEPTANCE_BAND_HARD_BARGAIN_PERMILLE,
+    0,
+    1000,
+  );
+  if (discount * 1000 >= maximumDiscount * cheapThreshold) {
+    return 'will_come_cheap';
+  }
+  if (discount * 1000 >= maximumDiscount * goingRateThreshold) {
+    return 'asks_the_going_rate';
+  }
+  if (discount * 1000 >= maximumDiscount * hardBargainThreshold) {
+    return 'drives_a_hard_bargain';
+  }
+  return 'wants_danger_money';
 }
 
 export function bidForLot(
