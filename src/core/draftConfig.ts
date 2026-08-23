@@ -1,6 +1,7 @@
 /**
- * Information-half draft controls. These are search seeds, not balance
- * rulings; the zero consultation budget keeps today's game path unchanged.
+ * Draft controls. These are search seeds, not balance rulings; the zero
+ * consultation budget keeps today's game path unchanged and the economy
+ * helpers are not connected to the default match path.
  */
 export interface DraftConfig {
   readonly CONSULTATIONS_PER_CYCLE: number;
@@ -11,6 +12,15 @@ export interface DraftConfig {
   readonly COUNSEL_FORTHCOMING_CREDENCE: number;
   readonly COUNSEL_GUARDED_CREDENCE: number;
   readonly COUNSEL_RELUCTANT_CREDENCE: number;
+  readonly PURSE_BASE: number;
+  readonly PURSE_SPREAD: number;
+  readonly PURSE_CARRY_PERMILLE: number;
+  readonly ACCEPTANCE_DISCOUNT_PERMILLE: number;
+  readonly MINIMUM_BID: number;
+  readonly FIRST_REFUSAL_MARGIN_PERMILLE: number;
+  readonly BID_MULTIPLIER_CAUTIOUS: number;
+  readonly BID_MULTIPLIER_BALANCED: number;
+  readonly BID_MULTIPLIER_AGGRESSIVE: number;
 }
 
 export const DRAFT_CONFIG = {
@@ -22,4 +32,13 @@ export const DRAFT_CONFIG = {
   COUNSEL_FORTHCOMING_CREDENCE: 75,
   COUNSEL_GUARDED_CREDENCE: 50,
   COUNSEL_RELUCTANT_CREDENCE: 25,
+  PURSE_BASE: 100,
+  PURSE_SPREAD: 50,
+  PURSE_CARRY_PERMILLE: 500,
+  ACCEPTANCE_DISCOUNT_PERMILLE: 500,
+  MINIMUM_BID: 1,
+  FIRST_REFUSAL_MARGIN_PERMILLE: 0,
+  BID_MULTIPLIER_CAUTIOUS: 900,
+  BID_MULTIPLIER_BALANCED: 1000,
+  BID_MULTIPLIER_AGGRESSIVE: 1100,
 } as const satisfies DraftConfig;

@@ -15,6 +15,7 @@ import {
 import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
 
 export const EARLY_QUARTILE_COUNT = 2;
+export const DRAFT_TANKING_POLICY = 'tanking';
 
 export const DEGENERACY_CONFIG = {
   /** Pearson |r| above this indicates transcript-column collapse. */
@@ -63,6 +64,14 @@ export const DEGENERACY_CONFIG = {
   counselDecorativeCorrelationThreshold: 0.1,
   /** Minimum counsel observations before correlation is meaningful. */
   counselCorrelationMinimumCareers: 5,
+  /** Minimum cycles before purse concentration is meaningful. */
+  draftEconomyMinimumCycles: 2,
+  /** Fraction of contested lots that indicates purse concentration. */
+  draftPurseRunawayFraction: 0.5,
+  /** Minimum clearing prices needed before price-collapse detection. */
+  draftPriceCollapseMinimumLots: 2,
+  /** Minimum shared cycles needed before tanking dominance is meaningful. */
+  draftTankingMinimumCycles: 2,
 } as const;
 
 export interface DegeneracyFinding {
@@ -96,6 +105,11 @@ export interface DegeneracyAssertionOptions {
   readonly counselOracularCorrelationThreshold?: number;
   readonly counselDecorativeCorrelationThreshold?: number;
   readonly counselCorrelationMinimumCareers?: number;
+  readonly draftEconomyMinimumCycles?: number;
+  readonly draftPurseRunawayFraction?: number;
+  readonly draftPriceCollapseMinimumLots?: number;
+  readonly draftTankingMinimumCycles?: number;
+  readonly draftTankingPolicy?: string;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -124,6 +138,8 @@ export interface DegeneracyAssertionOptions {
     readonly counsel: number;
     readonly realizedContribution: number;
   }[];
+  /** Harness-only draft economy observations; no draft result is persisted. */
+  readonly draftEconomy?: DraftEconomyObservations;
   /** Student-facing strings scanned for live commendation leakage (D93). */
   readonly studentFacingStrings?: readonly string[];
   /** Match audits for the consumer pacing cliff detector (5.8i). */
@@ -146,6 +162,28 @@ export interface DegeneracyAssertionOptions {
   readonly difficultyChangedDepth?: boolean;
   /** Dismissal occurred while mean roster trust remained high (McClellan). */
   readonly dismissalWithHighMandate?: boolean;
+}
+
+export interface DraftEconomyCycleObservation {
+  readonly cycle: number;
+  readonly contestedLots: number;
+  readonly winsByCommander: Readonly<Record<string, number>>;
+  readonly standingOrder: readonly string[];
+  readonly clearingPrices: readonly {
+    readonly clearingPrice: number;
+    readonly minimumBid: number;
+  }[];
+}
+
+export interface DraftStandingSeriesPoint {
+  readonly policy: string;
+  readonly cycle: number;
+  readonly standing: number;
+}
+
+export interface DraftEconomyObservations {
+  readonly cycles: readonly DraftEconomyCycleObservation[];
+  readonly standingSeries: readonly DraftStandingSeriesPoint[];
 }
 
 export function detectPoolDegeneracy(
@@ -377,6 +415,107 @@ function flatteringCounterfactualFinding(
   };
 }
 
+export function draftEconomyDegeneracyFindings(
+  observations: DraftEconomyObservations,
+  options: {
+    readonly minimumCycles?: number;
+    readonly purseRunawayFraction?: number;
+    readonly priceCollapseMinimumLots?: number;
+    readonly tankingMinimumCycles?: number;
+    readonly tankingPolicy?: string;
+  } = {},
+): DegeneracyFinding[] {
+  const minimumCycles =
+    options.minimumCycles ?? DEGENERACY_CONFIG.draftEconomyMinimumCycles;
+  const purseRunawayFraction =
+    options.purseRunawayFraction ?? DEGENERACY_CONFIG.draftPurseRunawayFraction;
+  const priceCollapseMinimumLots =
+    options.priceCollapseMinimumLots ??
+    DEGENERACY_CONFIG.draftPriceCollapseMinimumLots;
+  const tankingMinimumCycles =
+    options.tankingMinimumCycles ?? DEGENERACY_CONFIG.draftTankingMinimumCycles;
+  const tankingPolicy = options.tankingPolicy ?? DRAFT_TANKING_POLICY;
+  const findings: DegeneracyFinding[] = [];
+  if (observations.cycles.length >= minimumCycles) {
+    const rankOrders = observations.cycles.map((cycle) =>
+      cycle.standingOrder.join('\u0000'),
+    );
+    // "Monotone" is measured here as a stable cohort order across cycle
+    // snapshots: no commander changes relative position.
+    const monotoneStanding =
+      rankOrders.every((order) => order !== '') &&
+      rankOrders.every((order) => order === rankOrders[0]);
+    const contestedLots = observations.cycles.reduce(
+      (total, cycle) => total + Math.max(0, cycle.contestedLots),
+      0,
+    );
+    if (contestedLots > 0) {
+      const wins = new Map<string, number>();
+      for (const cycle of observations.cycles) {
+        for (const [commanderId, count] of Object.entries(
+          cycle.winsByCommander,
+        )) {
+          wins.set(commanderId, (wins.get(commanderId) ?? 0) + count);
+        }
+      }
+      const runaway = [...wins.entries()].find(
+        ([, count]) => count / contestedLots > purseRunawayFraction,
+      );
+      if (runaway !== undefined) {
+        findings.push({
+          code: 'purse-runaway',
+          message: `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
+        });
+      }
+    }
+    if (monotoneStanding) {
+      findings.push({
+        code: 'monotone-standing',
+        message: 'Standing order remained monotone across the draft cycles.',
+      });
+    }
+  }
+  const prices = observations.cycles.flatMap((cycle) => cycle.clearingPrices);
+  if (
+    prices.length >= priceCollapseMinimumLots &&
+    prices.every((lot) => lot.clearingPrice === lot.minimumBid)
+  ) {
+    findings.push({
+      code: 'price-collapse',
+      message: `All ${prices.length} observed lots cleared at their minimum bid.`,
+    });
+  }
+  const byPolicy = new Map<string, Map<number, number>>();
+  for (const point of observations.standingSeries) {
+    const policy = byPolicy.get(point.policy) ?? new Map<number, number>();
+    policy.set(point.cycle, point.standing);
+    byPolicy.set(point.policy, policy);
+  }
+  const tanking = byPolicy.get(tankingPolicy);
+  if (tanking !== undefined) {
+    const competitors = [...byPolicy.entries()].filter(
+      ([policy]) => policy !== tankingPolicy,
+    );
+    const tankingWins = competitors.some(([, competitor]) => {
+      const sharedCycles = [...tanking.keys()].filter((cycle) =>
+        competitor.has(cycle),
+      );
+      const wonCycles = sharedCycles.filter(
+        (cycle) => (tanking.get(cycle) ?? 0) > (competitor.get(cycle) ?? 0),
+      );
+      return wonCycles.length >= tankingMinimumCycles;
+    });
+    if (tankingWins) {
+      findings.push({
+        code: 'tanking-dominance',
+        message:
+          'The tanking policy beat a competing policy across multiple draft cycles.',
+      });
+    }
+  }
+  return findings;
+}
+
 export function detectDegeneracy(
   leader: CampaignMetrics['leader'],
   metrics: readonly MatchMetrics[],
@@ -451,6 +590,19 @@ export function detectDegeneracy(
     counselCorrelationMinimumCareers:
       options.counselCorrelationMinimumCareers ??
       DEGENERACY_CONFIG.counselCorrelationMinimumCareers,
+    draftEconomyMinimumCycles:
+      options.draftEconomyMinimumCycles ??
+      DEGENERACY_CONFIG.draftEconomyMinimumCycles,
+    draftPurseRunawayFraction:
+      options.draftPurseRunawayFraction ??
+      DEGENERACY_CONFIG.draftPurseRunawayFraction,
+    draftPriceCollapseMinimumLots:
+      options.draftPriceCollapseMinimumLots ??
+      DEGENERACY_CONFIG.draftPriceCollapseMinimumLots,
+    draftTankingMinimumCycles:
+      options.draftTankingMinimumCycles ??
+      DEGENERACY_CONFIG.draftTankingMinimumCycles,
+    draftTankingPolicy: options.draftTankingPolicy ?? DRAFT_TANKING_POLICY,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -610,6 +762,17 @@ export function detectDegeneracy(
       config.counselCorrelationMinimumCareers,
     ),
   );
+  if (options.draftEconomy !== undefined) {
+    findings.push(
+      ...draftEconomyDegeneracyFindings(options.draftEconomy, {
+        minimumCycles: config.draftEconomyMinimumCycles,
+        purseRunawayFraction: config.draftPurseRunawayFraction,
+        priceCollapseMinimumLots: config.draftPriceCollapseMinimumLots,
+        tankingMinimumCycles: config.draftTankingMinimumCycles,
+        tankingPolicy: config.draftTankingPolicy,
+      }),
+    );
+  }
 
   if (options.pacingMatches !== undefined) {
     const pacing = evaluateConsumerPacing(options.pacingMatches);

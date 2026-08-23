@@ -1125,6 +1125,12 @@ qualitative and deterministic (`src/psychology/counsel.ts:3-139`). Testimony,
 candidate rumour appraisals, and earned-knowledge projections remain open here.
 The existing rumour channel appraises the commander rather than a candidate,
 so it is not substituted into candidate counsel.
+The economy's acceptance price is currently harness-only, but its arithmetic is
+exactly invertible to the underlying benevolence reputation
+(`acceptedPrice = basePrice * (1000 - discount) / 1000`): a player-facing
+per-piece price would therefore leak hidden state and violate ADR 0018. Any
+future UI would need coarsened price bands; whether and how to do that remains
+an owner decision.
 ADR 0054 §6 still proposes earned knowledge as
 testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
@@ -1164,21 +1170,36 @@ all existing IDs, names, dispositions, and seeds; `POOL_DEPTH_FACTOR` remains a
 legacy mapping to reserve depth. The reserve magnitude and whether the first
 cycle is a draft or an issued army remain open.
 
+The draft economy is not connected to career bootstrap or season execution:
+draft lots and outcomes remain harness-only telemetry until the owner settles
+whether cycle one is drafted.
+
 ADR 0061 brings D153 due in step 1, the scarcity step.
 
 ### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
 **Partly wired — magnitudes remain open.** ADR 0059 proposes two currencies of opposite sign:
 priority and purse from *inverse* standing (the NBA device), and acceptance —
 a discount on a piece's price — from reputation, read through ADR 0058's
-relationship account or the disposition prior plus testimony. The stabilisers
-now include a shared green levy helper
-(`src/orchestration/squadFielding.ts:37-42,234-320`) replacing free
-conscription, with zero standing cost and full inheritance defaults so current
-behaviour is unchanged. A cap on purse
-carried between cycles, and the non-selection tax that already prices a deep
-bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
-acceptance discount. Tanking must be measurably dominated, not merely
-discouraged.
+relationship account or the disposition prior plus testimony. Deterministic
+priority/purse, acceptance pricing, reverse-order clearing with an opt-in
+first-refusal margin, and partial carry are pure, opt-in helpers in
+`src/core/draftEconomy.ts:1-276`, configured by the provisional seeds in
+`src/core/draftConfig.ts:1-45`; they are not reachable
+from the default season path. The purse base (`0..200`, seed `100`), purse
+spread (`0..100`, seed `50`), carry fraction (`0..1000` permille, seed `500`),
+acceptance discount (`0..1000` permille, seed `500`), and minimum bid
+(`0..10`, seed `1`) are §9 search seeds with documented none-to-steep/full
+brackets, not rulings. The first-refusal margin (`0..1000` permille, seed `0`)
+and deterministic cautious/balanced/aggressive bid multipliers (seeds
+`900/1000/1100`, with a `0..2000` calibration bracket) are also §9 search
+seeds. The economy stabilisers remain harness instruments: purse runaway,
+monotone standing, price collapse, and tanking dominance are detected from
+cycle telemetry in `sim/degeneracy.ts:410-530`, with minimum
+sample guards and provisional detector thresholds. Draft lots, outcomes, and
+clearing prices are not persisted. Open: reserve depth, whether cycle one is
+a draft, all economy magnitudes, and any player-facing price coarsening needed
+to avoid the D150 side-channel. Tanking must be measurably dominated, not
+merely discouraged.
 
 ADR 0061 brings D154 due in step 3, the draft.
 
@@ -1195,15 +1216,17 @@ commander rather than the candidate, so candidate rumour appraisal state is an
 open item and is not used as a stand-in. The public slate and private counsel
 are implemented in `src/persistence/candidateSlate.ts:14-117` and
 `src/psychology/counsel.ts:3-139`; consultations use a zero-default attention
-budget (`src/core/draftConfig.ts:1-29`,
+budget (`src/core/draftConfig.ts:1-44`,
 `src/orchestration/counsel.ts:1-43`) and heeded outcomes fold only into
 harness telemetry (`sim/metrics.ts:70-95`). Rivalry, opinion bands, and
 disclosure cutoffs are provisional ADR 0059 §9 search seeds in
-`src/core/draftConfig.ts:1-29`, not rulings. Harness detectors for decorative
+`src/core/draftConfig.ts:1-44`, not rulings. Harness detectors for decorative
 and oracular counsel are likewise provisional search instruments in
 `sim/degeneracy.ts:659-701`; their thresholds are not game magnitudes. Open:
 candidate rumour appraisals, the consultation budget, counsel magnitudes, and
-all economy mechanics.
+player-facing acceptance-price bands: raw per-piece prices would invert to
+hidden reputation, so the current harness-only price must not be exposed
+without an owner-approved coarsening.
 
 ADR 0061 brings D155 due in step 3, the draft.
 
