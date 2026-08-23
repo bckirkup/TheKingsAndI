@@ -33,7 +33,7 @@ import {
   type CredenceIdentity,
   type SquadMember,
 } from '../src/orchestration';
-import { createFreshPieceState } from './roster';
+import { createFreshPieceState, unitForIndex } from './roster';
 import type { CommanderPool } from './pool';
 import type { SeminarCommander } from './seminar';
 import { SEMINAR_CONFIG, type SeminarConfig } from './seminarConfig';
@@ -46,17 +46,7 @@ const DRAFT_ROLES: readonly PieceRole[] = [
   'Pawn',
 ];
 
-function deterministicUnit(base: number, index: number): number {
-  let value = index + 1;
-  let denominator = 1;
-  let reflected = 0;
-  while (value > 0) {
-    denominator *= 2;
-    reflected += (value % 2) / denominator;
-    value = Math.floor(value / 2);
-  }
-  return (base + reflected) % 1;
-}
+const NEUTRAL_ROSTER_TESTIMONY = 50;
 
 export interface SeminarMarket {
   readonly side: Side;
@@ -115,7 +105,7 @@ function marketMember(
     id,
     role,
     initialTrust,
-    deterministicUnit((((seed % 10000) + 10000) % 10000) / 10000, index),
+    unitForIndex((((seed % 10000) + 10000) % 10000) / 10000, index),
   );
   const disposition = identity.disposition ?? state.credence;
   return {
@@ -257,6 +247,21 @@ export function publicContributionForRecords(
   return contribution;
 }
 
+function candidateAcceptancePrice(
+  candidate: SquadMember,
+  lot: DraftLot,
+  commanderId: string,
+): number {
+  const relationshipAccount =
+    candidate.credenceIdentity?.relationshipAccounts?.[commanderId];
+  const acceptanceDiscount = acceptanceDiscountPermille({
+    ...(relationshipAccount === undefined ? {} : { relationshipAccount }),
+    disposition: candidate.state.credence,
+    rosterTestimony: NEUTRAL_ROSTER_TESTIMONY,
+  });
+  return acceptedPrice(lot.basePrice, acceptanceDiscount);
+}
+
 function consultationMap(
   consultations: readonly CounselConsultation[],
   weight: number,
@@ -334,7 +339,6 @@ export function runSeminarDraft(options: {
       const lot: DraftLot = {
         lotId: candidate.state.id,
         basePrice,
-        minimumBid: 0,
       };
       lots.push(lot);
       candidatesByLot.set(lot.lotId, candidate);
@@ -449,15 +453,24 @@ export function runSeminarDraft(options: {
     // This is an observation approximation: bids are recomputed independently
     // for each lot and do not model purse depletion across the lot sequence.
     contestedLots += lots.filter((lot) => {
-      const eligible = bidders.filter(
-        (bidder) => bidForLot(bidder, lot).amount >= (lot.minimumBid ?? 0),
-      );
+      const candidate = candidatesByLot.get(lot.lotId);
+      if (candidate === undefined)
+        throw new Error(`Missing candidate for lot ${lot.lotId}.`);
+      const eligible = bidders.filter((bidder) => {
+        const bid = bidForLot(bidder, lot);
+        return (
+          bid.amount >=
+          candidateAcceptancePrice(candidate, lot, bidder.commanderId)
+        );
+      });
       return eligible.length > 1;
     }).length;
     const clearing = clearDraft(lots, bidders);
     for (const [id, purse] of Object.entries(clearing.remainingPurses)) {
       remainingPurses.set(id, purse);
     }
+    // A decline refunds after clearDraft has priced later lots against the
+    // depleted purse, so the committed bid still crowds out this pass.
     for (const cleared of clearing.lots) {
       if (cleared.winnerId === undefined) {
         clearingPrices.push({
@@ -472,19 +485,16 @@ export function runSeminarDraft(options: {
         throw new Error(`Missing candidate for lot ${cleared.lotId}.`);
       if (winnerPool === undefined)
         throw new Error(`Missing winner pool for ${cleared.winnerId}.`);
-      const relationshipAccount =
-        candidate.credenceIdentity?.relationshipAccounts?.[cleared.winnerId];
-      const acceptanceDiscount = acceptanceDiscountPermille({
-        ...(relationshipAccount === undefined ? {} : { relationshipAccount }),
-        disposition: candidate.state.credence,
-        rosterTestimony: 50,
-      });
       const lot = lots.find(
         (candidateLot) => candidateLot.lotId === cleared.lotId,
       );
       if (lot === undefined)
         throw new Error(`Missing lot for clearing ${cleared.lotId}.`);
-      const candidateMinimum = acceptedPrice(lot.basePrice, acceptanceDiscount);
+      const candidateMinimum = candidateAcceptancePrice(
+        candidate,
+        lot,
+        cleared.winnerId,
+      );
       if (cleared.clearingPrice < candidateMinimum) {
         const remaining = remainingPurses.get(cleared.winnerId) ?? 0;
         remainingPurses.set(
@@ -542,12 +552,10 @@ export function runSeminarDraft(options: {
     observation: {
       cycle: options.cycle,
       contestedLots,
-      clearedLots: winsByCommander
-        ? Object.values(winsByCommander).reduce(
-            (total, count) => total + count,
-            0,
-          )
-        : 0,
+      clearedLots: Object.values(winsByCommander).reduce(
+        (total, count) => total + count,
+        0,
+      ),
       declinedLots,
       winsByCommander,
       standingOrder: priorities.map((entry) => entry.commanderId),

@@ -347,6 +347,96 @@ describe('seminar spine', () => {
     expect(result.markets.get('w')?.members).toHaveLength(1);
   });
 
+  it('counts only bidders who meet candidate acceptance as contested', () => {
+    const aggressive = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'tyrannical',
+      careerSeed: 63,
+    });
+    const cautious = createCommanderPool({
+      id: 'w:commander:01',
+      side: 'w',
+      style: 'servant',
+      careerSeed: 64,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'servant',
+      careerSeed: 65,
+    });
+    const aggressiveWithoutQueen = {
+      ...aggressive,
+      members: aggressive.members.filter(
+        (member) => member.originRole !== 'Queen',
+      ),
+    };
+    const cautiousWithoutQueen = {
+      ...cautious,
+      members: cautious.members.filter(
+        (member) => member.originRole !== 'Queen',
+      ),
+    };
+    const pools = new Map<string, CommanderPool>([
+      [aggressive.id, aggressiveWithoutQueen],
+      [cautious.id, cautiousWithoutQueen],
+      [black.id, black],
+    ]);
+    const market = createSeminarMarkets(63, pools);
+    const queen = market
+      .get('w')
+      ?.members.find((member) => member.originRole === 'Queen');
+    if (queen === undefined) throw new Error('Missing queen candidate.');
+    const candidate = {
+      ...queen,
+      state: {
+        ...queen.state,
+        credence: { ...queen.state.credence, tauBenev: 100 },
+      },
+      credenceIdentity: {
+        ...queen.credenceIdentity,
+        relationshipAccounts: {
+          ...(queen.credenceIdentity?.relationshipAccounts ?? {}),
+          [aggressive.id]: {
+            tauAbil: 50,
+            tauBenev: 100,
+            abilityObservationCount: 0,
+          },
+        },
+      },
+    };
+    const result = runSeminarDraft({
+      cycle: 2,
+      seed: 63,
+      commanders: [
+        { id: aggressive.id, side: 'w', style: 'tyrannical' },
+        { id: cautious.id, side: 'w', style: 'servant' },
+        { id: black.id, side: 'b', style: 'servant' },
+      ],
+      pools,
+      markets: new Map([
+        ['w', { side: 'w', members: [candidate] }],
+        ['b', { side: 'b', members: [] }],
+      ]),
+      standings: [
+        { commanderId: aggressive.id, standing: 0, cohortExternality: 0 },
+        { commanderId: cautious.id, standing: 0, cohortExternality: 0 },
+        { commanderId: black.id, standing: 0, cohortExternality: 0 },
+      ],
+      registers: new Map(),
+      previousPurses: new Map(),
+      config: {
+        ...SEMINAR_CONFIG,
+        DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+        DRAFT_LOT_BASE_PRICE: 10,
+        DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 0,
+      },
+    });
+    expect(result.observation.contestedLots).toBe(0);
+    expect(result.observation.clearedLots).toBe(1);
+  });
+
   it('wires counsel budget and willingness weight into draft decisions', () => {
     const commander = {
       id: 'w:commander:00',
@@ -472,6 +562,7 @@ describe('seminar spine', () => {
       config: {
         ...SEMINAR_CONFIG,
         DRAFT_CONSULTATIONS_PER_CYCLE: 4,
+        DRAFT_LOT_BASE_PRICE: 2,
         DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 0,
       },
     };
