@@ -133,6 +133,74 @@ describe('public register fold', () => {
     );
   });
 
+  it('values both sides at the role held when a promoted piece is captured', () => {
+    const board = LivingBoard.standard();
+    const whitePawn = pieceId(board, 'w', 'P');
+    const blackPawn = pieceId(board, 'b', 'P');
+    const register = foldPublicRegister([
+      {
+        side: 'w',
+        result: 'WIN',
+        events: [
+          {
+            t: 'PROMOTION',
+            pieceId: whitePawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          {
+            t: 'CAPTURE',
+            victim: whitePawn,
+            by: pieceId(board, 'b', 'N'),
+          },
+          {
+            t: 'PROMOTION',
+            pieceId: blackPawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          {
+            t: 'CAPTURE',
+            victim: blackPawn,
+            by: pieceId(board, 'w', 'R'),
+          },
+        ],
+      },
+    ]);
+    expect(register.materialTaken).toBe(9);
+    expect(register.materialLost).toBe(9);
+    expect(register.largestMaterialMargin).toBe(0);
+    expect(register.ownPiecesLost).toBe(1);
+    expect(register.promotionsReached).toBe(1);
+  });
+
+  it('resets current roles at each match boundary', () => {
+    const board = LivingBoard.standard();
+    const blackPawn = pieceId(board, 'b', 'P');
+    const whiteRook = pieceId(board, 'w', 'R');
+    const register = foldPublicRegister([
+      {
+        side: 'w',
+        result: 'WIN',
+        events: [
+          {
+            t: 'PROMOTION',
+            pieceId: blackPawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          { t: 'CAPTURE', victim: blackPawn, by: whiteRook },
+        ],
+      },
+      {
+        side: 'w',
+        result: 'WIN',
+        events: [{ t: 'CAPTURE', victim: blackPawn, by: whiteRook }],
+      },
+    ]);
+    expect(register.materialTaken).toBe(10);
+  });
+
   it('parses every real identity encoding and exposes unattributed captures', () => {
     const board = LivingBoard.standard();
     const appRoster = bootstrapRoster(17).roster;
@@ -186,8 +254,15 @@ describe('public register fold', () => {
           toRole: 'Queen',
         },
         {
-          t: 'ABILITY_OBSERVATION',
+          t: 'PROMOTION',
           ply: 3,
+          pieceId: pieceId(board, 'b', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
+        {
+          t: 'ABILITY_OBSERVATION',
+          ply: 4,
           pieceId: 'w:Knight:f3',
           vindicated: true,
         },
@@ -203,10 +278,23 @@ describe('public register fold', () => {
           victim: pieceId(board, 'b', 'P'),
           by: pieceId(board, 'w', 'N'),
         },
+        {
+          t: 'PROMOTION',
+          pieceId: pieceId(board, 'w', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
+        {
+          t: 'PROMOTION',
+          pieceId: pieceId(board, 'b', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
       ],
     });
     expect(Object.keys(facts).sort()).toEqual(['events', 'result', 'side']);
     expect(foldPublicRegister([facts]).materialTaken).toBe(0);
+    expect(foldPublicRegister([facts]).promotionsReached).toBe(1);
   });
 
   it('resets streaks on draws and routs while retaining the longest streak', () => {
