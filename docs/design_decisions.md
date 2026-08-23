@@ -1271,14 +1271,17 @@ which honours are live.
 Owner decision: public-register material is valued at the role held when a
 piece is captured, not at its origin role. Promotions are public facts, so the
 register folds them in event order while maintaining a current-role map scoped
-to each match; promotions by either side affect later capture valuation, while
-`promotionsReached` remains commander-side-only. If an identity cannot be
-attributed, the capture remains visible through `unattributedCaptures` rather
-than being treated as free material. This requires no persisted event or schema
-change.
+to each match and seeds it from the public starting chairs; promotions by either
+side affect later capture valuation when their role is public, while
+`promotionsReached` remains commander-side-only. Own-side valuation is exact
+because the record carries that lineup; an enemy piece fielded in an
+attained-role chair remains origin-valued because the record keeps no public
+enemy lineup. If an identity cannot be attributed, the capture remains visible
+through `unattributedCaptures` rather than being treated as free material. This
+requires no persisted event or schema change.
 
 ADR 0061 step 2 wires the own-record public register
-(`src/persistence/register.ts:1-208`), including capture-time role valuation,
+(`src/persistence/register.ts:1-228`), including capture-time role valuation,
 verdict-stability lower-bound probe and
 dead-by-match-two detector (`src/persistence/commendations.ts:316-346`,
 `sim/degeneracy.ts:565-579,707-745`), and provisional register-mirroring and

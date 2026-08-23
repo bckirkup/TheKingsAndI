@@ -21,6 +21,10 @@ export type PublicMatchEvent =
 export interface PublicMatchFacts {
   readonly side: 'w' | 'b';
   readonly result: MatchResult;
+  readonly startingRoles: readonly {
+    readonly pieceId: string;
+    readonly role: PieceRole;
+  }[];
   readonly events: readonly PublicMatchEvent[];
 }
 
@@ -100,7 +104,15 @@ export function publicMatchFactsFromRecord(
       });
     }
   }
-  return { side, result: match.result, events };
+  return {
+    side,
+    result: match.result,
+    startingRoles: match.rosterSnapshot.map((piece) => ({
+      pieceId: piece.id,
+      role: piece.role,
+    })),
+    events,
+  };
 }
 
 function emptyRegister(): PublicRegister {
@@ -125,7 +137,9 @@ function emptyRegister(): PublicRegister {
 /**
  * Fold narrow public facts; psychology and engine truth are not inputs.
  * Material values use each piece's role at capture time. Role state is rebuilt
- * independently for every match from identity roles and public promotions.
+ * independently for every match from public starting chairs and promotions.
+ * Enemy pieces have no public starting chair in the record and remain
+ * origin-valued when captured.
  */
 export function foldPublicRegister(
   matches: readonly PublicMatchFacts[],
@@ -158,6 +172,12 @@ export function foldPublicRegister(
     let taken = 0;
     let lost = 0;
     const currentRoles = new Map<string, Role>();
+    for (const startingRole of match.startingRoles) {
+      currentRoles.set(
+        startingRole.pieceId,
+        ROLE_BY_PIECE_ROLE[startingRole.role],
+      );
+    }
     for (const event of match.events) {
       if (event.t === 'PROMOTION') {
         currentRoles.set(event.pieceId, ROLE_BY_PIECE_ROLE[event.toRole]);
