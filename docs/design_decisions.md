@@ -1164,21 +1164,31 @@ all existing IDs, names, dispositions, and seeds; `POOL_DEPTH_FACTOR` remains a
 legacy mapping to reserve depth. The reserve magnitude and whether the first
 cycle is a draft or an issued army remain open.
 
+The draft economy is not connected to career bootstrap or season execution:
+draft lots and outcomes remain harness-only telemetry until the owner settles
+whether cycle one is drafted.
+
 ADR 0061 brings D153 due in step 1, the scarcity step.
 
 ### D154 ❓ What is the draft currency, and how is priority ordered? (ADR 0059 §2-§3, §6)
 **Partly wired — magnitudes remain open.** ADR 0059 proposes two currencies of opposite sign:
 priority and purse from *inverse* standing (the NBA device), and acceptance —
 a discount on a piece's price — from reputation, read through ADR 0058's
-relationship account or the disposition prior plus testimony. The stabilisers
-now include a shared green levy helper
-(`src/orchestration/squadFielding.ts:37-42,234-320`) replacing free
-conscription, with zero standing cost and full inheritance defaults so current
-behaviour is unchanged. A cap on purse
-carried between cycles, and the non-selection tax that already prices a deep
-bench (ADR 0051). Open: purse magnitudes, the carry cap, and the size of the
-acceptance discount. Tanking must be measurably dominated, not merely
-discouraged.
+relationship account or the disposition prior plus testimony. Deterministic
+priority/purse, acceptance pricing, reverse-order clearing, and partial carry
+are pure, opt-in helpers in `src/core/draftEconomy.ts:1-252`, configured by
+the provisional seeds in `src/core/draftConfig.ts:1-41`; they are not reachable
+from the default season path. The purse base (`0..200`, seed `100`), purse
+spread (`0..100`, seed `50`), carry fraction (`0..1000` permille, seed `500`),
+acceptance discount (`0..1000` permille, seed `500`), and minimum bid
+(`0..10`, seed `1`) are §9 search seeds with documented none-to-steep/full
+brackets, not rulings. The economy stabilisers remain
+harness instruments: purse runaway, price collapse, and tanking dominance are
+detected from cycle telemetry in `sim/degeneracy.ts:410-520`, with minimum
+sample guards and provisional detector thresholds. Draft lots, outcomes, and
+clearing prices are not persisted. Open: reserve depth, whether cycle one is
+a draft, and all economy magnitudes. Tanking must be measurably dominated, not
+merely discouraged.
 
 ADR 0061 brings D154 due in step 3, the draft.
 

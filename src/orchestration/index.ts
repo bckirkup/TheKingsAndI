@@ -41,6 +41,25 @@ export {
 } from './counsel';
 export { DRAFT_CONFIG, type DraftConfig } from './draftConfig';
 export {
+  acceptedPrice,
+  acceptanceDiscountPermille,
+  bidForLot,
+  carryPurse,
+  clearDraft,
+  draftPriority,
+} from '../core/draftEconomy';
+export type {
+  AcceptanceEvidence,
+  ClearedDraftLot,
+  CommanderStanding,
+  DraftBid,
+  DraftBidder,
+  DraftBidStyle,
+  DraftClearing,
+  DraftLot,
+  DraftPriority,
+} from '../core/draftEconomy';
+export {
   checkInCredence,
   checkOutCredence,
   dispositionForIdentitySeed,
