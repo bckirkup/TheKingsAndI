@@ -521,12 +521,18 @@ describe('seminar spine', () => {
       ...marketQueen,
       service: { ...marketQueen.service, captures: 10 },
     };
-    expect(
-      publicLotBasePrice(experienced, {
-        ...SEMINAR_CONFIG,
-        DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 100,
-      }),
-    ).not.toBe(publicLotBasePrice(experienced, SEMINAR_CONFIG));
+    const noServiceWeight = publicLotBasePrice(experienced, {
+      ...SEMINAR_CONFIG,
+      DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 0,
+    });
+    const fullServiceWeight = publicLotBasePrice(experienced, {
+      ...SEMINAR_CONFIG,
+      DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 10000,
+    });
+    expect(fullServiceWeight).toBeGreaterThan(noServiceWeight);
+    expect(publicLotBasePrice(experienced, SEMINAR_CONFIG)).toBeGreaterThan(
+      noServiceWeight,
+    );
     const draftMarkets = new Map(markets);
     draftMarkets.set('w', {
       side: 'w',
