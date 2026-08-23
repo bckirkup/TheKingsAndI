@@ -43,6 +43,7 @@ export { DRAFT_CONFIG, type DraftConfig } from './draftConfig';
 export {
   acceptedPrice,
   acceptanceDiscountPermille,
+  acceptancePriceBand,
   bidForLot,
   carryPurse,
   clearDraft,
@@ -50,6 +51,7 @@ export {
 } from '../core/draftEconomy';
 export type {
   AcceptanceEvidence,
+  AcceptancePriceBand,
   ClearedDraftLot,
   CommanderStanding,
   DraftBid,

@@ -1120,17 +1120,19 @@ objection strength, sight, and override cost without arithmetic
 `src/app/MatchScreen.tsx:235-273`). These panels provide a readable reason, not
 knowledge about pieces the commander has never led. The public candidate slate
 is folded from identity, lifecycle, relationship-account keys, and service
-records (`src/persistence/candidateSlate.ts:14-117`); private counsel is
-qualitative and deterministic (`src/psychology/counsel.ts:3-139`). Testimony,
+records (`src/persistence/candidateSlate.ts:14-110`); private counsel is
+qualitative and deterministic (`src/psychology/counsel.ts:3-126`). Testimony,
 candidate rumour appraisals, and earned-knowledge projections remain open here.
 The existing rumour channel appraises the commander rather than a candidate,
 so it is not substituted into candidate counsel.
-The economy's acceptance price is currently harness-only, but its arithmetic is
+The economy's raw acceptance price remains harness-only, but its arithmetic is
 exactly invertible to the underlying benevolence reputation
 (`acceptedPrice = basePrice * (1000 - discount) / 1000`): a player-facing
-per-piece price would therefore leak hidden state and violate ADR 0018. Any
-future UI would need coarsened price bands; whether and how to do that remains
-an owner decision.
+per-piece price would therefore leak hidden state and violate ADR 0018. The
+owner decision is to expose only qualitative salary-negotiation bands
+(`acceptancePriceBand` in `src/core/draftEconomy.ts:150-186`), derived from the
+discount's fraction of the configured maximum; the same bands apply to served
+and unserved candidates. The raw number remains hidden.
 ADR 0054 §6 still proposes earned knowledge as
 testimony rather than telemetry, with rumor-only information about pieces never
 served. Open: whether a commander may be *wrong* about a piece he has not led,
@@ -1183,8 +1185,8 @@ a discount on a piece's price — from reputation, read through ADR 0058's
 relationship account or the disposition prior plus testimony. Deterministic
 priority/purse, acceptance pricing, reverse-order clearing with an opt-in
 first-refusal margin, and partial carry are pure, opt-in helpers in
-`src/core/draftEconomy.ts:1-276`, configured by the provisional seeds in
-`src/core/draftConfig.ts:1-45`; they are not reachable
+`src/core/draftEconomy.ts:1-317`, configured by the provisional seeds in
+`src/core/draftConfig.ts:1-50`; they are not reachable
 from the default season path. The purse base (`0..200`, seed `100`), purse
 spread (`0..100`, seed `50`), carry fraction (`0..1000` permille, seed `500`),
 acceptance discount (`0..1000` permille, seed `500`), and minimum bid
@@ -1192,14 +1194,16 @@ acceptance discount (`0..1000` permille, seed `500`), and minimum bid
 brackets, not rulings. The first-refusal margin (`0..1000` permille, seed `0`)
 and deterministic cautious/balanced/aggressive bid multipliers (seeds
 `900/1000/1100`, with a `0..2000` calibration bracket) are also §9 search
-seeds. The economy stabilisers remain harness instruments: purse runaway,
+seeds. The acceptance-band labels and thresholds (`750/500/250` permille of
+the configured maximum discount) are owner-decided presentation semantics;
+raw acceptance prices remain harness-only. The economy stabilisers remain
+harness instruments: purse runaway,
 monotone standing, price collapse, and tanking dominance are detected from
-cycle telemetry in `sim/degeneracy.ts:410-530`, with minimum
+cycle telemetry in `sim/degeneracy.ts:418-518`, with minimum
 sample guards and provisional detector thresholds. Draft lots, outcomes, and
 clearing prices are not persisted. Open: reserve depth, whether cycle one is
-a draft, all economy magnitudes, and any player-facing price coarsening needed
-to avoid the D150 side-channel. Tanking must be measurably dominated, not
-merely discouraged.
+a draft, purse/carry/acceptance discount magnitudes, and detector thresholds.
+Tanking must be measurably dominated, not merely discouraged.
 
 ADR 0061 brings D154 due in step 3, the draft.
 
@@ -1214,19 +1218,21 @@ and holder sides
 only: silence returns no opinion. The existing rumour channel appraises the
 commander rather than the candidate, so candidate rumour appraisal state is an
 open item and is not used as a stand-in. The public slate and private counsel
-are implemented in `src/persistence/candidateSlate.ts:14-117` and
-`src/psychology/counsel.ts:3-139`; consultations use a zero-default attention
-budget (`src/core/draftConfig.ts:1-44`,
-`src/orchestration/counsel.ts:1-43`) and heeded outcomes fold only into
-harness telemetry (`sim/metrics.ts:70-95`). Rivalry, opinion bands, and
-disclosure cutoffs are provisional ADR 0059 §9 search seeds in
-`src/core/draftConfig.ts:1-44`, not rulings. Harness detectors for decorative
+are implemented in `src/persistence/candidateSlate.ts:14-110` and
+`src/psychology/counsel.ts:3-126`; consultations use a zero-default attention
+budget (`src/core/draftConfig.ts:1-50`,
+`src/orchestration/counsel.ts:1-54`) and heeded outcomes fold only into
+harness telemetry (`sim/metrics.ts:89-118`). The owner-set
+`COUNSEL_RIVALRY_PENALTY=20` is wired in `src/core/draftConfig.ts:31`, and rivalry
+is origin-inclusive on both candidate and holder sides; opinion bands and
+disclosure cutoffs remain provisional ADR 0059 §9 search seeds. Harness
+detectors for decorative
 and oracular counsel are likewise provisional search instruments in
-`sim/degeneracy.ts:659-701`; their thresholds are not game magnitudes. Open:
-candidate rumour appraisals, the consultation budget, counsel magnitudes, and
-player-facing acceptance-price bands: raw per-piece prices would invert to
-hidden reputation, so the current harness-only price must not be exposed
-without an owner-approved coarsening.
+`sim/degeneracy.ts:822-853`; their thresholds are not game magnitudes. Open:
+candidate rumour appraisals, the consultation budget, and the remaining counsel
+magnitudes. Raw per-piece acceptance prices still invert to hidden reputation
+and must not be exposed; the owner-approved qualitative bands are the only
+player-facing price representation.
 
 ADR 0061 brings D155 due in step 3, the draft.
 
