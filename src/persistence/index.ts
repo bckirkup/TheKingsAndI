@@ -35,6 +35,10 @@ export {
   foldMatchAudit,
 } from './folds';
 export {
+  assembleMatchRecord,
+  type MatchRecordAssemblyInput,
+} from './recordMatch';
+export {
   foldLearningDelta,
   normalizeBandLearningDelta,
   type LearningDelta,
