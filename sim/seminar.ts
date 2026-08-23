@@ -1,3 +1,10 @@
+/**
+ * The seminar spine: a week settles matches into a public register and
+ * commendations, a semester carries weeks forward into terminal awards.
+ *
+ * Commander colours are fixed for the semester — white commanders always lead
+ * white. Rotating them is a seminar decision this harness does not invent.
+ */
 import type { EnginePort } from '../src/engine/types';
 import {
   assembleMatchRecord,
@@ -35,11 +42,6 @@ import { runMatch } from './match';
 import { matchSeedForWorldPairing } from './world';
 import { SEMINAR_CONFIG, type SeminarConfig } from './seminarConfig';
 
-/**
- * Slice 1 deliberately keeps commander colours fixed for the semester:
- * white commanders always lead white. A later seminar decision may rotate
- * colours, but this harness does not invent that policy.
- */
 export const SEMINAR_WEEK_SEED_STRIDE = 1_000_003;
 const COMMANDER_STYLES = [
   'servant',
