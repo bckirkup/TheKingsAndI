@@ -15,6 +15,7 @@ import {
 import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
 
 export const EARLY_QUARTILE_COUNT = 2;
+export const DRAFT_TANKING_POLICY = 'tanking';
 
 export const DEGENERACY_CONFIG = {
   /** Pearson |r| above this indicates transcript-column collapse. */
@@ -108,6 +109,7 @@ export interface DegeneracyAssertionOptions {
   readonly draftPurseRunawayFraction?: number;
   readonly draftPriceCollapseMinimumLots?: number;
   readonly draftTankingMinimumCycles?: number;
+  readonly draftTankingPolicy?: string;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -420,6 +422,7 @@ export function draftEconomyDegeneracyFindings(
     readonly purseRunawayFraction?: number;
     readonly priceCollapseMinimumLots?: number;
     readonly tankingMinimumCycles?: number;
+    readonly tankingPolicy?: string;
   } = {},
 ): DegeneracyFinding[] {
   const minimumCycles =
@@ -431,11 +434,14 @@ export function draftEconomyDegeneracyFindings(
     DEGENERACY_CONFIG.draftPriceCollapseMinimumLots;
   const tankingMinimumCycles =
     options.tankingMinimumCycles ?? DEGENERACY_CONFIG.draftTankingMinimumCycles;
+  const tankingPolicy = options.tankingPolicy ?? DRAFT_TANKING_POLICY;
   const findings: DegeneracyFinding[] = [];
   if (observations.cycles.length >= minimumCycles) {
     const rankOrders = observations.cycles.map((cycle) =>
       cycle.standingOrder.join('\u0000'),
     );
+    // "Monotone" is measured here as a stable cohort order across cycle
+    // snapshots: no commander changes relative position.
     const monotoneStanding =
       rankOrders.every((order) => order !== '') &&
       rankOrders.every((order) => order === rankOrders[0]);
@@ -455,18 +461,16 @@ export function draftEconomyDegeneracyFindings(
       const runaway = [...wins.entries()].find(
         ([, count]) => count / contestedLots > purseRunawayFraction,
       );
-      if (runaway !== undefined || monotoneStanding) {
+      if (runaway !== undefined) {
         findings.push({
           code: 'purse-runaway',
-          message:
-            runaway === undefined
-              ? 'Standing order remained monotone across the draft cycles.'
-              : `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
+          message: `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
         });
       }
-    } else if (monotoneStanding) {
+    }
+    if (monotoneStanding) {
       findings.push({
-        code: 'purse-runaway',
+        code: 'monotone-standing',
         message: 'Standing order remained monotone across the draft cycles.',
       });
     }
@@ -487,21 +491,19 @@ export function draftEconomyDegeneracyFindings(
     policy.set(point.cycle, point.standing);
     byPolicy.set(point.policy, policy);
   }
-  const tanking = byPolicy.get('tanking');
+  const tanking = byPolicy.get(tankingPolicy);
   if (tanking !== undefined) {
     const competitors = [...byPolicy.entries()].filter(
-      ([policy]) => policy !== 'tanking',
+      ([policy]) => policy !== tankingPolicy,
     );
     const tankingWins = competitors.some(([, competitor]) => {
       const sharedCycles = [...tanking.keys()].filter((cycle) =>
         competitor.has(cycle),
       );
-      return (
-        sharedCycles.length >= tankingMinimumCycles &&
-        sharedCycles.every(
-          (cycle) => (tanking.get(cycle) ?? 0) > (competitor.get(cycle) ?? 0),
-        )
+      const wonCycles = sharedCycles.filter(
+        (cycle) => (tanking.get(cycle) ?? 0) > (competitor.get(cycle) ?? 0),
       );
+      return wonCycles.length >= tankingMinimumCycles;
     });
     if (tankingWins) {
       findings.push({
@@ -600,6 +602,7 @@ export function detectDegeneracy(
     draftTankingMinimumCycles:
       options.draftTankingMinimumCycles ??
       DEGENERACY_CONFIG.draftTankingMinimumCycles,
+    draftTankingPolicy: options.draftTankingPolicy ?? DRAFT_TANKING_POLICY,
   };
 
   const collinearity = metricCollinearityFinding(
@@ -766,6 +769,7 @@ export function detectDegeneracy(
         purseRunawayFraction: config.draftPurseRunawayFraction,
         priceCollapseMinimumLots: config.draftPriceCollapseMinimumLots,
         tankingMinimumCycles: config.draftTankingMinimumCycles,
+        tankingPolicy: config.draftTankingPolicy,
       }),
     );
   }

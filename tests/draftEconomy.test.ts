@@ -4,6 +4,7 @@ import {
   DRAFT_CONFIG,
   acceptanceDiscountPermille,
   acceptedPrice,
+  bidForLot,
   carryPurse,
   clearDraft,
   draftPriority,
@@ -210,6 +211,33 @@ describe('draft economy', () => {
     expect(unfilled.lots[0]?.clearingPrice).toBe(0);
   });
 
+  it('gives priority a configurable first-refusal margin', () => {
+    const bidders = [
+      {
+        commanderId: 'first',
+        priorityRank: 0,
+        purse: 20,
+        style: 'cautious' as const,
+        acceptanceDiscountPermille: 0,
+      },
+      {
+        commanderId: 'top-bid',
+        priorityRank: 1,
+        purse: 20,
+        style: 'aggressive' as const,
+        acceptanceDiscountPermille: 0,
+      },
+    ];
+    const lot = [{ lotId: 'lot', basePrice: 10, minimumBid: 1 }];
+    expect(clearDraft(lot, bidders).lots[0]?.winnerId).toBe('top-bid');
+    expect(
+      clearDraft(lot, bidders, {
+        ...DRAFT_CONFIG,
+        FIRST_REFUSAL_MARGIN_PERMILLE: 200,
+      }).lots[0]?.winnerId,
+    ).toBe('first');
+  });
+
   it('detects purse runaway and price collapse, with sample guards', () => {
     const purseRunaway = economyObservations({
       cycles: economyObservations().cycles.map((cycle) => ({
@@ -246,8 +274,10 @@ describe('draft economy', () => {
       standingSeries: [
         { policy: 'tanking', cycle: 1, standing: 3 },
         { policy: 'tanking', cycle: 2, standing: 4 },
+        { policy: 'tanking', cycle: 3, standing: 1 },
         { policy: 'balanced', cycle: 1, standing: 2 },
         { policy: 'balanced', cycle: 2, standing: 3 },
+        { policy: 'balanced', cycle: 3, standing: 2 },
       ],
     });
     expect(
@@ -263,6 +293,52 @@ describe('draft economy', () => {
         minimumCycles: 3,
       }),
     ).toEqual([]);
+  });
+
+  it('wires bid-style multipliers and keeps the monotone symptom distinct', () => {
+    const lot = { lotId: 'lot', basePrice: 10, minimumBid: 1 };
+    const bidder = {
+      commanderId: 'commander',
+      priorityRank: 0,
+      purse: 100,
+      style: 'cautious' as const,
+      acceptanceDiscountPermille: 0,
+    };
+    const cautious = bidForLot(bidder, lot).amount;
+    const wider = bidForLot(bidder, lot, {
+      ...DRAFT_CONFIG,
+      BID_MULTIPLIER_CAUTIOUS: 1200,
+    }).amount;
+    expect(wider).toBeGreaterThan(cautious);
+    const balanced = bidForLot({ ...bidder, style: 'balanced' }, lot).amount;
+    expect(
+      bidForLot({ ...bidder, style: 'balanced' }, lot, {
+        ...DRAFT_CONFIG,
+        BID_MULTIPLIER_BALANCED: 1200,
+      }).amount,
+    ).toBeGreaterThan(balanced);
+    const aggressive = bidForLot(
+      { ...bidder, style: 'aggressive' },
+      lot,
+    ).amount;
+    expect(
+      bidForLot({ ...bidder, style: 'aggressive' }, lot, {
+        ...DRAFT_CONFIG,
+        BID_MULTIPLIER_AGGRESSIVE: 800,
+      }).amount,
+    ).toBeLessThan(aggressive);
+    const monotone = economyObservations({
+      cycles: economyObservations().cycles.map((cycle) => ({
+        ...cycle,
+        standingOrder: ['a', 'b'],
+      })),
+    });
+    expect(
+      draftEconomyDegeneracyFindings(monotone).map((finding) => finding.code),
+    ).toContain('monotone-standing');
+    expect(
+      draftEconomyDegeneracyFindings(monotone).map((finding) => finding.code),
+    ).not.toContain('purse-runaway');
   });
 
   it('stays silent on healthy economy observations', () => {

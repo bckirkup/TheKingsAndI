@@ -58,12 +58,6 @@ export interface DraftClearing {
   readonly remainingPurses: Readonly<Record<string, number>>;
 }
 
-const BID_STYLE_MULTIPLIER: Readonly<Record<DraftBidStyle, number>> = {
-  cautious: 900,
-  balanced: 1000,
-  aggressive: 1100,
-};
-
 function boundedInteger(
   value: number,
   minimum: number,
@@ -155,8 +149,14 @@ export function bidForLot(
     lot.basePrice,
     bidder.acceptanceDiscountPermille,
   );
+  const multiplier =
+    bidder.style === 'cautious'
+      ? config.BID_MULTIPLIER_CAUTIOUS
+      : bidder.style === 'balanced'
+        ? config.BID_MULTIPLIER_BALANCED
+        : config.BID_MULTIPLIER_AGGRESSIVE;
   const suggested = Math.floor(
-    (target * BID_STYLE_MULTIPLIER[bidder.style]) / 1000,
+    (target * Math.max(0, Math.trunc(multiplier))) / 1000,
   );
   return {
     commanderId: bidder.commanderId,
@@ -170,8 +170,8 @@ export function bidForLot(
 }
 
 /**
- * Clear lots in deterministic input order. Priority breaks bid ties, so the
- * reverse-order rule remains visible even when commanders bid equally.
+ * Clear lots in deterministic input order. Priority breaks bid ties and can
+ * claim a near-top bid when the configured first-refusal margin allows it.
  */
 export function clearDraft(
   lots: readonly DraftLot[],
@@ -181,8 +181,20 @@ export function clearDraft(
   const remaining = new Map(
     bidders.map((bidder) => [bidder.commanderId, Math.max(0, bidder.purse)]),
   );
+  const rankByCommander = new Map(
+    bidders.map((bidder) => [bidder.commanderId, bidder.priorityRank]),
+  );
+  const firstRefusalMargin = boundedInteger(
+    config.FIRST_REFUSAL_MARGIN_PERMILLE,
+    0,
+    1000,
+  );
   const results: ClearedDraftLot[] = [];
   for (const lot of lots) {
+    const minimumBid = Math.max(
+      0,
+      Math.trunc(lot.minimumBid ?? config.MINIMUM_BID),
+    );
     const bids = bidders
       .map((bidder) => {
         const purse = remaining.get(bidder.commanderId) ?? 0;
@@ -190,33 +202,40 @@ export function clearDraft(
         return bid.amount > purse ? undefined : bid;
       })
       .filter((bid): bid is DraftBid => bid !== undefined)
-      .filter(
-        (bid) =>
-          bid.amount >=
-          Math.max(0, Math.trunc(lot.minimumBid ?? config.MINIMUM_BID)),
-      );
+      .filter((bid) => bid.amount >= minimumBid);
     bids.sort((left, right) => {
       if (right.amount !== left.amount) return right.amount - left.amount;
-      const leftRank =
-        bidders.find((bidder) => bidder.commanderId === left.commanderId)
-          ?.priorityRank ?? Number.MAX_SAFE_INTEGER;
-      const rightRank =
-        bidders.find((bidder) => bidder.commanderId === right.commanderId)
-          ?.priorityRank ?? Number.MAX_SAFE_INTEGER;
+      const leftRank = rankByCommander.get(left.commanderId);
+      const rightRank = rankByCommander.get(right.commanderId);
       return (
-        leftRank - rightRank ||
+        (leftRank ?? Number.MAX_SAFE_INTEGER) -
+          (rightRank ?? Number.MAX_SAFE_INTEGER) ||
         left.commanderId.localeCompare(right.commanderId)
       );
     });
-    const winner = bids[0];
+    const topBid = bids[0];
+    const winner =
+      topBid === undefined
+        ? undefined
+        : bids
+            .filter(
+              (bid) =>
+                bid.amount * 1000 >=
+                topBid.amount * (1000 - firstRefusalMargin),
+            )
+            .sort(
+              (left, right) =>
+                (rankByCommander.get(left.commanderId) ??
+                  Number.MAX_SAFE_INTEGER) -
+                  (rankByCommander.get(right.commanderId) ??
+                    Number.MAX_SAFE_INTEGER) ||
+                left.commanderId.localeCompare(right.commanderId),
+            )[0];
     if (winner === undefined) {
       results.push({
         lotId: lot.lotId,
         clearingPrice: 0,
-        minimumBid: Math.max(
-          0,
-          Math.trunc(lot.minimumBid ?? config.MINIMUM_BID),
-        ),
+        minimumBid,
       });
       continue;
     }
@@ -228,7 +247,7 @@ export function clearDraft(
       lotId: lot.lotId,
       winnerId: winner.commanderId,
       clearingPrice: winner.amount,
-      minimumBid: Math.max(0, Math.trunc(lot.minimumBid ?? config.MINIMUM_BID)),
+      minimumBid,
     });
   }
   return {
@@ -242,7 +261,8 @@ export function carryPurse(
   config: DraftConfig = DRAFT_CONFIG,
 ): number {
   return Math.floor(
-    Math.max(0, Math.trunc(unspent)) *
-      (boundedInteger(config.PURSE_CARRY_PERMILLE, 0, 1000) / 1000),
+    (Math.max(0, Math.trunc(unspent)) *
+      boundedInteger(config.PURSE_CARRY_PERMILLE, 0, 1000)) /
+      1000,
   );
 }

@@ -17,6 +17,10 @@ export interface DraftConfig {
   readonly PURSE_CARRY_PERMILLE: number;
   readonly ACCEPTANCE_DISCOUNT_PERMILLE: number;
   readonly MINIMUM_BID: number;
+  readonly FIRST_REFUSAL_MARGIN_PERMILLE: number;
+  readonly BID_MULTIPLIER_CAUTIOUS: number;
+  readonly BID_MULTIPLIER_BALANCED: number;
+  readonly BID_MULTIPLIER_AGGRESSIVE: number;
 }
 
 export const DRAFT_CONFIG = {
@@ -33,4 +37,8 @@ export const DRAFT_CONFIG = {
   PURSE_CARRY_PERMILLE: 500,
   ACCEPTANCE_DISCOUNT_PERMILLE: 500,
   MINIMUM_BID: 1,
+  FIRST_REFUSAL_MARGIN_PERMILLE: 0,
+  BID_MULTIPLIER_CAUTIOUS: 900,
+  BID_MULTIPLIER_BALANCED: 1000,
+  BID_MULTIPLIER_AGGRESSIVE: 1100,
 } as const satisfies DraftConfig;
