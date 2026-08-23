@@ -79,6 +79,11 @@ const ROLE_BY_PIECE_ROLE: Readonly<Record<PieceRole, Role>> = {
   King: 'K',
 };
 
+/** Public chess value used by folds and the draft's public lot pricing. */
+export function publicRoleValue(role: PieceRole): number {
+  return ROLE_VALUES[ROLE_BY_PIECE_ROLE[role]];
+}
+
 /**
  * Extract public, non-psychological facts for the commander represented by
  * `side`; the record result is already that commander's result.

@@ -44,6 +44,8 @@ export interface DraftBidder {
   readonly purse: number;
   readonly style: DraftBidStyle;
   readonly acceptanceDiscountPermille: number;
+  /** Private counsel adjustment; absent means the unchanged 1000‰ willingness. */
+  readonly willingnessPermilleByLot?: Readonly<Record<string, number>>;
 }
 
 export interface DraftBid {
@@ -190,10 +192,6 @@ export function bidForLot(
   lot: DraftLot,
   config: DraftConfig = DRAFT_CONFIG,
 ): DraftBid {
-  const minimumBid = Math.max(
-    0,
-    Math.trunc(lot.minimumBid ?? config.MINIMUM_BID),
-  );
   const target = acceptedPrice(
     lot.basePrice,
     bidder.acceptanceDiscountPermille,
@@ -207,11 +205,16 @@ export function bidForLot(
   const suggested = Math.floor(
     (target * Math.max(0, Math.trunc(multiplier))) / 1000,
   );
+  const willingness = boundedInteger(
+    bidder.willingnessPermilleByLot?.[lot.lotId] ?? 1000,
+    0,
+    2000,
+  );
   return {
     commanderId: bidder.commanderId,
     lotId: lot.lotId,
     amount: boundedInteger(
-      Math.min(bidder.purse, Math.max(minimumBid, suggested)),
+      Math.min(bidder.purse, Math.floor((suggested * willingness) / 1000)),
       0,
       Number.MAX_SAFE_INTEGER,
     ),

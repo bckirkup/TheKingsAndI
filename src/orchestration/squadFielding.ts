@@ -65,7 +65,7 @@ export interface SquadMember {
   readonly attainedRole?: PieceRole;
   readonly status: 'available' | 'recovering' | 'retired' | 'benched' | 'fired';
   readonly availableAtMatch: number;
-  readonly provenance: 'original' | 'conscript';
+  readonly provenance: 'original' | 'conscript' | 'drafted';
   readonly service: SquadService;
   readonly retirementCause?: 'trauma' | 'obsolescence';
   readonly credenceIdentity?: CredenceIdentity;

@@ -426,6 +426,36 @@ describe('draft economy', () => {
     ).not.toContain('purse-runaway');
   });
 
+  it('keeps absent or zero counsel weight inert and lets willingness change bids', () => {
+    const lot = { lotId: 'lot', basePrice: 10, minimumBid: 1 };
+    const bidder = {
+      commanderId: 'commander',
+      priorityRank: 0,
+      purse: 100,
+      style: 'balanced' as const,
+      acceptanceDiscountPermille: 0,
+    };
+    const unchanged = bidForLot(bidder, lot).amount;
+    const counselled = bidForLot(
+      {
+        ...bidder,
+        willingnessPermilleByLot: { lot: 500 },
+      },
+      lot,
+    ).amount;
+    expect(counselled).toBeLessThan(unchanged);
+    expect(
+      bidForLot(
+        {
+          ...bidder,
+          willingnessPermilleByLot: { lot: 500 },
+        },
+        lot,
+        { ...DRAFT_CONFIG, BID_MULTIPLIER_BALANCED: 0 },
+      ).amount,
+    ).toBe(0);
+  });
+
   it('stays silent on healthy economy observations', () => {
     expect(draftEconomyDegeneracyFindings(economyObservations())).toEqual([]);
     expect(
