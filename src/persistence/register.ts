@@ -21,6 +21,10 @@ export type PublicMatchEvent =
 export interface PublicMatchFacts {
   readonly side: 'w' | 'b';
   readonly result: MatchResult;
+  readonly startingRoles: readonly {
+    readonly pieceId: string;
+    readonly role: PieceRole;
+  }[];
   readonly events: readonly PublicMatchEvent[];
 }
 
@@ -66,6 +70,15 @@ const ROLE_VALUES: Readonly<Record<Role, number>> = {
   K: 0,
 };
 
+const ROLE_BY_PIECE_ROLE: Readonly<Record<PieceRole, Role>> = {
+  Pawn: 'P',
+  Knight: 'N',
+  Bishop: 'B',
+  Rook: 'R',
+  Queen: 'Q',
+  King: 'K',
+};
+
 /**
  * Extract public, non-psychological facts for the commander represented by
  * `side`; the record result is already that commander's result.
@@ -82,10 +95,7 @@ export function publicMatchFactsFromRecord(
         victim: event.victim,
         by: event.by,
       });
-    } else if (
-      event.t === 'PROMOTION' &&
-      parsePieceId(event.pieceId)?.side === side
-    ) {
+    } else if (event.t === 'PROMOTION') {
       events.push({
         t: 'PROMOTION',
         pieceId: event.pieceId,
@@ -94,7 +104,15 @@ export function publicMatchFactsFromRecord(
       });
     }
   }
-  return { side, result: match.result, events };
+  return {
+    side,
+    result: match.result,
+    startingRoles: match.rosterSnapshot.map((piece) => ({
+      pieceId: piece.id,
+      role: piece.role,
+    })),
+    events,
+  };
 }
 
 function emptyRegister(): PublicRegister {
@@ -118,8 +136,10 @@ function emptyRegister(): PublicRegister {
 
 /**
  * Fold narrow public facts; psychology and engine truth are not inputs.
- * Material values come from the identity in the capture event, which carries
- * the piece's origin role, so a promoted pawn is still valued as a pawn.
+ * Material values use each piece's role at capture time. Role state is rebuilt
+ * independently for every match from public starting chairs and promotions.
+ * Enemy pieces have no public starting chair in the record and remain
+ * origin-valued when captured.
  */
 export function foldPublicRegister(
   matches: readonly PublicMatchFacts[],
@@ -151,8 +171,16 @@ export function foldPublicRegister(
     }
     let taken = 0;
     let lost = 0;
+    const currentRoles = new Map<string, Role>();
+    for (const startingRole of match.startingRoles) {
+      currentRoles.set(
+        startingRole.pieceId,
+        ROLE_BY_PIECE_ROLE[startingRole.role],
+      );
+    }
     for (const event of match.events) {
       if (event.t === 'PROMOTION') {
+        currentRoles.set(event.pieceId, ROLE_BY_PIECE_ROLE[event.toRole]);
         if (parsePieceId(event.pieceId)?.side === match.side) {
           promotionsReached += 1;
         }
@@ -161,9 +189,14 @@ export function foldPublicRegister(
       const victim = parsePieceId(event.victim);
       const by = parsePieceId(event.by);
       if (victim === null || by === null) unattributedCaptures += 1;
-      const victimValue = victim === null ? 0 : ROLE_VALUES[victim.role];
+      const victimRole =
+        victim === null
+          ? undefined
+          : (currentRoles.get(event.victim) ?? victim.role);
+      const victimValue =
+        victimRole === undefined ? 0 : ROLE_VALUES[victimRole];
       if (by?.side === match.side && victim !== null) taken += victimValue;
-      if (victim?.side === match.side) {
+      if (victim?.side === match.side && victimRole !== undefined) {
         lost += victimValue;
         ownPiecesLost += 1;
       }

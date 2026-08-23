@@ -30,6 +30,7 @@ function pieceId(
 function makeMatch(
   result: MatchRecord['result'],
   events: readonly MatchEvent[],
+  rosterSnapshot: MatchRecord['rosterSnapshot'] = [],
 ): MatchRecord {
   return {
     id: 'm1',
@@ -37,7 +38,7 @@ function makeMatch(
     actId: 'a1',
     matchIndex: 1,
     seed: 1,
-    rosterSnapshot: [],
+    rosterSnapshot,
     rosterEnd: [],
     events,
     result,
@@ -94,16 +95,19 @@ describe('public register fold', () => {
       {
         side: 'w',
         result: 'WIN',
+        startingRoles: [],
         events: captures,
       },
       {
         side: 'w',
         result: 'LOSS',
+        startingRoles: [],
         events: [],
       },
       {
         side: 'w',
         result: 'WIN',
+        startingRoles: [],
         events: [
           { t: 'CAPTURE', victim: pieceId(board, 'b', 'K'), by: whiteRook },
           { t: 'CAPTURE', victim: blackBishop, by: whitePawn },
@@ -112,6 +116,7 @@ describe('public register fold', () => {
       {
         side: 'w',
         result: 'ROUT',
+        startingRoles: [],
         events: [],
       },
     ]);
@@ -131,6 +136,121 @@ describe('public register fold', () => {
     expect(Object.keys(register).sort()).toEqual(
       ['foldVersion', ...PUBLIC_REGISTER_COLUMNS].sort(),
     );
+  });
+
+  it('values both sides at the role held when a promoted piece is captured', () => {
+    const board = LivingBoard.standard();
+    const whitePawn = pieceId(board, 'w', 'P');
+    const blackPawn = pieceId(board, 'b', 'P');
+    const register = foldPublicRegister([
+      {
+        side: 'w',
+        result: 'WIN',
+        startingRoles: [],
+        events: [
+          {
+            t: 'PROMOTION',
+            pieceId: whitePawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          {
+            t: 'CAPTURE',
+            victim: whitePawn,
+            by: pieceId(board, 'b', 'N'),
+          },
+          {
+            t: 'PROMOTION',
+            pieceId: blackPawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          {
+            t: 'CAPTURE',
+            victim: blackPawn,
+            by: pieceId(board, 'w', 'R'),
+          },
+        ],
+      },
+    ]);
+    expect(register.materialTaken).toBe(9);
+    expect(register.materialLost).toBe(9);
+    expect(register.largestMaterialMargin).toBe(0);
+    expect(register.ownPiecesLost).toBe(1);
+    expect(register.promotionsReached).toBe(1);
+  });
+
+  it('resets current roles at each match boundary', () => {
+    const board = LivingBoard.standard();
+    const blackPawn = pieceId(board, 'b', 'P');
+    const whiteRook = pieceId(board, 'w', 'R');
+    const register = foldPublicRegister([
+      {
+        side: 'w',
+        result: 'WIN',
+        startingRoles: [],
+        events: [
+          {
+            t: 'PROMOTION',
+            pieceId: blackPawn,
+            fromRole: 'Pawn',
+            toRole: 'Queen',
+          },
+          { t: 'CAPTURE', victim: blackPawn, by: whiteRook },
+        ],
+      },
+      {
+        side: 'w',
+        result: 'WIN',
+        startingRoles: [],
+        events: [{ t: 'CAPTURE', victim: blackPawn, by: whiteRook }],
+      },
+    ]);
+    expect(register.materialTaken).toBe(10);
+  });
+
+  it('values a promoted piece from its later fielded chair', () => {
+    const roster = bootstrapRoster(17).roster;
+    const pawn = roster.find((piece) => piece.id === 'w:Pawn:00');
+    if (pawn === undefined) throw new Error('Expected a bootstrap pawn.');
+    const promotion = makeMatch('WIN', [
+      {
+        t: 'PROMOTION',
+        ply: 1,
+        pieceId: pawn.id,
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+    ]);
+    const laterMatch = makeMatch(
+      'WIN',
+      [
+        {
+          t: 'CAPTURE',
+          ply: 1,
+          victim: pawn.id,
+          by: 'b:Knight:00',
+        },
+        {
+          t: 'CAPTURE',
+          ply: 2,
+          victim: 'b:Pawn:00',
+          by: 'w:Rook:00',
+        },
+      ],
+      [{ ...pawn, role: 'Queen' }],
+    );
+    const register = foldPublicRegister([
+      publicMatchFactsFromRecord(promotion, 'w'),
+      publicMatchFactsFromRecord(laterMatch, 'w'),
+    ]);
+    expect(register.matchesPlayed).toBe(2);
+    expect(register.materialTaken).toBe(1);
+    expect(register.materialLost).toBe(9);
+    expect(register.largestMaterialMargin).toBe(0);
+    expect(register.ownPiecesLost).toBe(1);
+    expect(register.unattributedCaptures).toBe(0);
+    expect(register.promotionsReached).toBe(1);
   });
 
   it('parses every real identity encoding and exposes unattributed captures', () => {
@@ -157,6 +277,7 @@ describe('public register fold', () => {
       {
         side: 'w',
         result: 'WIN',
+        startingRoles: [],
         events: [
           { t: 'CAPTURE', victim: opposingBoardId, by: appId },
           { t: 'CAPTURE', victim: 'not-a-piece-id', by: boardId },
@@ -186,8 +307,15 @@ describe('public register fold', () => {
           toRole: 'Queen',
         },
         {
-          t: 'ABILITY_OBSERVATION',
+          t: 'PROMOTION',
           ply: 3,
+          pieceId: pieceId(board, 'b', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
+        {
+          t: 'ABILITY_OBSERVATION',
+          ply: 4,
           pieceId: 'w:Knight:f3',
           vindicated: true,
         },
@@ -197,16 +325,35 @@ describe('public register fold', () => {
     expect(facts).toEqual({
       side: 'b',
       result: 'ROUT',
+      startingRoles: [],
       events: [
         {
           t: 'CAPTURE',
           victim: pieceId(board, 'b', 'P'),
           by: pieceId(board, 'w', 'N'),
         },
+        {
+          t: 'PROMOTION',
+          pieceId: pieceId(board, 'w', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
+        {
+          t: 'PROMOTION',
+          pieceId: pieceId(board, 'b', 'P'),
+          fromRole: 'Pawn',
+          toRole: 'Queen',
+        },
       ],
     });
-    expect(Object.keys(facts).sort()).toEqual(['events', 'result', 'side']);
+    expect(Object.keys(facts).sort()).toEqual([
+      'events',
+      'result',
+      'side',
+      'startingRoles',
+    ]);
     expect(foldPublicRegister([facts]).materialTaken).toBe(0);
+    expect(foldPublicRegister([facts]).promotionsReached).toBe(1);
   });
 
   it('resets streaks on draws and routs while retaining the longest streak', () => {
@@ -214,6 +361,7 @@ describe('public register fold', () => {
     const facts = (result: MatchRecord['result']) => ({
       side: 'w' as const,
       result,
+      startingRoles: [],
       events: [] as PublicMatchEvent[],
     });
     const afterDraw = foldPublicRegister([
@@ -247,6 +395,7 @@ describe('public register fold', () => {
     const facts = {
       side: 'w' as const,
       result: 'LOSS' as const,
+      startingRoles: [],
       events: [
         {
           t: 'CAPTURE' as const,
@@ -267,6 +416,7 @@ describe('public register fold', () => {
       {
         side: 'w',
         result: 'WIN',
+        startingRoles: [],
         events: [
           {
             t: 'PROMOTION',
