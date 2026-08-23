@@ -433,6 +433,12 @@ export function draftEconomyDegeneracyFindings(
     options.tankingMinimumCycles ?? DEGENERACY_CONFIG.draftTankingMinimumCycles;
   const findings: DegeneracyFinding[] = [];
   if (observations.cycles.length >= minimumCycles) {
+    const rankOrders = observations.cycles.map((cycle) =>
+      cycle.standingOrder.join('\u0000'),
+    );
+    const monotoneStanding =
+      rankOrders.every((order) => order !== '') &&
+      rankOrders.every((order) => order === rankOrders[0]);
     const contestedLots = observations.cycles.reduce(
       (total, cycle) => total + Math.max(0, cycle.contestedLots),
       0,
@@ -449,12 +455,6 @@ export function draftEconomyDegeneracyFindings(
       const runaway = [...wins.entries()].find(
         ([, count]) => count / contestedLots > purseRunawayFraction,
       );
-      const rankOrders = observations.cycles.map((cycle) =>
-        cycle.standingOrder.join('\u0000'),
-      );
-      const monotoneStanding =
-        rankOrders.length >= minimumCycles &&
-        rankOrders.every((order) => order === rankOrders[0]);
       if (runaway !== undefined || monotoneStanding) {
         findings.push({
           code: 'purse-runaway',
@@ -464,6 +464,11 @@ export function draftEconomyDegeneracyFindings(
               : `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
         });
       }
+    } else if (monotoneStanding) {
+      findings.push({
+        code: 'purse-runaway',
+        message: 'Standing order remained monotone across the draft cycles.',
+      });
     }
   }
   const prices = observations.cycles.flatMap((cycle) => cycle.clearingPrices);
