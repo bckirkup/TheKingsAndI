@@ -197,15 +197,13 @@ export function poolRoleCountsForReserveDepth(
     counts[allocation.role] += allocation.whole;
     allocated += allocation.whole;
   }
-  allocations
-    .sort(
-      (left, right) =>
-        right.remainder - left.remainder || left.order - right.order,
-    )
-    .slice(0, depth - allocated)
-    .forEach((allocation) => {
-      counts[allocation.role] += 1;
-    });
+  const byRemainder = [...allocations].sort(
+    (left, right) =>
+      right.remainder - left.remainder || left.order - right.order,
+  );
+  for (const allocation of byRemainder.slice(0, depth - allocated)) {
+    counts[allocation.role] += 1;
+  }
   return counts;
 }
 
@@ -440,6 +438,138 @@ function updateMember(
   };
 }
 
+function foldOneSquadMember(input: {
+  readonly member: SquadMember;
+  readonly side: Side;
+  readonly match: number;
+  readonly config: SquadConfig;
+  readonly wasFielded: boolean;
+  readonly eligible: boolean;
+  readonly resultState: PieceState;
+  readonly attainedRole: PieceRole | undefined;
+  readonly desertion: boolean;
+  readonly captured: boolean;
+  readonly refusalCount: number;
+}): {
+  readonly member: SquadMember;
+  readonly events: SquadEvent[];
+  readonly erosionTarget?: { pieceId: PieceId; selfTrustDelta: number };
+} {
+  const {
+    member,
+    side,
+    match,
+    config,
+    wasFielded,
+    eligible,
+    resultState,
+    attainedRole,
+    desertion,
+    captured,
+    refusalCount,
+  } = input;
+  const memberEvents: SquadEvent[] = [];
+  let state = resultState;
+  let status = member.status;
+  let availableAtMatch = member.availableAtMatch;
+  let retirementCause = member.retirementCause;
+  let consecutiveNonSelections = member.service.consecutiveNonSelections;
+  const service: SquadService = {
+    ...member.service,
+    matchesPlayed: member.service.matchesPlayed + (wasFielded ? 1 : 0),
+    desertions: member.service.desertions + (desertion ? 1 : 0),
+    refusals: member.service.refusals + refusalCount,
+    captures: member.service.captures + (captured ? 1 : 0),
+  };
+  let erosionTarget: { pieceId: PieceId; selfTrustDelta: number } | undefined;
+
+  if (wasFielded) {
+    if (consecutiveNonSelections >= config.NON_SELECTION_TRUST_THRESHOLD) {
+      state = {
+        ...state,
+        T_i: clampTrust(
+          state.T_i + config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY,
+        ),
+      };
+      memberEvents.push({
+        t: 'POOL_TRUST_ADJUSTMENT',
+        side,
+        match,
+        reason: 'selection_redemption',
+        pieceId: member.state.id,
+        selfTrustDelta: state.T_i - member.state.T_i,
+        peerTrustDeltas: [],
+      });
+    }
+    consecutiveNonSelections = 0;
+    if (
+      state.role !== 'King' &&
+      state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+    ) {
+      status = 'retired';
+      availableAtMatch = Number.MAX_SAFE_INTEGER;
+      retirementCause = 'trauma';
+    } else if (desertion) {
+      status = 'recovering';
+      availableAtMatch = match + config.DESERTION_ABSENCE_MATCHES + 1;
+    } else {
+      status = 'available';
+      availableAtMatch = match + 1;
+    }
+  } else if (eligible) {
+    consecutiveNonSelections += 1;
+    status = 'available';
+    availableAtMatch = match + 1;
+    if (consecutiveNonSelections === config.NON_SELECTION_TRUST_THRESHOLD) {
+      state = {
+        ...state,
+        T_i: clampTrust(state.T_i + config.NON_SELECTION_SELF_TRUST_PENALTY),
+      };
+      erosionTarget = {
+        pieceId: member.state.id,
+        selfTrustDelta: state.T_i - member.state.T_i,
+      };
+    }
+    if (
+      state.role !== 'King' &&
+      consecutiveNonSelections >= config.OBSOLESCENCE_NON_SELECTION_THRESHOLD
+    ) {
+      status = 'retired';
+      availableAtMatch = Number.MAX_SAFE_INTEGER;
+      retirementCause = 'obsolescence';
+      memberEvents.push({
+        t: 'OBSOLESCENCE',
+        side,
+        match,
+        pieceId: member.state.id,
+        nonSelectionStreak: consecutiveNonSelections,
+      });
+    }
+  }
+  const nextService: SquadService = {
+    ...service,
+    consecutiveNonSelections,
+  };
+  const nextMember = updateMember(
+    attainedRole === undefined
+      ? member
+      : {
+          ...member,
+          attainedRole: highestAttainment(member.attainedRole, attainedRole),
+        },
+    state,
+    status,
+    availableAtMatch,
+    nextService,
+    retirementCause,
+  );
+  return {
+    member: nextMember,
+    events: memberEvents,
+    ...(erosionTarget === undefined ? {} : { erosionTarget }),
+  };
+}
+
 export function foldSquadMatch(input: {
   readonly side: Side;
   readonly members: readonly SquadMember[];
@@ -471,106 +601,30 @@ export function foldSquadMatch(input: {
     const becameAvailable =
       member.status === 'recovering' && input.match >= member.availableAtMatch;
     const eligible = member.status === 'available' || becameAvailable;
-    let state = wasFielded
+    const resultState = wasFielded
       ? (resultById.get(member.state.id) ?? member.state)
       : member.state;
-    const attainedRole = input.promotions.get(member.state.id);
-    let status = member.status;
-    let availableAtMatch = member.availableAtMatch;
-    let retirementCause = member.retirementCause;
-    const desertion = input.desertions.has(member.state.id);
-    const captured =
-      wasFielded && !desertion && !activeIds.has(member.state.id);
-    let consecutiveNonSelections = member.service.consecutiveNonSelections;
-    const service: SquadService = {
-      ...member.service,
-      matchesPlayed: member.service.matchesPlayed + (wasFielded ? 1 : 0),
-      desertions: member.service.desertions + (desertion ? 1 : 0),
-      refusals:
-        member.service.refusals + (input.refusals.get(member.state.id) ?? 0),
-      captures: member.service.captures + (captured ? 1 : 0),
-    };
-
-    if (wasFielded) {
-      if (consecutiveNonSelections >= config.NON_SELECTION_TRUST_THRESHOLD) {
-        state = {
-          ...state,
-          T_i: clampTrust(
-            state.T_i + config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY,
-          ),
-        };
-        events.push({
-          t: 'POOL_TRUST_ADJUSTMENT',
-          side: input.side,
-          match: input.match,
-          reason: 'selection_redemption',
-          pieceId: member.state.id,
-          selfTrustDelta: state.T_i - member.state.T_i,
-          peerTrustDeltas: [],
-        });
-      }
-      consecutiveNonSelections = 0;
-      if (
-        state.role !== 'King' &&
-        state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
-      ) {
-        status = 'retired';
-        availableAtMatch = Number.MAX_SAFE_INTEGER;
-        retirementCause = 'trauma';
-      } else if (desertion) {
-        status = 'recovering';
-        availableAtMatch = input.match + config.DESERTION_ABSENCE_MATCHES + 1;
-      } else {
-        status = 'available';
-        availableAtMatch = input.match + 1;
-      }
-    } else if (eligible) {
-      consecutiveNonSelections += 1;
-      status = 'available';
-      availableAtMatch = input.match + 1;
-      if (consecutiveNonSelections === config.NON_SELECTION_TRUST_THRESHOLD) {
-        state = {
-          ...state,
-          T_i: clampTrust(state.T_i + config.NON_SELECTION_SELF_TRUST_PENALTY),
-        };
-        erosionTargets.push({
-          pieceId: member.state.id,
-          selfTrustDelta: state.T_i - member.state.T_i,
-        });
-      }
-      if (
-        state.role !== 'King' &&
-        consecutiveNonSelections >= config.OBSOLESCENCE_NON_SELECTION_THRESHOLD
-      ) {
-        status = 'retired';
-        availableAtMatch = Number.MAX_SAFE_INTEGER;
-        retirementCause = 'obsolescence';
-        events.push({
-          t: 'OBSOLESCENCE',
-          side: input.side,
-          match: input.match,
-          pieceId: member.state.id,
-          nonSelectionStreak: consecutiveNonSelections,
-        });
-      }
+    const folded = foldOneSquadMember({
+      member,
+      side: input.side,
+      match: input.match,
+      config,
+      wasFielded,
+      eligible,
+      resultState,
+      attainedRole: input.promotions.get(member.state.id),
+      desertion: input.desertions.has(member.state.id),
+      captured:
+        wasFielded &&
+        !input.desertions.has(member.state.id) &&
+        !activeIds.has(member.state.id),
+      refusalCount: input.refusals.get(member.state.id) ?? 0,
+    });
+    events.push(...folded.events);
+    if (folded.erosionTarget !== undefined) {
+      erosionTargets.push(folded.erosionTarget);
     }
-    const nextService: SquadService = {
-      ...service,
-      consecutiveNonSelections,
-    };
-    return updateMember(
-      attainedRole === undefined
-        ? member
-        : {
-            ...member,
-            attainedRole: highestAttainment(member.attainedRole, attainedRole),
-          },
-      state,
-      status,
-      availableAtMatch,
-      nextService,
-      retirementCause,
-    );
+    return folded.member;
   });
   for (const erosion of erosionTargets) {
     const { pieceId } = erosion;

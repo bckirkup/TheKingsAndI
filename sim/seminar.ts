@@ -238,6 +238,155 @@ export function standingsFor(
     );
 }
 
+async function runSeminarMatchPairing(input: {
+  readonly white: SeminarCommander;
+  readonly black: SeminarCommander;
+  readonly whiteIndex: number;
+  readonly blackIndex: number;
+  readonly cohortSize: number;
+  readonly weekSeed: number;
+  readonly seminarSeed: number;
+  readonly matchesPerWeek: number;
+  readonly matchIndex: number;
+  readonly pools: Map<string, CommanderPool>;
+  readonly weekRecords: Map<string, MatchRecord[]>;
+  readonly weekFieldedLineups: Map<string, string[][]>;
+  readonly allRecords: Map<string, MatchRecord[]>;
+  readonly engine: EnginePort;
+}): Promise<number> {
+  let matchIndex = input.matchIndex;
+  for (let match = 1; match <= input.matchesPerWeek; match += 1) {
+    matchIndex += 1;
+    const whitePool = input.pools.get(input.white.id);
+    const blackPool = input.pools.get(input.black.id);
+    if (whitePool === undefined || blackPool === undefined) {
+      throw new Error('Seminar pool references an unknown commander.');
+    }
+    const whiteFielded = fieldPool(whitePool, matchIndex);
+    const blackFielded = fieldPool(blackPool, matchIndex);
+    const matchSeed = matchSeedForWorldPairing(
+      input.weekSeed,
+      pairingIndex(input.whiteIndex, input.blackIndex, input.cohortSize),
+      match,
+    );
+    const result = await runMatch({
+      seed: matchSeed,
+      leader: input.white.style,
+      opponent: input.black.style,
+      matchIndex,
+      campaignMatch: matchIndex,
+      roster: whiteFielded.lineup.map((member) => member.state),
+      initialLineup: whiteFielded.lineup.map((member) => member.state),
+      enemyRoster: blackFielded.lineup.map((member) => member.state),
+      initialEnemyLineup: blackFielded.lineup.map((member) => member.state),
+      engine: input.engine,
+    });
+    const folded = foldMatchIntoPools({
+      white: whitePool,
+      black: blackPool,
+      whiteFielded,
+      blackFielded,
+      result,
+      match: matchIndex,
+    });
+    input.pools.set(input.white.id, folded.white);
+    input.pools.set(input.black.id, folded.black);
+    const whiteRecord = recordForSide({
+      commander: input.white,
+      rosterEndPool: folded.white,
+      fielded: whiteFielded,
+      result,
+      matchIndex,
+      matchSeed,
+      campaignId: `seminar:${input.seminarSeed}:${input.white.id}`,
+      actId: `semester:${input.seminarSeed}`,
+    });
+    const blackRecord = recordForSide({
+      commander: input.black,
+      rosterEndPool: folded.black,
+      fielded: blackFielded,
+      result,
+      matchIndex,
+      matchSeed,
+      campaignId: `seminar:${input.seminarSeed}:${input.black.id}`,
+      actId: `semester:${input.seminarSeed}`,
+    });
+    input.weekRecords.get(input.white.id)?.push(whiteRecord);
+    input.weekRecords.get(input.black.id)?.push(blackRecord);
+    input.weekFieldedLineups
+      .get(input.white.id)
+      ?.push(whiteFielded.lineup.map((member) => member.state.id));
+    input.weekFieldedLineups
+      .get(input.black.id)
+      ?.push(blackFielded.lineup.map((member) => member.state.id));
+    input.allRecords.get(input.white.id)?.push(whiteRecord);
+    input.allRecords.get(input.black.id)?.push(blackRecord);
+  }
+  return matchIndex;
+}
+
+function buildSeminarWeekResult(input: {
+  readonly week: number;
+  readonly weekSeed: number;
+  readonly commanders: readonly SeminarCommander[];
+  readonly weekRecords: ReadonlyMap<string, MatchRecord[]>;
+  readonly weekFieldedLineups: ReadonlyMap<string, string[][]>;
+  readonly allRecords: ReadonlyMap<string, MatchRecord[]>;
+  readonly pools: ReadonlyMap<string, CommanderPool>;
+  readonly config: SeminarConfig;
+}): SeminarWeekResult {
+  const records = Object.fromEntries(
+    input.commanders.map((commander) => [
+      commander.id,
+      input.weekRecords.get(commander.id) ?? [],
+    ]),
+  );
+  const recordDigests = Object.fromEntries(
+    input.commanders.map((commander) => [
+      commander.id,
+      (records[commander.id] ?? []).map((record) => digest(record)),
+    ]),
+  );
+  const fieldedLineups = Object.fromEntries(
+    input.commanders.map((commander) => [
+      commander.id,
+      input.weekFieldedLineups.get(commander.id) ?? [],
+    ]),
+  );
+  const registerDeltas = Object.fromEntries(
+    input.commanders.map((commander) => [
+      commander.id,
+      registerForSide(records[commander.id] ?? [], commander.side),
+    ]),
+  );
+  const commendations = Object.fromEntries(
+    input.commanders.map((commander) => [
+      commander.id,
+      foldPlayerCommendations(records[commander.id] ?? []),
+    ]),
+  );
+  return {
+    week: input.week,
+    seed: input.weekSeed,
+    records,
+    recordDigests,
+    fieldedLineups,
+    registerDeltas,
+    commendations,
+    standings: standingsFor(
+      input.commanders,
+      new Map(
+        input.commanders.map((commander) => [
+          commander.id,
+          input.allRecords.get(commander.id) ?? [],
+        ]),
+      ),
+      input.config,
+    ),
+    poolStates: Object.fromEntries(input.pools.entries()),
+  };
+}
+
 export async function runSeminar(options: {
   readonly seed: number;
   readonly config?: SeminarConfig;
@@ -304,131 +453,36 @@ export async function runSeminar(options: {
           if (white === undefined || black === undefined) {
             throw new Error('Seminar pairing references an unknown commander.');
           }
-          for (let match = 1; match <= config.MATCHES_PER_WEEK; match += 1) {
-            matchIndex += 1;
-            const whitePool = pools.get(white.id);
-            const blackPool = pools.get(black.id);
-            if (whitePool === undefined || blackPool === undefined) {
-              throw new Error('Seminar pool references an unknown commander.');
-            }
-            const whiteFielded = fieldPool(whitePool, matchIndex);
-            const blackFielded = fieldPool(blackPool, matchIndex);
-            const matchSeed = matchSeedForWorldPairing(
-              weekSeed,
-              pairingIndex(
-                whiteIndex,
-                blackIndex,
-                config.COMMANDERS_PER_COHORT,
-              ),
-              match,
-            );
-            const result = await runMatch({
-              seed: matchSeed,
-              leader: white.style,
-              opponent: black.style,
-              matchIndex,
-              campaignMatch: matchIndex,
-              roster: whiteFielded.lineup.map((member) => member.state),
-              initialLineup: whiteFielded.lineup.map((member) => member.state),
-              enemyRoster: blackFielded.lineup.map((member) => member.state),
-              initialEnemyLineup: blackFielded.lineup.map(
-                (member) => member.state,
-              ),
-              engine,
-            });
-            const folded = foldMatchIntoPools({
-              white: whitePool,
-              black: blackPool,
-              whiteFielded,
-              blackFielded,
-              result,
-              match: matchIndex,
-            });
-            pools.set(white.id, folded.white);
-            pools.set(black.id, folded.black);
-            const whiteRecord = recordForSide({
-              commander: white,
-              rosterEndPool: folded.white,
-              fielded: whiteFielded,
-              result,
-              matchIndex,
-              matchSeed,
-              campaignId: `seminar:${options.seed}:${white.id}`,
-              actId: `semester:${options.seed}`,
-            });
-            const blackRecord = recordForSide({
-              commander: black,
-              rosterEndPool: folded.black,
-              fielded: blackFielded,
-              result,
-              matchIndex,
-              matchSeed,
-              campaignId: `seminar:${options.seed}:${black.id}`,
-              actId: `semester:${options.seed}`,
-            });
-            weekRecords.get(white.id)?.push(whiteRecord);
-            weekRecords.get(black.id)?.push(blackRecord);
-            weekFieldedLineups
-              .get(white.id)
-              ?.push(whiteFielded.lineup.map((member) => member.state.id));
-            weekFieldedLineups
-              .get(black.id)
-              ?.push(blackFielded.lineup.map((member) => member.state.id));
-            allRecords.get(white.id)?.push(whiteRecord);
-            allRecords.get(black.id)?.push(blackRecord);
-          }
+          matchIndex = await runSeminarMatchPairing({
+            white,
+            black,
+            whiteIndex,
+            blackIndex,
+            cohortSize: config.COMMANDERS_PER_COHORT,
+            weekSeed,
+            seminarSeed: options.seed,
+            matchesPerWeek: config.MATCHES_PER_WEEK,
+            matchIndex,
+            pools,
+            weekRecords,
+            weekFieldedLineups,
+            allRecords,
+            engine,
+          });
         }
       }
-      const records = Object.fromEntries(
-        commanders.map((commander) => [
-          commander.id,
-          weekRecords.get(commander.id) ?? [],
-        ]),
-      );
-      const recordDigests = Object.fromEntries(
-        commanders.map((commander) => [
-          commander.id,
-          (records[commander.id] ?? []).map((record) => digest(record)),
-        ]),
-      );
-      const fieldedLineups = Object.fromEntries(
-        commanders.map((commander) => [
-          commander.id,
-          weekFieldedLineups.get(commander.id) ?? [],
-        ]),
-      );
-      const registerDeltas = Object.fromEntries(
-        commanders.map((commander) => [
-          commander.id,
-          registerForSide(records[commander.id] ?? [], commander.side),
-        ]),
-      );
-      const commendations = Object.fromEntries(
-        commanders.map((commander) => [
-          commander.id,
-          foldPlayerCommendations(records[commander.id] ?? []),
-        ]),
-      );
-      weeks.push({
-        week,
-        seed: weekSeed,
-        records,
-        recordDigests,
-        fieldedLineups,
-        registerDeltas,
-        commendations,
-        standings: standingsFor(
+      weeks.push(
+        buildSeminarWeekResult({
+          week,
+          weekSeed,
           commanders,
-          new Map(
-            commanders.map((commander) => [
-              commander.id,
-              allRecords.get(commander.id) ?? [],
-            ]),
-          ),
+          weekRecords,
+          weekFieldedLineups,
+          allRecords,
+          pools,
           config,
-        ),
-        poolStates: Object.fromEntries(pools.entries()),
-      });
+        }),
+      );
     }
   } finally {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');

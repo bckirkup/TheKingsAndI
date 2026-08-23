@@ -625,40 +625,10 @@ export class MatchSession {
       return;
     }
     if (this.board.turn() === this.playerSide) {
-      const san = chooseKingCommandMove(this.board, this.random);
-      if (san === undefined) {
+      if (!this.applyKingCommandPly()) {
         this.phase = 'game_over';
         return;
       }
-      const applied = this.board.applySan(san);
-      this.lastMove = [applied.from, applied.to];
-      this.events.push({
-        t: 'MOVE',
-        ply: this.ply,
-        san,
-        pieceId: applied.moverId,
-        verdict: 'COMPLIANT_EXECUTION',
-        orderQualityCp: 40,
-      });
-      if (applied.capture !== undefined) {
-        this.events.push({
-          t: 'CAPTURE',
-          ply: this.ply,
-          victim: applied.capture.pieceId,
-          by: applied.moverId,
-        });
-      }
-      if (applied.promotion !== undefined) {
-        const promotion = applyPromotion(
-          this.roster,
-          applied.promotion,
-          this.ply,
-        );
-        this.roster = promotion.roster;
-        this.events.push(promotion.event);
-      }
-      this.roster = syncRoster(this.board, this.roster, this.playerSide);
-      this.ply += 1;
     } else {
       await this.runOpponentTurn();
     }
@@ -705,40 +675,10 @@ export class MatchSession {
       !this.rout
     ) {
       if (this.board.turn() === this.playerSide) {
-        const san = chooseKingCommandMove(this.board, this.random);
-        if (san === undefined) {
+        if (!this.applyKingCommandPly()) {
           this.phase = 'game_over';
           return;
         }
-        const applied = this.board.applySan(san);
-        this.lastMove = [applied.from, applied.to];
-        this.events.push({
-          t: 'MOVE',
-          ply: this.ply,
-          san,
-          pieceId: applied.moverId,
-          verdict: 'COMPLIANT_EXECUTION',
-          orderQualityCp: 40,
-        });
-        if (applied.capture !== undefined) {
-          this.events.push({
-            t: 'CAPTURE',
-            ply: this.ply,
-            victim: applied.capture.pieceId,
-            by: applied.moverId,
-          });
-        }
-        if (applied.promotion !== undefined) {
-          const promotion = applyPromotion(
-            this.roster,
-            applied.promotion,
-            this.ply,
-          );
-          this.roster = promotion.roster;
-          this.events.push(promotion.event);
-        }
-        this.roster = syncRoster(this.board, this.roster, this.playerSide);
-        this.ply += 1;
       } else {
         await this.runOpponentTurn();
       }
@@ -746,6 +686,44 @@ export class MatchSession {
         this.phase = 'game_over';
       }
     }
+  }
+
+  /** Applies one King-command ply during succession spectate. */
+  private applyKingCommandPly(): boolean {
+    const san = chooseKingCommandMove(this.board, this.random);
+    if (san === undefined) {
+      return false;
+    }
+    const applied = this.board.applySan(san);
+    this.lastMove = [applied.from, applied.to];
+    this.events.push({
+      t: 'MOVE',
+      ply: this.ply,
+      san,
+      pieceId: applied.moverId,
+      verdict: 'COMPLIANT_EXECUTION',
+      orderQualityCp: 40,
+    });
+    if (applied.capture !== undefined) {
+      this.events.push({
+        t: 'CAPTURE',
+        ply: this.ply,
+        victim: applied.capture.pieceId,
+        by: applied.moverId,
+      });
+    }
+    if (applied.promotion !== undefined) {
+      const promotion = applyPromotion(
+        this.roster,
+        applied.promotion,
+        this.ply,
+      );
+      this.roster = promotion.roster;
+      this.events.push(promotion.event);
+    }
+    this.roster = syncRoster(this.board, this.roster, this.playerSide);
+    this.ply += 1;
+    return true;
   }
 
   private commitPlayerMove(

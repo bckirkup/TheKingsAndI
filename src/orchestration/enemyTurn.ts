@@ -133,6 +133,231 @@ export function finishUntrackedMove(
   };
 }
 
+function enemyMoralRefusalTurn(input: {
+  readonly enemyRoster: PieceState[];
+  readonly actor: PieceState;
+  readonly outcome: ReturnType<typeof evaluateMoveResponse>;
+  readonly moveEval: CandidateMoveEvaluation;
+  readonly orderQualityCp: number;
+  readonly ply: number;
+  readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
+  readonly audit: EngineAuditEntry;
+}): EnemyTurnResult {
+  const events: MatchEvent[] = [
+    {
+      t: 'REFUSAL',
+      ply: input.ply,
+      pieceId: input.actor.id,
+      utility: input.outcome.utilityScore,
+      threshold: input.outcome.refusalThreshold,
+      perceivedValue: input.outcome.perceivedValue,
+    },
+  ];
+  const heeded = applyHeededAbilityGrade(
+    input.enemyRoster,
+    input.actor.id,
+    input.moveEval.deltaV_board < 0 && input.orderQualityCp < 0,
+    input.ply,
+  );
+  return {
+    enemyRoster: heeded.roster,
+    departedRoster: [],
+    dreadExposureByPiece: input.dreadExposureByPiece ?? {},
+    events: [...events, ...heeded.events],
+    engineAudit: [input.audit],
+    ply: input.ply,
+    enemyRout: false,
+    lastMove: null,
+    observableBehaviours: ['refusal'],
+  };
+}
+
+function enemyDesertionTurn(input: {
+  readonly board: LivingBoard;
+  readonly enemyRoster: PieceState[];
+  readonly enemySide: Side;
+  readonly actor: PieceState;
+  readonly san: string;
+  readonly moveEval: CandidateMoveEvaluation;
+  readonly desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>;
+  readonly desertionDecision: ReturnType<typeof shouldDesert>;
+  readonly ply: number;
+  readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
+  readonly audit: EngineAuditEntry;
+}): EnemyTurnResult {
+  const cascade = applyDesertionWithCascade(
+    input.enemyRoster,
+    {
+      actor: input.actor,
+      refusedMove: input.san,
+      refusedMoveEval: input.moveEval,
+      moveEvalByPiece: {
+        ...input.desertionMoveEvals,
+        [input.actor.id]: input.moveEval,
+      },
+      uStay: input.desertionDecision.uStay,
+      uDesert: input.desertionDecision.uDesert,
+      terms: input.desertionDecision.terms,
+    },
+    input.ply,
+  );
+  const events: MatchEvent[] = [...cascade.events];
+  const behaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  for (const event of cascade.events) {
+    if (event.t === 'DESERTION') {
+      input.board.withdrawPiece(event.pieceId);
+      behaviours.push('desertion');
+    }
+  }
+  const exposure = kingExposureAfterWithdrawals(input.board, input.enemySide);
+  if (exposure !== undefined) {
+    events.push({
+      t: 'KING_EXPOSED_TURN_CEDED',
+      ply: input.ply,
+      exposedKingId: exposure.kingId,
+      attackerSide: exposure.attackerSide,
+    });
+    input.board.cedeTurn();
+  }
+  return {
+    enemyRoster: syncSideRoster(
+      input.board,
+      cascade.roster,
+      input.enemySide,
+    ),
+    departedRoster: cascade.departed,
+    dreadExposureByPiece: input.dreadExposureByPiece ?? {},
+    events,
+    engineAudit: [input.audit],
+    ply: input.ply + 1,
+    enemyRout: cascade.rout,
+    lastMove: null,
+    observableBehaviours: behaviours,
+  };
+}
+
+function enemyCompliantTurn(input: {
+  readonly board: LivingBoard;
+  readonly enemyRoster: PieceState[];
+  readonly enemySide: Side;
+  readonly actor: PieceState;
+  readonly san: string;
+  readonly moveEval: CandidateMoveEvaluation;
+  readonly desertionMoveEvals: Readonly<Record<string, CandidateMoveEvaluation>>;
+  readonly outcome: ReturnType<typeof evaluateMoveResponse>;
+  readonly ply: number;
+  readonly overrideRefusals: boolean;
+  readonly objectivelyGood: boolean;
+  readonly orderQualityCp: number;
+  readonly bestAuditScore: number;
+  readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
+  readonly audit: EngineAuditEntry;
+}): EnemyTurnResult {
+  const {
+    board,
+    enemySide,
+    actor,
+    san,
+    moveEval,
+    desertionMoveEvals,
+    outcome,
+    ply,
+    overrideRefusals,
+    objectivelyGood,
+    orderQualityCp,
+    bestAuditScore,
+  } = input;
+  let enemyRoster = input.enemyRoster;
+  const events: MatchEvent[] = [];
+  const behaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
+  const applied = board.applySan(san);
+  events.push({
+    t: 'MOVE',
+    ply,
+    san,
+    pieceId: actor.id,
+    verdict: outcome.verdict,
+    orderQualityCp,
+  });
+  if (applied.promotion !== undefined) {
+    const promotion = applyPromotion(enemyRoster, applied.promotion, ply);
+    enemyRoster = promotion.roster;
+    events.push(promotion.event);
+  }
+  if (applied.capture !== undefined) {
+    events.push({
+      t: 'CAPTURE',
+      ply,
+      victim: applied.capture.pieceId,
+      by: applied.moverId,
+    });
+  }
+  behaviours.push('move');
+  if (outcome.verdict === 'QUIET_QUITTING') behaviours.push('quiet_quit');
+  if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+    behaviours.push('fatalistic');
+  }
+  const abilityObservations = applyRosterAbilityObservations(
+    enemyRoster,
+    desertionMoveEvals,
+    orderQualityCp,
+    bestAuditScore,
+    bestAuditScore,
+    ply,
+    actor.id,
+    overrideRefusals,
+    moveEval.deltaV_board >= 0,
+    { [actor.id]: ply % 3 },
+  );
+  events.push(...abilityObservations.events);
+  enemyRoster = abilityObservations.roster.map((piece) =>
+    piece.id === actor.id
+      ? applyPostMoveCredence(
+          { ...piece, engagementFactor: outcome.engagementFactor },
+          moveEval,
+          objectivelyGood,
+        )
+      : piece,
+  );
+  if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
+    const fatalistic = applyFatalisticComplianceCosts(
+      enemyRoster,
+      actor.id,
+      ply,
+    );
+    enemyRoster = fatalistic.roster;
+    events.push(...fatalistic.events);
+  }
+  const trauma = applyMoveTrauma(
+    enemyRoster,
+    input.dreadExposureByPiece ?? {},
+    Object.fromEntries(
+      Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
+        id,
+        evaluation.P_captured,
+      ]),
+    ),
+    applied.capture?.pieceId,
+    ply,
+  );
+  enemyRoster = trauma.roster;
+  events.push(...trauma.events);
+  return {
+    enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
+    departedRoster: [],
+    dreadExposureByPiece: trauma.exposure,
+    ...(applied.capture === undefined
+      ? {}
+      : { capturedPieceId: applied.capture.pieceId }),
+    events,
+    engineAudit: [input.audit],
+    ply: ply + 1,
+    enemyRout: false,
+    lastMove: [applied.from, applied.to],
+    observableBehaviours: behaviours,
+  };
+}
+
 function applyTrackedEnemyDecision(input: {
   readonly board: LivingBoard;
   readonly enemyRoster: PieceState[];
@@ -165,9 +390,6 @@ function applyTrackedEnemyDecision(input: {
     bestAuditScore = orderQualityCp,
     preMoveAuditScore = bestAuditScore,
   } = input;
-  let enemyRoster = input.enemyRoster;
-  const events: MatchEvent[] = [];
-  const behaviours: EnemyTurnResult['observableBehaviours'][number][] = [];
   const audit = engineAuditEntry({
     ply,
     pieceId: actor.id,
@@ -179,12 +401,12 @@ function applyTrackedEnemyDecision(input: {
     scoreDepth: 8,
     bestScoreDepth: SHARED_SEARCH_D_MAX,
   });
-  const desertionContext = desertionContextFor(actor, moveEval, enemyRoster);
-  const desertionDecision = shouldDesert(actor, desertionContext, enemyRoster);
+  const desertionContext = desertionContextFor(actor, moveEval, input.enemyRoster);
+  const desertionDecision = shouldDesert(actor, desertionContext, input.enemyRoster);
   let outcome = evaluateMoveResponse(
     actor,
     moveEval,
-    enemyRoster,
+    input.enemyRoster,
     desertionContext,
   );
 
@@ -192,170 +414,52 @@ function applyTrackedEnemyDecision(input: {
     if (overrideRefusals) {
       outcome = { ...outcome, verdict: 'COMPLIANT_EXECUTION' };
     } else {
-      events.push({
-        t: 'REFUSAL',
+      return enemyMoralRefusalTurn({
+        enemyRoster: input.enemyRoster,
+        actor,
+        outcome,
+        moveEval,
+        orderQualityCp,
         ply,
-        pieceId: actor.id,
-        utility: outcome.utilityScore,
-        threshold: outcome.refusalThreshold,
-        perceivedValue: outcome.perceivedValue,
+        dreadExposureByPiece: input.dreadExposureByPiece,
+        audit,
       });
-      const heeded = applyHeededAbilityGrade(
-        enemyRoster,
-        actor.id,
-        moveEval.deltaV_board < 0 && orderQualityCp < 0,
-        ply,
-      );
-      return {
-        enemyRoster: heeded.roster,
-        departedRoster: [],
-        dreadExposureByPiece: input.dreadExposureByPiece ?? {},
-        events: [...events, ...heeded.events],
-        engineAudit: [audit],
-        ply,
-        enemyRout: false,
-        lastMove: null,
-        observableBehaviours: ['refusal'],
-      };
     }
   }
 
   if (outcome.verdict === 'DESERTION_MUTINY') {
-    const cascade = applyDesertionWithCascade(
-      enemyRoster,
-      {
-        actor,
-        refusedMove: san,
-        refusedMoveEval: moveEval,
-        moveEvalByPiece: {
-          ...desertionMoveEvals,
-          [actor.id]: moveEval,
-        },
-        uStay: desertionDecision.uStay,
-        uDesert: desertionDecision.uDesert,
-        terms: desertionDecision.terms,
-      },
+    return enemyDesertionTurn({
+      board,
+      enemyRoster: input.enemyRoster,
+      enemySide,
+      actor,
+      san,
+      moveEval,
+      desertionMoveEvals,
+      desertionDecision,
       ply,
-    );
-    events.push(...cascade.events);
-    for (const event of cascade.events) {
-      if (event.t === 'DESERTION') {
-        board.withdrawPiece(event.pieceId);
-        behaviours.push('desertion');
-      }
-    }
-    const exposure = kingExposureAfterWithdrawals(board, enemySide);
-    if (exposure !== undefined) {
-      events.push({
-        t: 'KING_EXPOSED_TURN_CEDED',
-        ply,
-        exposedKingId: exposure.kingId,
-        attackerSide: exposure.attackerSide,
-      });
-      board.cedeTurn();
-    }
-    return {
-      enemyRoster: syncSideRoster(board, cascade.roster, enemySide),
-      departedRoster: cascade.departed,
-      dreadExposureByPiece: input.dreadExposureByPiece ?? {},
-      events,
-      engineAudit: [audit],
-      ply: ply + 1,
-      enemyRout: cascade.rout,
-      lastMove: null,
-      observableBehaviours: behaviours,
-    };
-  }
-
-  const applied = board.applySan(san);
-  events.push({
-    t: 'MOVE',
-    ply,
-    san,
-    pieceId: actor.id,
-    verdict: outcome.verdict,
-    orderQualityCp,
-  });
-  if (applied.promotion !== undefined) {
-    const promotion = applyPromotion(enemyRoster, applied.promotion, ply);
-    enemyRoster = promotion.roster;
-    events.push(promotion.event);
-  }
-  if (applied.capture !== undefined) {
-    events.push({
-      t: 'CAPTURE',
-      ply,
-      victim: applied.capture.pieceId,
-      by: applied.moverId,
+      dreadExposureByPiece: input.dreadExposureByPiece,
+      audit,
     });
   }
-  behaviours.push('move');
-  if (outcome.verdict === 'QUIET_QUITTING') behaviours.push('quiet_quit');
-  if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
-    behaviours.push('fatalistic');
-  }
 
-  const abilityObservations = applyRosterAbilityObservations(
-    enemyRoster,
+  return enemyCompliantTurn({
+    board,
+    enemyRoster: input.enemyRoster,
+    enemySide,
+    actor,
+    san,
+    moveEval,
     desertionMoveEvals,
+    outcome,
+    ply,
+    overrideRefusals,
+    objectivelyGood,
     orderQualityCp,
     bestAuditScore,
-    bestAuditScore,
-    ply,
-    actor.id,
-    overrideRefusals,
-    moveEval.deltaV_board >= 0,
-    { [actor.id]: ply % 3 },
-  );
-  events.push(...abilityObservations.events);
-  enemyRoster = abilityObservations.roster.map((piece) =>
-    piece.id === actor.id
-      ? applyPostMoveCredence(
-          { ...piece, engagementFactor: outcome.engagementFactor },
-          moveEval,
-          objectivelyGood,
-        )
-      : piece,
-  );
-
-  if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
-    const fatalistic = applyFatalisticComplianceCosts(
-      enemyRoster,
-      actor.id,
-      ply,
-    );
-    enemyRoster = fatalistic.roster;
-    events.push(...fatalistic.events);
-  }
-  const trauma = applyMoveTrauma(
-    enemyRoster,
-    input.dreadExposureByPiece ?? {},
-    Object.fromEntries(
-      Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
-        id,
-        evaluation.P_captured,
-      ]),
-    ),
-    applied.capture?.pieceId,
-    ply,
-  );
-  enemyRoster = trauma.roster;
-  events.push(...trauma.events);
-
-  return {
-    enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
-    departedRoster: [],
-    dreadExposureByPiece: trauma.exposure,
-    ...(applied.capture === undefined
-      ? {}
-      : { capturedPieceId: applied.capture.pieceId }),
-    events,
-    engineAudit: [audit],
-    ply: ply + 1,
-    enemyRout: false,
-    lastMove: [applied.from, applied.to],
-    observableBehaviours: behaviours,
-  };
+    dreadExposureByPiece: input.dreadExposureByPiece,
+    audit,
+  });
 }
 
 function mergeRefusalHistory(
