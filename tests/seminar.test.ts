@@ -14,8 +14,16 @@ import {
   standingsFor,
 } from '../sim/seminar';
 import { SEMINAR_CONFIG } from '../sim/seminarConfig';
-import { createSeminarMarkets, runSeminarDraft } from '../sim/seminarDraft';
-import { createCommanderPool, type CommanderPool } from '../sim/pool';
+import {
+  createSeminarMarkets,
+  publicLotBasePrice,
+  runSeminarDraft,
+} from '../sim/seminarDraft';
+import {
+  createCommanderPool,
+  poolSeasonMetrics,
+  type CommanderPool,
+} from '../sim/pool';
 import {
   dispositionForIdentitySeed,
   identityCreationSeed,
@@ -162,6 +170,41 @@ describe('seminar spine', () => {
     );
   });
 
+  it('keeps drafted members distinct in pool metrics', () => {
+    const pool = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'servant',
+      careerSeed: 41,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'servant',
+      careerSeed: 42,
+    });
+    const market = createSeminarMarkets(
+      41,
+      new Map([
+        [pool.id, pool],
+        [black.id, black],
+      ]),
+    ).get('w');
+    const drafted = market?.members[0];
+    if (drafted === undefined) throw new Error('Missing market candidate.');
+    const withDraft = {
+      ...pool,
+      members: [...pool.members, drafted],
+    };
+    const metrics = poolSeasonMetrics({
+      initialPool: withDraft,
+      finalPool: withDraft,
+      lineups: [[drafted.state.id]],
+      promotionMatches: new Map(),
+    });
+    expect(metrics.draftedMembers).toBe(1);
+  });
+
   it('keeps cycle-one drafting opt-in and wires seminar counsel controls', async () => {
     const base = {
       seed: 37,
@@ -190,6 +233,118 @@ describe('seminar spine', () => {
     expect(noConsultations.counselCorrelationPairs.length).toBeLessThanOrEqual(
       enabled.counselCorrelationPairs.length,
     );
+  });
+
+  it('treats unavailable members as absent only in the strict demand branch', () => {
+    const white = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'servant',
+      careerSeed: 51,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'servant',
+      careerSeed: 52,
+    });
+    const unavailableWhite = {
+      ...white,
+      members: white.members.map((member) =>
+        member.originRole === 'Queen'
+          ? { ...member, status: 'recovering' as const }
+          : member,
+      ),
+    };
+    const pools = new Map<string, CommanderPool>([
+      [unavailableWhite.id, unavailableWhite],
+      [black.id, black],
+    ]);
+    const markets = createSeminarMarkets(51, pools);
+    const base = {
+      cycle: 2,
+      seed: 51,
+      commanders: [
+        { id: white.id, side: 'w' as const, style: 'servant' as const },
+        { id: black.id, side: 'b' as const, style: 'servant' as const },
+      ],
+      pools,
+      markets,
+      standings: [
+        { commanderId: white.id, standing: 0, cohortExternality: 0 },
+        { commanderId: black.id, standing: 0, cohortExternality: 0 },
+      ],
+      registers: new Map(),
+      previousPurses: new Map(),
+      firstMatch: 1,
+      config: {
+        ...SEMINAR_CONFIG,
+        DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+      },
+    };
+    const strict = runSeminarDraft(base);
+    const countUnavailable = runSeminarDraft({
+      ...base,
+      config: { ...base.config, DRAFT_COUNT_UNAVAILABLE_AS_PRESENT: true },
+    });
+    expect(strict.observation.clearingPrices.length).toBeGreaterThan(0);
+    expect(countUnavailable.observation.clearingPrices).toHaveLength(0);
+  });
+
+  it('keeps a candidate unfilled when the winning commander underbids her price', () => {
+    const white = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'tyrannical',
+      careerSeed: 61,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'tyrannical',
+      careerSeed: 62,
+    });
+    const whiteWithoutQueen = {
+      ...white,
+      members: white.members.filter((member) => member.originRole !== 'Queen'),
+    };
+    const pools = new Map<string, CommanderPool>([
+      [white.id, whiteWithoutQueen],
+      [black.id, black],
+    ]);
+    const market = createSeminarMarkets(61, pools);
+    const queen = market
+      .get('w')
+      ?.members.find((member) => member.originRole === 'Queen');
+    if (queen === undefined) throw new Error('Missing queen candidate.');
+    const result = runSeminarDraft({
+      cycle: 2,
+      seed: 61,
+      commanders: [
+        { id: white.id, side: 'w', style: 'tyrannical' },
+        { id: black.id, side: 'b', style: 'tyrannical' },
+      ],
+      pools,
+      markets: new Map([
+        ['w', { side: 'w', members: [queen] }],
+        ['b', { side: 'b', members: [] }],
+      ]),
+      standings: [
+        { commanderId: white.id, standing: 0, cohortExternality: 0 },
+        { commanderId: black.id, standing: 0, cohortExternality: 0 },
+      ],
+      registers: new Map(),
+      previousPurses: new Map(),
+      config: {
+        ...SEMINAR_CONFIG,
+        DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+        DRAFT_LOT_BASE_PRICE: 1,
+        DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 1000,
+      },
+    });
+    expect(result.observation.declinedLots).toBe(1);
+    expect(result.observation.clearedLots).toBe(0);
+    expect(result.markets.get('w')?.members).toHaveLength(1);
   });
 
   it('wires counsel budget and willingness weight into draft decisions', () => {
@@ -244,6 +399,44 @@ describe('seminar spine', () => {
     expect(markets.get('b')?.members.length).toBe(
       initialWhiteMarket.members.length,
     );
+    const deeper = createSeminarMarkets(7, pools, {
+      ...SEMINAR_CONFIG,
+      DRAFT_MARKET_DEPTH_PER_SIDE: 20,
+    });
+    expect(deeper.get('w')?.members.length).toBeGreaterThan(
+      initialWhiteMarket.members.length,
+    );
+    const trusted = createSeminarMarkets(7, pools, {
+      ...SEMINAR_CONFIG,
+      DRAFT_MARKET_INITIAL_TRUST: 80,
+    });
+    const trustedQueen = trusted
+      .get('w')
+      ?.members.find((member) => member.originRole === 'Queen');
+    expect(trustedQueen?.state.T_i).toBe(80);
+    if (marketQueen === undefined) throw new Error('Missing queen.');
+    expect(
+      publicLotBasePrice(marketQueen, {
+        ...SEMINAR_CONFIG,
+        DRAFT_LOT_BASE_PRICE: 7,
+      }),
+    ).not.toBe(publicLotBasePrice(marketQueen, SEMINAR_CONFIG));
+    expect(
+      publicLotBasePrice(marketQueen, {
+        ...SEMINAR_CONFIG,
+        DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 1000,
+      }),
+    ).not.toBe(publicLotBasePrice(marketQueen, SEMINAR_CONFIG));
+    const experienced = {
+      ...marketQueen,
+      service: { ...marketQueen.service, captures: 10 },
+    };
+    expect(
+      publicLotBasePrice(experienced, {
+        ...SEMINAR_CONFIG,
+        DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 100,
+      }),
+    ).not.toBe(publicLotBasePrice(experienced, SEMINAR_CONFIG));
     const draftMarkets = new Map(markets);
     draftMarkets.set('w', {
       side: 'w',
@@ -279,6 +472,7 @@ describe('seminar spine', () => {
       config: {
         ...SEMINAR_CONFIG,
         DRAFT_CONSULTATIONS_PER_CYCLE: 4,
+        DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 0,
       },
     };
     const noCounsel = runSeminarDraft({
@@ -301,6 +495,10 @@ describe('seminar spine', () => {
         noCounsel.willingnessByCommander.get(commander.id) ?? {},
       )[0],
     ).toBe(1000);
+    expect(noCounsel.counselSelections.length).toBeGreaterThan(0);
+    expect(
+      noCounsel.counselSelections.some((selection) => selection.counsel !== 0),
+    ).toBe(true);
     expect(noBudget.willingnessByCommander.get(commander.id)).toEqual({});
     expect(counsel.markets.get('w')?.members.length ?? 0).toBeLessThan(
       initialWhiteMarket?.members.length ?? 0,

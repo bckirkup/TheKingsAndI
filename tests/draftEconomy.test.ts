@@ -29,6 +29,8 @@ const economyObservations = (
     {
       cycle: 1,
       contestedLots: 2,
+      clearedLots: 2,
+      declinedLots: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['a', 'b'],
       clearingPrices: [
@@ -39,6 +41,8 @@ const economyObservations = (
     {
       cycle: 2,
       contestedLots: 2,
+      clearedLots: 2,
+      declinedLots: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['b', 'a'],
       clearingPrices: [
@@ -294,6 +298,21 @@ describe('draft economy', () => {
     );
     expect(unfilled.lots[0]?.winnerId).toBeUndefined();
     expect(unfilled.lots[0]?.clearingPrice).toBe(0);
+  });
+
+  it('leaves an underbid lot unfilled', () => {
+    const bidder = {
+      commanderId: 'under',
+      priorityRank: 0,
+      purse: 20,
+      style: 'cautious' as const,
+      acceptanceDiscountPermille: 0,
+      willingnessPermilleByLot: { expensive: 500 },
+    };
+    const lot = { lotId: 'expensive', basePrice: 10, minimumBid: 8 };
+    expect(bidForLot(bidder, lot).amount).toBeLessThan(lot.minimumBid);
+    const clearing = clearDraft([lot], [bidder]);
+    expect(clearing.lots[0]?.winnerId).toBeUndefined();
   });
 
   it('gives priority a configurable first-refusal margin', () => {

@@ -213,6 +213,8 @@ export function bidForLot(
   return {
     commanderId: bidder.commanderId,
     lotId: lot.lotId,
+    // Do not floor to minimumBid: an underbid must remain an underbid so the
+    // clearing rule can leave a candidate unfilled.
     amount: boundedInteger(
       Math.min(bidder.purse, Math.floor((suggested * willingness) / 1000)),
       0,

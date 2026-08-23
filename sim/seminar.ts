@@ -300,6 +300,7 @@ export async function runSeminar(options: {
   let markets: ReadonlyMap<'w' | 'b', SeminarMarket> = createSeminarMarkets(
     options.seed,
     currentPools,
+    config,
   );
   let previousPurses = new Map<string, number>();
   const allRecords = new Map<string, MatchRecord[]>(
@@ -339,6 +340,8 @@ export async function runSeminar(options: {
       let draftObservation: DraftEconomyCycleObservation = {
         cycle: week,
         contestedLots: 0,
+        clearedLots: 0,
+        declinedLots: 0,
         winsByCommander: {},
         standingOrder: draftPriority(standingsBefore).map(
           (entry) => entry.commanderId,
@@ -368,6 +371,7 @@ export async function runSeminar(options: {
           registers: registersBefore,
           previousPurses,
           config,
+          firstMatch: matchIndex + 1,
         });
         currentPools = new Map(drafted.pools);
         markets = drafted.markets;
@@ -604,13 +608,12 @@ export function seminarSummary(result: SeminarResult): string {
     `Semester ${result.seed}: ${result.weeks.length} weeks, ${result.commanders.length} commanders`,
   ];
   for (const week of result.weeks) {
-    const cleared = week.draftEconomy.clearingPrices.filter(
-      (lot) => lot.clearingPrice > 0,
-    ).length;
+    const cleared = week.draftEconomy.clearedLots;
     const unfilled = week.draftEconomy.clearingPrices.length - cleared;
     lines.push(
       `week ${week.week} draft contested=${week.draftEconomy.contestedLots} ` +
-        `cleared=${cleared} unfilled=${unfilled}`,
+        `cleared=${cleared} unfilled=${unfilled} ` +
+        `declined=${week.draftEconomy.declinedLots}`,
     );
   }
   for (const entry of result.commanders) {

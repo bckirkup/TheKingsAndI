@@ -76,7 +76,11 @@ function memberFrom(
       : { attainedRole: role(identity.attainedRole) }),
     status: statusForSquad(piece),
     availableAtMatch: 1,
-    provenance: piece.id.includes(':conscript:') ? 'conscript' : 'original',
+    provenance: piece.id.includes(':market:')
+      ? 'drafted'
+      : piece.id.includes(':conscript:')
+        ? 'conscript'
+        : 'original',
     service,
   };
 }

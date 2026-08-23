@@ -79,6 +79,8 @@ export interface PoolSeasonMetrics {
   readonly promotions: number;
   readonly promotionsWithRemainingWindow: number;
   readonly crownedSelectionRate: number;
+  /** Present only when this harness pool contains drafted members. */
+  readonly draftedMembers?: number;
 }
 
 export function poolSeasonMetrics(input: {
@@ -152,6 +154,9 @@ export function poolSeasonMetrics(input: {
       .map((member) => member.state.id),
   );
   const squadSize = input.initialPool.members.length;
+  const draftedMembers = input.initialPool.members.filter(
+    (member) => member.provenance === 'drafted',
+  ).length;
   const meanLineupChurn =
     input.lineups.length < 2
       ? 0
@@ -180,6 +185,7 @@ export function poolSeasonMetrics(input: {
     promotions,
     promotionsWithRemainingWindow,
     crownedSelectionRate: crownedSelections / Math.max(1, crownedOpportunities),
+    ...(draftedMembers === 0 ? {} : { draftedMembers }),
   };
 }
 

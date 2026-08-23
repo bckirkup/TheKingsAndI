@@ -1206,6 +1206,20 @@ clearing prices are not persisted. Open: reserve depth, whether cycle one is
 a draft, purse/carry/acceptance discount magnitudes, and detector thresholds.
 Tanking must be measurably dominated, not merely discouraged.
 
+The seminar harness now creates a finite, depleting per-side market and runs
+drafting at the head of enabled weeks. `DRAFT_MARKET_DEPTH_PER_SIDE`,
+`DRAFT_COUNT_UNAVAILABLE_AS_PRESENT`, `DRAFT_MARKET_INITIAL_TRUST`,
+`DRAFT_LOT_BASE_PRICE`, `DRAFT_LOT_ROLE_WEIGHT_PERMILLE`, and
+`DRAFT_LOT_SERVICE_WEIGHT_PERMILLE` are explicit harness configuration seeds;
+their current values are calibration starting points, not owner-settled
+magnitudes. Unavailable members are absent from demand by default, while the
+count-all branch remains available for comparison. Public lot pricing uses
+only candidate role and folded public service facts. Candidate-specific
+acceptance is checked after clearing; a winning commander may decline, leaving
+the lot unfilled, and the refusal is retained in draft telemetry. Counsel
+signals remain private: raw opinion is retained only for harness correlation,
+while the configured weight changes bidder willingness.
+
 ADR 0061 brings D154 due in step 3, the draft.
 
 ### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)

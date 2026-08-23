@@ -8,6 +8,7 @@ import {
   draftPriority,
   consultWithBudget,
   type CounselConsultation,
+  type CounselConsultationRequest,
   type CommanderStanding,
   type DraftBidder,
   type DraftLot,
@@ -27,7 +28,6 @@ import type {
 import {
   dispositionForIdentitySeed,
   identityCreationSeed,
-  poolRoleCounts,
   poolRoleCountsForReserveDepth,
   reserveDepthForConfig,
   type CredenceIdentity,
@@ -36,7 +36,7 @@ import {
 import { createFreshPieceState } from './roster';
 import type { CommanderPool } from './pool';
 import type { SeminarCommander } from './seminar';
-import type { SeminarConfig } from './seminarConfig';
+import { SEMINAR_CONFIG, type SeminarConfig } from './seminarConfig';
 
 const DRAFT_ROLES: readonly PieceRole[] = [
   'Queen',
@@ -102,6 +102,7 @@ function marketMember(
   role: PieceRole,
   index: number,
   seed: number,
+  initialTrust: number,
 ): SquadMember {
   const id = `${side}:market:${role}:${String(index).padStart(2, '0')}`;
   const identitySeed = identityCreationSeed(seed, id);
@@ -113,7 +114,7 @@ function marketMember(
   const state = createFreshPieceState(
     id,
     role,
-    50,
+    initialTrust,
     deterministicUnit((((seed % 10000) + 10000) % 10000) / 10000, index),
   );
   const disposition = identity.disposition ?? state.credence;
@@ -137,6 +138,7 @@ function marketMember(
 export function createSeminarMarkets(
   seed: number,
   pools: ReadonlyMap<string, CommanderPool>,
+  config: SeminarConfig = SEMINAR_CONFIG,
 ): ReadonlyMap<Side, SeminarMarket> {
   const markets = new Map<Side, SeminarMarket>();
   for (const side of ['w', 'b'] as const) {
@@ -144,15 +146,23 @@ export function createSeminarMarkets(
       (candidate) => candidate.side === side,
     );
     if (pool === undefined) throw new Error(`Missing ${side} commander pool.`);
-    const target = poolRoleCountsForReserveDepth(
-      reserveDepthForConfig(pool.config),
+    const marketTarget = poolRoleCountsForReserveDepth(
+      Math.max(0, Math.trunc(config.DRAFT_MARKET_DEPTH_PER_SIDE)),
     );
-    const issued = poolRoleCounts();
+    const issued = poolRoleCountsForReserveDepth(0);
     const members = DRAFT_ROLES.flatMap((role) =>
       Array.from(
-        { length: Math.max(0, (target[role] ?? 0) - (issued[role] ?? 0)) },
+        {
+          length: Math.max(0, (marketTarget[role] ?? 0) - (issued[role] ?? 0)),
+        },
         (_, index) =>
-          marketMember(side, role, index, seed ^ (side === 'w' ? 0 : 1)),
+          marketMember(
+            side,
+            role,
+            index,
+            seed ^ (side === 'w' ? 0 : 1),
+            config.DRAFT_MARKET_INITIAL_TRUST,
+          ),
       ),
     );
     markets.set(side, { side, members });
@@ -177,6 +187,8 @@ function draftStyle(style: SeminarCommander['style']): DraftBidder['style'] {
 
 function roleShortfall(
   pool: CommanderPool,
+  firstMatch: number,
+  countUnavailableAsPresent: boolean,
 ): Readonly<Record<PieceRole, number>> {
   const target = poolRoleCountsForReserveDepth(
     reserveDepthForConfig(pool.config),
@@ -185,8 +197,10 @@ function roleShortfall(
     DRAFT_ROLES.map((role) => {
       const present = pool.members.filter(
         (member) =>
-          member.status !== 'retired' &&
-          member.status !== 'fired' &&
+          (countUnavailableAsPresent
+            ? member.status !== 'retired' && member.status !== 'fired'
+            : member.status === 'available' &&
+              member.availableAtMatch <= firstMatch) &&
           isEligibleForChair(member.originRole, member.attainedRole, role),
       ).length;
       return [role, Math.max(0, (target[role] ?? 0) - present)];
@@ -194,10 +208,25 @@ function roleShortfall(
   ) as Record<PieceRole, number>;
 }
 
-function testimony(register: PublicRegister | undefined): number {
+function publicServiceValue(service: SquadMember['service']): number {
+  return service.captures - service.desertions - service.refusals;
+}
+
+export function publicLotBasePrice(
+  candidate: SquadMember,
+  config: SeminarConfig,
+): number {
+  const rolePrice =
+    (publicRoleValue(candidate.originRole) *
+      Math.trunc(config.DRAFT_LOT_ROLE_WEIGHT_PERMILLE)) /
+    1000;
+  const servicePrice =
+    (publicServiceValue(candidate.service) *
+      Math.trunc(config.DRAFT_LOT_SERVICE_WEIGHT_PERMILLE)) /
+    1000;
   return Math.max(
     0,
-    Math.min(100, 50 + (register?.wins ?? 0) * 5 - (register?.losses ?? 0) * 5),
+    Math.trunc(config.DRAFT_LOT_BASE_PRICE + rolePrice + servicePrice),
   );
 }
 
@@ -256,7 +285,9 @@ export function runSeminarDraft(options: {
   readonly registers: ReadonlyMap<string, PublicRegister>;
   readonly previousPurses: ReadonlyMap<string, number>;
   readonly config: SeminarConfig;
+  readonly firstMatch?: number;
 }): SeminarDraftResult {
+  const firstMatch = options.firstMatch ?? 1;
   const priorities = draftPriority(options.standings);
   const priorityById = new Map(
     priorities.map((entry) => [entry.commanderId, entry]),
@@ -274,7 +305,16 @@ export function runSeminarDraft(options: {
         .filter((commander) => commander.side === side)
         .map((commander) => [
           commander.id,
-          roleShortfall(options.pools.get(commander.id) as CommanderPool),
+          (() => {
+            const pool = options.pools.get(commander.id);
+            if (pool === undefined)
+              throw new Error(`Missing pool for ${commander.id}.`);
+            return roleShortfall(
+              pool,
+              firstMatch,
+              options.config.DRAFT_COUNT_UNAVAILABLE_AS_PRESENT,
+            );
+          })(),
         ]),
     );
     for (const candidate of market.members) {
@@ -290,22 +330,11 @@ export function runSeminarDraft(options: {
         ),
       );
       if (demandedRole === undefined) continue;
-      const owner = options.commanders.find(
-        (commander) => commander.side === side,
-      );
-      const ownerRegister =
-        owner === undefined ? undefined : options.registers.get(owner.id);
-      const discount = acceptanceDiscountPermille({
-        disposition: candidate.state.credence,
-        rosterTestimony: testimony(ownerRegister),
-      });
+      const basePrice = publicLotBasePrice(candidate, options.config);
       const lot: DraftLot = {
         lotId: candidate.state.id,
-        basePrice: publicRoleValue(candidate.originRole),
-        minimumBid: acceptedPrice(
-          publicRoleValue(candidate.originRole),
-          discount,
-        ),
+        basePrice,
+        minimumBid: 0,
       };
       lots.push(lot);
       candidatesByLot.set(lot.lotId, candidate);
@@ -333,12 +362,18 @@ export function runSeminarDraft(options: {
     string,
     Readonly<Record<string, number>>
   >();
+  const counselSignalsByCommander = new Map<
+    string,
+    ReadonlyMap<string, number>
+  >();
   const remainingPurses = new Map<string, number>();
   let contestedLots = 0;
+  let declinedLots = 0;
   for (const side of ['w', 'b'] as const) {
     const lots = lotsBySide.get(side) ?? [];
     const market = sideMarkets.get(side);
     if (market === undefined) continue;
+    let remainingMarket = market;
     const sideCommanders = options.commanders.filter(
       (commander) => commander.side === side,
     );
@@ -347,21 +382,32 @@ export function runSeminarDraft(options: {
       const pool = options.pools.get(commander.id);
       const priority = priorityById.get(commander.id);
       if (pool === undefined || priority === undefined) continue;
-      const requests = lots.flatMap((lot) =>
-        pool.members
-          .filter(
-            (member) =>
-              member.status !== 'retired' && member.status !== 'fired',
-          )
-          .map((member) => ({
-            holder: member.state,
-            holderOriginRole: member.originRole,
+      const holders = pool.members
+        .filter(
+          (member) => member.status !== 'retired' && member.status !== 'fired',
+        )
+        .sort((left, right) => left.state.id.localeCompare(right.state.id));
+      // Rotate lot order for each holder round so a small budget reaches
+      // multiple candidates; holders remain sorted by stable piece id.
+      const requests: CounselConsultationRequest[] = [];
+      for (let holderIndex = 0; holderIndex < holders.length; holderIndex++) {
+        for (let lotOffset = 0; lotOffset < lots.length; lotOffset++) {
+          const lot = lots[(holderIndex + lotOffset) % lots.length];
+          const holder = holders[holderIndex];
+          if (lot === undefined || holder === undefined) continue;
+          const candidate = candidatesByLot.get(lot.lotId);
+          if (candidate === undefined)
+            throw new Error(`Missing candidate for lot ${lot.lotId}.`);
+          requests.push({
+            holder: holder.state,
+            holderOriginRole: holder.originRole,
             candidate: {
               id: lot.lotId,
-              originRole: candidatesByLot.get(lot.lotId)?.originRole ?? 'Pawn',
+              originRole: candidate.originRole,
             },
-          })),
-      );
+          });
+        }
+      }
       const ledger = consultWithBudget(requests, {
         ...DRAFT_CONFIG,
         CONSULTATIONS_PER_CYCLE: options.config.DRAFT_CONSULTATIONS_PER_CYCLE,
@@ -378,6 +424,15 @@ export function runSeminarDraft(options: {
           ),
         ),
       );
+      const counselSignals = new Map(
+        ledger.consultations.map((consultation) => [
+          consultation.candidateId,
+          'opinion' in consultation.counsel
+            ? counselOpinionValue(consultation.counsel.opinion)
+            : 0,
+        ]),
+      );
+      counselSignalsByCommander.set(commander.id, counselSignals);
       willingnessByCommander.set(commander.id, willingness);
       const purse =
         priority.purse +
@@ -391,6 +446,8 @@ export function runSeminarDraft(options: {
         willingnessPermilleByLot: willingness,
       });
     }
+    // This is an observation approximation: bids are recomputed independently
+    // for each lot and do not model purse depletion across the lot sequence.
     contestedLots += lots.filter((lot) => {
       const eligible = bidders.filter(
         (bidder) => bidForLot(bidder, lot).amount >= (lot.minimumBid ?? 0),
@@ -402,17 +459,58 @@ export function runSeminarDraft(options: {
       remainingPurses.set(id, purse);
     }
     for (const cleared of clearing.lots) {
+      if (cleared.winnerId === undefined) {
+        clearingPrices.push({
+          clearingPrice: cleared.clearingPrice,
+          minimumBid: cleared.minimumBid,
+        });
+        continue;
+      }
+      const candidate = candidatesByLot.get(cleared.lotId);
+      const winnerPool = nextPools.get(cleared.winnerId);
+      if (candidate === undefined)
+        throw new Error(`Missing candidate for lot ${cleared.lotId}.`);
+      if (winnerPool === undefined)
+        throw new Error(`Missing winner pool for ${cleared.winnerId}.`);
+      const relationshipAccount =
+        candidate.credenceIdentity?.relationshipAccounts?.[cleared.winnerId];
+      const acceptanceDiscount = acceptanceDiscountPermille({
+        ...(relationshipAccount === undefined ? {} : { relationshipAccount }),
+        disposition: candidate.state.credence,
+        rosterTestimony: 50,
+      });
+      const lot = lots.find(
+        (candidateLot) => candidateLot.lotId === cleared.lotId,
+      );
+      if (lot === undefined)
+        throw new Error(`Missing lot for clearing ${cleared.lotId}.`);
+      const candidateMinimum = acceptedPrice(lot.basePrice, acceptanceDiscount);
+      if (cleared.clearingPrice < candidateMinimum) {
+        const remaining = remainingPurses.get(cleared.winnerId) ?? 0;
+        remainingPurses.set(
+          cleared.winnerId,
+          remaining + cleared.clearingPrice,
+        );
+        declinedLots += 1;
+        clearingPrices.push({
+          clearingPrice: 0,
+          minimumBid: cleared.minimumBid,
+        });
+        continue;
+      }
       clearingPrices.push({
         clearingPrice: cleared.clearingPrice,
         minimumBid: cleared.minimumBid,
       });
-      if (cleared.winnerId === undefined) continue;
-      const candidate = candidatesByLot.get(cleared.lotId);
-      const winnerPool = nextPools.get(cleared.winnerId);
-      if (candidate === undefined || winnerPool === undefined) continue;
       nextPools.set(cleared.winnerId, {
         ...winnerPool,
-        members: [...winnerPool.members, candidate],
+        members: [
+          ...winnerPool.members,
+          {
+            ...candidate,
+            availableAtMatch: firstMatch,
+          },
+        ],
       });
       winsByCommander[cleared.winnerId] =
         (winsByCommander[cleared.winnerId] ?? 0) + 1;
@@ -423,16 +521,20 @@ export function runSeminarDraft(options: {
         counselSelections.push({
           leader: cleared.winnerId,
           candidateId: candidate.state.id,
-          counsel: counsel - 1000,
+          counsel:
+            counselSignalsByCommander
+              .get(cleared.winnerId)
+              ?.get(cleared.lotId) ?? 0,
         });
       }
-      sideMarkets.set(side, {
+      remainingMarket = {
         side,
-        members: market.members.filter(
+        members: remainingMarket.members.filter(
           (member) => member.state.id !== candidate.state.id,
         ),
-      });
+      };
     }
+    sideMarkets.set(side, remainingMarket);
   }
   return {
     pools: nextPools,
@@ -440,6 +542,13 @@ export function runSeminarDraft(options: {
     observation: {
       cycle: options.cycle,
       contestedLots,
+      clearedLots: winsByCommander
+        ? Object.values(winsByCommander).reduce(
+            (total, count) => total + count,
+            0,
+          )
+        : 0,
+      declinedLots,
       winsByCommander,
       standingOrder: priorities.map((entry) => entry.commanderId),
       clearingPrices,

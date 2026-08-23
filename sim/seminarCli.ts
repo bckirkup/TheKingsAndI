@@ -74,17 +74,11 @@ async function main(): Promise<void> {
   const result = await runSeminar({
     seed: options.seed,
     config: {
+      ...SEMINAR_CONFIG,
       WEEKS_PER_SEMESTER: options.weeks,
       MATCHES_PER_WEEK: options.matches,
       COMMANDERS_PER_COHORT: options.commanders,
-      STANDING_WIN_WEIGHT: SEMINAR_CONFIG.STANDING_WIN_WEIGHT,
-      STANDING_DRAW_WEIGHT: SEMINAR_CONFIG.STANDING_DRAW_WEIGHT,
-      STANDING_LOSS_WEIGHT: SEMINAR_CONFIG.STANDING_LOSS_WEIGHT,
       DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
-      DRAFT_CONSULTATIONS_PER_CYCLE:
-        SEMINAR_CONFIG.DRAFT_CONSULTATIONS_PER_CYCLE,
-      DRAFT_COUNSEL_WILLINGNESS_WEIGHT_PERMILLE:
-        SEMINAR_CONFIG.DRAFT_COUNSEL_WILLINGNESS_WEIGHT_PERMILLE,
     },
     engineKind: options.engine,
   });
