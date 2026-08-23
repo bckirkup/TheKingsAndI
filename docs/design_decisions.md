@@ -1223,7 +1223,7 @@ are implemented in `src/persistence/candidateSlate.ts:14-110` and
 budget (`src/core/draftConfig.ts:1-50`,
 `src/orchestration/counsel.ts:1-54`) and heeded outcomes fold only into
 harness telemetry (`sim/metrics.ts:89-118`). The owner-set
-`COUNSEL_RIVALRY_PENALTY=20` is wired in `src/core/draftConfig.ts:1-50`, and rivalry
+`COUNSEL_RIVALRY_PENALTY=20` is wired in `src/core/draftConfig.ts:31`, and rivalry
 is origin-inclusive on both candidate and holder sides; opinion bands and
 disclosure cutoffs remain provisional ADR 0059 §9 search seeds. Harness
 detectors for decorative
