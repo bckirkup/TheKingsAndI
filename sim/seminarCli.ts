@@ -70,6 +70,9 @@ async function main(): Promise<void> {
       WEEKS_PER_SEMESTER: options.weeks,
       MATCHES_PER_WEEK: options.matches,
       COMMANDERS_PER_COHORT: options.commanders,
+      STANDING_WIN_WEIGHT: SEMINAR_CONFIG.STANDING_WIN_WEIGHT,
+      STANDING_DRAW_WEIGHT: SEMINAR_CONFIG.STANDING_DRAW_WEIGHT,
+      STANDING_LOSS_WEIGHT: SEMINAR_CONFIG.STANDING_LOSS_WEIGHT,
     },
     engineKind: options.engine,
   });
