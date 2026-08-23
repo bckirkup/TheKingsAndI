@@ -1,5 +1,10 @@
 import type { PieceId } from '../src/chess';
-import { ENGINE_CONFIG, type MatchEvent } from '../src/psychology';
+import {
+  counselOpinionValue,
+  ENGINE_CONFIG,
+  type CounselOpinion,
+  type MatchEvent,
+} from '../src/psychology';
 import type { HeadlessMatchResult } from '../src/orchestration';
 
 import type { Leader } from './cli';
@@ -79,6 +84,37 @@ export interface MatchMetrics {
   readonly meanAbility?: number;
   /** Number of fielded pieces with a nonzero ability grade during this match. */
   readonly abilityMovedCount?: number;
+}
+
+export interface CounselObservation {
+  readonly opinion: CounselOpinion;
+  readonly realizedContribution: number;
+  readonly heeded: boolean;
+}
+
+export interface CounselMetrics {
+  readonly consultations: number;
+  readonly heeded: number;
+  readonly heededRate: number;
+}
+
+/** Fold counsel outcomes into harness-only telemetry; nothing is persisted. */
+export function foldCounselMetrics(
+  observations: readonly CounselObservation[],
+): CounselMetrics {
+  const heeded = observations.filter(
+    (observation) => observation.heeded,
+  ).length;
+  return {
+    consultations: observations.length,
+    heeded,
+    heededRate: heeded / Math.max(1, observations.length),
+  };
+}
+
+/** Numeric counsel signal used only by the harness correlation detectors. */
+export function counselSignal(observation: CounselObservation): number {
+  return counselOpinionValue(observation.opinion);
 }
 
 export interface DesertionSummary {

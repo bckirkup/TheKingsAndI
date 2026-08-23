@@ -1,4 +1,5 @@
 import type { PieceId, Side } from '../chess';
+import { isEligibleForChair } from '../core/roleEligibility';
 import type { CredenceIdentity } from './credence';
 import type { PieceRole, PieceState } from '../psychology';
 import {
@@ -384,7 +385,7 @@ export function fieldSquad(
     const available = pool.members
       .filter(
         (member) =>
-          (member.originRole === role || member.attainedRole === role) &&
+          isEligibleForChair(member.originRole, member.attainedRole, role) &&
           availableAt(member, match) &&
           !selectedIds.has(member.state.id),
       )

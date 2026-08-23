@@ -856,6 +856,86 @@ describe('degeneracy detectors', () => {
     ).toBe(true);
   });
 
+  it('detects oracular and decorative counsel in the correct direction', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const oracleCounsel = [1, 2, 3, 4, 5].map((value) => ({
+      leader: `leader-${value}`,
+      counsel: value,
+      realizedContribution: value * 10,
+    }));
+    const decorativeCounsel = [1, 2, 3, 4, 5].map((value) => ({
+      leader: `leader-${value}`,
+      counsel: value,
+      realizedContribution: value % 2,
+    }));
+    const healthyCounselPairs: readonly (readonly [number, number])[] = [
+      [1, 3],
+      [2, 1],
+      [3, 4],
+      [4, 2],
+      [5, 5],
+    ];
+    const healthyCounsel = healthyCounselPairs.map(
+      ([counsel, realizedContribution], index) => ({
+        leader: `leader-${index}`,
+        counsel,
+        realizedContribution,
+      }),
+    );
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel,
+      }).some((finding) => finding.code === 'counsel-oracular'),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: decorativeCounsel,
+      }).some((finding) => finding.code === 'counsel-decorative'),
+    ).toBe(true);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: healthyCounsel,
+      }).some((finding) => finding.code.startsWith('counsel-')),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: oracleCounsel.slice(0, 4),
+      }).some((finding) => finding.code.startsWith('counsel-')),
+    ).toBe(false);
+  });
+
+  it('keeps counsel detectors silent for zero variance and grades thresholds', () => {
+    const metrics = [1, 2, 3, 4].map(handCheckMetric);
+    const summary = aggregateCampaign('supportive', 7, metrics);
+    const entries = [1, 2, 3, 4, 5].map((value) => ({
+      leader: `leader-${value}`,
+      counsel: value,
+      realizedContribution: value,
+    }));
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: entries.map((entry) => ({
+          ...entry,
+          realizedContribution: 1,
+        })),
+      }).some((finding) => finding.code.startsWith('counsel-')),
+    ).toBe(false);
+    expect(DEGENERACY_CONFIG.counselOracularCorrelationThreshold).toBe(0.8);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: entries,
+        counselOracularCorrelationThreshold: 1,
+      }).some((finding) => finding.code === 'counsel-oracular'),
+    ).toBe(false);
+    expect(
+      detectDegeneracy('supportive', metrics, summary, {
+        oracleCounsel: entries,
+        counselOracularCorrelationThreshold: 0.8,
+      }).some((finding) => finding.code === 'counsel-oracular'),
+    ).toBe(true);
+  });
+
   it('flags a redeemer with no movement between trajectory bands', () => {
     const metrics = [1, 2, 3, 4].map((match) => ({
       ...handCheckMetric(match),

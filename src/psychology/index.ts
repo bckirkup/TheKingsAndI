@@ -1,6 +1,14 @@
 export { ENGINE_CONFIG } from './config';
 export type { EngineConfig } from './config';
 export { attentionWeight, applyRumorDiffusion, diffuseRumor } from './belief';
+export { counselForCandidate, counselOpinionValue } from './counsel';
+export type {
+  CounselCandidate,
+  CounselOpinion,
+  CounselReason,
+  CounselVolunteering,
+  PieceCounsel,
+} from './counsel';
 export {
   clampAffinity,
   clampCredence,
