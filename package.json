@@ -15,6 +15,7 @@
     "test:heavy": "vitest run tests/sim.trajectory.test.ts tests/sim.sweep.test.ts tests/chess.board.fuzz.test.ts",
     "test:coverage": "vitest run --coverage --exclude tests/sim.trajectory.test.ts --exclude tests/sim.sweep.test.ts --exclude tests/chess.board.fuzz.test.ts",
     "sim": "tsx sim/cli.ts",
+    "sim:seminar": "tsx sim/seminarCli.ts",
     "season": "tsx sim/seasonCli.ts",
     "sim:aggregate": "tsx sim/aggregate.ts",
     "sim:sweep": "tsx sim/sweep.ts",

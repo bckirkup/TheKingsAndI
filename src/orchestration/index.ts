@@ -1,4 +1,5 @@
 export { runHeadlessMatch } from './headlessMatch';
+export { classifyMatchResult } from './terminalState';
 export { kingExposureAfterWithdrawals } from './kingExposure';
 export { endpointFor } from './privateEvaluation';
 export { MatchSession } from './matchSession';
