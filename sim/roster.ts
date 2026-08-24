@@ -86,6 +86,18 @@ export function createFreshPieceState(
   });
 }
 
+export function unitForIndex(base: number, index: number): number {
+  let value = index + 1;
+  let denominator = 1;
+  let reflected = 0;
+  while (value > 0) {
+    denominator *= 2;
+    reflected += (value % 2) / denominator;
+    value = Math.floor(value / 2);
+  }
+  return (base + reflected) % 1;
+}
+
 export function createStartingRoster(
   board: LivingBoard,
   side: Side,

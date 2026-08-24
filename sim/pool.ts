@@ -27,7 +27,7 @@ import type { MatchEvent, PieceRole, PieceState } from '../src/psychology';
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
 import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
-import { createFreshPieceState } from './roster';
+import { createFreshPieceState, unitForIndex } from './roster';
 
 export type FieldingPolicy = SquadFieldingPolicy;
 export { FIELDING_POLICIES };
@@ -79,6 +79,8 @@ export interface PoolSeasonMetrics {
   readonly promotions: number;
   readonly promotionsWithRemainingWindow: number;
   readonly crownedSelectionRate: number;
+  /** Present only when this harness pool contains drafted members. */
+  readonly draftedMembers?: number;
 }
 
 export function poolSeasonMetrics(input: {
@@ -152,6 +154,9 @@ export function poolSeasonMetrics(input: {
       .map((member) => member.state.id),
   );
   const squadSize = input.initialPool.members.length;
+  const draftedMembers = input.initialPool.members.filter(
+    (member) => member.provenance === 'drafted',
+  ).length;
   const meanLineupChurn =
     input.lineups.length < 2
       ? 0
@@ -180,6 +185,7 @@ export function poolSeasonMetrics(input: {
     promotions,
     promotionsWithRemainingWindow,
     crownedSelectionRate: crownedSelections / Math.max(1, crownedOpportunities),
+    ...(draftedMembers === 0 ? {} : { draftedMembers }),
   };
 }
 
@@ -282,18 +288,6 @@ function initialPoolMembers(
     }
   }
   return members;
-}
-
-function unitForIndex(base: number, index: number): number {
-  let value = index + 1;
-  let denominator = 1;
-  let reflected = 0;
-  while (value > 0) {
-    denominator *= 2;
-    reflected += (value % 2) / denominator;
-    value = Math.floor(value / 2);
-  }
-  return (base + reflected) % 1;
 }
 
 export function createCommanderPool(options: {
