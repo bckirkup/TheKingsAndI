@@ -1209,6 +1209,7 @@ Tanking must be measurably dominated, not merely discouraged.
 The seminar harness now creates a finite, depleting per-side market and runs
 drafting at the head of enabled weeks. `DRAFT_MARKET_DEPTH_PER_SIDE`,
 `DRAFT_COUNT_UNAVAILABLE_AS_PRESENT`, `DRAFT_MARKET_INITIAL_TRUST`,
+`DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE`,
 `DRAFT_LOT_BASE_PRICE`, `DRAFT_LOT_ROLE_WEIGHT_PERMILLE`, and
 `DRAFT_LOT_SERVICE_WEIGHT_PERMILLE` are explicit harness configuration seeds;
 their current values are calibration starting points, not owner-settled

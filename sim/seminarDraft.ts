@@ -262,6 +262,26 @@ function candidateAcceptancePrice(
   return acceptedPrice(lot.basePrice, acceptanceDiscount);
 }
 
+export function bidderAcceptanceDiscountPermille(
+  candidate: SquadMember,
+  commanderId: string,
+  config: SeminarConfig,
+): number {
+  const relationshipAccount =
+    candidate.credenceIdentity?.relationshipAccounts?.[commanderId];
+  if (relationshipAccount === undefined) {
+    return Math.max(
+      0,
+      Math.min(1000, Math.trunc(config.DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE)),
+    );
+  }
+  return acceptanceDiscountPermille({
+    relationshipAccount,
+    disposition: { tauBenev: NEUTRAL_ROSTER_TESTIMONY },
+    rosterTestimony: NEUTRAL_ROSTER_TESTIMONY,
+  });
+}
+
 function consultationMap(
   consultations: readonly CounselConsultation[],
   weight: number,
@@ -446,7 +466,23 @@ export function runSeminarDraft(options: {
         priorityRank: priority.priorityRank,
         purse,
         style: draftStyle(commander.style),
-        acceptanceDiscountPermille: DRAFT_CONFIG.ACCEPTANCE_DISCOUNT_PERMILLE,
+        acceptanceDiscountPermille:
+          options.config.DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE,
+        acceptanceDiscountPermilleByLot: Object.fromEntries(
+          lots.map((lot) => {
+            const candidate = candidatesByLot.get(lot.lotId);
+            if (candidate === undefined)
+              throw new Error(`Missing candidate for lot ${lot.lotId}.`);
+            return [
+              lot.lotId,
+              bidderAcceptanceDiscountPermille(
+                candidate,
+                commander.id,
+                options.config,
+              ),
+            ];
+          }),
+        ),
         willingnessPermilleByLot: willingness,
       });
     }

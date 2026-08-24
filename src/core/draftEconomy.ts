@@ -44,6 +44,7 @@ export interface DraftBidder {
   readonly purse: number;
   readonly style: DraftBidStyle;
   readonly acceptanceDiscountPermille: number;
+  readonly acceptanceDiscountPermilleByLot?: Readonly<Record<string, number>>;
   /** Private counsel adjustment; absent means the unchanged 1000‰ willingness. */
   readonly willingnessPermilleByLot?: Readonly<Record<string, number>>;
 }
@@ -192,10 +193,10 @@ export function bidForLot(
   lot: DraftLot,
   config: DraftConfig = DRAFT_CONFIG,
 ): DraftBid {
-  const target = acceptedPrice(
-    lot.basePrice,
-    bidder.acceptanceDiscountPermille,
-  );
+  const acceptanceDiscount =
+    bidder.acceptanceDiscountPermilleByLot?.[lot.lotId] ??
+    bidder.acceptanceDiscountPermille;
+  const target = acceptedPrice(lot.basePrice, acceptanceDiscount);
   const multiplier =
     bidder.style === 'cautious'
       ? config.BID_MULTIPLIER_CAUTIOUS

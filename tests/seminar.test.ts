@@ -15,6 +15,7 @@ import {
 } from '../sim/seminar';
 import { SEMINAR_CONFIG } from '../sim/seminarConfig';
 import {
+  bidderAcceptanceDiscountPermille,
   createSeminarMarkets,
   publicLotBasePrice,
   runSeminarDraft,
@@ -338,6 +339,7 @@ describe('seminar spine', () => {
       config: {
         ...SEMINAR_CONFIG,
         DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+        DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: 500,
         DRAFT_LOT_BASE_PRICE: 1,
         DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 1000,
       },
@@ -400,7 +402,7 @@ describe('seminar spine', () => {
           ...(queen.credenceIdentity?.relationshipAccounts ?? {}),
           [aggressive.id]: {
             tauAbil: 50,
-            tauBenev: 100,
+            tauBenev: 0,
             abilityObservationCount: 0,
           },
         },
@@ -429,6 +431,7 @@ describe('seminar spine', () => {
       config: {
         ...SEMINAR_CONFIG,
         DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+        DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: 500,
         DRAFT_LOT_BASE_PRICE: 10,
         DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 0,
       },
@@ -533,6 +536,32 @@ describe('seminar spine', () => {
     expect(publicLotBasePrice(experienced, SEMINAR_CONFIG)).toBeGreaterThan(
       noServiceWeight,
     );
+    const assumedDiscounts = [0, 250, 500].map((discount) =>
+      bidderAcceptanceDiscountPermille(marketQueen, commander.id, {
+        ...SEMINAR_CONFIG,
+        DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: discount,
+      }),
+    );
+    expect(assumedDiscounts).toEqual([0, 250, 500]);
+    const servedCandidate = {
+      ...marketQueen,
+      credenceIdentity: {
+        ...marketQueen.credenceIdentity,
+        relationshipAccounts: {
+          [commander.id]: {
+            tauAbil: 0,
+            tauBenev: 100,
+            abilityObservationCount: 0,
+          },
+        },
+      },
+    };
+    expect(
+      bidderAcceptanceDiscountPermille(servedCandidate, commander.id, {
+        ...SEMINAR_CONFIG,
+        DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: 500,
+      }),
+    ).toBe(500);
     const draftMarkets = new Map(markets);
     draftMarkets.set('w', {
       side: 'w',

@@ -475,6 +475,19 @@ describe('draft economy', () => {
     ).toBe(0);
   });
 
+  it('uses candidate-specific acceptance estimates when provided', () => {
+    const lot = { lotId: 'served', basePrice: 100, minimumBid: 1 };
+    const bidder = {
+      commanderId: 'commander',
+      priorityRank: 0,
+      purse: 100,
+      style: 'balanced' as const,
+      acceptanceDiscountPermille: 0,
+      acceptanceDiscountPermilleByLot: { served: 500 },
+    };
+    expect(bidForLot(bidder, lot).amount).toBe(50);
+  });
+
   it('stays silent on healthy economy observations', () => {
     expect(draftEconomyDegeneracyFindings(economyObservations())).toEqual([]);
     expect(
