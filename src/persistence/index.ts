@@ -22,6 +22,7 @@ export {
 } from './commendations';
 export {
   foldPublicRegister,
+  publicRoleValue,
   publicMatchFactsFromRecord,
   type PublicMatchEvent,
   type PublicMatchFacts,

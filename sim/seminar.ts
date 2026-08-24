@@ -18,7 +18,10 @@ import {
   type PublicRegister,
 } from '../src/persistence';
 import { digest } from '../src/core/digest';
-import type { CommanderStanding } from '../src/core/draftEconomy';
+import {
+  draftPriority,
+  type CommanderStanding,
+} from '../src/core/draftEconomy';
 import {
   classifyMatchResult,
   type HeadlessMatchResult,
@@ -41,6 +44,19 @@ import {
 import { runMatch } from './match';
 import { matchSeedForWorldPairing } from './world';
 import { SEMINAR_CONFIG, type SeminarConfig } from './seminarConfig';
+import {
+  createSeminarMarkets,
+  publicContributionForRecords,
+  runSeminarDraft,
+  type SeminarMarket,
+} from './seminarDraft';
+import {
+  draftEconomyDegeneracyFindings,
+  type DegeneracyFinding,
+  type DraftEconomyCycleObservation,
+  type DraftEconomyObservations,
+  type DraftStandingSeriesPoint,
+} from './degeneracy';
 
 export const SEMINAR_WEEK_SEED_STRIDE = 1_000_003;
 const COMMANDER_STYLES = [
@@ -69,6 +85,7 @@ export interface SeminarWeekResult {
   readonly commendations: Readonly<Record<string, PlayerCommendationSet>>;
   readonly standings: readonly SeminarStanding[];
   readonly poolStates: Readonly<Record<string, CommanderPool>>;
+  readonly draftEconomy: DraftEconomyCycleObservation;
 }
 
 export interface SeminarCommanderResult {
@@ -93,6 +110,13 @@ export interface SeminarResult {
   readonly terminalAwards: Readonly<
     Record<string, readonly CommendationAward[]>
   >;
+  readonly draftEconomy: DraftEconomyObservations;
+  readonly draftEconomyDegeneracyFindings: readonly DegeneracyFinding[];
+  readonly counselCorrelationPairs: readonly {
+    readonly leader: string;
+    readonly counsel: number;
+    readonly realizedContribution: number;
+  }[];
 }
 
 export function weekSeedForSemester(
@@ -334,6 +358,7 @@ function buildSeminarWeekResult(input: {
   readonly allRecords: ReadonlyMap<string, MatchRecord[]>;
   readonly pools: ReadonlyMap<string, CommanderPool>;
   readonly config: SeminarConfig;
+  readonly draftEconomy: DraftEconomyCycleObservation;
 }): SeminarWeekResult {
   const records = Object.fromEntries(
     input.commanders.map((commander) => [
@@ -384,6 +409,7 @@ function buildSeminarWeekResult(input: {
       input.config,
     ),
     poolStates: Object.fromEntries(input.pools.entries()),
+    draftEconomy: input.draftEconomy,
   };
 }
 
@@ -421,10 +447,24 @@ export async function runSeminar(options: {
       }),
     ]),
   );
+  let currentPools = pools;
+  let markets: ReadonlyMap<'w' | 'b', SeminarMarket> = createSeminarMarkets(
+    options.seed,
+    currentPools,
+    config,
+  );
+  let previousPurses = new Map<string, number>();
   const allRecords = new Map<string, MatchRecord[]>(
     commanders.map((commander) => [commander.id, []]),
   );
   const weeks: SeminarWeekResult[] = [];
+  const draftCycles: DraftEconomyCycleObservation[] = [];
+  const standingSeries: DraftStandingSeriesPoint[] = [];
+  const counselCorrelationPairs: {
+    leader: string;
+    counsel: number;
+    realizedContribution: number;
+  }[] = [];
   const engine =
     options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
   const ownedEngine = options.engine === undefined;
@@ -432,6 +472,67 @@ export async function runSeminar(options: {
   try {
     for (let week = 1; week <= config.WEEKS_PER_SEMESTER; week += 1) {
       const weekSeed = weekSeedForSemester(options.seed, week);
+      const standingsBefore = standingsFor(
+        commanders,
+        new Map(
+          commanders.map((commander) => [
+            commander.id,
+            allRecords.get(commander.id) ?? [],
+          ]),
+        ),
+        config,
+      );
+      const registersBefore = new Map(
+        commanders.map((commander) => [
+          commander.id,
+          registerForSide(allRecords.get(commander.id) ?? [], commander.side),
+        ]),
+      );
+      let draftObservation: DraftEconomyCycleObservation = {
+        cycle: week,
+        contestedLots: 0,
+        clearedLots: 0,
+        declinedLots: 0,
+        winsByCommander: {},
+        standingOrder: draftPriority(standingsBefore).map(
+          (entry) => entry.commanderId,
+        ),
+        clearingPrices: [],
+      };
+      let draftPurses = new Map<string, number>(
+        draftPriority(standingsBefore).map((entry) => [
+          entry.commanderId,
+          entry.purse,
+        ]),
+      );
+      let weekDraftSelections: readonly {
+        readonly leader: string;
+        readonly candidateId: string;
+        readonly counsel: number;
+      }[] = [];
+      const draftEnabled = week > 1 || config.DRAFT_AT_CYCLE_ONE;
+      if (draftEnabled) {
+        const drafted = runSeminarDraft({
+          cycle: week,
+          seed: weekSeed,
+          commanders,
+          pools: currentPools,
+          markets,
+          standings: standingsBefore,
+          registers: registersBefore,
+          previousPurses,
+          config,
+          firstMatch: matchIndex + 1,
+        });
+        currentPools = new Map(drafted.pools);
+        markets = drafted.markets;
+        draftObservation = drafted.observation;
+        draftPurses = new Map(drafted.remainingPurses);
+        standingSeries.push(...drafted.standingSeries);
+        weekDraftSelections = drafted.counselSelections;
+      }
+      previousPurses = draftPurses;
+      draftCycles.push(draftObservation);
       const weekRecords = new Map<string, MatchRecord[]>(
         commanders.map((commander) => [commander.id, []]),
       );
@@ -463,7 +564,7 @@ export async function runSeminar(options: {
             seminarSeed: options.seed,
             matchesPerWeek: config.MATCHES_PER_WEEK,
             matchIndex,
-            pools,
+            pools: currentPools,
             weekRecords,
             weekFieldedLineups,
             allRecords,
@@ -471,6 +572,16 @@ export async function runSeminar(options: {
           });
         }
       }
+      counselCorrelationPairs.push(
+        ...weekDraftSelections.map((selection) => ({
+          leader: selection.leader,
+          counsel: selection.counsel,
+          realizedContribution: publicContributionForRecords(
+            allRecords.get(selection.leader) ?? [],
+            selection.candidateId,
+          ),
+        })),
+      );
       weeks.push(
         buildSeminarWeekResult({
           week,
@@ -479,8 +590,9 @@ export async function runSeminar(options: {
           weekRecords,
           weekFieldedLineups,
           allRecords,
-          pools,
+          pools: currentPools,
           config,
+          draftEconomy: draftObservation,
         }),
       );
     }
@@ -511,10 +623,19 @@ export async function runSeminar(options: {
     commanders: terminal,
     weeks,
     standings,
-    finalPools: Object.fromEntries(pools.entries()),
+    finalPools: Object.fromEntries(currentPools.entries()),
     terminalAwards: Object.fromEntries(
       terminal.map((entry) => [entry.commander.id, entry.commendations.awards]),
     ),
+    draftEconomy: {
+      cycles: draftCycles,
+      standingSeries,
+    },
+    draftEconomyDegeneracyFindings: draftEconomyDegeneracyFindings({
+      cycles: draftCycles,
+      standingSeries,
+    }),
+    counselCorrelationPairs,
   };
 }
 
@@ -532,6 +653,9 @@ export function seminarPayload(result: SeminarResult): string {
     ),
     standings: result.standings,
     terminalAwards: result.terminalAwards,
+    draftEconomy: result.draftEconomy,
+    draftEconomyDegeneracyFindings: result.draftEconomyDegeneracyFindings,
+    counselCorrelationPairs: result.counselCorrelationPairs,
   });
 }
 
@@ -539,6 +663,15 @@ export function seminarSummary(result: SeminarResult): string {
   const lines = [
     `Semester ${result.seed}: ${result.weeks.length} weeks, ${result.commanders.length} commanders`,
   ];
+  for (const week of result.weeks) {
+    const cleared = week.draftEconomy.clearedLots;
+    const unfilled = week.draftEconomy.clearingPrices.length - cleared;
+    lines.push(
+      `week ${week.week} draft contested=${week.draftEconomy.contestedLots} ` +
+        `cleared=${cleared} unfilled=${unfilled} ` +
+        `declined=${week.draftEconomy.declinedLots}`,
+    );
+  }
   for (const entry of result.commanders) {
     const earned = entry.commendations.earnedIds.join(', ') || 'none';
     const columns = PUBLIC_REGISTER_COLUMNS.map(

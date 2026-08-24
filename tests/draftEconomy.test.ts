@@ -29,6 +29,8 @@ const economyObservations = (
     {
       cycle: 1,
       contestedLots: 2,
+      clearedLots: 2,
+      declinedLots: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['a', 'b'],
       clearingPrices: [
@@ -39,6 +41,8 @@ const economyObservations = (
     {
       cycle: 2,
       contestedLots: 2,
+      clearedLots: 2,
+      declinedLots: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['b', 'a'],
       clearingPrices: [
@@ -296,6 +300,21 @@ describe('draft economy', () => {
     expect(unfilled.lots[0]?.clearingPrice).toBe(0);
   });
 
+  it('leaves an underbid lot unfilled', () => {
+    const bidder = {
+      commanderId: 'under',
+      priorityRank: 0,
+      purse: 20,
+      style: 'cautious' as const,
+      acceptanceDiscountPermille: 0,
+      willingnessPermilleByLot: { expensive: 500 },
+    };
+    const lot = { lotId: 'expensive', basePrice: 10, minimumBid: 8 };
+    expect(bidForLot(bidder, lot).amount).toBeLessThan(lot.minimumBid);
+    const clearing = clearDraft([lot], [bidder]);
+    expect(clearing.lots[0]?.winnerId).toBeUndefined();
+  });
+
   it('gives priority a configurable first-refusal margin', () => {
     const bidders = [
       {
@@ -424,6 +443,49 @@ describe('draft economy', () => {
     expect(
       draftEconomyDegeneracyFindings(monotone).map((finding) => finding.code),
     ).not.toContain('purse-runaway');
+  });
+
+  it('keeps absent or zero counsel weight inert and lets willingness change bids', () => {
+    const lot = { lotId: 'lot', basePrice: 10, minimumBid: 1 };
+    const bidder = {
+      commanderId: 'commander',
+      priorityRank: 0,
+      purse: 100,
+      style: 'balanced' as const,
+      acceptanceDiscountPermille: 0,
+    };
+    const unchanged = bidForLot(bidder, lot).amount;
+    const counselled = bidForLot(
+      {
+        ...bidder,
+        willingnessPermilleByLot: { lot: 500 },
+      },
+      lot,
+    ).amount;
+    expect(counselled).toBeLessThan(unchanged);
+    expect(
+      bidForLot(
+        {
+          ...bidder,
+          willingnessPermilleByLot: { lot: 500 },
+        },
+        lot,
+        { ...DRAFT_CONFIG, BID_MULTIPLIER_BALANCED: 0 },
+      ).amount,
+    ).toBe(0);
+  });
+
+  it('uses candidate-specific acceptance estimates when provided', () => {
+    const lot = { lotId: 'served', basePrice: 100, minimumBid: 1 };
+    const bidder = {
+      commanderId: 'commander',
+      priorityRank: 0,
+      purse: 100,
+      style: 'balanced' as const,
+      acceptanceDiscountPermille: 0,
+      acceptanceDiscountPermilleByLot: { served: 500 },
+    };
+    expect(bidForLot(bidder, lot).amount).toBe(50);
   });
 
   it('stays silent on healthy economy observations', () => {

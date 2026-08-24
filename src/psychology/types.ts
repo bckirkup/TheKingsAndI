@@ -175,7 +175,7 @@ export type MatchEvent =
       readonly decision: 'fielded' | 'passed_over';
       readonly chair?: PieceRole;
       readonly originRole: PieceRole;
-      readonly provenance: 'original' | 'conscript';
+      readonly provenance: 'original' | 'conscript' | 'drafted';
     }
   | {
       readonly t: 'SQUAD_OBSOLESCENCE';

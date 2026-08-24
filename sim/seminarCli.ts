@@ -20,6 +20,7 @@ function parseArguments(argumentsList: readonly string[]): {
   readonly matches: number;
   readonly commanders: number;
   readonly engine: SimEngineKind;
+  readonly draftAtCycleOne: boolean;
 } {
   const values = new Map<string, string>();
   const supported = new Set([
@@ -28,6 +29,7 @@ function parseArguments(argumentsList: readonly string[]): {
     'matches',
     'commanders',
     'engine',
+    'draft-at-cycle-one',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -49,6 +51,10 @@ function parseArguments(argumentsList: readonly string[]): {
   if (!['fake', 'lozza', 'stockfish'].includes(engine)) {
     throw new Error('--engine must be fake, lozza, or stockfish.');
   }
+  const draftAtCycleOne = values.get('draft-at-cycle-one') ?? 'false';
+  if (draftAtCycleOne !== 'true' && draftAtCycleOne !== 'false') {
+    throw new Error('--draft-at-cycle-one must be true or false.');
+  }
   return {
     seed,
     weeks: parseInteger(values, 'weeks', SEMINAR_CONFIG.WEEKS_PER_SEMESTER),
@@ -59,6 +65,7 @@ function parseArguments(argumentsList: readonly string[]): {
       SEMINAR_CONFIG.COMMANDERS_PER_COHORT,
     ),
     engine: engine as SimEngineKind,
+    draftAtCycleOne: draftAtCycleOne === 'true',
   };
 }
 
@@ -67,12 +74,11 @@ async function main(): Promise<void> {
   const result = await runSeminar({
     seed: options.seed,
     config: {
+      ...SEMINAR_CONFIG,
       WEEKS_PER_SEMESTER: options.weeks,
       MATCHES_PER_WEEK: options.matches,
       COMMANDERS_PER_COHORT: options.commanders,
-      STANDING_WIN_WEIGHT: SEMINAR_CONFIG.STANDING_WIN_WEIGHT,
-      STANDING_DRAW_WEIGHT: SEMINAR_CONFIG.STANDING_DRAW_WEIGHT,
-      STANDING_LOSS_WEIGHT: SEMINAR_CONFIG.STANDING_LOSS_WEIGHT,
+      DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
     },
     engineKind: options.engine,
   });

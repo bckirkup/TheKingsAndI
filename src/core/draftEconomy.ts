@@ -44,6 +44,9 @@ export interface DraftBidder {
   readonly purse: number;
   readonly style: DraftBidStyle;
   readonly acceptanceDiscountPermille: number;
+  readonly acceptanceDiscountPermilleByLot?: Readonly<Record<string, number>>;
+  /** Private counsel adjustment; absent means the unchanged 1000‰ willingness. */
+  readonly willingnessPermilleByLot?: Readonly<Record<string, number>>;
 }
 
 export interface DraftBid {
@@ -198,14 +201,10 @@ export function bidForLot(
   lot: DraftLot,
   config: DraftConfig = DRAFT_CONFIG,
 ): DraftBid {
-  const minimumBid = Math.max(
-    0,
-    Math.trunc(lot.minimumBid ?? config.MINIMUM_BID),
-  );
-  const target = acceptedPrice(
-    lot.basePrice,
-    bidder.acceptanceDiscountPermille,
-  );
+  const acceptanceDiscount =
+    bidder.acceptanceDiscountPermilleByLot?.[lot.lotId] ??
+    bidder.acceptanceDiscountPermille;
+  const target = acceptedPrice(lot.basePrice, acceptanceDiscount);
   const multiplier =
     bidder.style === 'cautious'
       ? config.BID_MULTIPLIER_CAUTIOUS
@@ -213,11 +212,18 @@ export function bidForLot(
   const suggested = Math.floor(
     (target * Math.max(0, Math.trunc(multiplier))) / 1000,
   );
+  const willingness = boundedInteger(
+    bidder.willingnessPermilleByLot?.[lot.lotId] ?? 1000,
+    0,
+    2000,
+  );
   return {
     commanderId: bidder.commanderId,
     lotId: lot.lotId,
+    // Do not floor to minimumBid: an underbid must remain an underbid so the
+    // clearing rule can leave a candidate unfilled.
     amount: boundedInteger(
-      Math.min(bidder.purse, Math.max(minimumBid, suggested)),
+      Math.min(bidder.purse, Math.floor((suggested * willingness) / 1000)),
       0,
       Number.MAX_SAFE_INTEGER,
     ),

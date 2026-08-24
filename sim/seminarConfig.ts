@@ -5,11 +5,20 @@ export interface SeminarConfig {
   readonly STANDING_WIN_WEIGHT: number;
   readonly STANDING_DRAW_WEIGHT: number;
   readonly STANDING_LOSS_WEIGHT: number;
+  readonly DRAFT_AT_CYCLE_ONE: boolean;
+  readonly DRAFT_CONSULTATIONS_PER_CYCLE: number;
+  readonly DRAFT_COUNSEL_WILLINGNESS_WEIGHT_PERMILLE: number;
+  readonly DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: number;
+  readonly DRAFT_COUNT_UNAVAILABLE_AS_PRESENT: boolean;
+  readonly DRAFT_MARKET_DEPTH_PER_SIDE: number;
+  readonly DRAFT_MARKET_INITIAL_TRUST: number;
+  readonly DRAFT_LOT_BASE_PRICE: number;
+  readonly DRAFT_LOT_ROLE_WEIGHT_PERMILLE: number;
+  readonly DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: number;
 }
 
 /**
- * Seminar spine controls. The draft and its economy are deliberately absent
- * from this slice; these values determine loop dimensions and public standings.
+ * Seminar controls. Draft magnitudes remain search seeds, not balance rulings.
  */
 export const SEMINAR_CONFIG = {
   WEEKS_PER_SEMESTER: 4,
@@ -18,4 +27,14 @@ export const SEMINAR_CONFIG = {
   STANDING_WIN_WEIGHT: 3,
   STANDING_DRAW_WEIGHT: 1,
   STANDING_LOSS_WEIGHT: -1,
+  DRAFT_AT_CYCLE_ONE: false,
+  DRAFT_CONSULTATIONS_PER_CYCLE: 4,
+  DRAFT_COUNSEL_WILLINGNESS_WEIGHT_PERMILLE: 250,
+  DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: 0,
+  DRAFT_COUNT_UNAVAILABLE_AS_PRESENT: false,
+  DRAFT_MARKET_DEPTH_PER_SIDE: 15,
+  DRAFT_MARKET_INITIAL_TRUST: 50,
+  DRAFT_LOT_BASE_PRICE: 10,
+  DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 10000,
+  DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 5000,
 } as const satisfies SeminarConfig;

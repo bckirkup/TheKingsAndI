@@ -1172,9 +1172,10 @@ all existing IDs, names, dispositions, and seeds; `POOL_DEPTH_FACTOR` remains a
 legacy mapping to reserve depth. The reserve magnitude and whether the first
 cycle is a draft or an issued army remain open.
 
-The draft economy is not connected to career bootstrap or season execution:
-draft lots and outcomes remain harness-only telemetry until the owner settles
-whether cycle one is drafted.
+The draft economy is connected to the seminar harness only. `DRAFT_AT_CYCLE_ONE`
+defaults to `false`, so the issued army remains the week-one default; the
+opt-in `true` branch is exercised by the seminar CLI and tests. The cycle-one
+choice remains open for the shipped career/season path.
 
 ADR 0061 brings D153 due in step 1, the scarcity step.
 
@@ -1205,6 +1206,21 @@ clearing prices are not persisted. Open: reserve depth, whether cycle one is
 a draft, purse/carry/acceptance discount magnitudes, and detector thresholds.
 Tanking must be measurably dominated, not merely discouraged.
 
+The seminar harness now creates a finite, depleting per-side market and runs
+drafting at the head of enabled weeks. `DRAFT_MARKET_DEPTH_PER_SIDE`,
+`DRAFT_COUNT_UNAVAILABLE_AS_PRESENT`, `DRAFT_MARKET_INITIAL_TRUST`,
+`DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE`,
+`DRAFT_LOT_BASE_PRICE`, `DRAFT_LOT_ROLE_WEIGHT_PERMILLE`, and
+`DRAFT_LOT_SERVICE_WEIGHT_PERMILLE` are explicit harness configuration seeds;
+their current values are calibration starting points, not owner-settled
+magnitudes. Unavailable members are absent from demand by default, while the
+count-all branch remains available for comparison. Public lot pricing uses
+only candidate role and folded public service facts. Candidate-specific
+acceptance is checked after clearing; a winning commander may decline, leaving
+the lot unfilled, and the refusal is retained in draft telemetry. Counsel
+signals remain private: raw opinion is retained only for harness correlation,
+while the configured weight changes bidder willingness.
+
 ADR 0061 brings D154 due in step 3, the draft.
 
 ### D155 ❓ What does a commander's own roster tell him about a candidate? (ADR 0059 §4-§5)
@@ -1222,15 +1238,17 @@ are implemented in `src/persistence/candidateSlate.ts:14-110` and
 `src/psychology/counsel.ts:3-126`; consultations use a zero-default attention
 budget (`src/core/draftConfig.ts:1-50`,
 `src/orchestration/counsel.ts:1-54`) and heeded outcomes fold only into
-harness telemetry (`sim/metrics.ts:89-118`). The owner-set
+harness telemetry (`sim/metrics.ts:89-118`). The seminar harness additionally
+uses its own consultation budget and applies the resulting private signal to
+bidder willingness only (`sim/seminarDraft.ts`). The owner-set
 `COUNSEL_RIVALRY_PENALTY=20` is wired in `src/core/draftConfig.ts:31`, and rivalry
 is origin-inclusive on both candidate and holder sides; opinion bands and
 disclosure cutoffs remain provisional ADR 0059 §9 search seeds. Harness
 detectors for decorative
 and oracular counsel are likewise provisional search instruments in
 `sim/degeneracy.ts:822-853`; their thresholds are not game magnitudes. Open:
-candidate rumour appraisals, the consultation budget, and the remaining counsel
-magnitudes. Raw per-piece acceptance prices still invert to hidden reputation
+candidate rumour appraisals and the remaining counsel magnitudes. Raw
+per-piece acceptance prices still invert to hidden reputation
 and must not be exposed; the owner-approved qualitative bands are the only
 player-facing price representation.
 

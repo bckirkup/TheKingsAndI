@@ -167,6 +167,8 @@ export interface DegeneracyAssertionOptions {
 export interface DraftEconomyCycleObservation {
   readonly cycle: number;
   readonly contestedLots: number;
+  readonly clearedLots: number;
+  readonly declinedLots: number;
   readonly winsByCommander: Readonly<Record<string, number>>;
   readonly standingOrder: readonly string[];
   readonly clearingPrices: readonly {
