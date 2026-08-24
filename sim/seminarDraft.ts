@@ -11,7 +11,9 @@ import {
   type CounselConsultationRequest,
   type CommanderStanding,
   type DraftBidder,
+  type DraftPriority,
   type DraftLot,
+  minimumBidForCommander,
 } from '../src/orchestration';
 import { isEligibleForChair } from '../src/core/roleEligibility';
 import {
@@ -282,6 +284,59 @@ export function bidderAcceptanceDiscountPermille(
   });
 }
 
+export function scaledDraftPurses(
+  priorities: readonly DraftPriority[],
+  lots: readonly DraftLot[],
+  ratioPermille: number,
+): ReadonlyMap<string, number> {
+  const fallback = new Map(
+    priorities.map((priority) => [priority.commanderId, priority.purse]),
+  );
+  if (lots.length === 0) return fallback;
+  const askingTotal = lots.reduce(
+    (total, lot) => total + Math.max(0, Math.trunc(lot.basePrice)),
+    0,
+  );
+  const ordered = [...priorities].sort((left, right) =>
+    left.commanderId.localeCompare(right.commanderId),
+  );
+  const weightTotal = ordered.reduce(
+    (total, priority) => total + Math.max(0, Math.trunc(priority.purse)),
+    0,
+  );
+  if (askingTotal === 0 || weightTotal === 0) return fallback;
+  const ratio = Math.max(0, Math.min(1000, Math.trunc(ratioPermille)));
+  const target = Math.floor((askingTotal * ratio) / 1000);
+  const allocations = ordered.map((priority) => {
+    const weight = Math.max(0, Math.trunc(priority.purse));
+    const numerator = target * weight;
+    return {
+      commanderId: priority.commanderId,
+      amount: Math.floor(numerator / weightTotal),
+      remainder: numerator % weightTotal,
+    };
+  });
+  let remainder =
+    target -
+    allocations.reduce((total, allocation) => total + allocation.amount, 0);
+  allocations.sort(
+    (left, right) =>
+      right.remainder - left.remainder ||
+      left.commanderId.localeCompare(right.commanderId),
+  );
+  for (const allocation of allocations) {
+    if (remainder <= 0) break;
+    allocation.amount += 1;
+    remainder -= 1;
+  }
+  return new Map(
+    allocations.map((allocation) => [
+      allocation.commanderId,
+      allocation.amount,
+    ]),
+  );
+}
+
 function consultationMap(
   consultations: readonly CounselConsultation[],
   weight: number,
@@ -356,9 +411,20 @@ export function runSeminarDraft(options: {
       );
       if (demandedRole === undefined) continue;
       const basePrice = publicLotBasePrice(candidate, options.config);
-      const lot: DraftLot = {
+      const baseLot: DraftLot = {
         lotId: candidate.state.id,
         basePrice,
+      };
+      const lot: DraftLot = {
+        ...baseLot,
+        minimumBidByCommander: Object.fromEntries(
+          options.commanders
+            .filter((commander) => commander.side === side)
+            .map((commander) => [
+              commander.id,
+              candidateAcceptancePrice(candidate, baseLot, commander.id),
+            ]),
+        ),
       };
       lots.push(lot);
       candidatesByLot.set(lot.lotId, candidate);
@@ -392,7 +458,8 @@ export function runSeminarDraft(options: {
   >();
   const remainingPurses = new Map<string, number>();
   let contestedLots = 0;
-  let declinedLots = 0;
+  let unfilledNoBids = 0;
+  let unfilledBelowReserve = 0;
   for (const side of ['w', 'b'] as const) {
     const lots = lotsBySide.get(side) ?? [];
     const market = sideMarkets.get(side);
@@ -400,6 +467,14 @@ export function runSeminarDraft(options: {
     let remainingMarket = market;
     const sideCommanders = options.commanders.filter(
       (commander) => commander.side === side,
+    );
+    const sidePriorities = sideCommanders
+      .map((commander) => priorityById.get(commander.id))
+      .filter((priority): priority is DraftPriority => priority !== undefined);
+    const basePurses = scaledDraftPurses(
+      sidePriorities,
+      lots,
+      options.config.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
     );
     const bidders: DraftBidder[] = [];
     for (const commander of sideCommanders) {
@@ -459,7 +534,7 @@ export function runSeminarDraft(options: {
       counselSignalsByCommander.set(commander.id, counselSignals);
       willingnessByCommander.set(commander.id, willingness);
       const purse =
-        priority.purse +
+        (basePurses.get(commander.id) ?? priority.purse) +
         carryPurse(options.previousPurses.get(commander.id) ?? 0);
       bidders.push({
         commanderId: commander.id,
@@ -495,18 +570,21 @@ export function runSeminarDraft(options: {
       const eligible = bidders.filter((bidder) => {
         const bid = bidForLot(bidder, lot);
         return (
-          bid.amount >=
-          candidateAcceptancePrice(candidate, lot, bidder.commanderId)
+          bid.amount >= minimumBidForCommander(lot, bidder.commanderId) &&
+          bid.amount <= bidder.purse
         );
       });
       return eligible.length > 1;
     }).length;
-    const clearing = clearDraft(lots, bidders);
+    const clearing = clearDraft(lots, bidders, {
+      ...DRAFT_CONFIG,
+      DRAFT_CLEARING_RULE: options.config.DRAFT_CLEARING_RULE,
+    });
+    unfilledNoBids += clearing.unfilledNoBids;
+    unfilledBelowReserve += clearing.unfilledBelowReserve;
     for (const [id, purse] of Object.entries(clearing.remainingPurses)) {
       remainingPurses.set(id, purse);
     }
-    // A decline refunds after clearDraft has priced later lots against the
-    // depleted purse, so the committed bid still crowds out this pass.
     for (const cleared of clearing.lots) {
       if (cleared.winnerId === undefined) {
         clearingPrices.push({
@@ -521,29 +599,6 @@ export function runSeminarDraft(options: {
         throw new Error(`Missing candidate for lot ${cleared.lotId}.`);
       if (winnerPool === undefined)
         throw new Error(`Missing winner pool for ${cleared.winnerId}.`);
-      const lot = lots.find(
-        (candidateLot) => candidateLot.lotId === cleared.lotId,
-      );
-      if (lot === undefined)
-        throw new Error(`Missing lot for clearing ${cleared.lotId}.`);
-      const candidateMinimum = candidateAcceptancePrice(
-        candidate,
-        lot,
-        cleared.winnerId,
-      );
-      if (cleared.clearingPrice < candidateMinimum) {
-        const remaining = remainingPurses.get(cleared.winnerId) ?? 0;
-        remainingPurses.set(
-          cleared.winnerId,
-          remaining + cleared.clearingPrice,
-        );
-        declinedLots += 1;
-        clearingPrices.push({
-          clearingPrice: 0,
-          minimumBid: cleared.minimumBid,
-        });
-        continue;
-      }
       clearingPrices.push({
         clearingPrice: cleared.clearingPrice,
         minimumBid: cleared.minimumBid,
@@ -592,7 +647,24 @@ export function runSeminarDraft(options: {
         (total, count) => total + count,
         0,
       ),
-      declinedLots,
+      declinedLots: unfilledBelowReserve,
+      unfilledNoBids,
+      unfilledBelowReserve,
+      meanClearingPrice:
+        clearingPrices.filter((entry) => entry.clearingPrice > 0).length === 0
+          ? 0
+          : Math.floor(
+              clearingPrices.reduce(
+                (total, entry) => total + entry.clearingPrice,
+                0,
+              ) /
+                clearingPrices.filter((entry) => entry.clearingPrice > 0)
+                  .length,
+            ),
+      totalPurseLeftUnspent: [...remainingPurses.values()].reduce(
+        (total, purse) => total + purse,
+        0,
+      ),
       winsByCommander,
       standingOrder: priorities.map((entry) => entry.commanderId),
       clearingPrices,

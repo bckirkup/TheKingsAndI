@@ -21,6 +21,8 @@ function parseArguments(argumentsList: readonly string[]): {
   readonly commanders: number;
   readonly engine: SimEngineKind;
   readonly draftAtCycleOne: boolean;
+  readonly clearingRule: 'first_price' | 'second_price';
+  readonly purseToAskingRatioPermille: number;
 } {
   const values = new Map<string, string>();
   const supported = new Set([
@@ -30,6 +32,8 @@ function parseArguments(argumentsList: readonly string[]): {
     'commanders',
     'engine',
     'draft-at-cycle-one',
+    'clearing-rule',
+    'purse-to-asking-ratio',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -55,6 +59,23 @@ function parseArguments(argumentsList: readonly string[]): {
   if (draftAtCycleOne !== 'true' && draftAtCycleOne !== 'false') {
     throw new Error('--draft-at-cycle-one must be true or false.');
   }
+  const clearingRule = values.get('clearing-rule') ?? 'first_price';
+  if (clearingRule !== 'first_price' && clearingRule !== 'second_price') {
+    throw new Error('--clearing-rule must be first_price or second_price.');
+  }
+  const purseToAskingRatioPermille = Number(
+    values.get('purse-to-asking-ratio') ??
+      SEMINAR_CONFIG.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
+  );
+  if (
+    !Number.isSafeInteger(purseToAskingRatioPermille) ||
+    purseToAskingRatioPermille < 0 ||
+    purseToAskingRatioPermille > 1000
+  ) {
+    throw new Error(
+      '--purse-to-asking-ratio must be an integer from 0 to 1000.',
+    );
+  }
   return {
     seed,
     weeks: parseInteger(values, 'weeks', SEMINAR_CONFIG.WEEKS_PER_SEMESTER),
@@ -66,6 +87,8 @@ function parseArguments(argumentsList: readonly string[]): {
     ),
     engine: engine as SimEngineKind,
     draftAtCycleOne: draftAtCycleOne === 'true',
+    clearingRule,
+    purseToAskingRatioPermille,
   };
 }
 
@@ -79,6 +102,8 @@ async function main(): Promise<void> {
       MATCHES_PER_WEEK: options.matches,
       COMMANDERS_PER_COHORT: options.commanders,
       DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
+      DRAFT_CLEARING_RULE: options.clearingRule,
+      DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: options.purseToAskingRatioPermille,
     },
     engineKind: options.engine,
   });

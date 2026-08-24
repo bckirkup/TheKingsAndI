@@ -342,6 +342,10 @@ export async function runSeminar(options: {
         contestedLots: 0,
         clearedLots: 0,
         declinedLots: 0,
+        unfilledNoBids: 0,
+        unfilledBelowReserve: 0,
+        meanClearingPrice: 0,
+        totalPurseLeftUnspent: 0,
         winsByCommander: {},
         standingOrder: draftPriority(standingsBefore).map(
           (entry) => entry.commanderId,
@@ -609,11 +613,14 @@ export function seminarSummary(result: SeminarResult): string {
   ];
   for (const week of result.weeks) {
     const cleared = week.draftEconomy.clearedLots;
-    const unfilled = week.draftEconomy.clearingPrices.length - cleared;
     lines.push(
       `week ${week.week} draft contested=${week.draftEconomy.contestedLots} ` +
-        `cleared=${cleared} unfilled=${unfilled} ` +
-        `declined=${week.draftEconomy.declinedLots}`,
+        `cleared=${cleared} ` +
+        `unfilled-no-bids=${week.draftEconomy.unfilledNoBids} ` +
+        `unfilled-below-reserve=${week.draftEconomy.unfilledBelowReserve} ` +
+        `declined=${week.draftEconomy.declinedLots} ` +
+        `mean-price=${week.draftEconomy.meanClearingPrice} ` +
+        `purse-left=${week.draftEconomy.totalPurseLeftUnspent}`,
     );
   }
   for (const entry of result.commanders) {

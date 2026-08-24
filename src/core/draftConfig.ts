@@ -4,6 +4,7 @@
  * helpers are not connected to the default match path.
  */
 export interface DraftConfig {
+  readonly DRAFT_CLEARING_RULE: 'first_price' | 'second_price';
   readonly CONSULTATIONS_PER_CYCLE: number;
   readonly COUNSEL_RIVALRY_PENALTY: number;
   readonly COUNSEL_STRONGLY_RECOMMEND_THRESHOLD: number;
@@ -27,6 +28,7 @@ export interface DraftConfig {
 }
 
 export const DRAFT_CONFIG = {
+  DRAFT_CLEARING_RULE: 'first_price',
   CONSULTATIONS_PER_CYCLE: 0,
   COUNSEL_RIVALRY_PENALTY: 20,
   COUNSEL_STRONGLY_RECOMMEND_THRESHOLD: 50,

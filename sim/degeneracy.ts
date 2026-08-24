@@ -169,6 +169,10 @@ export interface DraftEconomyCycleObservation {
   readonly contestedLots: number;
   readonly clearedLots: number;
   readonly declinedLots: number;
+  readonly unfilledNoBids: number;
+  readonly unfilledBelowReserve: number;
+  readonly meanClearingPrice: number;
+  readonly totalPurseLeftUnspent: number;
   readonly winsByCommander: Readonly<Record<string, number>>;
   readonly standingOrder: readonly string[];
   readonly clearingPrices: readonly {

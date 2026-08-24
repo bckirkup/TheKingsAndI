@@ -34,6 +34,7 @@ export interface DraftLot {
   readonly lotId: string;
   readonly basePrice: number;
   readonly minimumBid?: number;
+  readonly minimumBidByCommander?: Readonly<Record<string, number>>;
 }
 
 export type DraftBidStyle = 'cautious' | 'balanced' | 'aggressive';
@@ -65,6 +66,8 @@ export interface ClearedDraftLot {
 export interface DraftClearing {
   readonly lots: readonly ClearedDraftLot[];
   readonly remainingPurses: Readonly<Record<string, number>>;
+  readonly unfilledNoBids: number;
+  readonly unfilledBelowReserve: number;
 }
 
 function boundedInteger(
@@ -224,6 +227,21 @@ export function bidForLot(
   };
 }
 
+export function minimumBidForCommander(
+  lot: DraftLot,
+  commanderId: string,
+  config: DraftConfig = DRAFT_CONFIG,
+): number {
+  return Math.max(
+    0,
+    Math.trunc(
+      lot.minimumBidByCommander?.[commanderId] ??
+        lot.minimumBid ??
+        config.MINIMUM_BID,
+    ),
+  );
+}
+
 /**
  * Clear lots in deterministic input order. Priority breaks bid ties and can
  * claim a near-top bid when the configured first-refusal margin allows it.
@@ -245,19 +263,24 @@ export function clearDraft(
     1000,
   );
   const results: ClearedDraftLot[] = [];
+  let unfilledNoBids = 0;
+  let unfilledBelowReserve = 0;
   for (const lot of lots) {
     const minimumBid = Math.max(
       0,
       Math.trunc(lot.minimumBid ?? config.MINIMUM_BID),
     );
-    const bids = bidders
+    const affordableBids = bidders
       .map((bidder) => {
         const purse = remaining.get(bidder.commanderId) ?? 0;
         const bid = bidForLot({ ...bidder, purse }, { ...lot }, config);
         return bid.amount > purse ? undefined : bid;
       })
-      .filter((bid): bid is DraftBid => bid !== undefined)
-      .filter((bid) => bid.amount >= minimumBid);
+      .filter((bid): bid is DraftBid => bid !== undefined);
+    const bids = affordableBids.filter(
+      (bid) =>
+        bid.amount >= minimumBidForCommander(lot, bid.commanderId, config),
+    );
     bids.sort((left, right) => {
       if (right.amount !== left.amount) return right.amount - left.amount;
       const leftRank = rankByCommander.get(left.commanderId);
@@ -287,6 +310,8 @@ export function clearDraft(
                 left.commanderId.localeCompare(right.commanderId),
             )[0];
     if (winner === undefined) {
+      if (affordableBids.length === 0) unfilledNoBids += 1;
+      else unfilledBelowReserve += 1;
       results.push({
         lotId: lot.lotId,
         clearingPrice: 0,
@@ -294,20 +319,37 @@ export function clearDraft(
       });
       continue;
     }
-    remaining.set(
+    const winnerReserve = minimumBidForCommander(
+      lot,
       winner.commanderId,
-      (remaining.get(winner.commanderId) ?? 0) - winner.amount,
+      config,
     );
+    const highestNonWinningBid = bids
+      .filter((bid) => bid.commanderId !== winner.commanderId)
+      .reduce((highest, bid) => Math.max(highest, bid.amount), 0);
+    const clearingPrice =
+      config.DRAFT_CLEARING_RULE === 'second_price'
+        ? Math.max(winnerReserve, highestNonWinningBid)
+        : winner.amount;
+    const winnerPurse = remaining.get(winner.commanderId) ?? 0;
+    if (clearingPrice > winnerPurse) {
+      throw new Error(
+        `Clearing price ${clearingPrice} exceeds purse ${winnerPurse} for ${winner.commanderId}.`,
+      );
+    }
+    remaining.set(winner.commanderId, winnerPurse - clearingPrice);
     results.push({
       lotId: lot.lotId,
       winnerId: winner.commanderId,
-      clearingPrice: winner.amount,
+      clearingPrice,
       minimumBid,
     });
   }
   return {
     lots: results,
     remainingPurses: Object.fromEntries(remaining),
+    unfilledNoBids,
+    unfilledBelowReserve,
   };
 }
 
