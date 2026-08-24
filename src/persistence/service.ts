@@ -45,6 +45,14 @@ function emptyRecord(): PieceServiceRecord {
   };
 }
 
+function pieceIdForServiceEvent(
+  event: MatchRecord['events'][number],
+): string | undefined {
+  if ('pieceId' in event) return event.pieceId;
+  if (event.t === 'SACRIFICE_WITNESSED') return event.hero;
+  return undefined;
+}
+
 /**
  * Fold observable service from campaign match logs (ADR 0054 slice 1).
  * The roster snapshots define which pieces belong to this campaign; event
@@ -87,12 +95,7 @@ export function foldPieceServiceRecords(
         continue;
       }
 
-      const pieceId =
-        'pieceId' in event
-          ? event.pieceId
-          : event.t === 'SACRIFICE_WITNESSED'
-            ? event.hero
-            : undefined;
+      const pieceId = pieceIdForServiceEvent(event);
       if (pieceId === undefined || !records.has(pieceId)) continue;
 
       switch (event.t) {

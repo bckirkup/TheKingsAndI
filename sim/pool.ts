@@ -1,6 +1,5 @@
 import { LivingBoard, type PieceId, type Side } from '../src/chess';
 import {
-  FIELDING_POLICIES,
   fieldSquad,
   applyLevyStandingCost,
   checkInCredence,
@@ -16,12 +15,12 @@ import {
   stateForLevy,
   statusForConscript,
   type FieldingPolicy as SquadFieldingPolicy,
+  type HeadlessMatchResult,
   type SquadEvent,
   type SquadMember,
   type SquadService,
   type CredenceIdentity,
 } from '../src/orchestration';
-import type { HeadlessMatchResult } from '../src/orchestration';
 import type { MatchEvent, PieceRole, PieceState } from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
@@ -30,7 +29,7 @@ import { SEASON_CONFIG, type SeasonConfig } from './seasonConfig';
 import { createFreshPieceState, unitForIndex } from './roster';
 
 export type FieldingPolicy = SquadFieldingPolicy;
-export { FIELDING_POLICIES };
+export { FIELDING_POLICIES } from '../src/orchestration';
 export type PoolService = SquadService;
 export type PoolMember = SquadMember;
 export type PoolEvent = SquadEvent;
@@ -83,23 +82,37 @@ export interface PoolSeasonMetrics {
   readonly draftedMembers?: number;
 }
 
-export function poolSeasonMetrics(input: {
-  readonly initialPool: CommanderPool;
-  readonly finalPool: CommanderPool;
-  readonly lineups: readonly (readonly PieceId[])[];
-  readonly promotionMatches: ReadonlyMap<PieceId, number>;
-  readonly firstCycleLevies?: number;
-}): PoolSeasonMetrics {
+function indexFieldedMatches(
+  lineups: readonly (readonly PieceId[])[],
+): Map<PieceId, Set<number>> {
   const fieldedById = new Map<PieceId, Set<number>>();
-  input.lineups.forEach((lineup, index) => {
+  lineups.forEach((lineup, index) => {
     for (const pieceId of lineup) {
       const matches = fieldedById.get(pieceId) ?? new Set<number>();
       matches.add(index + 1);
       fieldedById.set(pieceId, matches);
     }
   });
-  const distinctMembersFielded = fieldedById.size;
-  const promotions = input.promotionMatches.size;
+  return fieldedById;
+}
+
+interface PromotionSeasonCounters {
+  readonly postSelections: number;
+  readonly postOpportunities: number;
+  readonly crownedSelections: number;
+  readonly crownedOpportunities: number;
+  readonly promotionsWithRemainingWindow: number;
+  readonly controlSelections: number;
+  readonly controlOpportunities: number;
+  readonly crownedNeverFieldedAgain: number;
+}
+
+function accumulatePromotionSeasonCounters(input: {
+  readonly initialPool: CommanderPool;
+  readonly lineups: readonly (readonly PieceId[])[];
+  readonly promotionMatches: ReadonlyMap<PieceId, number>;
+  readonly fieldedById: ReadonlyMap<PieceId, Set<number>>;
+}): PromotionSeasonCounters {
   let postSelections = 0;
   let postOpportunities = 0;
   let crownedSelections = 0;
@@ -112,7 +125,7 @@ export function poolSeasonMetrics(input: {
     const member = input.initialPool.members.find(
       (candidate) => candidate.state.id === pieceId,
     );
-    const fieldedMatches = fieldedById.get(pieceId) ?? new Set<number>();
+    const fieldedMatches = input.fieldedById.get(pieceId) ?? new Set<number>();
     const laterMatches = input.lineups.length - promotionMatch;
     const laterSelections = [...fieldedMatches].filter(
       (match) => match > promotionMatch,
@@ -132,7 +145,8 @@ export function poolSeasonMetrics(input: {
           !input.promotionMatches.has(candidate.state.id),
       );
       for (const control of controls) {
-        const controlMatches = fieldedById.get(control.state.id) ?? new Set();
+        const controlMatches =
+          input.fieldedById.get(control.state.id) ?? new Set();
         for (
           let match = promotionMatch + 1;
           match <= input.lineups.length;
@@ -144,6 +158,49 @@ export function poolSeasonMetrics(input: {
       }
     }
   }
+  return {
+    postSelections,
+    postOpportunities,
+    crownedSelections,
+    crownedOpportunities,
+    promotionsWithRemainingWindow,
+    controlSelections,
+    controlOpportunities,
+    crownedNeverFieldedAgain,
+  };
+}
+
+function meanLineupChurnRate(lineups: readonly (readonly PieceId[])[]): number {
+  if (lineups.length < 2) return 0;
+  return (
+    lineups.slice(1).reduce((total, lineup, index) => {
+      const previous = new Set(lineups[index] ?? []);
+      return (
+        total +
+        lineup.filter((pieceId) => !previous.has(pieceId)).length /
+          Math.max(1, lineup.length)
+      );
+    }, 0) /
+    (lineups.length - 1)
+  );
+}
+
+export function poolSeasonMetrics(input: {
+  readonly initialPool: CommanderPool;
+  readonly finalPool: CommanderPool;
+  readonly lineups: readonly (readonly PieceId[])[];
+  readonly promotionMatches: ReadonlyMap<PieceId, number>;
+  readonly firstCycleLevies?: number;
+}): PoolSeasonMetrics {
+  const fieldedById = indexFieldedMatches(input.lineups);
+  const distinctMembersFielded = fieldedById.size;
+  const promotions = input.promotionMatches.size;
+  const promotionCounters = accumulatePromotionSeasonCounters({
+    initialPool: input.initialPool,
+    lineups: input.lineups,
+    promotionMatches: input.promotionMatches,
+    fieldedById,
+  });
   const retiredForObsolescence = new Set(
     input.finalPool.members
       .filter(
@@ -157,34 +214,28 @@ export function poolSeasonMetrics(input: {
   const draftedMembers = input.initialPool.members.filter(
     (member) => member.provenance === 'drafted',
   ).length;
-  const meanLineupChurn =
-    input.lineups.length < 2
-      ? 0
-      : input.lineups.slice(1).reduce((total, lineup, index) => {
-          const previous = new Set(input.lineups[index] ?? []);
-          return (
-            total +
-            lineup.filter((pieceId) => !previous.has(pieceId)).length /
-              Math.max(1, lineup.length)
-          );
-        }, 0) /
-        (input.lineups.length - 1);
   return {
     squadSize,
     firstCycleLevies: input.firstCycleLevies ?? 0,
     distinctMembersFielded,
     benchUtilisation: distinctMembersFielded / Math.max(1, squadSize),
-    meanLineupChurn,
-    postPromotionSelectionRate: postSelections / Math.max(1, postOpportunities),
+    meanLineupChurn: meanLineupChurnRate(input.lineups),
+    postPromotionSelectionRate:
+      promotionCounters.postSelections /
+      Math.max(1, promotionCounters.postOpportunities),
     unpromotedOriginControlRate:
-      controlSelections / Math.max(1, controlOpportunities),
-    crownedNeverFieldedAgain,
+      promotionCounters.controlSelections /
+      Math.max(1, promotionCounters.controlOpportunities),
+    crownedNeverFieldedAgain: promotionCounters.crownedNeverFieldedAgain,
     crownedRetiredForObsolescence: [...retiredForObsolescence].filter((id) =>
       input.promotionMatches.has(id),
     ).length,
     promotions,
-    promotionsWithRemainingWindow,
-    crownedSelectionRate: crownedSelections / Math.max(1, crownedOpportunities),
+    promotionsWithRemainingWindow:
+      promotionCounters.promotionsWithRemainingWindow,
+    crownedSelectionRate:
+      promotionCounters.crownedSelections /
+      Math.max(1, promotionCounters.crownedOpportunities),
     ...(draftedMembers === 0 ? {} : { draftedMembers }),
   };
 }

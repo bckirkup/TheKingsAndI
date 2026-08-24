@@ -48,15 +48,20 @@ function parseNonNegativeInteger(
   return value;
 }
 
-function parseArguments(argumentsList: readonly string[]): {
-  readonly seed: number;
-  readonly matches: number;
-  readonly whiteStyle: OpponentArchetype;
-  readonly blackStyle: OpponentArchetype;
-  readonly depthFactor: number;
-  readonly reserveDepth?: number;
-  readonly engineKind: SimEngineKind;
-} {
+const SUPPORTED_FLAGS = new Set([
+  'seed',
+  'matches',
+  'white-style',
+  'black-style',
+  'pool-depth',
+  'depth-factor',
+  'reserve-depth',
+  'engine',
+]);
+
+function collectFlagValues(
+  argumentsList: readonly string[],
+): Map<string, string> {
   const values = new Map<string, string>();
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -70,33 +75,53 @@ function parseArguments(argumentsList: readonly string[]): {
     if (values.has(name)) throw new Error(`Repeated flag: --${name}`);
     values.set(name, argument.slice(separator + 1));
   }
-  const supported = new Set([
-    'seed',
-    'matches',
-    'white-style',
-    'black-style',
-    'pool-depth',
-    'depth-factor',
-    'reserve-depth',
-    'engine',
-  ]);
+  return values;
+}
+
+function assertSupportedFlags(values: ReadonlyMap<string, string>): void {
   for (const name of values.keys()) {
-    if (!supported.has(name)) throw new Error(`Unrecognised flag: --${name}`);
+    if (!SUPPORTED_FLAGS.has(name)) {
+      throw new Error(`Unrecognised flag: --${name}`);
+    }
   }
-  const seed = Number(valueFor(values, 'seed', '0'));
-  if (!Number.isSafeInteger(seed))
-    throw new Error('--seed must be an integer.');
-  const whiteStyle = valueFor(values, 'white-style', 'servant');
-  const blackStyle = valueFor(values, 'black-style', 'supportive');
-  if (!STYLES.includes(whiteStyle as OpponentArchetype)) {
-    throw new Error(`--white-style must be one of: ${STYLES.join(', ')}.`);
+}
+
+function parseOpponentArchetype(
+  values: ReadonlyMap<string, string>,
+  flag: string,
+  fallback: string,
+): OpponentArchetype {
+  const style = valueFor(values, flag, fallback);
+  if (!STYLES.includes(style as OpponentArchetype)) {
+    throw new Error(`--${flag} must be one of: ${STYLES.join(', ')}.`);
   }
-  if (!STYLES.includes(blackStyle as OpponentArchetype)) {
-    throw new Error(`--black-style must be one of: ${STYLES.join(', ')}.`);
-  }
+  return style as OpponentArchetype;
+}
+
+function parseEngineKindValue(
+  values: ReadonlyMap<string, string>,
+): SimEngineKind {
   const engineKind = valueFor(values, 'engine', 'fake');
   if (!['fake', 'lozza', 'stockfish'].includes(engineKind)) {
     throw new Error('--engine must be fake, lozza, or stockfish.');
+  }
+  return engineKind as SimEngineKind;
+}
+
+function parseArguments(argumentsList: readonly string[]): {
+  readonly seed: number;
+  readonly matches: number;
+  readonly whiteStyle: OpponentArchetype;
+  readonly blackStyle: OpponentArchetype;
+  readonly depthFactor: number;
+  readonly reserveDepth?: number;
+  readonly engineKind: SimEngineKind;
+} {
+  const values = collectFlagValues(argumentsList);
+  assertSupportedFlags(values);
+  const seed = Number(valueFor(values, 'seed', '0'));
+  if (!Number.isSafeInteger(seed)) {
+    throw new Error('--seed must be an integer.');
   }
   const reserveDepth = values.has('reserve-depth')
     ? parseNonNegativeInteger(values, 'reserve-depth')
@@ -104,15 +129,15 @@ function parseArguments(argumentsList: readonly string[]): {
   return {
     seed,
     matches: parseInteger(values, 'matches', 20),
-    whiteStyle: whiteStyle as OpponentArchetype,
-    blackStyle: blackStyle as OpponentArchetype,
+    whiteStyle: parseOpponentArchetype(values, 'white-style', 'servant'),
+    blackStyle: parseOpponentArchetype(values, 'black-style', 'supportive'),
     depthFactor: parseInteger(
       values,
       'pool-depth',
       Number(values.get('depth-factor') ?? '2'),
     ),
     ...(reserveDepth === undefined ? {} : { reserveDepth }),
-    engineKind: engineKind as SimEngineKind,
+    engineKind: parseEngineKindValue(values),
   };
 }
 
@@ -144,8 +169,10 @@ const isMain =
   import.meta.url.endsWith(process.argv[1].replaceAll('\\', '/'));
 
 if (isMain) {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  });
+  }
 }

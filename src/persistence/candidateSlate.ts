@@ -45,7 +45,9 @@ export function foldPublicCandidateSlate(
         ? {}
         : { attainedRole: candidate.attainedRole }),
       status: candidate.status,
-      commandersServed: [...candidate.commandersServed].sort(),
+      commandersServed: [...candidate.commandersServed].sort((left, right) =>
+        left.localeCompare(right),
+      ),
       serviceRecord: { ...candidate.serviceRecord },
     })),
   };

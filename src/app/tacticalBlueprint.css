@@ -45,11 +45,13 @@
   background-color: var(--surface-elevated);
 }
 
-.theme-tactical-blueprint .cg-wrap square.light {
+/* Chessground paints board cells as custom <square> elements; select by
+   class under cg-board so CSS analyzers do not require that tag name. */
+.theme-tactical-blueprint .cg-wrap cg-board > .light {
   background-color: #1a2740;
 }
 
-.theme-tactical-blueprint .cg-wrap square.dark {
+.theme-tactical-blueprint .cg-wrap cg-board > .dark {
   background-color: #111a2e;
 }
 

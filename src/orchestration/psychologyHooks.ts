@@ -206,6 +206,132 @@ export function expectedVindicationDelta(
   return Math.trunc((moveEval.deltaV_board - expectedHarm) * 100) / 100;
 }
 
+const ABILITY_DRIP_STREAK_PLIES = 3;
+
+function applyPieceAbilityObservation(input: {
+  readonly piece: PieceState;
+  readonly moveEval: CandidateMoveEvaluation | undefined;
+  readonly roster: readonly PieceState[];
+  readonly playedAuditCp: number;
+  readonly preMoveAuditCp: number;
+  readonly oracleBestAuditCp: number;
+  readonly ply: number;
+  readonly actorId: string | undefined;
+  readonly actorChallenged: boolean;
+  readonly safePly: boolean;
+  readonly streak: number;
+}): {
+  readonly piece: PieceState;
+  readonly events: MatchEvent[];
+  readonly vindicated: boolean;
+} {
+  const {
+    piece,
+    moveEval,
+    roster,
+    playedAuditCp,
+    preMoveAuditCp,
+    oracleBestAuditCp,
+    ply,
+    actorId,
+    actorChallenged,
+    safePly,
+    streak,
+  } = input;
+  const pieceEvents: MatchEvent[] = [];
+  let credence = piece.credence;
+  if (safePly && streak > 0 && streak % ABILITY_DRIP_STREAK_PLIES === 0) {
+    const gain = calculateAbilityDripGain(piece, moveEval);
+    if (gain > 0) {
+      credence = applyAbilityDrip(credence, gain);
+      pieceEvents.push({
+        t: 'ABILITY_DRIP',
+        ply,
+        pieceId: piece.id,
+        streak,
+        gain,
+      });
+    }
+  }
+  if (moveEval === undefined) {
+    return {
+      piece: normalizePieceState({ ...piece, credence }),
+      events: pieceEvents,
+      vindicated: false,
+    };
+  }
+  const witnessOutcome = evaluateMoveResponse(
+    piece,
+    moveEval,
+    roster,
+    desertionContextFor(piece, moveEval, roster),
+  );
+  const nearRefusal = isNearRefusal(witnessOutcome);
+  const challenged =
+    actorId === undefined ||
+    (piece.id === actorId && actorChallenged) ||
+    nearRefusal;
+  if (!challenged) {
+    return {
+      piece: normalizePieceState({ ...piece, credence }),
+      events: pieceEvents,
+      vindicated: false,
+    };
+  }
+  const vindicated = isVindicatedMove(
+    playedAuditCp,
+    preMoveAuditCp,
+    oracleBestAuditCp,
+    expectedVindicationDelta(piece, moveEval),
+  );
+  const authorityGain = vindicated
+    ? Math.trunc(
+        justifiedRefusalObviousness(
+          expectedVindicationDelta(piece, moveEval),
+          true,
+        ) * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE,
+      )
+    : 0;
+  const beforeObservationTau = credence.tauAbil;
+  credence = applyAbilityObservation(credence, vindicated);
+  pieceEvents.push({
+    t: 'ABILITY_OBSERVATION',
+    ply,
+    pieceId: piece.id,
+    vindicated,
+    channel: 'adjudication',
+    delta: credence.tauAbil - beforeObservationTau,
+  });
+  if (authorityGain > 0) {
+    credence = applyAuthorityGain(credence, authorityGain);
+  }
+  const objected = piece.id === actorId && actorChallenged;
+  const shouldGradeAbility = actorId !== undefined && objected;
+  const wasRight = objected ? !vindicated : vindicated;
+  const earnedAbility = shouldGradeAbility
+    ? applyEarnedAbilityObservation(piece.E_i, wasRight)
+    : piece.E_i;
+  if (shouldGradeAbility && earnedAbility !== piece.E_i) {
+    pieceEvents.push({
+      t: 'ABILITY_GRADE',
+      ply,
+      pieceId: piece.id,
+      wasRight,
+      delta: earnedAbility - piece.E_i,
+      channel: 'forced',
+    });
+  }
+  return {
+    piece: normalizePieceState({
+      ...piece,
+      credence,
+      E_i: earnedAbility,
+    }),
+    events: pieceEvents,
+    vindicated,
+  };
+}
+
 export function applyRosterAbilityObservations(
   roster: readonly PieceState[],
   moveEvalByPiece: Readonly<Record<string, CandidateMoveEvaluation>>,
@@ -230,86 +356,22 @@ export function applyRosterAbilityObservations(
     const moveEval = moveEvalByPiece[piece.id];
     const streak = safePly ? (dripStreakByPiece[piece.id] ?? 0) + 1 : 0;
     nextDripStreakByPiece[piece.id] = streak;
-    let credence = piece.credence;
-    if (safePly && streak > 0 && streak % ABILITY_DRIP_STREAK_PLIES === 0) {
-      const gain = calculateAbilityDripGain(piece, moveEval);
-      if (gain > 0) {
-        credence = applyAbilityDrip(credence, gain);
-        events.push({
-          t: 'ABILITY_DRIP',
-          ply,
-          pieceId: piece.id,
-          streak,
-          gain,
-        });
-      }
-    }
-    if (moveEval === undefined) {
-      return normalizePieceState({ ...piece, credence });
-    }
-    const witnessOutcome = evaluateMoveResponse(
+    const observed = applyPieceAbilityObservation({
       piece,
       moveEval,
       roster,
-      desertionContextFor(piece, moveEval, roster),
-    );
-    const nearRefusal = isNearRefusal(witnessOutcome);
-    const challenged =
-      actorId === undefined ||
-      (piece.id === actorId && actorChallenged) ||
-      nearRefusal;
-    if (!challenged) {
-      return normalizePieceState({ ...piece, credence });
-    }
-    const vindicated = isVindicatedMove(
       playedAuditCp,
       preMoveAuditCp,
       oracleBestAuditCp,
-      expectedVindicationDelta(piece, moveEval),
-    );
-    if (vindicated) vindicatedCount += 1;
-    const authorityGain = vindicated
-      ? Math.trunc(
-          justifiedRefusalObviousness(
-            expectedVindicationDelta(piece, moveEval),
-            true,
-          ) * ENGINE_CONFIG.ABIL_VINDICATION_GAIN_SCALE,
-        )
-      : 0;
-    const beforeObservationTau = credence.tauAbil;
-    credence = applyAbilityObservation(credence, vindicated);
-    events.push({
-      t: 'ABILITY_OBSERVATION',
       ply,
-      pieceId: piece.id,
-      vindicated,
-      channel: 'adjudication',
-      delta: credence.tauAbil - beforeObservationTau,
+      actorId,
+      actorChallenged,
+      safePly,
+      streak,
     });
-    if (authorityGain > 0) {
-      credence = applyAuthorityGain(credence, authorityGain);
-    }
-    const objected = piece.id === actorId && actorChallenged;
-    const shouldGradeAbility = actorId !== undefined && objected;
-    const wasRight = objected ? !vindicated : vindicated;
-    const earnedAbility = shouldGradeAbility
-      ? applyEarnedAbilityObservation(piece.E_i, wasRight)
-      : piece.E_i;
-    if (shouldGradeAbility && earnedAbility !== piece.E_i) {
-      events.push({
-        t: 'ABILITY_GRADE',
-        ply,
-        pieceId: piece.id,
-        wasRight,
-        delta: earnedAbility - piece.E_i,
-        channel: 'forced',
-      });
-    }
-    return normalizePieceState({
-      ...piece,
-      credence,
-      E_i: earnedAbility,
-    });
+    events.push(...observed.events);
+    if (observed.vindicated) vindicatedCount += 1;
+    return observed.piece;
   });
   return {
     roster: next,
@@ -368,8 +430,6 @@ export function isNearRefusal(
 ): boolean {
   return outcome.utilityScore <= outcome.refusalThreshold + margin;
 }
-
-const ABILITY_DRIP_STREAK_PLIES = 3;
 
 export function calculateAbilityDripGain(
   piece: PieceState,

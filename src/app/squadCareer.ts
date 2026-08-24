@@ -91,9 +91,12 @@ function stateMap(
   return new Map(
     pieces.map((piece) => {
       if ('status' in piece) {
-        const { status, ...state } = piece;
-        void status;
-        return [piece.id, state];
+        return [
+          piece.id,
+          Object.fromEntries(
+            Object.entries(piece).filter(([key]) => key !== 'status'),
+          ) as PieceState,
+        ];
       }
       return [piece.id, piece];
     }),
@@ -278,13 +281,28 @@ export function foldPlayerSquad(
     }
     return {
       ...member,
-      ...(current.status === 'BENCHED'
-        ? { status: 'benched' as const }
-        : current.status === 'FIRED'
-          ? { status: 'fired' as const }
-          : {}),
+      ...benchOrFireStatus(current.status),
     };
   });
+}
+
+function benchOrFireStatus(
+  status: StoredPieceState['status'],
+): { readonly status: 'benched' | 'fired' } | Record<string, never> {
+  if (status === 'BENCHED') return { status: 'benched' };
+  if (status === 'FIRED') return { status: 'fired' };
+  return {};
+}
+
+function storedStatusAfterFold(
+  memberStatus: SquadMember['status'],
+  previousStatus: StoredPieceState['status'] | undefined,
+): StoredPieceState['status'] {
+  if (memberStatus === 'retired') return 'RETIRED';
+  if (previousStatus === 'BENCHED' || previousStatus === 'FIRED') {
+    return previousStatus;
+  }
+  return 'ACTIVE';
 }
 
 function conscript(
@@ -606,12 +624,7 @@ export function mergePlayerSquadAfterMatch(input: {
   const nextRoster = folded.members.map((member) => {
     const state = member.state;
     const previous = input.roster.find((piece) => piece.id === state.id);
-    const status: StoredPieceState['status'] =
-      member.status === 'retired'
-        ? 'RETIRED'
-        : previous?.status === 'BENCHED' || previous?.status === 'FIRED'
-          ? previous.status
-          : 'ACTIVE';
+    const status = storedStatusAfterFold(member.status, previous?.status);
     return { ...state, status };
   });
   const lifecycleEvents: MatchEvent[] = folded.events.flatMap((event) =>

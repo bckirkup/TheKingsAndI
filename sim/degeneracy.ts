@@ -417,6 +417,97 @@ function flatteringCounterfactualFinding(
   };
 }
 
+function draftPurseRunawayFinding(
+  observations: DraftEconomyObservations,
+  purseRunawayFraction: number,
+): DegeneracyFinding | undefined {
+  const contestedLots = observations.cycles.reduce(
+    (total, cycle) => total + Math.max(0, cycle.contestedLots),
+    0,
+  );
+  if (contestedLots <= 0) return undefined;
+  const wins = new Map<string, number>();
+  for (const cycle of observations.cycles) {
+    for (const [commanderId, count] of Object.entries(cycle.winsByCommander)) {
+      wins.set(commanderId, (wins.get(commanderId) ?? 0) + count);
+    }
+  }
+  const runaway = [...wins.entries()].find(
+    ([, count]) => count / contestedLots > purseRunawayFraction,
+  );
+  if (runaway === undefined) return undefined;
+  return {
+    code: 'purse-runaway',
+    message: `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
+  };
+}
+
+function draftMonotoneStandingFinding(
+  observations: DraftEconomyObservations,
+): DegeneracyFinding | undefined {
+  const rankOrders = observations.cycles.map((cycle) =>
+    cycle.standingOrder.join('\u0000'),
+  );
+  const monotoneStanding =
+    rankOrders.every((order) => order !== '') &&
+    rankOrders.every((order) => order === rankOrders[0]);
+  if (!monotoneStanding) return undefined;
+  return {
+    code: 'monotone-standing',
+    message: 'Standing order remained monotone across the draft cycles.',
+  };
+}
+
+function draftPriceCollapseFinding(
+  observations: DraftEconomyObservations,
+  priceCollapseMinimumLots: number,
+): DegeneracyFinding | undefined {
+  const prices = observations.cycles.flatMap((cycle) => cycle.clearingPrices);
+  if (
+    prices.length < priceCollapseMinimumLots ||
+    !prices.every((lot) => lot.clearingPrice === lot.minimumBid)
+  ) {
+    return undefined;
+  }
+  return {
+    code: 'price-collapse',
+    message: `All ${prices.length} observed lots cleared at their minimum bid.`,
+  };
+}
+
+function draftTankingDominanceFinding(
+  observations: DraftEconomyObservations,
+  tankingPolicy: string,
+  tankingMinimumCycles: number,
+): DegeneracyFinding | undefined {
+  const byPolicy = new Map<string, Map<number, number>>();
+  for (const point of observations.standingSeries) {
+    const policy = byPolicy.get(point.policy) ?? new Map<number, number>();
+    policy.set(point.cycle, point.standing);
+    byPolicy.set(point.policy, policy);
+  }
+  const tanking = byPolicy.get(tankingPolicy);
+  if (tanking === undefined) return undefined;
+  const competitors = [...byPolicy.entries()].filter(
+    ([policy]) => policy !== tankingPolicy,
+  );
+  const tankingWins = competitors.some(([, competitor]) => {
+    const sharedCycles = [...tanking.keys()].filter((cycle) =>
+      competitor.has(cycle),
+    );
+    const wonCycles = sharedCycles.filter(
+      (cycle) => (tanking.get(cycle) ?? 0) > (competitor.get(cycle) ?? 0),
+    );
+    return wonCycles.length >= tankingMinimumCycles;
+  });
+  if (!tankingWins) return undefined;
+  return {
+    code: 'tanking-dominance',
+    message:
+      'The tanking policy beat a competing policy across multiple draft cycles.',
+  };
+}
+
 export function draftEconomyDegeneracyFindings(
   observations: DraftEconomyObservations,
   options: {
@@ -439,82 +530,25 @@ export function draftEconomyDegeneracyFindings(
   const tankingPolicy = options.tankingPolicy ?? DRAFT_TANKING_POLICY;
   const findings: DegeneracyFinding[] = [];
   if (observations.cycles.length >= minimumCycles) {
-    const rankOrders = observations.cycles.map((cycle) =>
-      cycle.standingOrder.join('\u0000'),
+    const purseRunaway = draftPurseRunawayFinding(
+      observations,
+      purseRunawayFraction,
     );
-    // "Monotone" is measured here as a stable cohort order across cycle
-    // snapshots: no commander changes relative position.
-    const monotoneStanding =
-      rankOrders.every((order) => order !== '') &&
-      rankOrders.every((order) => order === rankOrders[0]);
-    const contestedLots = observations.cycles.reduce(
-      (total, cycle) => total + Math.max(0, cycle.contestedLots),
-      0,
-    );
-    if (contestedLots > 0) {
-      const wins = new Map<string, number>();
-      for (const cycle of observations.cycles) {
-        for (const [commanderId, count] of Object.entries(
-          cycle.winsByCommander,
-        )) {
-          wins.set(commanderId, (wins.get(commanderId) ?? 0) + count);
-        }
-      }
-      const runaway = [...wins.entries()].find(
-        ([, count]) => count / contestedLots > purseRunawayFraction,
-      );
-      if (runaway !== undefined) {
-        findings.push({
-          code: 'purse-runaway',
-          message: `${runaway[0]} won ${((runaway[1] / contestedLots) * 100).toFixed(0)}% of contested lots.`,
-        });
-      }
-    }
-    if (monotoneStanding) {
-      findings.push({
-        code: 'monotone-standing',
-        message: 'Standing order remained monotone across the draft cycles.',
-      });
-    }
+    if (purseRunaway !== undefined) findings.push(purseRunaway);
+    const monotoneStanding = draftMonotoneStandingFinding(observations);
+    if (monotoneStanding !== undefined) findings.push(monotoneStanding);
   }
-  const prices = observations.cycles.flatMap((cycle) => cycle.clearingPrices);
-  if (
-    prices.length >= priceCollapseMinimumLots &&
-    prices.every((lot) => lot.clearingPrice === lot.minimumBid)
-  ) {
-    findings.push({
-      code: 'price-collapse',
-      message: `All ${prices.length} observed lots cleared at their minimum bid.`,
-    });
-  }
-  const byPolicy = new Map<string, Map<number, number>>();
-  for (const point of observations.standingSeries) {
-    const policy = byPolicy.get(point.policy) ?? new Map<number, number>();
-    policy.set(point.cycle, point.standing);
-    byPolicy.set(point.policy, policy);
-  }
-  const tanking = byPolicy.get(tankingPolicy);
-  if (tanking !== undefined) {
-    const competitors = [...byPolicy.entries()].filter(
-      ([policy]) => policy !== tankingPolicy,
-    );
-    const tankingWins = competitors.some(([, competitor]) => {
-      const sharedCycles = [...tanking.keys()].filter((cycle) =>
-        competitor.has(cycle),
-      );
-      const wonCycles = sharedCycles.filter(
-        (cycle) => (tanking.get(cycle) ?? 0) > (competitor.get(cycle) ?? 0),
-      );
-      return wonCycles.length >= tankingMinimumCycles;
-    });
-    if (tankingWins) {
-      findings.push({
-        code: 'tanking-dominance',
-        message:
-          'The tanking policy beat a competing policy across multiple draft cycles.',
-      });
-    }
-  }
+  const priceCollapse = draftPriceCollapseFinding(
+    observations,
+    priceCollapseMinimumLots,
+  );
+  if (priceCollapse !== undefined) findings.push(priceCollapse);
+  const tankingDominance = draftTankingDominanceFinding(
+    observations,
+    tankingPolicy,
+    tankingMinimumCycles,
+  );
+  if (tankingDominance !== undefined) findings.push(tankingDominance);
   return findings;
 }
 
@@ -746,17 +780,11 @@ export function detectDegeneracy(
       config.commendationLivenessFraction,
       config.commendationLivenessMinimumCareers,
     ),
-  );
-
-  findings.push(
     ...registerOrthogonalityFindings(
       options.oracleRegisterCommendations ?? [],
       config.registerCorrelationThreshold,
       config.registerCorrelationMinimumCareers,
     ),
-  );
-
-  findings.push(
     ...counselInformationFindings(
       options.oracleCounsel ?? [],
       config.counselOracularCorrelationThreshold,

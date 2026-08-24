@@ -10,15 +10,13 @@ import { finalizeCampaignIfComplete } from '../orchestration/campaignFinalize';
 import {
   CareerRepository,
   foldPieceServiceRecords,
+  type ActRecord,
+  type CampaignRecord,
+  type CareerRecord,
+  type MatchRecord,
   type PieceIdentityRecord,
   type PieceServiceRecord,
-} from '../persistence';
-import type {
-  ActRecord,
-  CampaignRecord,
-  CareerRecord,
-  MatchRecord,
-  StoredPieceState,
+  type StoredPieceState,
 } from '../persistence';
 import type { MatchEvent } from '../psychology';
 import { selectPlayerSquad } from './squadCareer';

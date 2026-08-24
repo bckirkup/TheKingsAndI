@@ -63,7 +63,7 @@ export function longestConsecutiveRepeat(input: {
   readonly credence?: CredenceReading;
 }): number {
   let longest = 1;
-  let current = 1;
+  let runLength = 0;
   let previous: string | null = null;
   for (let ply = 1; ply <= input.plies; ply += 1) {
     const line = lineFor({
@@ -74,12 +74,8 @@ export function longestConsecutiveRepeat(input: {
       seed: input.seed,
       ...(input.credence === undefined ? {} : { credence: input.credence }),
     });
-    if (previous !== null && line === previous) {
-      current += 1;
-      longest = Math.max(longest, current);
-    } else {
-      current = 1;
-    }
+    runLength = previous !== null && line === previous ? runLength + 1 : 1;
+    longest = Math.max(longest, runLength);
     previous = line;
   }
   return longest;

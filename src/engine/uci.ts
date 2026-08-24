@@ -102,7 +102,7 @@ function parseMultiPv(tokens: readonly string[]): number {
 export class UciEngine {
   private readonly process: ChildProcessWithoutNullStreams;
   private readonly reader: Interface;
-  private readonly ready: Promise<void>;
+  private ready: Promise<void> | undefined;
   private readonly hashMb: number;
   private readonly threads: number;
   private readonly multiPv: number;
@@ -166,7 +166,12 @@ export class UciEngine {
         ),
       );
     });
-    this.ready = this.handshake();
+  }
+
+  /** Lazily start the UCI handshake outside the constructor (S7059). */
+  private ensureReady(): Promise<void> {
+    this.ready ??= this.handshake();
+    return this.ready;
   }
 
   get isBusy(): boolean {
@@ -325,7 +330,7 @@ export class UciEngine {
       throw this.processFailure;
     }
     this.busy = true;
-    await this.ready;
+    await this.ensureReady();
     this.searchFen = fen;
     this.targetDepth = depth;
     this.depthBest = new Map();

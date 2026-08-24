@@ -46,7 +46,7 @@ export const MIGRATIONS: readonly MigrationStep[] = [
               identityCreationSeed(0, identity.id),
             disposition,
             relationshipAccounts: {
-              ...(identity.relationshipAccounts ?? {}),
+              ...identity.relationshipAccounts,
               [PLAYER_LEADER_ID]: { ...account },
             },
           };

@@ -30,10 +30,10 @@ function highestAttainment(
   current: PieceRole | undefined,
   candidate: PieceRole,
 ): PieceRole {
-  return (ATTAINMENT_RANK[candidate] ?? 0) >
-    (current === undefined ? 0 : ATTAINMENT_RANK[current])
-    ? candidate
-    : (current ?? candidate);
+  const candidateRank = ATTAINMENT_RANK[candidate] ?? 0;
+  const currentRank = current === undefined ? 0 : ATTAINMENT_RANK[current];
+  if (candidateRank > currentRank) return candidate;
+  return current ?? candidate;
 }
 
 function normalizeAct(act: ActRecord): ActRecord {

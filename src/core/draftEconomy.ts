@@ -188,6 +188,14 @@ export function acceptancePriceBand(
   return 'wants_danger_money';
 }
 
+function bidMultiplierForNonCautious(
+  style: Exclude<DraftBidStyle, 'cautious'>,
+  config: DraftConfig,
+): number {
+  if (style === 'balanced') return config.BID_MULTIPLIER_BALANCED;
+  return config.BID_MULTIPLIER_AGGRESSIVE;
+}
+
 export function bidForLot(
   bidder: DraftBidder,
   lot: DraftLot,
@@ -200,9 +208,7 @@ export function bidForLot(
   const multiplier =
     bidder.style === 'cautious'
       ? config.BID_MULTIPLIER_CAUTIOUS
-      : bidder.style === 'balanced'
-        ? config.BID_MULTIPLIER_BALANCED
-        : config.BID_MULTIPLIER_AGGRESSIVE;
+      : bidMultiplierForNonCautious(bidder.style, config);
   const suggested = Math.floor(
     (target * Math.max(0, Math.trunc(multiplier))) / 1000,
   );
