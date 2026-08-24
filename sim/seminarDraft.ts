@@ -637,6 +637,9 @@ export function runSeminarDraft(options: {
     }
     sideMarkets.set(side, remainingMarket);
   }
+  const positiveClearingPrices = clearingPrices.filter(
+    (entry) => entry.clearingPrice > 0,
+  );
   return {
     pools: nextPools,
     markets: sideMarkets,
@@ -651,15 +654,13 @@ export function runSeminarDraft(options: {
       unfilledNoBids,
       unfilledBelowReserve,
       meanClearingPrice:
-        clearingPrices.filter((entry) => entry.clearingPrice > 0).length === 0
+        positiveClearingPrices.length === 0
           ? 0
           : Math.floor(
-              clearingPrices.reduce(
+              positiveClearingPrices.reduce(
                 (total, entry) => total + entry.clearingPrice,
                 0,
-              ) /
-                clearingPrices.filter((entry) => entry.clearingPrice > 0)
-                  .length,
+              ) / positiveClearingPrices.length,
             ),
       totalPurseLeftUnspent: [...remainingPurses.values()].reduce(
         (total, purse) => total + purse,

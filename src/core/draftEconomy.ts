@@ -292,9 +292,9 @@ export function clearDraft(
       );
     });
     const topBid = bids[0];
-    const winner =
+    const claimants =
       topBid === undefined
-        ? undefined
+        ? []
         : bids
             .filter(
               (bid) =>
@@ -308,7 +308,29 @@ export function clearDraft(
                   (rankByCommander.get(right.commanderId) ??
                     Number.MAX_SAFE_INTEGER) ||
                 left.commanderId.localeCompare(right.commanderId),
-            )[0];
+            );
+    let winner: DraftBid | undefined;
+    let clearingPrice = 0;
+    for (const claimant of claimants) {
+      const winnerReserve = minimumBidForCommander(
+        lot,
+        claimant.commanderId,
+        config,
+      );
+      const highestNonWinningBid = bids
+        .filter((bid) => bid.commanderId !== claimant.commanderId)
+        .reduce((highest, bid) => Math.max(highest, bid.amount), 0);
+      const claimantClearingPrice =
+        config.DRAFT_CLEARING_RULE === 'second_price'
+          ? Math.max(winnerReserve, highestNonWinningBid)
+          : claimant.amount;
+      const claimantPurse = remaining.get(claimant.commanderId) ?? 0;
+      // A first-refusal claimant can only claim at a price he can afford.
+      if (claimantClearingPrice > claimantPurse) continue;
+      winner = claimant;
+      clearingPrice = claimantClearingPrice;
+      break;
+    }
     if (winner === undefined) {
       if (affordableBids.length === 0) unfilledNoBids += 1;
       else unfilledBelowReserve += 1;
@@ -319,18 +341,6 @@ export function clearDraft(
       });
       continue;
     }
-    const winnerReserve = minimumBidForCommander(
-      lot,
-      winner.commanderId,
-      config,
-    );
-    const highestNonWinningBid = bids
-      .filter((bid) => bid.commanderId !== winner.commanderId)
-      .reduce((highest, bid) => Math.max(highest, bid.amount), 0);
-    const clearingPrice =
-      config.DRAFT_CLEARING_RULE === 'second_price'
-        ? Math.max(winnerReserve, highestNonWinningBid)
-        : winner.amount;
     const winnerPurse = remaining.get(winner.commanderId) ?? 0;
     if (clearingPrice > winnerPurse) {
       throw new Error(

@@ -1220,8 +1220,11 @@ only candidate role and folded public service facts. Candidate-specific
 acceptance is represented as a per-commander clearing reserve; a lot with no
 reserve-qualified bid is retained as below-reserve telemetry. The opt-in
 second-price clearing direction is owner-approved, while first-price remains
-the default. Counsel signals remain private: raw opinion is retained only for
-harness correlation, while the configured weight changes bidder willingness.
+the default. The legacy `declinedLots` telemetry field now means that no
+commander met her reserve; it no longer means that a winning commander
+accepted and then walked. Counsel signals remain private: raw opinion is
+retained only for harness correlation, while the configured weight changes
+bidder willingness.
 
 ADR 0061 brings D154 due in step 3, the draft.
 
