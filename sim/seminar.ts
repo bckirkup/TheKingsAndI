@@ -27,6 +27,12 @@ import {
   type HeadlessMatchResult,
 } from '../src/orchestration';
 import type { PieceState } from '../src/psychology';
+import {
+  COHORT_HISTORY_CONFIG,
+  generateCohortHistory,
+  type CohortHistoryConfig,
+} from '../src/core/cohortHistory';
+import { applyCohortHistory } from '../src/psychology';
 
 import { canonicalJson } from '../src/core/canonicalJson';
 import {
@@ -56,6 +62,8 @@ import {
   type DraftEconomyCycleObservation,
   type DraftEconomyObservations,
   type DraftStandingSeriesPoint,
+  type CohortHistoryCycleObservation,
+  type CohortHistoryObservations,
 } from './degeneracy';
 
 export const SEMINAR_WEEK_SEED_STRIDE = 1_000_003;
@@ -86,6 +94,7 @@ export interface SeminarWeekResult {
   readonly standings: readonly SeminarStanding[];
   readonly poolStates: Readonly<Record<string, CommanderPool>>;
   readonly draftEconomy: DraftEconomyCycleObservation;
+  readonly cohortHistory: CohortHistoryCycleObservation;
 }
 
 export interface SeminarCommanderResult {
@@ -117,6 +126,7 @@ export interface SeminarResult {
     readonly counsel: number;
     readonly realizedContribution: number;
   }[];
+  readonly cohortHistoryObservations: CohortHistoryObservations;
 }
 
 export function weekSeedForSemester(
@@ -359,6 +369,7 @@ function buildSeminarWeekResult(input: {
   readonly pools: ReadonlyMap<string, CommanderPool>;
   readonly config: SeminarConfig;
   readonly draftEconomy: DraftEconomyCycleObservation;
+  readonly cohortHistory: CohortHistoryCycleObservation;
 }): SeminarWeekResult {
   const records = Object.fromEntries(
     input.commanders.map((commander) => [
@@ -410,12 +421,14 @@ function buildSeminarWeekResult(input: {
     ),
     poolStates: Object.fromEntries(input.pools.entries()),
     draftEconomy: input.draftEconomy,
+    cohortHistory: input.cohortHistory,
   };
 }
 
 export async function runSeminar(options: {
   readonly seed: number;
   readonly config?: SeminarConfig;
+  readonly cohortHistoryConfig?: Partial<CohortHistoryConfig>;
   readonly engine?: EnginePort;
   readonly engineKind?: SimEngineKind;
 }): Promise<SeminarResult> {
@@ -453,6 +466,56 @@ export async function runSeminar(options: {
     currentPools,
     config,
   );
+  const cohortMemberIds = [
+    ...[...currentPools.values()].flatMap((pool) =>
+      pool.members.map((member) => member.state.id),
+    ),
+    ...[...markets.values()].flatMap((market) =>
+      market.members.map((member) => member.state.id),
+    ),
+  ];
+  const cohortHistoryConfig = {
+    ...COHORT_HISTORY_CONFIG,
+    ...options.cohortHistoryConfig,
+    RELATIONS_PER_PIECE: config.COHORT_HISTORY_RELATIONS_PER_PIECE,
+  };
+  const cohortHistory = generateCohortHistory(
+    cohortMemberIds,
+    options.seed,
+    cohortHistoryConfig,
+  );
+  currentPools = new Map(
+    [...currentPools.entries()].map(([id, pool]) => [
+      id,
+      {
+        ...pool,
+        members: pool.members.map((member) => ({
+          ...member,
+          state: applyCohortHistory(
+            member.state,
+            cohortHistory,
+            cohortHistoryConfig,
+          ),
+        })),
+      },
+    ]),
+  );
+  markets = new Map(
+    [...markets.entries()].map(([side, market]) => [
+      side,
+      {
+        ...market,
+        members: market.members.map((member) => ({
+          ...member,
+          state: applyCohortHistory(
+            member.state,
+            cohortHistory,
+            cohortHistoryConfig,
+          ),
+        })),
+      },
+    ]),
+  );
   let previousPurses = new Map<string, number>();
   const allRecords = new Map<string, MatchRecord[]>(
     commanders.map((commander) => [commander.id, []]),
@@ -465,6 +528,7 @@ export async function runSeminar(options: {
     counsel: number;
     realizedContribution: number;
   }[] = [];
+  const cohortHistoryObservations: CohortHistoryCycleObservation[] = [];
   const engine =
     options.engine ?? (await createSimEngine(options.engineKind ?? 'fake'));
   const ownedEngine = options.engine === undefined;
@@ -472,6 +536,13 @@ export async function runSeminar(options: {
   try {
     for (let week = 1; week <= config.WEEKS_PER_SEMESTER; week += 1) {
       const weekSeed = weekSeedForSemester(options.seed, week);
+      const poolStatusesBeforeWeek = new Map(
+        [...currentPools.values()].flatMap((pool) =>
+          pool.members.map(
+            (member) => [member.state.id, member.status] as const,
+          ),
+        ),
+      );
       const standingsBefore = standingsFor(
         commanders,
         new Map(
@@ -503,6 +574,23 @@ export async function runSeminar(options: {
         ),
         clearingPrices: [],
       };
+      let cohortObservation: CohortHistoryCycleObservation = {
+        cycle: week,
+        draftedCandidates: 0,
+        sharedIntakeDrafts: 0,
+        counselOpinionTotal: 0,
+        counselOpinionCount: 0,
+        counselOpinions: [],
+        counselReasonCounts: {
+          'personal affinity': 0,
+          'class prejudice': 0,
+          'chair rivalry': 0,
+          'mixed evidence': 0,
+        },
+        desertions: 0,
+        retirements: 0,
+        commendationsAwarded: 0,
+      };
       let draftPurses = new Map<string, number>(
         draftPriority(standingsBefore).map((entry) => [
           entry.commanderId,
@@ -527,6 +615,7 @@ export async function runSeminar(options: {
           previousPurses,
           config,
           firstMatch: matchIndex + 1,
+          cohortHistory,
         });
         currentPools = new Map(drafted.pools);
         markets = drafted.markets;
@@ -534,6 +623,7 @@ export async function runSeminar(options: {
         draftPurses = new Map(drafted.remainingPurses);
         standingSeries.push(...drafted.standingSeries);
         weekDraftSelections = drafted.counselSelections;
+        cohortObservation = drafted.cohortHistory;
       }
       previousPurses = draftPurses;
       draftCycles.push(draftObservation);
@@ -586,6 +676,26 @@ export async function runSeminar(options: {
           ),
         })),
       );
+      const weekRecordsList = [...weekRecords.values()].flat();
+      cohortObservation = {
+        ...cohortObservation,
+        desertions: weekRecordsList.reduce(
+          (total, record) =>
+            total +
+            record.events.filter((event) => event.t === 'DESERTION').length,
+          0,
+        ),
+        commendationsAwarded:
+          foldPlayerCommendations(weekRecordsList).awards.length,
+        retirements: [...currentPools.values()]
+          .flatMap((pool) => pool.members)
+          .filter(
+            (member) =>
+              member.status === 'retired' &&
+              poolStatusesBeforeWeek.get(member.state.id) !== 'retired',
+          ).length,
+      };
+      cohortHistoryObservations.push(cohortObservation);
       weeks.push(
         buildSeminarWeekResult({
           week,
@@ -597,6 +707,7 @@ export async function runSeminar(options: {
           pools: currentPools,
           config,
           draftEconomy: draftObservation,
+          cohortHistory: cohortObservation,
         }),
       );
     }
@@ -640,6 +751,7 @@ export async function runSeminar(options: {
       standingSeries,
     }),
     counselCorrelationPairs,
+    cohortHistoryObservations: { cycles: cohortHistoryObservations },
   };
 }
 
@@ -660,6 +772,7 @@ export function seminarPayload(result: SeminarResult): string {
     draftEconomy: result.draftEconomy,
     draftEconomyDegeneracyFindings: result.draftEconomyDegeneracyFindings,
     counselCorrelationPairs: result.counselCorrelationPairs,
+    cohortHistoryObservations: result.cohortHistoryObservations,
   });
 }
 

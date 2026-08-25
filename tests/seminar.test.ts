@@ -156,6 +156,65 @@ describe('seminar spine', () => {
     );
   });
 
+  it('folds private cohort history without publishing its ledger', async () => {
+    const result = await runSeminar({
+      seed: 41,
+      config: {
+        ...SEMINAR_CONFIG,
+        WEEKS_PER_SEMESTER: 1,
+        MATCHES_PER_WEEK: 1,
+        COMMANDERS_PER_COHORT: 1,
+        DRAFT_AT_CYCLE_ONE: true,
+        COHORT_HISTORY_RELATIONS_PER_PIECE: 2,
+      },
+      engineKind: 'fake',
+    });
+    const poolStates = Object.values(result.weeks[0]?.poolStates ?? {});
+    expect(
+      poolStates.some((pool) =>
+        pool.members.some(
+          (member) => Object.keys(member.state.dyadicAffinity).length > 0,
+        ),
+      ),
+    ).toBe(true);
+    const payload = seminarPayload(result);
+    expect(payload).not.toContain('intakeByMember');
+    expect(payload).not.toContain('"relations"');
+    expect(payload).not.toContain('cohort:');
+  });
+
+  it('keeps cohort state quantitative across density controls', async () => {
+    const runs = await Promise.all(
+      [0, 1, 2].map((density) =>
+        runSeminar({
+          seed: 43,
+          config: {
+            ...SEMINAR_CONFIG,
+            WEEKS_PER_SEMESTER: 1,
+            MATCHES_PER_WEEK: 1,
+            COMMANDERS_PER_COHORT: 1,
+            DRAFT_AT_CYCLE_ONE: false,
+            COHORT_HISTORY_RELATIONS_PER_PIECE: density,
+          },
+          engineKind: 'fake',
+        }),
+      ),
+    );
+    const affinityCounts = runs.map((result) =>
+      Object.values(result.weeks[0]?.poolStates ?? {}).reduce(
+        (total, pool) =>
+          total +
+          pool.members.reduce(
+            (count, member) =>
+              count + Object.keys(member.state.dyadicAffinity).length,
+            0,
+          ),
+        0,
+      ),
+    );
+    expect(new Set(affinityCounts).size).toBeGreaterThan(1);
+  });
+
   it('wires each loop dimension into the output', async () => {
     const base = {
       seed: 29,

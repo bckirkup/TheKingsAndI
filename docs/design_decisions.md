@@ -1361,3 +1361,19 @@ orthogonality probe arrive in step 2.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
+
+### Cohort-history seminar implementation note
+The seminar now generates one deterministic, private cohort-history ledger at
+semester start. It folds only integer relation effects into piece affinity and
+officer-class prestige; intake membership and relation rows never enter the
+public candidate slate, records, canonical seminar payload, or digest. The
+ledger density is controlled by `COHORT_HISTORY_RELATIONS_PER_PIECE`, whose
+zero default is the byte-identical control. `INTAKE_SIZE`, relation weights,
+cross-intake tail, and bereavement prestige shove are search brackets for a
+later sweep, not balance rulings. Green levies created after semester start
+intentionally receive no pre-seminar history because they are not members of
+the semester-start cohort.
+
+`inert_past` compares populated history with the same-seed density-zero control,
+while `frozen_clique` is a provisional threshold detector for intake
+concentration.

@@ -22,8 +22,11 @@ import {
   type PublicRegister,
 } from '../src/persistence';
 import { counselOpinionValue, type PieceRole } from '../src/psychology';
+import type { CohortHistory } from '../src/core/cohortHistory';
+import type { CounselReason } from '../src/psychology';
 import { DRAFT_CONFIG } from '../src/core/draftConfig';
 import type {
+  CohortHistoryCycleObservation,
   DraftEconomyCycleObservation,
   DraftStandingSeriesPoint,
 } from './degeneracy';
@@ -70,6 +73,7 @@ export interface SeminarDraftResult {
     readonly candidateId: string;
     readonly counsel: number;
   }[];
+  readonly cohortHistory: CohortHistoryCycleObservation;
 }
 
 function roleFromShortRole(role: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K'): PieceRole {
@@ -366,6 +370,7 @@ export function runSeminarDraft(options: {
   readonly previousPurses: ReadonlyMap<string, number>;
   readonly config: SeminarConfig;
   readonly firstMatch?: number;
+  readonly cohortHistory?: CohortHistory;
 }): SeminarDraftResult {
   const firstMatch = options.firstMatch ?? 1;
   const priorities = draftPriority(options.standings);
@@ -448,6 +453,16 @@ export function runSeminarDraft(options: {
     candidateId: string;
     counsel: number;
   }[] = [];
+  const counselReasonCounts: Record<CounselReason, number> = {
+    'personal affinity': 0,
+    'class prejudice': 0,
+    'chair rivalry': 0,
+    'mixed evidence': 0,
+  };
+  let counselOpinionTotal = 0;
+  let counselOpinionCount = 0;
+  const counselOpinions: number[] = [];
+  let sharedIntakeDrafts = 0;
   const willingnessByCommander = new Map<
     string,
     Readonly<Record<string, number>>
@@ -511,6 +526,15 @@ export function runSeminarDraft(options: {
         ...DRAFT_CONFIG,
         CONSULTATIONS_PER_CYCLE: options.config.DRAFT_CONSULTATIONS_PER_CYCLE,
       });
+      for (const consultation of ledger.consultations) {
+        if (!('opinion' in consultation.counsel)) continue;
+        counselOpinionTotal += counselOpinionValue(
+          consultation.counsel.opinion,
+        );
+        counselOpinionCount += 1;
+        counselOpinions.push(counselOpinionValue(consultation.counsel.opinion));
+        counselReasonCounts[consultation.counsel.reason] += 1;
+      }
       const willingness = consultationMap(
         ledger.consultations,
         Math.max(
@@ -613,6 +637,18 @@ export function runSeminarDraft(options: {
           },
         ],
       });
+      if (
+        options.cohortHistory !== undefined &&
+        options.cohortHistory.intakeByMember[candidate.state.id] !==
+          undefined &&
+        winnerPool.members.some(
+          (member) =>
+            options.cohortHistory?.intakeByMember[member.state.id] ===
+            options.cohortHistory?.intakeByMember[candidate.state.id],
+        )
+      ) {
+        sharedIntakeDrafts += 1;
+      }
       winsByCommander[cleared.winnerId] =
         (winsByCommander[cleared.winnerId] ?? 0) + 1;
       const counsel = bidders.find(
@@ -674,5 +710,20 @@ export function runSeminarDraft(options: {
     remainingPurses,
     willingnessByCommander,
     counselSelections,
+    cohortHistory: {
+      cycle: options.cycle,
+      draftedCandidates: Object.values(winsByCommander).reduce(
+        (total, count) => total + count,
+        0,
+      ),
+      sharedIntakeDrafts,
+      counselOpinionTotal,
+      counselOpinionCount,
+      counselOpinions,
+      counselReasonCounts,
+      desertions: 0,
+      retirements: 0,
+      commendationsAwarded: 0,
+    },
   };
 }

@@ -13,6 +13,7 @@ import {
   PACING_CONFIG,
 } from '../src/orchestration/pacingConfig';
 import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
+import type { CounselReason } from '../src/psychology';
 
 export const EARLY_QUARTILE_COUNT = 2;
 export const DRAFT_TANKING_POLICY = 'tanking';
@@ -72,6 +73,10 @@ export const DEGENERACY_CONFIG = {
   draftPriceCollapseMinimumLots: 2,
   /** Minimum shared cycles needed before tanking dominance is meaningful. */
   draftTankingMinimumCycles: 2,
+  /** Minimum drafted candidates before clique concentration is meaningful. */
+  cohortFrozenCliqueMinimumDrafts: 4,
+  /** Shared-intake fraction above which the market is a frozen clique. */
+  cohortFrozenCliqueFraction: 0.75,
 } as const;
 
 export interface DegeneracyFinding {
@@ -190,6 +195,105 @@ export interface DraftStandingSeriesPoint {
 export interface DraftEconomyObservations {
   readonly cycles: readonly DraftEconomyCycleObservation[];
   readonly standingSeries: readonly DraftStandingSeriesPoint[];
+}
+
+export interface CohortHistoryCycleObservation {
+  readonly cycle: number;
+  readonly draftedCandidates: number;
+  readonly sharedIntakeDrafts: number;
+  readonly counselOpinionTotal: number;
+  readonly counselOpinionCount: number;
+  readonly counselOpinions: readonly number[];
+  readonly counselReasonCounts: Readonly<Record<CounselReason, number>>;
+  readonly desertions: number;
+  readonly retirements: number;
+  readonly commendationsAwarded: number;
+}
+
+export interface CohortHistoryObservations {
+  readonly cycles: readonly CohortHistoryCycleObservation[];
+}
+
+function sameCohortCycle(
+  left: CohortHistoryCycleObservation,
+  right: CohortHistoryCycleObservation,
+): boolean {
+  return (
+    left.draftedCandidates === right.draftedCandidates &&
+    left.counselOpinionTotal === right.counselOpinionTotal &&
+    left.counselOpinionCount === right.counselOpinionCount &&
+    left.counselOpinions.length === right.counselOpinions.length &&
+    left.counselOpinions.every(
+      (opinion, index) => opinion === right.counselOpinions[index],
+    ) &&
+    left.desertions === right.desertions &&
+    left.commendationsAwarded === right.commendationsAwarded
+  );
+}
+
+export function cohortInertPastFinding(
+  populated: CohortHistoryObservations,
+  densityZeroControl: CohortHistoryObservations,
+): DegeneracyFinding | undefined {
+  if (
+    populated.cycles.length !== densityZeroControl.cycles.length ||
+    !populated.cycles.every((cycle, index) => {
+      const control = densityZeroControl.cycles[index];
+      return control !== undefined && sameCohortCycle(cycle, control);
+    })
+  ) {
+    return undefined;
+  }
+  return {
+    code: 'inert_past',
+    message:
+      'Populated cohort history matched the density-zero control on draft picks, counsel opinions, desertions, and commendations.',
+  };
+}
+
+export function cohortFrozenCliqueFinding(
+  observations: CohortHistoryObservations,
+  minimumDrafts: number = DEGENERACY_CONFIG.cohortFrozenCliqueMinimumDrafts,
+  sharedFraction: number = DEGENERACY_CONFIG.cohortFrozenCliqueFraction,
+): DegeneracyFinding | undefined {
+  const drafted = observations.cycles.reduce(
+    (total, cycle) => total + cycle.draftedCandidates,
+    0,
+  );
+  const shared = observations.cycles.reduce(
+    (total, cycle) => total + cycle.sharedIntakeDrafts,
+    0,
+  );
+  if (
+    drafted < Math.max(1, Math.trunc(minimumDrafts)) ||
+    shared / drafted <= Math.max(0, Math.min(1, sharedFraction))
+  ) {
+    return undefined;
+  }
+  return {
+    code: 'frozen_clique',
+    message: `Drafted candidates shared an intake with an existing member at ${(shared / drafted) * 100}% of acquisitions.`,
+  };
+}
+
+export function cohortHistoryDegeneracyFindings(
+  populated: CohortHistoryObservations,
+  densityZeroControl: CohortHistoryObservations,
+  options: {
+    readonly minimumDrafts?: number;
+    readonly sharedFraction?: number;
+  } = {},
+): DegeneracyFinding[] {
+  const findings: DegeneracyFinding[] = [];
+  const inert = cohortInertPastFinding(populated, densityZeroControl);
+  if (inert !== undefined) findings.push(inert);
+  const clique = cohortFrozenCliqueFinding(
+    populated,
+    options.minimumDrafts,
+    options.sharedFraction,
+  );
+  if (clique !== undefined) findings.push(clique);
+  return findings;
 }
 
 export function detectPoolDegeneracy(

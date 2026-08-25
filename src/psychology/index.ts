@@ -105,6 +105,7 @@ export {
   applyMatchOutcomeTrust,
   costlySignalCredit,
 } from './trust';
+export { applyCohortHistory } from './cohortHistory';
 export {
   calculateInterPieceProtection,
   calculateMoveUtility,
