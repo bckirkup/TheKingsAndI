@@ -102,6 +102,7 @@ function parseMultiPv(tokens: readonly string[]): number {
 export class UciEngine {
   private readonly process: ChildProcessWithoutNullStreams;
   private readonly reader: Interface;
+  private readonly processExit: Promise<void>;
   private ready: Promise<void> | undefined;
   private readonly hashMb: number;
   private readonly threads: number;
@@ -137,6 +138,9 @@ export class UciEngine {
     }
     this.process = spawn(process.execPath, [options.enginePath], {
       stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    this.processExit = new Promise((resolve) => {
+      this.process.once('exit', () => resolve());
     });
     this.reader = createInterface({ input: this.process.stdout });
     this.reader.on('line', (line) => this.dispatch(line.trim()));
@@ -366,5 +370,6 @@ export class UciEngine {
     await this.send('quit').catch(() => undefined);
     this.reader.close();
     this.process.kill();
+    await this.processExit;
   }
 }

@@ -31,6 +31,7 @@ import {
   disposeSimEngine,
   type SimEngineKind,
 } from './engine';
+import { shardCost, type ShardCost } from './cost';
 
 export const PARALLEL_MANIFEST_VERSION = 1;
 const CAMPAIGN_SEED_SALT = 0xa5f1523d;
@@ -172,6 +173,7 @@ export interface ShardArtifact {
   readonly trajectoryBands?: readonly CampaignTrajectoryBand[];
   readonly horizon?: readonly CampaignHorizon[];
   readonly matchedSkillHorizon?: readonly ControlHorizon[];
+  readonly cost?: ShardCost;
 }
 
 export interface ShardCampaignResult {
@@ -188,6 +190,7 @@ export interface ShardResult {
   readonly trajectoryBands: readonly CampaignTrajectoryBand[];
   readonly horizon: readonly CampaignHorizon[];
   readonly matchedSkillHorizon: readonly ControlHorizon[];
+  readonly cost?: ShardCost;
 }
 
 export function deriveCampaignSeed(
@@ -248,6 +251,7 @@ function identityFromEnvironment(): {
 }
 
 export async function runShard(options: ShardOptions): Promise<ShardResult> {
+  const startedAt = process.hrtime.bigint();
   const indices = campaignIndicesForShard(
     options.plan.campaigns,
     options.shardIndex,
@@ -324,6 +328,17 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       campaignIndices: indices,
       ...identityFromEnvironment(),
     };
+    const campaignCosts = campaigns.flatMap((campaign) =>
+      campaign.result.cost === undefined
+        ? []
+        : [
+            {
+              campaignIndex: campaign.campaignIndex,
+              campaignSeed: campaign.campaignSeed,
+              cost: campaign.result.cost,
+            },
+          ],
+    );
     return {
       manifest,
       campaigns,
@@ -337,6 +352,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
       matchedSkillHorizon: averagePlainChessHorizonSeries(
         campaigns.map((campaign) => campaign.matchedSkillHorizon),
       ),
+      ...(campaignCosts.length === campaigns.length
+        ? { cost: shardCost(startedAt, campaignCosts) }
+        : {}),
     };
   } finally {
     if (engine !== undefined) {
@@ -357,6 +375,7 @@ export function artifactFromShard(result: ShardResult): ShardArtifact {
     trajectoryBands: result.trajectoryBands,
     horizon: result.horizon,
     matchedSkillHorizon: result.matchedSkillHorizon,
+    ...(result.cost === undefined ? {} : { cost: result.cost }),
   };
 }
 

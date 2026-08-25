@@ -391,6 +391,11 @@ async function main(): Promise<void> {
   console.log(
     `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
+  if (result.cost !== undefined) {
+    console.log(
+      `cost wall_ms=${result.cost.wallClockMs.toFixed(1)} ms_per_match=${result.cost.msPerMatch.toFixed(1)} ms_per_ply=${result.cost.msPerPly.toFixed(3)} engine_calls=${result.cost.engineCalls} evaluate=${result.cost.evaluateCalls} multi_pv_at=${result.cost.multiPvAtCalls} calls_per_ply=${result.cost.engineCallsPerPly.toFixed(3)} restarts=${result.cost.restarts} peak_rss_mb=${(result.cost.peakRssBytes / (1024 * 1024)).toFixed(1)} resource_max_rss_mb=${(result.cost.resourceMaxRssBytes / (1024 * 1024)).toFixed(1)}`,
+    );
+  }
   for (const band of result.trajectoryBands) {
     console.log(
       `quartile=${band.quartile} matches=${band.startMatch}-${band.endMatch} tau_abil=${band.meanTauAbil.toFixed(2)} tau_benev=${band.meanTauBenev.toFixed(2)} vindication=${band.meanVindicationRate.toFixed(3)} drip_events=${band.meanDripEvents.toFixed(2)} adjudication_vindication=${band.meanAdjudicationVindicationRate.toFixed(3)} tau_abil_role=${JSON.stringify(band.meanFinalTauAbilByRole)} refusal=${band.meanRefusalRate.toFixed(3)} refusals_per_ply=${band.meanRefusalsPerPly.toFixed(3)} desertion_match=${band.desertionMatchRate.toFixed(3)} desertion_attrition=${band.desertionAttrition.toFixed(3)} rout=${band.routRate.toFixed(3)} roster=${band.meanSurvivingRosterSize.toFixed(2)}`,

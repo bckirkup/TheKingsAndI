@@ -110,6 +110,42 @@ describe('engine conformance corpus (Lozza)', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it('keeps evaluations stable with cache eviction', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-lozza-'));
+    const artifact = fileURLToPath(
+      new URL('../vendor/lozza/lozza.cjs', import.meta.url),
+    );
+    const defaultPath = join(directory, 'default-lozza.cjs');
+    const constrainedPath = join(directory, 'constrained-lozza.cjs');
+    try {
+      await writeFile(defaultPath, await readFile(artifact));
+      await writeFile(constrainedPath, await readFile(artifact));
+      const defaultPort = createLozzaPort({
+        enginePath: defaultPath,
+        ladderCacheCapacity: 32,
+      });
+      const constrainedPort = createLozzaPort({
+        enginePath: constrainedPath,
+        ladderCacheCapacity: 1,
+      });
+      const cases = CONFORMANCE_CORPUS.slice(0, 2);
+      const evaluate = async (port: EnginePort) =>
+        Promise.all(
+          cases.flatMap((testCase) => [
+            port.evaluate(testCase.fen, testCase.depth),
+            port.multiPvAt?.(testCase.fen, testCase.depth) ??
+              Promise.resolve([]),
+          ]),
+        );
+      await expect(evaluate(constrainedPort)).resolves.toEqual(
+        await evaluate(defaultPort),
+      );
+      expect(constrainedPort.determinismId).toBe(defaultPort.determinismId);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
 
 describe('engine conformance corpus (Stockfish)', () => {

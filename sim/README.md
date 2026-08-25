@@ -51,6 +51,14 @@ simulation or aggregation command when an exit-criterion failure should be
 fatal; the default smoke path still reports findings without making them hard
 failures.
 
+The JSON artifact also contains a machine-dependent top-level `cost` section
+with per-match and per-campaign wall time, engine call counts and depth
+histograms, child restarts, RSS samples, and derived rates. Lozza child
+recycling is currently opt-in because its warm transposition-table state can
+affect search results; the default restart count is therefore zero. Cost is
+observational only: it is excluded from deterministic manifests and aggregate
+identity checks.
+
 For a multi-campaign run, do not reproduce one campaign with
 `--campaigns=1`: the legacy single-campaign path deliberately uses the master
 seed directly to preserve historical byte identity, while multi-campaign runs

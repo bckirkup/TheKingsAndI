@@ -12,6 +12,10 @@ import type { EngineEvaluation, EnginePort } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
 const LOZZA_HASH_MB = 16;
+export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = 256;
+// Lozza's warm transposition-table state affects search results. Keep
+// recycling opt-in until its determinism contract is decided.
+export const DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES = Number.MAX_SAFE_INTEGER;
 const LOZZA_BUILD_PATTERN = /\bconst BUILD = ['"]([^'"]+)['"];/;
 const LOZZA_ARTIFACT_HASH_PREFIX_LENGTH = 12;
 
@@ -23,6 +27,10 @@ const defaultEnginePath = join(
 export interface LozzaPortOptions {
   /** Override the vendored lozza.cjs path (tests only). */
   readonly enginePath?: string;
+  /** Maximum number of FEN ladders retained by the adapter's LRU. */
+  readonly ladderCacheCapacity?: number;
+  /** Recycle each child after this many completed searches (opt-in). */
+  readonly recycleAfterSearches?: number;
 }
 
 interface LozzaEngineState {
@@ -30,7 +38,12 @@ interface LozzaEngineState {
   bestEngine: UciEngine | undefined;
   searchQueue: Promise<void>;
   bestSearchQueue: Promise<void>;
-  ladderByFen: Map<string, DepthLadder>;
+  ladderByFen: LruCache<string, DepthLadder>;
+  ladderCacheCapacity: number;
+  recycleAfterSearches: number;
+  sharedSearches: number;
+  bestSearches: number;
+  restarts: number;
 }
 
 const statesByPath = new Map<string, LozzaEngineState>();
@@ -39,20 +52,82 @@ const artifactIdentityByPath = new Map<
   { readonly build: string; readonly hash: string }
 >();
 
-function getState(enginePath: string): LozzaEngineState {
+class LruCache<K, V> {
+  private readonly values = new Map<K, V>();
+
+  constructor(private capacity: number) {
+    if (!Number.isSafeInteger(capacity) || capacity < 1) {
+      throw new RangeError('ladderCacheCapacity must be a positive integer.');
+    }
+  }
+
+  setCapacity(capacity: number): void {
+    if (!Number.isSafeInteger(capacity) || capacity < 1) {
+      throw new RangeError('ladderCacheCapacity must be a positive integer.');
+    }
+    this.capacity = capacity;
+    this.trim();
+  }
+
+  get(key: K): V | undefined {
+    const value = this.values.get(key);
+    if (value !== undefined) {
+      this.values.delete(key);
+      this.values.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    this.values.delete(key);
+    this.values.set(key, value);
+    this.trim();
+  }
+
+  private trim(): void {
+    while (this.values.size > this.capacity) {
+      const oldest = this.values.keys().next().value as K | undefined;
+      if (oldest === undefined) break;
+      this.values.delete(oldest);
+    }
+  }
+}
+
+function createSharedEngine(enginePath: string): UciEngine {
+  return new UciEngine({
+    enginePath,
+    hashMb: LOZZA_HASH_MB,
+    threads: 1,
+    multiPv: DEFAULT_PRIVATE_MULTIPV_WIDTH,
+  });
+}
+
+function getState(
+  enginePath: string,
+  options: LozzaPortOptions,
+): LozzaEngineState {
   const existing = statesByPath.get(enginePath);
-  if (existing !== undefined) return existing;
+  const ladderCacheCapacity =
+    options.ladderCacheCapacity ?? DEFAULT_LOZZA_LADDER_CACHE_CAPACITY;
+  const recycleAfterSearches =
+    options.recycleAfterSearches ?? DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES;
+  if (existing !== undefined) {
+    existing.ladderCacheCapacity = ladderCacheCapacity;
+    existing.recycleAfterSearches = recycleAfterSearches;
+    existing.ladderByFen.setCapacity(ladderCacheCapacity);
+    return existing;
+  }
   const state: LozzaEngineState = {
-    sharedEngine: new UciEngine({
-      enginePath,
-      hashMb: LOZZA_HASH_MB,
-      threads: 1,
-      multiPv: DEFAULT_PRIVATE_MULTIPV_WIDTH,
-    }),
+    sharedEngine: createSharedEngine(enginePath),
     bestEngine: undefined,
     searchQueue: Promise.resolve(),
     bestSearchQueue: Promise.resolve(),
-    ladderByFen: new Map(),
+    ladderByFen: new LruCache(ladderCacheCapacity),
+    ladderCacheCapacity,
+    recycleAfterSearches,
+    sharedSearches: 0,
+    bestSearches: 0,
+    restarts: 0,
   };
   statesByPath.set(enginePath, state);
   return state;
@@ -66,6 +141,31 @@ function getBestEngine(state: LozzaEngineState, enginePath: string): UciEngine {
     multiPv: 1,
   });
   return state.bestEngine;
+}
+
+async function recycleSharedEngine(
+  state: LozzaEngineState,
+  enginePath: string,
+): Promise<void> {
+  await state.sharedEngine.dispose();
+  state.sharedEngine = createSharedEngine(enginePath);
+  state.sharedSearches = 0;
+  state.restarts += 1;
+}
+
+async function recycleBestEngine(
+  state: LozzaEngineState,
+  enginePath: string,
+): Promise<void> {
+  if (state.bestEngine !== undefined) await state.bestEngine.dispose();
+  state.bestEngine = new UciEngine({
+    enginePath,
+    hashMb: LOZZA_HASH_MB,
+    threads: 1,
+    multiPv: 1,
+  });
+  state.bestSearches = 0;
+  state.restarts += 1;
 }
 
 function getArtifactIdentity(enginePath: string): {
@@ -123,16 +223,20 @@ function bestAvailableResult(
 export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   const enginePath = resolve(options.enginePath ?? defaultEnginePath);
   const determinismId = lozzaDeterminismId(enginePath);
-  const state = getState(enginePath);
+  const state = getState(enginePath, options);
   const ladderFor = async (
     fen: string,
     depth: number,
   ): Promise<DepthLadder> => {
     const cached = state.ladderByFen.get(fen);
     if (cached !== undefined && cached.maxDepth >= depth) return cached;
-    const search = state.searchQueue.then(() =>
-      state.sharedEngine.searchLadder(fen, depth),
-    );
+    const search = state.searchQueue.then(async () => {
+      if (state.sharedSearches >= state.recycleAfterSearches) {
+        await recycleSharedEngine(state, enginePath);
+      }
+      state.sharedSearches += 1;
+      return state.sharedEngine.searchLadder(fen, depth);
+    });
     state.searchQueue = search.then(
       () => undefined,
       () => undefined,
@@ -172,9 +276,13 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
       return Object.freeze([]);
     },
     async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
-      const search = state.bestSearchQueue.then(() =>
-        getBestEngine(state, enginePath).searchLadder(fen, depth),
-      );
+      const search = state.bestSearchQueue.then(async () => {
+        if (state.bestSearches >= state.recycleAfterSearches) {
+          await recycleBestEngine(state, enginePath);
+        }
+        state.bestSearches += 1;
+        return getBestEngine(state, enginePath).searchLadder(fen, depth);
+      });
       state.bestSearchQueue = search.then(
         () => undefined,
         () => undefined,
@@ -189,6 +297,7 @@ export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
         pv: Object.freeze([...result.pv]),
       });
     },
+    getCostStats: () => ({ restarts: state.restarts }),
   };
 }
 
