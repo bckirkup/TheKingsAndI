@@ -1,6 +1,7 @@
 import { seminarPayload, seminarSummary, runSeminar } from './seminar';
 import { SEMINAR_CONFIG } from './seminarConfig';
 import type { SimEngineKind } from './engine';
+import { cohortHistoryDegeneracyFindings } from './degeneracy';
 
 function parseInteger(
   values: ReadonlyMap<string, string>,
@@ -23,6 +24,7 @@ function parseArguments(argumentsList: readonly string[]): {
   readonly draftAtCycleOne: boolean;
   readonly clearingRule: 'first_price' | 'second_price';
   readonly purseToAskingRatioPermille: number;
+  readonly cohortHistoryRelationsPerPiece: number;
 } {
   const values = new Map<string, string>();
   const supported = new Set([
@@ -34,6 +36,7 @@ function parseArguments(argumentsList: readonly string[]): {
     'draft-at-cycle-one',
     'clearing-rule',
     'purse-to-asking-ratio',
+    'cohort-history-relations-per-piece',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -76,6 +79,18 @@ function parseArguments(argumentsList: readonly string[]): {
       '--purse-to-asking-ratio must be an integer from 0 to 1000.',
     );
   }
+  const cohortHistoryRelationsPerPiece = Number(
+    values.get('cohort-history-relations-per-piece') ??
+      SEMINAR_CONFIG.COHORT_HISTORY_RELATIONS_PER_PIECE,
+  );
+  if (
+    !Number.isSafeInteger(cohortHistoryRelationsPerPiece) ||
+    cohortHistoryRelationsPerPiece < 0
+  ) {
+    throw new Error(
+      '--cohort-history-relations-per-piece must be a non-negative integer.',
+    );
+  }
   return {
     seed,
     weeks: parseInteger(values, 'weeks', SEMINAR_CONFIG.WEEKS_PER_SEMESTER),
@@ -89,6 +104,7 @@ function parseArguments(argumentsList: readonly string[]): {
     draftAtCycleOne: draftAtCycleOne === 'true',
     clearingRule,
     purseToAskingRatioPermille,
+    cohortHistoryRelationsPerPiece,
   };
 }
 
@@ -104,11 +120,41 @@ async function main(): Promise<void> {
       DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
       DRAFT_CLEARING_RULE: options.clearingRule,
       DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: options.purseToAskingRatioPermille,
+      COHORT_HISTORY_RELATIONS_PER_PIECE:
+        options.cohortHistoryRelationsPerPiece,
     },
     engineKind: options.engine,
   });
+  const control =
+    options.cohortHistoryRelationsPerPiece === 0
+      ? result
+      : await runSeminar({
+          seed: options.seed,
+          config: {
+            ...SEMINAR_CONFIG,
+            WEEKS_PER_SEMESTER: options.weeks,
+            MATCHES_PER_WEEK: options.matches,
+            COMMANDERS_PER_COHORT: options.commanders,
+            DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
+            DRAFT_CLEARING_RULE: options.clearingRule,
+            DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE:
+              options.purseToAskingRatioPermille,
+            COHORT_HISTORY_RELATIONS_PER_PIECE: 0,
+          },
+          engineKind: options.engine,
+        });
   console.log(seminarPayload(result));
   console.log(seminarSummary(result));
+  const cohortFindings =
+    options.cohortHistoryRelationsPerPiece === 0
+      ? []
+      : cohortHistoryDegeneracyFindings(
+          result.cohortHistoryObservations,
+          control.cohortHistoryObservations,
+        );
+  console.log(
+    `cohortHistoryDegeneracyFindings=${JSON.stringify(cohortFindings)}`,
+  );
 }
 
 const isMain =

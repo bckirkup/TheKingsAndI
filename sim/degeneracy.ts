@@ -13,6 +13,7 @@ import {
   PACING_CONFIG,
 } from '../src/orchestration/pacingConfig';
 import { normalizeBandLearningDelta } from '../src/persistence/learningDelta';
+import type { CounselReason } from '../src/psychology';
 
 export const EARLY_QUARTILE_COUNT = 2;
 export const DRAFT_TANKING_POLICY = 'tanking';
@@ -72,6 +73,10 @@ export const DEGENERACY_CONFIG = {
   draftPriceCollapseMinimumLots: 2,
   /** Minimum shared cycles needed before tanking dominance is meaningful. */
   draftTankingMinimumCycles: 2,
+  /** Minimum drafted candidates before clique concentration is meaningful. */
+  cohortFrozenCliqueMinimumDrafts: 4,
+  /** Minimum populated-vs-control shared-intake rate delta for clique detection. */
+  cohortFrozenCliqueRateMargin: 0.1,
 } as const;
 
 export interface DegeneracyFinding {
@@ -110,6 +115,7 @@ export interface DegeneracyAssertionOptions {
   readonly draftPriceCollapseMinimumLots?: number;
   readonly draftTankingMinimumCycles?: number;
   readonly draftTankingPolicy?: string;
+  readonly cohortFrozenCliqueRateMargin?: number;
   /**
    * Forward campaigns run on the same seed set. This is deliberately not the
    * ADR 0030 replay-based counterfactual: ReplayManifest is not wired yet.
@@ -190,6 +196,158 @@ export interface DraftStandingSeriesPoint {
 export interface DraftEconomyObservations {
   readonly cycles: readonly DraftEconomyCycleObservation[];
   readonly standingSeries: readonly DraftStandingSeriesPoint[];
+}
+
+export interface CohortHistoryCycleObservation {
+  readonly cycle: number;
+  readonly draftedCandidates: number;
+  readonly sharedIntakeDrafts: number;
+  readonly consultedAffinityPairs: number;
+  readonly consultedIntakePairs: number;
+  readonly acquisitionsWithAffinity: number;
+  readonly counselOpinionTotal: number;
+  readonly counselOpinionCount: number;
+  readonly counselOpinions: readonly number[];
+  readonly counselReasonCounts: Readonly<Record<CounselReason, number>>;
+  readonly desertions: number;
+  readonly retirements: number;
+  readonly commendationsAwarded: number;
+}
+
+export interface CohortHistoryObservations {
+  readonly cycles: readonly CohortHistoryCycleObservation[];
+}
+
+function sameCohortCounsel(
+  left: CohortHistoryCycleObservation,
+  right: CohortHistoryCycleObservation,
+): boolean {
+  return (
+    left.counselOpinionTotal === right.counselOpinionTotal &&
+    left.counselOpinionCount === right.counselOpinionCount &&
+    left.counselOpinions.length === right.counselOpinions.length &&
+    left.counselOpinions.every(
+      (opinion, index) => opinion === right.counselOpinions[index],
+    )
+  );
+}
+
+export function cohortInertPastFinding(
+  populated: CohortHistoryObservations,
+  densityZeroControl: CohortHistoryObservations,
+): DegeneracyFinding | undefined {
+  const activeCycles = populated.cycles.filter(
+    (cycle) => cycle.draftedCandidates > 0 || cycle.counselOpinionCount > 0,
+  );
+  if (activeCycles.length === 0) {
+    return undefined;
+  }
+  const controlByCycle = new Map(
+    densityZeroControl.cycles.map((cycle) => [cycle.cycle, cycle]),
+  );
+  const draftPicksMatch = activeCycles.every((cycle) => {
+    const control = controlByCycle.get(cycle.cycle);
+    return (
+      control !== undefined &&
+      cycle.draftedCandidates === control.draftedCandidates
+    );
+  });
+  const counselOpinionsMatch = activeCycles.every((cycle) => {
+    const control = controlByCycle.get(cycle.cycle);
+    return control !== undefined && sameCohortCounsel(cycle, control);
+  });
+  if (!draftPicksMatch || !counselOpinionsMatch) {
+    return undefined;
+  }
+  return {
+    code: 'inert_past',
+    message:
+      'Populated cohort history matched the density-zero control on draft picks and counsel opinions.',
+  };
+}
+
+export function cohortDraftNeverRanFinding(
+  observations: CohortHistoryObservations,
+): DegeneracyFinding | undefined {
+  if (
+    observations.cycles.length === 0 ||
+    observations.cycles.some(
+      (cycle) => cycle.draftedCandidates > 0 || cycle.counselOpinionCount > 0,
+    )
+  ) {
+    return undefined;
+  }
+  return {
+    code: 'draft_never_ran',
+    message:
+      'The draft never ran: no candidates were drafted or counsel opinions recorded.',
+  };
+}
+
+export function cohortFrozenCliqueFinding(
+  observations: CohortHistoryObservations,
+  densityZeroControl: CohortHistoryObservations,
+  minimumDrafts: number = DEGENERACY_CONFIG.cohortFrozenCliqueMinimumDrafts,
+  rateMargin: number = DEGENERACY_CONFIG.cohortFrozenCliqueRateMargin,
+): DegeneracyFinding | undefined {
+  const drafted = observations.cycles.reduce(
+    (total, cycle) => total + cycle.draftedCandidates,
+    0,
+  );
+  const shared = observations.cycles.reduce(
+    (total, cycle) => total + cycle.sharedIntakeDrafts,
+    0,
+  );
+  const controlDrafted = densityZeroControl.cycles.reduce(
+    (total, cycle) => total + cycle.draftedCandidates,
+    0,
+  );
+  const controlShared = densityZeroControl.cycles.reduce(
+    (total, cycle) => total + cycle.sharedIntakeDrafts,
+    0,
+  );
+  const ledgerTouched = observations.cycles.some(
+    (cycle) =>
+      cycle.consultedAffinityPairs > 0 || cycle.acquisitionsWithAffinity > 0,
+  );
+  const sharedRate = drafted === 0 ? 0 : shared / drafted;
+  const controlRate = controlDrafted === 0 ? 0 : controlShared / controlDrafted;
+  const margin = Math.max(0, rateMargin);
+  if (
+    drafted < Math.max(1, Math.trunc(minimumDrafts)) ||
+    controlDrafted < Math.max(1, Math.trunc(minimumDrafts)) ||
+    !ledgerTouched ||
+    sharedRate <= controlRate + margin
+  ) {
+    return undefined;
+  }
+  return {
+    code: 'frozen_clique',
+    message: `Drafted candidates shared an intake at ${(sharedRate * 100).toFixed(1)}% versus ${(controlRate * 100).toFixed(1)}% for the density-zero control.`,
+  };
+}
+
+export function cohortHistoryDegeneracyFindings(
+  populated: CohortHistoryObservations,
+  densityZeroControl: CohortHistoryObservations,
+  options: {
+    readonly minimumDrafts?: number;
+    readonly cohortFrozenCliqueRateMargin?: number;
+  } = {},
+): DegeneracyFinding[] {
+  const findings: DegeneracyFinding[] = [];
+  const draftNeverRan = cohortDraftNeverRanFinding(populated);
+  if (draftNeverRan !== undefined) findings.push(draftNeverRan);
+  const inert = cohortInertPastFinding(populated, densityZeroControl);
+  if (inert !== undefined) findings.push(inert);
+  const clique = cohortFrozenCliqueFinding(
+    populated,
+    densityZeroControl,
+    options.minimumDrafts,
+    options.cohortFrozenCliqueRateMargin,
+  );
+  if (clique !== undefined) findings.push(clique);
+  return findings;
 }
 
 export function detectPoolDegeneracy(

@@ -1361,3 +1361,34 @@ orthogonality probe arrive in step 2.
 4. **D25–D27, D33 (price)** — during Milestones 3–5.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
+
+### Cohort-history seminar implementation note
+The seminar now generates one deterministic, private cohort-history ledger at
+semester start. It folds only integer relation effects into piece affinity and
+officer-class prestige; intake membership and relation rows never enter the
+public candidate slate, records, canonical seminar payload, or digest. The
+ledger density is controlled by `COHORT_HISTORY_RELATIONS_PER_PIECE`, whose
+zero default is the byte-identical control. `INTAKE_SIZE`, relation weights,
+cross-intake tail, and bereavement prestige shove are search brackets for a
+later sweep, not balance rulings. Green levies created after semester start
+intentionally receive no pre-seminar history because they are not members of
+the semester-start cohort.
+
+Because the ledger has no explicit ordering-class field, `bereaved_together`
+currently lowers prestige for all four officer roles (`Knight`, `Bishop`,
+`Rook`, and `Queen`); this remains an implementation assumption.
+
+Shared-intake draft counts are only a coarse intake-shape measure: they can be
+non-zero at density zero because membership is assigned independently of
+relation rows. Consultation telemetry therefore reports both the number of
+same-intake holder/candidate pairs that could have carried a relation and the
+subset with non-zero affinity; the affinity-specific consultation and
+acquisition counts are the direct measures of whether the past reaches draft
+decisions.
+
+`inert_past` compares populated history with the same-seed density-zero control
+on draft picks and counsel opinions only, and ignores cycles where neither
+channel had activity. A run with no activity reports `draft_never_ran` instead.
+`frozen_clique` is differential: it requires the populated run's shared-intake
+acquisition rate to exceed the density-zero control by a provisional margin,
+so the detector cannot fire from intake shape alone at density zero.

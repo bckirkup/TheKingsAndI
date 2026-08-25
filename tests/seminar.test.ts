@@ -156,6 +156,150 @@ describe('seminar spine', () => {
     );
   });
 
+  it('folds private cohort history without publishing its ledger', async () => {
+    const result = await runSeminar({
+      seed: 41,
+      config: {
+        ...SEMINAR_CONFIG,
+        WEEKS_PER_SEMESTER: 1,
+        MATCHES_PER_WEEK: 1,
+        COMMANDERS_PER_COHORT: 1,
+        DRAFT_AT_CYCLE_ONE: true,
+        COHORT_HISTORY_RELATIONS_PER_PIECE: 2,
+      },
+      engineKind: 'fake',
+    });
+    const poolStates = Object.values(result.weeks[0]?.poolStates ?? {});
+    expect(
+      poolStates.some((pool) =>
+        pool.members.some(
+          (member) => Object.keys(member.state.dyadicAffinity).length > 0,
+        ),
+      ),
+    ).toBe(true);
+    const payload = seminarPayload(result);
+    expect(payload).not.toContain('intakeByMember');
+    expect(payload).not.toContain('"relations"');
+    expect(payload).not.toContain('cohort:');
+  });
+
+  it('counts direct affinity in consultations and acquisitions', () => {
+    const white = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'tyrannical',
+      careerSeed: 42,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'servant',
+      careerSeed: 43,
+    });
+    const whiteWithoutQueen = {
+      ...white,
+      members: white.members.filter((member) => member.originRole !== 'Queen'),
+    };
+    const market = createSeminarMarkets(
+      42,
+      new Map([
+        [whiteWithoutQueen.id, whiteWithoutQueen],
+        [black.id, black],
+      ]),
+    );
+    const queen = market
+      .get('w')
+      ?.members.find((member) => member.originRole === 'Queen');
+    const holder = [...whiteWithoutQueen.members].sort((left, right) =>
+      left.state.id.localeCompare(right.state.id),
+    )[0];
+    if (queen === undefined || holder === undefined) {
+      throw new Error('Missing direct-affinity fixture.');
+    }
+    const pooledHolder = {
+      ...holder,
+      state: {
+        ...holder.state,
+        dyadicAffinity: { [queen.state.id]: 10 },
+      },
+    };
+    const pooledWhite = {
+      ...whiteWithoutQueen,
+      members: whiteWithoutQueen.members.map((member) =>
+        member.state.id === holder.state.id ? pooledHolder : member,
+      ),
+    };
+    const result = runSeminarDraft({
+      cycle: 2,
+      seed: 42,
+      commanders: [
+        { id: pooledWhite.id, side: 'w', style: 'tyrannical' },
+        { id: black.id, side: 'b', style: 'servant' },
+      ],
+      pools: new Map([
+        [pooledWhite.id, pooledWhite],
+        [black.id, black],
+      ]),
+      markets: new Map([
+        ['w', { side: 'w', members: [queen] }],
+        ['b', { side: 'b', members: [] }],
+      ]),
+      standings: [
+        { commanderId: pooledWhite.id, standing: 0, cohortExternality: 0 },
+        { commanderId: black.id, standing: 0, cohortExternality: 0 },
+      ],
+      registers: new Map(),
+      previousPurses: new Map(),
+      config: {
+        ...SEMINAR_CONFIG,
+        DRAFT_CONSULTATIONS_PER_CYCLE: 1,
+        DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: 1000,
+      },
+      cohortHistory: {
+        intakeByMember: {
+          [holder.state.id]: 0,
+          [queen.state.id]: 0,
+        },
+        relations: [],
+      },
+    });
+    expect(result.cohortHistory.consultedIntakePairs).toBe(1);
+    expect(result.cohortHistory.consultedAffinityPairs).toBe(1);
+    expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
+  });
+
+  it('keeps cohort state quantitative across density controls', async () => {
+    const runs = await Promise.all(
+      [0, 1, 2].map((density) =>
+        runSeminar({
+          seed: 43,
+          config: {
+            ...SEMINAR_CONFIG,
+            WEEKS_PER_SEMESTER: 1,
+            MATCHES_PER_WEEK: 1,
+            COMMANDERS_PER_COHORT: 1,
+            DRAFT_AT_CYCLE_ONE: false,
+            COHORT_HISTORY_RELATIONS_PER_PIECE: density,
+          },
+          engineKind: 'fake',
+        }),
+      ),
+    );
+    const affinityCounts = runs.map((result) =>
+      Object.values(result.weeks[0]?.poolStates ?? {}).reduce(
+        (total, pool) =>
+          total +
+          pool.members.reduce(
+            (count, member) =>
+              count + Object.keys(member.state.dyadicAffinity).length,
+            0,
+          ),
+        0,
+      ),
+    );
+    expect(new Set(affinityCounts).size).toBeGreaterThan(1);
+  });
+
   it('wires each loop dimension into the output', async () => {
     const base = {
       seed: 29,
