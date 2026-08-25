@@ -12,8 +12,9 @@ import type { EngineEvaluation, EnginePort } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
 const LOZZA_HASH_MB = 16;
-// Keep the warm-child default behavior until the engine determinism contract
-// decides whether eviction-induced re-searches may change campaign results.
+// Keep the cache unbounded by default: eviction forces re-searches on the warm
+// child, and Lozza's carried state makes those results path-dependent. Whether
+// bounded eviction may change campaign numbers belongs in the determinism ADR.
 export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = Number.MAX_SAFE_INTEGER;
 // Lozza's warm transposition-table state affects search results. Keep
 // recycling opt-in until its determinism contract is decided.

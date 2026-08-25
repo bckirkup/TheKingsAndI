@@ -13,9 +13,15 @@ export interface MatchCost extends EngineCallCost {
   readonly match: number;
   readonly wallClockMs: number;
   readonly restarts: number;
-  /** Process-cumulative RSS high-water mark observed by the end of this match. */
+  /**
+   * Process-cumulative RSS high-water mark observed through this match.
+   * Monotonic across match records; intended for leak detection.
+   */
   readonly peakRssBytes: number;
-  /** Process-cumulative resource RSS high-water mark observed by this match. */
+  /**
+   * Process-cumulative resource RSS high-water mark observed through this
+   * match. Monotonic across match records; intended for leak detection.
+   */
   readonly resourceMaxRssBytes: number;
   readonly plies: number;
   readonly msPerPly: number;

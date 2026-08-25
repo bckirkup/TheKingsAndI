@@ -111,7 +111,7 @@ describe('engine conformance corpus (Lozza)', () => {
     }
   });
 
-  it('keeps evaluations stable with cache eviction', async () => {
+  it('keeps fresh-child evaluations stable with cache eviction', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'the-kings-and-i-lozza-'));
     const artifact = fileURLToPath(
       new URL('../vendor/lozza/lozza.cjs', import.meta.url),
