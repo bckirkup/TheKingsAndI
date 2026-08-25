@@ -1362,6 +1362,30 @@ orthogonality probe arrive in step 2.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
 
+### D159–D163 ❓ How may a model play, and what may its play prove? (ADR 0062)
+**Open — not wired.** Owner ruling of 2026-08-25: **no live LLM during play.**
+A model may play only through a **decision journal** — an ordered, canonical
+record of each decision, the observation the commander was shown, the
+canonically ordered option set, and the chosen *index*; free text is carried as
+`rationale` that no reducer may read, so ADR 0001 is enforced structurally
+rather than by convention. Journals replay with neither model nor engine
+(engine answers are recorded per entry, as `ReplayManifest` already does for
+`moveEval`), which is also what makes forking a prefix at one decision the way
+realistic mid-campaign scenarios are generated. Balance rule: coefficients are
+tuned only against scripted policies; model runs exist to surface behaviour a
+script cannot express (boredom, spite, over-overriding), and a finding counts
+only once it is demoted into a deterministic scripted policy or metric. No
+committed balance number may depend on a model checkpoint. All model calls live
+in `sim/`; `src/` gains only the widened commander port and the observation
+projection.
+
+Open: **D159** which decision kinds enter the first journal; **D160** the
+contents of `Observation` per kind and its leak test; **D161** the fallback when
+an agent declines or answers out of range (scripted policy of record versus
+recorded disengagement); **D162** bid-ladder discretisation and granularity;
+**D163** how many model runs constitute a finding worth demoting, and who rules
+on it.
+
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
 semester start. It folds only integer relation effects into piece affinity and
