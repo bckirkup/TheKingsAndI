@@ -19,6 +19,7 @@ import {
   createSeminarMarkets,
   publicLotBasePrice,
   runSeminarDraft,
+  scaledDraftPurses,
 } from '../sim/seminarDraft';
 import {
   createCommanderPool,
@@ -31,6 +32,49 @@ import {
 } from '../src/orchestration';
 
 describe('seminar spine', () => {
+  it('scales seminar purses monotonically with the asking-price ratio', () => {
+    const priorities = [
+      {
+        commanderId: 'a',
+        standing: 0,
+        cohortExternality: 0,
+        priorityScore: 0,
+        priorityRank: 0,
+        purse: 150,
+      },
+      {
+        commanderId: 'b',
+        standing: 1,
+        cohortExternality: 0,
+        priorityScore: 1,
+        priorityRank: 1,
+        purse: 100,
+      },
+    ];
+    const lots = [
+      { lotId: 'pawn', basePrice: 10 },
+      { lotId: 'rook', basePrice: 20 },
+      { lotId: 'queen', basePrice: 30 },
+    ];
+    const purses = [250, 500, 1000].map((ratio) =>
+      scaledDraftPurses(priorities, lots, ratio),
+    );
+    const totals = purses.map((purse) =>
+      [...purse.values()].reduce((total, value) => total + value, 0),
+    );
+    expect(totals).toEqual([15, 30, 60]);
+    expect(purses[0]?.get('a')).toBeLessThan(purses[1]?.get('a') ?? 0);
+    expect(purses[1]?.get('a')).toBeLessThan(purses[2]?.get('a') ?? 0);
+    expect(scaledDraftPurses(priorities, [], 500).get('a')).toBe(150);
+    expect(
+      scaledDraftPurses(
+        priorities.map((priority) => ({ ...priority, purse: 0 })),
+        lots,
+        500,
+      ).get('a'),
+    ).toBe(0);
+  });
+
   it('shares pure match-record assembly with persistence-shaped inputs', () => {
     const record = assembleMatchRecord({
       campaignId: 'c1',
@@ -402,7 +446,7 @@ describe('seminar spine', () => {
           ...(queen.credenceIdentity?.relationshipAccounts ?? {}),
           [aggressive.id]: {
             tauAbil: 50,
-            tauBenev: 0,
+            tauBenev: 100,
             abilityObservationCount: 0,
           },
         },
@@ -432,6 +476,7 @@ describe('seminar spine', () => {
         ...SEMINAR_CONFIG,
         DRAFT_CONSULTATIONS_PER_CYCLE: 0,
         DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE: 500,
+        DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: 1000,
         DRAFT_LOT_BASE_PRICE: 10,
         DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 0,
       },

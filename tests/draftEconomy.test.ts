@@ -9,7 +9,9 @@ import {
   carryPurse,
   clearDraft,
   draftPriority,
+  minimumBidForCommander,
 } from '../src/orchestration';
+import type { DraftBidder } from '../src/orchestration';
 import {
   draftEconomyDegeneracyFindings,
   type DraftEconomyObservations,
@@ -31,6 +33,10 @@ const economyObservations = (
       contestedLots: 2,
       clearedLots: 2,
       declinedLots: 0,
+      unfilledNoBids: 0,
+      unfilledBelowReserve: 0,
+      meanClearingPrice: 2,
+      totalPurseLeftUnspent: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['a', 'b'],
       clearingPrices: [
@@ -43,6 +49,10 @@ const economyObservations = (
       contestedLots: 2,
       clearedLots: 2,
       declinedLots: 0,
+      unfilledNoBids: 0,
+      unfilledBelowReserve: 0,
+      meanClearingPrice: 2,
+      totalPurseLeftUnspent: 0,
       winsByCommander: { a: 1, b: 1 },
       standingOrder: ['b', 'a'],
       clearingPrices: [
@@ -340,6 +350,146 @@ describe('draft economy', () => {
         FIRST_REFUSAL_MARGIN_PERMILLE: 200,
       }).lots[0]?.winnerId,
     ).toBe('first');
+  });
+
+  it('supports second-price clearing with a reserve floor', () => {
+    const lot = { lotId: 'lot', basePrice: 20, minimumBid: 1 };
+    const bidders = [
+      {
+        commanderId: 'balanced',
+        priorityRank: 1,
+        purse: 100,
+        style: 'balanced' as const,
+        acceptanceDiscountPermille: 0,
+      },
+      {
+        commanderId: 'aggressive',
+        priorityRank: 0,
+        purse: 100,
+        style: 'aggressive' as const,
+        acceptanceDiscountPermille: 0,
+      },
+    ];
+    const firstPrice = clearDraft([lot], bidders, {
+      ...DRAFT_CONFIG,
+      DRAFT_CLEARING_RULE: 'first_price',
+    });
+    const secondPrice = clearDraft([lot], bidders, {
+      ...DRAFT_CONFIG,
+      DRAFT_CLEARING_RULE: 'second_price',
+    });
+    expect(secondPrice.lots[0]?.winnerId).toBe('aggressive');
+    expect(secondPrice.lots[0]?.clearingPrice).toBe(20);
+    expect(secondPrice.lots[0]?.clearingPrice).toBeLessThanOrEqual(
+      firstPrice.lots[0]?.clearingPrice ?? 0,
+    );
+    expect(secondPrice.remainingPurses.aggressive).toBe(80);
+    expect(firstPrice.remainingPurses.aggressive).toBe(78);
+    const reserveFloor = clearDraft(
+      [
+        {
+          ...lot,
+          minimumBidByCommander: { aggressive: 21 },
+        },
+      ],
+      bidders,
+      { ...DRAFT_CONFIG, DRAFT_CLEARING_RULE: 'second_price' },
+    );
+    expect(reserveFloor.lots[0]?.clearingPrice).toBe(21);
+    expect(minimumBidForCommander(lot, 'unknown')).toBe(1);
+  });
+
+  it('uses the highest non-winning bid when first refusal changes the winner', () => {
+    const clearing = clearDraft(
+      [{ lotId: 'lot', basePrice: 20, minimumBid: 1 }],
+      [
+        {
+          commanderId: 'priority',
+          priorityRank: 0,
+          purse: 100,
+          style: 'cautious',
+          acceptanceDiscountPermille: 0,
+        },
+        {
+          commanderId: 'top',
+          priorityRank: 1,
+          purse: 100,
+          style: 'balanced',
+          acceptanceDiscountPermille: 0,
+        },
+      ],
+      {
+        ...DRAFT_CONFIG,
+        DRAFT_CLEARING_RULE: 'second_price',
+        FIRST_REFUSAL_MARGIN_PERMILLE: 200,
+      },
+    );
+    expect(clearing.lots[0]?.winnerId).toBe('priority');
+    expect(clearing.lots[0]?.clearingPrice).toBe(20);
+  });
+
+  it('only lets an affordable first-refusal claimant take a second-price lot', () => {
+    const lot = { lotId: 'lot', basePrice: 20, minimumBid: 1 };
+    const priorityBidder: DraftBidder = {
+      commanderId: 'priority',
+      priorityRank: 0,
+      purse: 100,
+      style: 'cautious',
+      acceptanceDiscountPermille: 0,
+    };
+    const topBidder: DraftBidder = {
+      commanderId: 'top',
+      priorityRank: 1,
+      purse: 100,
+      style: 'balanced',
+      acceptanceDiscountPermille: 0,
+    };
+    const bidders = [priorityBidder, topBidder];
+    const affordableClaim = clearDraft([lot], bidders, {
+      ...DRAFT_CONFIG,
+      DRAFT_CLEARING_RULE: 'second_price',
+      FIRST_REFUSAL_MARGIN_PERMILLE: 200,
+    });
+    expect(affordableClaim.lots[0]?.winnerId).toBe('priority');
+    expect(affordableClaim.lots[0]?.clearingPrice).toBe(20);
+    expect(affordableClaim.remainingPurses.priority).toBe(80);
+
+    const unaffordableClaim = clearDraft(
+      [lot],
+      [
+        { ...priorityBidder, purse: 18 },
+        { ...topBidder, purse: 100 },
+      ],
+      {
+        ...DRAFT_CONFIG,
+        DRAFT_CLEARING_RULE: 'second_price',
+        FIRST_REFUSAL_MARGIN_PERMILLE: 200,
+      },
+    );
+    expect(unaffordableClaim.lots[0]?.winnerId).toBe('top');
+    expect(unaffordableClaim.lots[0]?.clearingPrice).toBe(18);
+    expect(unaffordableClaim.remainingPurses.top).toBe(82);
+  });
+
+  it('distinguishes no bids from bids below reserve', () => {
+    const noBids = clearDraft([{ lotId: 'lot', basePrice: 10 }], []);
+    const belowReserve = clearDraft(
+      [{ lotId: 'lot', basePrice: 10, minimumBid: 8 }],
+      [
+        {
+          commanderId: 'under',
+          priorityRank: 0,
+          purse: 20,
+          style: 'cautious',
+          acceptanceDiscountPermille: 0,
+          willingnessPermilleByLot: { lot: 500 },
+        },
+      ],
+    );
+    expect(noBids.unfilledNoBids).toBe(1);
+    expect(noBids.unfilledBelowReserve).toBe(0);
+    expect(belowReserve.unfilledNoBids).toBe(0);
+    expect(belowReserve.unfilledBelowReserve).toBe(1);
   });
 
   it('detects purse runaway and price collapse, with sample guards', () => {

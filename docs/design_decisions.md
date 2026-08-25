@@ -1211,15 +1211,20 @@ drafting at the head of enabled weeks. `DRAFT_MARKET_DEPTH_PER_SIDE`,
 `DRAFT_COUNT_UNAVAILABLE_AS_PRESENT`, `DRAFT_MARKET_INITIAL_TRUST`,
 `DRAFT_BIDDER_ASSUMED_DISCOUNT_PERMILLE`,
 `DRAFT_LOT_BASE_PRICE`, `DRAFT_LOT_ROLE_WEIGHT_PERMILLE`, and
-`DRAFT_LOT_SERVICE_WEIGHT_PERMILLE` are explicit harness configuration seeds;
+`DRAFT_LOT_SERVICE_WEIGHT_PERMILLE`, and
+`DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE` are explicit harness configuration seeds;
 their current values are calibration starting points, not owner-settled
 magnitudes. Unavailable members are absent from demand by default, while the
 count-all branch remains available for comparison. Public lot pricing uses
 only candidate role and folded public service facts. Candidate-specific
-acceptance is checked after clearing; a winning commander may decline, leaving
-the lot unfilled, and the refusal is retained in draft telemetry. Counsel
-signals remain private: raw opinion is retained only for harness correlation,
-while the configured weight changes bidder willingness.
+acceptance is represented as a per-commander clearing reserve; a lot with no
+reserve-qualified bid is retained as below-reserve telemetry. The opt-in
+second-price clearing direction is owner-approved, while first-price remains
+the default. The legacy `declinedLots` telemetry field now means that no
+commander met her reserve; it no longer means that a winning commander
+accepted and then walked. Counsel signals remain private: raw opinion is
+retained only for harness correlation, while the configured weight changes
+bidder willingness.
 
 ADR 0061 brings D154 due in step 3, the draft.
 
