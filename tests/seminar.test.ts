@@ -256,10 +256,14 @@ describe('seminar spine', () => {
         DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: 1000,
       },
       cohortHistory: {
-        intakeByMember: {},
+        intakeByMember: {
+          [holder.state.id]: 0,
+          [queen.state.id]: 0,
+        },
         relations: [],
       },
     });
+    expect(result.cohortHistory.consultedIntakePairs).toBe(1);
     expect(result.cohortHistory.consultedAffinityPairs).toBe(1);
     expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
   });

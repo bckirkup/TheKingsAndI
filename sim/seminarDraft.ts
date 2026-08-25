@@ -467,6 +467,7 @@ export function runSeminarDraft(options: {
   const counselOpinions: number[] = [];
   let sharedIntakeDrafts = 0;
   let consultedAffinityPairs = 0;
+  let consultedIntakePairs = 0;
   let acquisitionsWithAffinity = 0;
   const willingnessByCommander = new Map<
     string,
@@ -536,6 +537,17 @@ export function runSeminarDraft(options: {
       );
       for (const consultation of ledger.consultations) {
         const holder = holderById.get(consultation.holderId);
+        const holderIntake =
+          options.cohortHistory?.intakeByMember[consultation.holderId];
+        const candidateIntake =
+          options.cohortHistory?.intakeByMember[consultation.candidateId];
+        if (
+          holderIntake !== undefined &&
+          candidateIntake !== undefined &&
+          holderIntake === candidateIntake
+        ) {
+          consultedIntakePairs += 1;
+        }
         if (
           holder !== undefined &&
           (holder.state.dyadicAffinity[consultation.candidateId] ?? 0) !== 0
@@ -743,6 +755,7 @@ export function runSeminarDraft(options: {
       ),
       sharedIntakeDrafts,
       consultedAffinityPairs,
+      consultedIntakePairs,
       acquisitionsWithAffinity,
       counselOpinionTotal,
       counselOpinionCount,

@@ -15,6 +15,7 @@ function observations(sharedIntakeDrafts: number): CohortHistoryObservations {
         draftedCandidates: 4,
         sharedIntakeDrafts,
         consultedAffinityPairs: 0,
+        consultedIntakePairs: 0,
         acquisitionsWithAffinity: 0,
         counselOpinionTotal: 2,
         counselOpinionCount: 4,
@@ -73,13 +74,47 @@ describe('cohort history degeneracy detectors', () => {
     ).toBeUndefined();
   });
 
-  it('fires frozen-clique only above the configured fraction', () => {
-    expect(cohortFrozenCliqueFinding(observations(2), 4, 0.75)).toBeUndefined();
-    expect(cohortFrozenCliqueFinding(observations(4), 4, 0.75)?.code).toBe(
-      'frozen_clique',
-    );
-    expect(cohortFrozenCliqueFinding(observations(3), 4, 0.5)?.code).toBe(
-      'frozen_clique',
-    );
+  it('fires frozen-clique only when populated history beats its control', () => {
+    const populated = observations(4);
+    const control = observations(0);
+    const cycle = populated.cycles[0];
+    if (cycle === undefined) throw new Error('Missing cohort cycle fixture.');
+    const touched = {
+      ...cycle,
+      acquisitionsWithAffinity: 1,
+    };
+    const halfShared = { ...touched, sharedIntakeDrafts: 2 };
+    expect(
+      cohortFrozenCliqueFinding({ cycles: [halfShared] }, control, 4, 0.25)
+        ?.code,
+    ).toBe('frozen_clique');
+    expect(
+      cohortFrozenCliqueFinding({ cycles: [halfShared] }, control, 4, 0.5),
+    ).toBeUndefined();
+    expect(
+      cohortFrozenCliqueFinding({ cycles: [halfShared] }, control, 4, 0.75),
+    ).toBeUndefined();
+  });
+
+  it('reports when a draft never ran without calling the past inert', () => {
+    const cycle = observations(0).cycles[0];
+    if (cycle === undefined) throw new Error('Missing cohort cycle fixture.');
+    const neverRan: CohortHistoryObservations = {
+      cycles: [
+        {
+          ...cycle,
+          draftedCandidates: 0,
+          counselOpinionCount: 0,
+          counselOpinionTotal: 0,
+          counselOpinions: [],
+        },
+      ],
+    };
+    expect(cohortInertPastFinding(neverRan, neverRan)).toBeUndefined();
+    expect(
+      cohortHistoryDegeneracyFindings(neverRan, neverRan).map(
+        (finding) => finding.code,
+      ),
+    ).toEqual(['draft_never_ran']);
   });
 });

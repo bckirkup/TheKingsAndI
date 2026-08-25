@@ -1380,9 +1380,15 @@ currently lowers prestige for all four officer roles (`Knight`, `Bishop`,
 
 Shared-intake draft counts are only a coarse intake-shape measure: they can be
 non-zero at density zero because membership is assigned independently of
-relation rows. The affinity-specific consultation and acquisition counts are
-the direct measures of whether the past reaches draft decisions.
+relation rows. Consultation telemetry therefore reports both the number of
+same-intake holder/candidate pairs that could have carried a relation and the
+subset with non-zero affinity; the affinity-specific consultation and
+acquisition counts are the direct measures of whether the past reaches draft
+decisions.
 
 `inert_past` compares populated history with the same-seed density-zero control
-on draft picks and counsel opinions only, while `frozen_clique` is a provisional
-threshold detector for intake concentration.
+on draft picks and counsel opinions only, and ignores cycles where neither
+channel had activity. A run with no activity reports `draft_never_ran` instead.
+`frozen_clique` is differential: it requires the populated run's shared-intake
+acquisition rate to exceed the density-zero control by a provisional margin,
+so the detector cannot fire from intake shape alone at density zero.
