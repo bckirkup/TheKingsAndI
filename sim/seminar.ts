@@ -578,6 +578,8 @@ export async function runSeminar(options: {
         cycle: week,
         draftedCandidates: 0,
         sharedIntakeDrafts: 0,
+        consultedAffinityPairs: 0,
+        acquisitionsWithAffinity: 0,
         counselOpinionTotal: 0,
         counselOpinionCount: 0,
         counselOpinions: [],

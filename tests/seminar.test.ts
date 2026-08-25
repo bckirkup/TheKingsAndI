@@ -183,6 +183,87 @@ describe('seminar spine', () => {
     expect(payload).not.toContain('cohort:');
   });
 
+  it('counts direct affinity in consultations and acquisitions', () => {
+    const white = createCommanderPool({
+      id: 'w:commander:00',
+      side: 'w',
+      style: 'tyrannical',
+      careerSeed: 42,
+    });
+    const black = createCommanderPool({
+      id: 'b:commander:00',
+      side: 'b',
+      style: 'servant',
+      careerSeed: 43,
+    });
+    const whiteWithoutQueen = {
+      ...white,
+      members: white.members.filter((member) => member.originRole !== 'Queen'),
+    };
+    const market = createSeminarMarkets(
+      42,
+      new Map([
+        [whiteWithoutQueen.id, whiteWithoutQueen],
+        [black.id, black],
+      ]),
+    );
+    const queen = market
+      .get('w')
+      ?.members.find((member) => member.originRole === 'Queen');
+    const holder = [...whiteWithoutQueen.members].sort((left, right) =>
+      left.state.id.localeCompare(right.state.id),
+    )[0];
+    if (queen === undefined || holder === undefined) {
+      throw new Error('Missing direct-affinity fixture.');
+    }
+    const pooledHolder = {
+      ...holder,
+      state: {
+        ...holder.state,
+        dyadicAffinity: { [queen.state.id]: 10 },
+      },
+    };
+    const pooledWhite = {
+      ...whiteWithoutQueen,
+      members: whiteWithoutQueen.members.map((member) =>
+        member.state.id === holder.state.id ? pooledHolder : member,
+      ),
+    };
+    const result = runSeminarDraft({
+      cycle: 2,
+      seed: 42,
+      commanders: [
+        { id: pooledWhite.id, side: 'w', style: 'tyrannical' },
+        { id: black.id, side: 'b', style: 'servant' },
+      ],
+      pools: new Map([
+        [pooledWhite.id, pooledWhite],
+        [black.id, black],
+      ]),
+      markets: new Map([
+        ['w', { side: 'w', members: [queen] }],
+        ['b', { side: 'b', members: [] }],
+      ]),
+      standings: [
+        { commanderId: pooledWhite.id, standing: 0, cohortExternality: 0 },
+        { commanderId: black.id, standing: 0, cohortExternality: 0 },
+      ],
+      registers: new Map(),
+      previousPurses: new Map(),
+      config: {
+        ...SEMINAR_CONFIG,
+        DRAFT_CONSULTATIONS_PER_CYCLE: 1,
+        DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: 1000,
+      },
+      cohortHistory: {
+        intakeByMember: {},
+        relations: [],
+      },
+    });
+    expect(result.cohortHistory.consultedAffinityPairs).toBe(1);
+    expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
+  });
+
   it('keeps cohort state quantitative across density controls', async () => {
     const runs = await Promise.all(
       [0, 1, 2].map((density) =>

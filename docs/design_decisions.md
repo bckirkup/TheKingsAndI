@@ -1374,6 +1374,15 @@ later sweep, not balance rulings. Green levies created after semester start
 intentionally receive no pre-seminar history because they are not members of
 the semester-start cohort.
 
-`inert_past` compares populated history with the same-seed density-zero control,
-while `frozen_clique` is a provisional threshold detector for intake
-concentration.
+Because the ledger has no explicit ordering-class field, `bereaved_together`
+currently lowers prestige for all four officer roles (`Knight`, `Bishop`,
+`Rook`, and `Queen`); this remains an implementation assumption.
+
+Shared-intake draft counts are only a coarse intake-shape measure: they can be
+non-zero at density zero because membership is assigned independently of
+relation rows. The affinity-specific consultation and acquisition counts are
+the direct measures of whether the past reaches draft decisions.
+
+`inert_past` compares populated history with the same-seed density-zero control
+on draft picks and counsel opinions only, while `frozen_clique` is a provisional
+threshold detector for intake concentration.

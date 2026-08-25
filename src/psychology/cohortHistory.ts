@@ -36,7 +36,7 @@ export function applyCohortHistory(
     );
     if (relation.type !== 'bereaved_together' || prestigeShove === 0) continue;
     for (const role of OFFICER_ROLES) {
-      classPrestige[role] = clampAffinity(classPrestige[role] + prestigeShove);
+      classPrestige[role] = clampAffinity(classPrestige[role] - prestigeShove);
     }
   }
   return normalizePieceState({

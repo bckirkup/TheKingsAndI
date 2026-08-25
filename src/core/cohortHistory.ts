@@ -105,11 +105,21 @@ export function generateCohortHistory(
     config.CROSS_INTAKE_TAIL_PERMILLE,
     COHORT_HISTORY_CONFIG.CROSS_INTAKE_TAIL_PERMILLE,
   );
+  const random = createSeededRandom(seed);
+  const intakeOrder = [...sortedIds];
+  for (let index = intakeOrder.length - 1; index > 0; index -= 1) {
+    const swapIndex = random.nextInt(index + 1);
+    const current = intakeOrder[index];
+    const swapped = intakeOrder[swapIndex];
+    if (current === undefined || swapped === undefined) continue;
+    intakeOrder[index] = swapped;
+    intakeOrder[swapIndex] = current;
+  }
   const intakeByMember: Record<string, number> = {};
   const intakes: string[][] = [];
-  for (let index = 0; index < sortedIds.length; index += 1) {
+  for (let index = 0; index < intakeOrder.length; index += 1) {
     const intake = Math.floor(index / intakeSize);
-    const memberId = sortedIds[index];
+    const memberId = intakeOrder[index];
     if (memberId === undefined) continue;
     intakeByMember[memberId] = intake;
     const members = intakes[intake] ?? [];
@@ -120,7 +130,6 @@ export function generateCohortHistory(
     return { intakeByMember, relations: [] };
   }
 
-  const random = createSeededRandom(seed);
   const relations: CohortRelation[] = [];
   const seen = new Set<string>();
   for (const from of sortedIds) {

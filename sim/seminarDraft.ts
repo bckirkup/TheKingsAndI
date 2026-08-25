@@ -21,9 +21,12 @@ import {
   type MatchRecord,
   type PublicRegister,
 } from '../src/persistence';
-import { counselOpinionValue, type PieceRole } from '../src/psychology';
+import {
+  counselOpinionValue,
+  type CounselReason,
+  type PieceRole,
+} from '../src/psychology';
 import type { CohortHistory } from '../src/core/cohortHistory';
-import type { CounselReason } from '../src/psychology';
 import { DRAFT_CONFIG } from '../src/core/draftConfig';
 import type {
   CohortHistoryCycleObservation,
@@ -463,6 +466,8 @@ export function runSeminarDraft(options: {
   let counselOpinionCount = 0;
   const counselOpinions: number[] = [];
   let sharedIntakeDrafts = 0;
+  let consultedAffinityPairs = 0;
+  let acquisitionsWithAffinity = 0;
   const willingnessByCommander = new Map<
     string,
     Readonly<Record<string, number>>
@@ -526,6 +531,18 @@ export function runSeminarDraft(options: {
         ...DRAFT_CONFIG,
         CONSULTATIONS_PER_CYCLE: options.config.DRAFT_CONSULTATIONS_PER_CYCLE,
       });
+      const holderById = new Map(
+        holders.map((member) => [member.state.id, member]),
+      );
+      for (const consultation of ledger.consultations) {
+        const holder = holderById.get(consultation.holderId);
+        if (
+          holder !== undefined &&
+          (holder.state.dyadicAffinity[consultation.candidateId] ?? 0) !== 0
+        ) {
+          consultedAffinityPairs += 1;
+        }
+      }
       for (const consultation of ledger.consultations) {
         if (!('opinion' in consultation.counsel)) continue;
         counselOpinionTotal += counselOpinionValue(
@@ -623,6 +640,14 @@ export function runSeminarDraft(options: {
         throw new Error(`Missing candidate for lot ${cleared.lotId}.`);
       if (winnerPool === undefined)
         throw new Error(`Missing winner pool for ${cleared.winnerId}.`);
+      if (
+        winnerPool.members.some(
+          (member) =>
+            (member.state.dyadicAffinity[candidate.state.id] ?? 0) !== 0,
+        )
+      ) {
+        acquisitionsWithAffinity += 1;
+      }
       clearingPrices.push({
         clearingPrice: cleared.clearingPrice,
         minimumBid: cleared.minimumBid,
@@ -717,6 +742,8 @@ export function runSeminarDraft(options: {
         0,
       ),
       sharedIntakeDrafts,
+      consultedAffinityPairs,
+      acquisitionsWithAffinity,
       counselOpinionTotal,
       counselOpinionCount,
       counselOpinions,

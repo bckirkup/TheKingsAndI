@@ -201,6 +201,8 @@ export interface CohortHistoryCycleObservation {
   readonly cycle: number;
   readonly draftedCandidates: number;
   readonly sharedIntakeDrafts: number;
+  readonly consultedAffinityPairs: number;
+  readonly acquisitionsWithAffinity: number;
   readonly counselOpinionTotal: number;
   readonly counselOpinionCount: number;
   readonly counselOpinions: readonly number[];
@@ -214,20 +216,17 @@ export interface CohortHistoryObservations {
   readonly cycles: readonly CohortHistoryCycleObservation[];
 }
 
-function sameCohortCycle(
+function sameCohortCounsel(
   left: CohortHistoryCycleObservation,
   right: CohortHistoryCycleObservation,
 ): boolean {
   return (
-    left.draftedCandidates === right.draftedCandidates &&
     left.counselOpinionTotal === right.counselOpinionTotal &&
     left.counselOpinionCount === right.counselOpinionCount &&
     left.counselOpinions.length === right.counselOpinions.length &&
     left.counselOpinions.every(
       (opinion, index) => opinion === right.counselOpinions[index],
-    ) &&
-    left.desertions === right.desertions &&
-    left.commendationsAwarded === right.commendationsAwarded
+    )
   );
 }
 
@@ -235,19 +234,31 @@ export function cohortInertPastFinding(
   populated: CohortHistoryObservations,
   densityZeroControl: CohortHistoryObservations,
 ): DegeneracyFinding | undefined {
-  if (
-    populated.cycles.length !== densityZeroControl.cycles.length ||
-    !populated.cycles.every((cycle, index) => {
+  const draftPicksMatch =
+    populated.cycles.length === densityZeroControl.cycles.length &&
+    populated.cycles.every((cycle, index) => {
       const control = densityZeroControl.cycles[index];
-      return control !== undefined && sameCohortCycle(cycle, control);
-    })
-  ) {
+      return (
+        control !== undefined &&
+        cycle.draftedCandidates === control.draftedCandidates
+      );
+    });
+  const counselOpinionsMatch =
+    populated.cycles.length === densityZeroControl.cycles.length &&
+    populated.cycles.every((cycle, index) => {
+      const control = densityZeroControl.cycles[index];
+      return control !== undefined && sameCohortCounsel(cycle, control);
+    });
+  if (!draftPicksMatch || !counselOpinionsMatch) {
     return undefined;
   }
+  const matchedChannels = [
+    ...(draftPicksMatch ? ['draft picks'] : []),
+    ...(counselOpinionsMatch ? ['counsel opinions'] : []),
+  ].join(' and ');
   return {
     code: 'inert_past',
-    message:
-      'Populated cohort history matched the density-zero control on draft picks, counsel opinions, desertions, and commendations.',
+    message: `Populated cohort history matched the density-zero control on ${matchedChannels}.`,
   };
 }
 

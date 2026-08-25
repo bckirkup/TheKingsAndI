@@ -79,10 +79,10 @@ describe('cohort history fold', () => {
     );
     expect(folded.dyadicAffinity.ally).toBe(100);
     expect(folded.dyadicAffinity.rival).toBe(-100);
-    expect(folded.classPrestige.Knight).toBe(100);
-    expect(folded.classPrestige.Bishop).toBe(5);
-    expect(folded.classPrestige.Rook).toBe(5);
-    expect(folded.classPrestige.Queen).toBe(5);
+    expect(folded.classPrestige.Knight).toBe(93);
+    expect(folded.classPrestige.Bishop).toBe(-5);
+    expect(folded.classPrestige.Rook).toBe(-5);
+    expect(folded.classPrestige.Queen).toBe(-5);
     expect(folded.classPrestige.Pawn).toBe(0);
   });
 
@@ -130,6 +130,6 @@ describe('cohort history fold', () => {
           BEREAVED_PRESTIGE_SHOVE: shove,
         }).classPrestige.Queen,
     );
-    expect(values).toEqual([0, 5, 20]);
+    expect(values).toEqual([0, -5, -20]);
   });
 });

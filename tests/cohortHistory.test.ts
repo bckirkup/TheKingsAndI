@@ -6,13 +6,11 @@ import {
 } from '../src/core/cohortHistory';
 
 describe('cohort history generation', () => {
-  it('is deterministic, sorted, and zero-density by default', () => {
+  it('is deterministic and zero-density by default', () => {
     const members = ['b', 'a', 'c'];
     const first = generateCohortHistory(members, 17);
-    expect(first).toEqual({
-      intakeByMember: { a: 0, b: 0, c: 0 },
-      relations: [],
-    });
+    expect(first.relations).toEqual([]);
+    expect(Object.keys(first.intakeByMember).sort()).toEqual(['a', 'b', 'c']);
     expect(generateCohortHistory(members, 17)).toEqual(first);
     expect(COHORT_HISTORY_CONFIG.RELATIONS_PER_PIECE).toBe(0);
   });
@@ -26,11 +24,11 @@ describe('cohort history generation', () => {
     });
     expect(history.intakeByMember).toEqual({
       a: 0,
-      b: 0,
+      f: 0,
       c: 1,
-      d: 1,
-      e: 2,
-      f: 2,
+      e: 1,
+      d: 2,
+      b: 2,
     });
     expect(history.relations.every((row) => row.from !== row.to)).toBe(true);
     expect(
@@ -48,6 +46,38 @@ describe('cohort history generation', () => {
         weight: row.weight,
       });
     }
+  });
+
+  it('permutes sorted members reproducibly before mixing intake groups', () => {
+    const members = [
+      'pool:a',
+      'pool:b',
+      'pool:c',
+      'pool:d',
+      'market:a',
+      'market:b',
+      'market:c',
+      'market:d',
+    ];
+    const config = {
+      ...COHORT_HISTORY_CONFIG,
+      INTAKE_SIZE: 2,
+    };
+    const first = generateCohortHistory(members, 2, config);
+    const reordered = generateCohortHistory([...members].reverse(), 2, config);
+    expect(reordered).toEqual(first);
+    const intakes = new Set(Object.values(first.intakeByMember));
+    expect(
+      [...intakes].some((intake) => {
+        const ids = Object.entries(first.intakeByMember)
+          .filter(([, candidateIntake]) => candidateIntake === intake)
+          .map(([id]) => id);
+        return (
+          ids.some((id) => id.startsWith('pool:')) &&
+          ids.some((id) => id.startsWith('market:'))
+        );
+      }),
+    ).toBe(true);
   });
 
   it('keeps local and cross-intake target selection configurable', () => {
