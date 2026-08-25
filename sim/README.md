@@ -55,9 +55,14 @@ The JSON artifact also contains a machine-dependent top-level `cost` section
 with per-match and per-campaign wall time, engine call counts and depth
 histograms, child restarts, RSS samples, and derived rates. Lozza child
 recycling is currently opt-in because its warm transposition-table state can
-affect search results; the default restart count is therefore zero. Cost is
-observational only: it is excluded from deterministic manifests and aggregate
-identity checks.
+affect search results; the default restart count is therefore zero. The
+host-side ladder cache is unbounded by default: eviction forces re-searches on
+the warm child, and Lozza's carried state makes those results path-dependent.
+Bounding it is opt-in and changes campaign results until the pending engine
+determinism-contract decision is made. Per-match RSS values are process-wide
+monotonic high-water marks, not isolated match peaks, and are intended for
+leak detection. Cost is observational only: it is excluded from deterministic
+manifests and aggregate identity checks.
 
 For a multi-campaign run, do not reproduce one campaign with
 `--campaigns=1`: the legacy single-campaign path deliberately uses the master

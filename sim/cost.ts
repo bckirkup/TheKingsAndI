@@ -13,7 +13,9 @@ export interface MatchCost extends EngineCallCost {
   readonly match: number;
   readonly wallClockMs: number;
   readonly restarts: number;
+  /** Process-cumulative RSS high-water mark observed by the end of this match. */
   readonly peakRssBytes: number;
+  /** Process-cumulative resource RSS high-water mark observed by this match. */
   readonly resourceMaxRssBytes: number;
   readonly plies: number;
   readonly msPerPly: number;
@@ -57,7 +59,7 @@ interface MutableCalls {
   multiPvAtCalls: number;
   multiPvAtMaxCalls: number;
   bestAtCalls: number;
-  depthHistogram: Map<number, number>;
+  depthHistogram: Map<string, number>;
 }
 
 function emptyCalls(): MutableCalls {
@@ -84,8 +86,17 @@ function callsSnapshot(calls: MutableCalls): EngineCallCost {
       evaluateCalls + multiPvAtCalls + multiPvAtMaxCalls + bestAtCalls,
     depthHistogram: Object.fromEntries(
       [...calls.depthHistogram.entries()]
-        .sort(([left], [right]) => left - right)
-        .map(([depth, count]) => [String(depth), count]),
+        .sort(([left], [right]) => {
+          const leftDepth = Number(left);
+          const rightDepth = Number(right);
+          const leftIsNumeric = Number.isSafeInteger(leftDepth);
+          const rightIsNumeric = Number.isSafeInteger(rightDepth);
+          if (leftIsNumeric && rightIsNumeric) return leftDepth - rightDepth;
+          if (leftIsNumeric) return -1;
+          if (rightIsNumeric) return 1;
+          return left.localeCompare(right);
+        })
+        .map(([depth, count]) => [depth, count]),
     ),
   };
 }
@@ -164,8 +175,8 @@ export class CostTracker {
   }
 
   recordMultiPvAtMax(): void {
-    this.record(this.calls, 'multiPvAtMaxCalls', 16);
-    this.record(this.matchCalls, 'multiPvAtMaxCalls', 16);
+    this.record(this.calls, 'multiPvAtMaxCalls', 'max');
+    this.record(this.matchCalls, 'multiPvAtMaxCalls', 'max');
   }
 
   recordBestAt(depth: number): void {
@@ -201,10 +212,14 @@ export class CostTracker {
       | 'multiPvAtCalls'
       | 'multiPvAtMaxCalls'
       | 'bestAtCalls',
-    depth: number,
+    depth: number | 'max',
   ): void {
     calls[field] += 1;
-    calls.depthHistogram.set(depth, (calls.depthHistogram.get(depth) ?? 0) + 1);
+    const bucket = typeof depth === 'number' ? String(depth) : depth;
+    calls.depthHistogram.set(
+      bucket,
+      (calls.depthHistogram.get(bucket) ?? 0) + 1,
+    );
     this.sample();
   }
 
@@ -282,10 +297,9 @@ export function shardCost(
     calls.multiPvAtMaxCalls += campaign.cost.multiPvAtMaxCalls;
     calls.bestAtCalls += campaign.cost.bestAtCalls;
     for (const [depth, count] of Object.entries(campaign.cost.depthHistogram)) {
-      const numericDepth = Number(depth);
       calls.depthHistogram.set(
-        numericDepth,
-        (calls.depthHistogram.get(numericDepth) ?? 0) + count,
+        depth,
+        (calls.depthHistogram.get(depth) ?? 0) + count,
       );
     }
   }

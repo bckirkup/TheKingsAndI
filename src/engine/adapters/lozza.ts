@@ -12,7 +12,9 @@ import type { EngineEvaluation, EnginePort } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
 const LOZZA_HASH_MB = 16;
-export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = 256;
+// Keep the warm-child default behavior until the engine determinism contract
+// decides whether eviction-induced re-searches may change campaign results.
+export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = Number.MAX_SAFE_INTEGER;
 // Lozza's warm transposition-table state affects search results. Keep
 // recycling opt-in until its determinism contract is decided.
 export const DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES = Number.MAX_SAFE_INTEGER;
@@ -107,16 +109,20 @@ function getState(
   options: LozzaPortOptions,
 ): LozzaEngineState {
   const existing = statesByPath.get(enginePath);
+  if (existing !== undefined) {
+    if (options.ladderCacheCapacity !== undefined) {
+      existing.ladderCacheCapacity = options.ladderCacheCapacity;
+      existing.ladderByFen.setCapacity(options.ladderCacheCapacity);
+    }
+    if (options.recycleAfterSearches !== undefined) {
+      existing.recycleAfterSearches = options.recycleAfterSearches;
+    }
+    return existing;
+  }
   const ladderCacheCapacity =
     options.ladderCacheCapacity ?? DEFAULT_LOZZA_LADDER_CACHE_CAPACITY;
   const recycleAfterSearches =
     options.recycleAfterSearches ?? DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES;
-  if (existing !== undefined) {
-    existing.ladderCacheCapacity = ladderCacheCapacity;
-    existing.recycleAfterSearches = recycleAfterSearches;
-    existing.ladderByFen.setCapacity(ladderCacheCapacity);
-    return existing;
-  }
   const state: LozzaEngineState = {
     sharedEngine: createSharedEngine(enginePath),
     bestEngine: undefined,

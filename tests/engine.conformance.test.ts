@@ -130,6 +130,9 @@ describe('engine conformance corpus (Lozza)', () => {
         ladderCacheCapacity: 1,
       });
       const cases = CONFORMANCE_CORPUS.slice(0, 2);
+      // Both ports start fresh children and receive the same query sequence.
+      // This does not imply campaign-level invariance when a warm child is
+      // re-searched after an eviction.
       const evaluate = async (port: EnginePort) =>
         Promise.all(
           cases.flatMap((testCase) => [
