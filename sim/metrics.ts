@@ -300,6 +300,12 @@ export interface CampaignMetrics {
 const CSV_HEADER =
   'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate';
 
+/** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
+export function csvField(value: string | number): string {
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 function countEvents(
   events: readonly MatchEvent[],
   fieldedPieceIds: readonly PieceId[],
@@ -1056,7 +1062,9 @@ export function renderCsv(
       metric.enemySurvivingRosterSize,
       metric.enemyDesertions,
       metric.enemyRefusalRate.toFixed(4),
-    ].join(','),
+    ]
+      .map(csvField)
+      .join(','),
   );
   const output = [CSV_HEADER, ...rows];
   if (trajectoryBands !== undefined) {
@@ -1086,7 +1094,9 @@ export function renderCsv(
           band.meanDesertionDifferential.toFixed(2),
           band.meanRefusalRateDifferential.toFixed(4),
           band.meanWinScore.toFixed(2),
-        ].join(','),
+        ]
+          .map(csvField)
+          .join(','),
       ),
     );
   }
@@ -1099,7 +1109,9 @@ export function renderCsv(
         point.meanTauAbil.toFixed(2),
         point.meanTauBenev.toFixed(2),
         point.meanSurvivingRosterSize,
-      ].join(','),
+      ]
+        .map(csvField)
+        .join(','),
     ),
   );
   if (horizon !== undefined) {
@@ -1134,7 +1146,9 @@ export function renderCsv(
           point.meanTauAbil.toFixed(2),
           point.meanTauBenev.toFixed(2),
           point.meanTrustEnd.toFixed(2),
-        ].join(','),
+        ]
+          .map(csvField)
+          .join(','),
       ),
     );
   }
@@ -1149,7 +1163,9 @@ export function renderCsv(
           point.winRate.toFixed(4),
           point.drawRate.toFixed(4),
           point.lossRate.toFixed(4),
-        ].join(','),
+        ]
+          .map(csvField)
+          .join(','),
       ),
     );
   }

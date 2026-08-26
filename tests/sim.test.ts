@@ -280,6 +280,42 @@ describe('simulation harness sensitivity', () => {
       ),
     );
   });
+
+  it('quotes promotion JSON while preserving CSV field boundaries', () => {
+    const twoRoleMetric = {
+      ...handCheckMetric(1),
+      promotionToRoleCounts: { Rook: 1, Queen: 2 },
+    };
+    const [header, row] = renderCsv([twoRoleMetric]).trimEnd().split('\n');
+    if (header === undefined || row === undefined) {
+      throw new Error('expected a CSV header and data row');
+    }
+    const fields = splitCsvRow(row);
+    expect(fields).toHaveLength(header.split(',').length);
+    const promotionField = fields[10];
+    if (promotionField === undefined) {
+      throw new Error('expected promotion JSON field');
+    }
+    expect(promotionField).toBe('"{""Rook"":1,""Queen"":2}"');
+    expect(JSON.parse(promotionField.slice(1, -1).replace(/""/g, '"'))).toEqual(
+      { Rook: 1, Queen: 2 },
+    );
+
+    const emptyMetric = handCheckMetric(1);
+    const singleRoleMetric = {
+      ...handCheckMetric(1),
+      promotionToRoleCounts: { Queen: 1 },
+    };
+    const [, emptyRow] = renderCsv([emptyMetric]).trimEnd().split('\n');
+    const [, singleRoleRow] = renderCsv([singleRoleMetric])
+      .trimEnd()
+      .split('\n');
+    if (emptyRow === undefined || singleRoleRow === undefined) {
+      throw new Error('expected CSV data rows');
+    }
+    expect(splitCsvRow(emptyRow)[10]).toBe('{}');
+    expect(splitCsvRow(singleRoleRow)[10]).toBe('"{""Queen"":1}"');
+  });
 });
 
 describe('match outcome scoring', () => {
@@ -1054,6 +1090,36 @@ function handCheckMetric(match: number): MatchMetrics {
     rout: false,
     archetype: 'caretaker',
   };
+}
+
+function splitCsvRow(row: string): string[] {
+  const fields: string[] = [];
+  let field = '';
+  let quoted = false;
+  for (let index = 0; index < row.length; index += 1) {
+    const character = row[index];
+    if (quoted) {
+      field += character;
+      if (character === '"') {
+        if (row[index + 1] === '"') {
+          field += row[index + 1];
+          index += 1;
+        } else {
+          quoted = false;
+        }
+      }
+    } else if (character === ',') {
+      fields.push(field);
+      field = '';
+    } else if (character === '"' && field.length === 0) {
+      field += character;
+      quoted = true;
+    } else {
+      field += character;
+    }
+  }
+  fields.push(field);
+  return fields;
 }
 
 function registerFor(value: number): PublicRegister {

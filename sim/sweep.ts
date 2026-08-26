@@ -19,6 +19,7 @@ import {
 } from './cli';
 import { plainChessMeanWinScore } from './baseline';
 import { disposeSimEngine, type SimEngineKind } from './engine';
+import { csvField } from './metrics';
 import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 export interface SweepPoint {
@@ -231,7 +232,9 @@ async function main(): Promise<void> {
         point.abilityMax.toFixed(2),
         point.meanAbility.toFixed(2),
         point.abilityMovedCount.toFixed(2),
-      ].join(','),
+      ]
+        .map(csvField)
+        .join(','),
     );
   }
 }
