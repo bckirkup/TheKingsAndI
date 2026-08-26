@@ -153,11 +153,14 @@ export function leaderTrustBias(leader: Leader): number {
   switch (leader) {
     case 'supportive':
     case 'servant':
+    case 'exacting':
       return 40;
     case 'tyrannical':
     case 'pure_tactician':
+    case 'absentee':
       return -10;
     case 'volatile':
+    case 'steady':
       return 10;
     case 'redeemer':
       return 0;

@@ -272,6 +272,57 @@ function createPolicy(style: Leader): LeaderPolicy {
         },
         shouldOverride: (random) => random.nextInt(100) < 15,
       };
+    case 'exacting':
+      // Warm and demanding — protects pieces, then insists (D164 quadrant).
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, 20),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0,
+          };
+        },
+        shouldOverride: (random) => random.nextInt(100) < 80,
+      };
+    case 'absentee':
+      // Cold and indifferent — asks for the sharp move, then shrugs (D164 quadrant).
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, 0.25),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 2,
+          };
+        },
+        shouldOverride: (random) => random.nextInt(100) < 5,
+      };
+    case 'steady':
+      // Middle care and insistence — neither protects nor shrugs (D164 quadrant).
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, 8),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random) => random.nextInt(100) < 40,
+      };
     case 'random':
     default:
       return {
@@ -301,6 +352,9 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   redeemer: createPolicy('redeemer'),
   cold_winner: createPolicy('cold_winner'),
   rebuilder: createPolicy('rebuilder'),
+  exacting: createPolicy('exacting'),
+  absentee: createPolicy('absentee'),
+  steady: createPolicy('steady'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {
