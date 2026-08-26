@@ -19,6 +19,7 @@ import {
   type MatchMetrics,
 } from './metrics';
 import { createStartingRoster, mergeCampaignRoster } from './roster';
+import { CostTracker, instrumentEngine, type CampaignCost } from './cost';
 
 export interface CampaignOptions {
   readonly matches: number;
@@ -63,6 +64,7 @@ export interface CampaignResult {
   readonly checkpoint: CampaignCheckpoint;
   readonly justifiedRefusalObviousness: readonly number[];
   readonly justifiedRefusalPrivateViewLosses: readonly number[];
+  readonly cost?: CampaignCost;
 }
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
@@ -199,10 +201,12 @@ function createCampaignCheckpoint(options: {
 export async function runCampaign(
   options: CampaignOptions,
 ): Promise<CampaignResult> {
-  const board = LivingBoard.standard();
   const baseEngine =
     options.engine ?? (await createSimEngine(options.engineKind ?? 'lozza'));
-  const engine = capEngineDepth(baseEngine, options.depthCap);
+  const costTracker = new CostTracker(baseEngine);
+  const board = LivingBoard.standard();
+  const instrumentedBaseEngine = instrumentEngine(baseEngine, costTracker);
+  const engine = capEngineDepth(instrumentedBaseEngine, options.depthCap);
   const initialTrust = options.initialTrust ?? leaderTrustBias(options.leader);
   const opponent = options.opponent ?? 'random';
   const enemyTrackedIdentities = options.enemyTrackedIdentities ?? 16;
@@ -240,6 +244,7 @@ export async function runCampaign(
   const firstMatch = checkpoint?.nextMatch ?? 1;
 
   for (let match = firstMatch; match <= options.matches; match += 1) {
+    costTracker.startMatch();
     const matchSeed = matchSeedForCampaign(options.seed, match);
     roster = mergeCampaignRoster(
       board,
@@ -267,6 +272,7 @@ export async function runCampaign(
       enemyTrackedIdentities,
       engine,
     });
+    costTracker.endMatch(match, result.plies);
     const metric = metricsFromMatch(
       match,
       matchSeed,
@@ -322,6 +328,7 @@ export async function runCampaign(
     justifiedRefusalPrivateViewLosses: Object.freeze(
       justifiedRefusalPrivateViewLosses,
     ),
+    cost: costTracker.finish(),
   };
 }
 

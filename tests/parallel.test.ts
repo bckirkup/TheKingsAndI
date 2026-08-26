@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { digest } from '../src/core/digest';
 import {
   aggregateCampaign,
   buildTrajectoryBands,
@@ -308,6 +309,38 @@ describe('parallel campaign sharding', () => {
     expect(() => aggregateShardArtifacts([first, mismatched])).toThrow(
       /identity/,
     );
+  });
+
+  it('ignores machine-dependent cost when aggregating shard artifacts', async () => {
+    const shard = await runShard({
+      plan: resolveRunPlan({
+        matches: 2,
+        campaignLength: undefined,
+        campaigns: undefined,
+      }),
+      leader: 'supportive',
+      opponent: 'random',
+      masterSeed: 7,
+      engineKind: 'fake',
+      depthCap: undefined,
+      shardIndex: 0,
+      shardCount: 1,
+    });
+    const artifact = artifactFromShard(shard);
+    if (artifact.cost === undefined) {
+      throw new Error('Expected simulation cost telemetry.');
+    }
+    const timed = {
+      ...artifact,
+      cost: {
+        ...artifact.cost,
+        wallClockMs: 999,
+      },
+    };
+    const baseline = aggregateShardArtifacts([artifact]);
+    const withTiming = aggregateShardArtifacts([timed]);
+    expect(digest(baseline)).toBe(digest(withTiming));
+    expect(withTiming.campaigns).toEqual(baseline.campaigns);
   });
 });
 

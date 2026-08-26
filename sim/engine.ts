@@ -30,6 +30,9 @@ export function capEngineDepth(
             engine.multiPvAt?.(fen, Math.min(depth, depthCap)) ??
             Promise.resolve([]),
         }),
+    ...(engine.getCostStats === undefined
+      ? {}
+      : { getCostStats: engine.getCostStats }),
   };
 }
 
