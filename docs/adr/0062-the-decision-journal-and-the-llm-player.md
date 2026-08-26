@@ -3,6 +3,8 @@
 - **Status:** proposed (2026-08-25). The owner has ruled the direction — **no
   live LLM during play** — and opens **D159–D163** for the schema and balance
   questions below.
+- **Refined by:** ADR 0063 (two duties: coverage and containment), which answers
+  D159–D163 and adds the coverage/containment duties and the envelope metric.
 - **Depends on:** ADR 0001 (deterministic core, narrative skin), ADR 0004 (no
   runtime LLM), ADR 0013 (a piece reasons from its own view), ADR 0025 (the
   opponent is a commander), ADR 0034 (the per-ply query barrier)

@@ -1362,8 +1362,9 @@ orthogonality probe arrive in step 2.
 5. **D1, D17** — as UI and content work begins. (D14 is resolved by ADR 0032;
    only its chart-library residue is left, and it waits for Milestone 5.)
 
-### D159–D163 ❓ How may a model play, and what may its play prove? (ADR 0062)
-**Open — not wired.** Owner ruling of 2026-08-25: **no live LLM during play.**
+### D159–D163 ✅ How may a model play, and what may its play prove? (ADR 0062, ADR 0063)
+**Answered — not wired.** Owner ruling of 2026-08-25: **no live LLM during
+play.**
 A model may play only through a **decision journal** — an ordered, canonical
 record of each decision, the observation the commander was shown, the
 canonically ordered option set, and the chosen *index*; free text is carried as
@@ -1379,12 +1380,39 @@ committed balance number may depend on a model checkpoint. All model calls live
 in `sim/`; `src/` gains only the widened commander port and the observation
 projection.
 
-Open: **D159** which decision kinds enter the first journal; **D160** the
-contents of `Observation` per kind and its leak test; **D161** the fallback when
-an agent declines or answers out of range (scripted policy of record versus
-recorded disengagement); **D162** bid-ladder discretisation and granularity;
-**D163** how many model runs constitute a finding worth demoting, and who rules
-on it.
+**Answered 2026-08-26 by ADR 0063 — not wired.** **D159**: the first journal
+carries `move` (one entry per `chooseMove` attempt, so re-plans are visible),
+`override` (only where `shouldOverride` is asked on a `MORAL_REFUSAL`), and
+`disengage` (an option on both sets, not a third ask); `crisis_option` waits on
+ADR 0040 being implemented at all, fielding/dismissal are slice 2, bid/counsel
+slice 3. **D160**: observations carry only the qualitative band words the player
+already sees (`src/ui/qualitativeLabels.ts`), never a raw scalar; the event log
+is not an observation, since `REFUSAL` carries `utility`/`threshold`/
+`perceivedValue` (`src/orchestration/headlessMatch.ts:629-641`); enforced by a
+leak test rather than a whitelist test. **D161**: a declined or out-of-range
+answer is a recorded `abstain` resolved by the named scripted policy, never read
+as disengagement and never retried. **D162**: the bid ladder is derived from the
+existing integer economy (`pass`, lot/global minimum, the three
+`BID_MULTIPLIER_*` rungs, remaining purse), so `optionSetVersion` includes a
+draft-economy config digest. **D163**: a finding requires recurrence across at
+least two distinct NPC prefixes at a pinned model id, and is demoted into a
+widened NPC policy or a new option before it counts; coefficient changes remain
+owner rulings.
+
+### D164 ❓ Along which axis is the NPC span widened first? (ADR 0063 §5)
+**Open — not wired.** The NPCs owe **coverage** and the models owe
+**containment** (ADR 0063), so an envelope is only as honest as the span it is
+built from. The 2026-08-26 measurement
+(`docs/calibration/2026-08-26-npc-coverage-and-the-envelope.md`) finds the span
+compressed on both axes a student experiences: four of the nine styles in
+`sim/cli.ts:36-56` tie at exactly `100.00` win score with identical 20/0/0
+records, and `τ_benev` ends at `73.6` for `supportive` against `≤ 8.0` for every
+other style with trust at the floor for eight of nine — so the emotional axis is
+two points rather than a range, and no style ends a campaign with a merely
+strained roster. Widening changes balance, so the axis and its magnitudes are an
+owner ruling: a demandingness axis independent of warmth (today "cold" and
+"demanding" are the same style), an outcome ceiling that separates the four tied
+styles, or both. Containment numbers must not be quoted before this passes.
 
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
