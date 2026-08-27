@@ -1,5 +1,13 @@
 # NPC coverage: does a range of semi-rational play lead to feasible campaigns?
 
+> **Superseded in part, 2026-08-27.** Every run below uses the *default*
+> `random` opponent, so the four-way tie at `100.00` reported here is a
+> saturation artifact of that opponent and not an outcome ceiling — against
+> `--opponent=tyrannical` the same four styles score 82.5 / 65.0 / 40.0 / 30.0.
+> See `docs/calibration/2026-08-27-the-competent-opponent-and-the-two-axes.md`.
+> The compute figures, the detector inventory and the two-point emotional axis
+> below all still hold.
+
 ## Why this measurement
 
 The owner's ruling of 2026-08-25 assigns the two simulated populations
