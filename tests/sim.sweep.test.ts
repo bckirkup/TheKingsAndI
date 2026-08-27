@@ -204,6 +204,8 @@ describe('coefficient sweep', () => {
     expect(point.abilityMax).toBe(campaignSummary.abilityMax);
     expect(point.meanAbility).toBe(campaignSummary.meanAbility);
     expect(point.abilityMovedCount).toBe(campaignSummary.abilityMovedCount);
+    expect(point.meanTauBenev).toBe(campaignSummary.meanTauBenev);
+    expect(point.meanQuietQuitRate).toBe(campaignSummary.meanQuietQuitRate);
     expect(typeof point.plainChessWinDelta).toBe('number');
   }, 60_000);
 });
