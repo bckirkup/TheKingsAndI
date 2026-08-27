@@ -32,6 +32,8 @@ export interface ClassPrestigeMatrix {
 export interface CredenceState {
   readonly tauBenev: number;
   readonly tauAbil: number;
+  /** Rupture debt owed by this commander relationship, integer 0..100. */
+  readonly ruptureDebt?: number;
   /** Per-piece ability observations retained across matches. */
   readonly abilityObservationCount: number;
 }
@@ -223,6 +225,12 @@ export type MatchEvent =
       readonly authorityLoss?: number;
       /** True only when the command was bad in the audit view. */
       readonly justified?: boolean;
+    }
+  | {
+      readonly t: 'REPAIR';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly repaid: number;
     }
   | {
       readonly t: 'OVERRIDE';

@@ -14,6 +14,10 @@ import {
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   applyOverride,
+  applyRegardSignal,
+  applyRepairSignal,
+  isRegardEligible,
+  ENGINE_CONFIG,
   evaluateMoveResponse,
   justifiedRefusalObviousness,
   normalizePieceState,
@@ -226,6 +230,7 @@ function applyPlayerMoveConsequences(input: {
   readonly events: MatchEvent[];
   readonly lastFriendlyCapturePly: number | undefined;
   readonly abilityDripStreakByPiece: Readonly<Record<string, number>>;
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
   readonly dreadExposureByPiece: DreadExposureByPiece;
   readonly capturedPieceId?: string;
   readonly actorChallenged: boolean;
@@ -234,6 +239,7 @@ function applyPlayerMoveConsequences(input: {
   readonly lastFriendlyCapturePly: number | undefined;
   readonly ply: number;
   readonly abilityDripStreakByPiece: Readonly<Record<string, number>>;
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
   readonly dreadExposureByPiece: DreadExposureByPiece;
   readonly capturedPieceId?: string;
 } {
@@ -251,6 +257,7 @@ function applyPlayerMoveConsequences(input: {
     ply,
     events,
     abilityDripStreakByPiece,
+    regardStreakByPiece,
     dreadExposureByPiece,
     actorChallenged,
   } = input;
@@ -292,15 +299,25 @@ function applyPlayerMoveConsequences(input: {
     abilityDripStreakByPiece,
   );
   events.push(...abilityObservations.events);
-  roster = abilityObservations.roster.map((piece) =>
-    piece.id === actor.id
-      ? applyPostMoveCredence(
-          { ...piece, engagementFactor: outcome.engagementFactor },
-          moveEval,
-          objectivelyGood,
-        )
-      : piece,
-  );
+  const regardStreak = isRegardEligible(
+    moveEval.P_captured,
+    moveEval.deltaV_board,
+  )
+    ? (regardStreakByPiece[actor.id] ?? 0) + 1
+    : 0;
+  const regardApplied = regardStreak >= ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES;
+  roster = abilityObservations.roster.map((piece) => {
+    if (piece.id !== actor.id) return piece;
+    const postMove = applyPostMoveCredence(
+      { ...piece, engagementFactor: outcome.engagementFactor },
+      moveEval,
+      objectivelyGood,
+    );
+    return {
+      ...postMove,
+      credence: applyRegardSignal(postMove.credence, regardStreak),
+    };
+  });
 
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
     const fatalistic = applyFatalisticComplianceCosts(roster, actor.id, ply);
@@ -364,6 +381,10 @@ function applyPlayerMoveConsequences(input: {
     lastFriendlyCapturePly,
     ply: ply + 1,
     abilityDripStreakByPiece: abilityObservations.dripStreakByPiece,
+    regardStreakByPiece: {
+      ...regardStreakByPiece,
+      [actor.id]: regardApplied ? 0 : regardStreak,
+    },
     dreadExposureByPiece: trauma.exposure,
     ...(applied.capture === undefined
       ? {}
@@ -418,8 +439,10 @@ export async function runHeadlessMatch(
   const insight = createInsightRoundHandle();
   let lastFriendlyCapturePly: number | undefined;
   let abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
+  let regardStreakByPiece: Readonly<Record<string, number>> = {};
   let dreadExposureByPiece: DreadExposureByPiece = {};
   let enemyDreadExposureByPiece: DreadExposureByPiece = {};
+  let enemyRegardStreakByPiece: Readonly<Record<string, number>> = {};
   const opponentArchetype = config.opponentArchetype ?? 'random';
 
   while (ply <= config.maxPlies) {
@@ -459,10 +482,12 @@ export async function runHeadlessMatch(
         insight,
         overrideRefusals: opponentArchetype === 'tyrannical',
         dreadExposureByPiece: enemyDreadExposureByPiece,
+        regardStreakByPiece: enemyRegardStreakByPiece,
       });
       enemyRoster = enemyTurn.enemyRoster;
       engineAudit.push(...(enemyTurn.engineAudit ?? []));
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
+      enemyRegardStreakByPiece = enemyTurn.regardStreakByPiece;
       events.push(...enemyTurn.events);
       const capturedByEnemy =
         enemyTurn.capturedPieceId === undefined
@@ -674,6 +699,22 @@ export async function runHeadlessMatch(
           );
           roster = heeded.roster;
           events.push(...heeded.events);
+          const repair = applyRepairSignal(
+            roster.find((piece) => piece.id === actor.id)?.credence ??
+              actor.credence,
+          );
+          if (repair.repaid > 0) {
+            roster = updatePiece(roster, actor.id, (piece) => ({
+              ...piece,
+              credence: repair.credence,
+            }));
+            events.push({
+              t: 'REPAIR',
+              ply,
+              pieceId: actor.id,
+              repaid: repair.repaid,
+            });
+          }
           firstRefused ??= {
             actor,
             choice,
@@ -752,6 +793,7 @@ export async function runHeadlessMatch(
         events,
         lastFriendlyCapturePly,
         abilityDripStreakByPiece,
+        regardStreakByPiece,
         dreadExposureByPiece,
         actorChallenged,
       });
@@ -778,6 +820,7 @@ export async function runHeadlessMatch(
       );
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
+      regardStreakByPiece = committed.regardStreakByPiece;
       dreadExposureByPiece = committed.dreadExposureByPiece;
       ply = committed.ply;
       turnCompleted = true;
@@ -823,6 +866,7 @@ export async function runHeadlessMatch(
         events,
         lastFriendlyCapturePly,
         abilityDripStreakByPiece,
+        regardStreakByPiece,
         dreadExposureByPiece,
         actorChallenged: true,
       });
@@ -835,6 +879,7 @@ export async function runHeadlessMatch(
       );
       lastFriendlyCapturePly = committed.lastFriendlyCapturePly;
       abilityDripStreakByPiece = committed.abilityDripStreakByPiece;
+      regardStreakByPiece = committed.regardStreakByPiece;
       dreadExposureByPiece = committed.dreadExposureByPiece;
       ply = committed.ply;
       continue;

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { LivingBoard } from '../src/chess';
 import type { MoveIntent } from '../src/chess';
 import { canonicalJson } from '../src/core/canonicalJson';
+import { ENGINE_CONFIG } from '../src/psychology';
 import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
 import {
   parseArguments,
@@ -40,6 +41,27 @@ import {
 import type { PoolSeasonMetrics } from '../sim/pool';
 
 describe('simulation harness determinism', () => {
+  it('keeps the campaign digest unchanged with zero regard and repair steps', async () => {
+    const options = {
+      matches: 1,
+      leader: 'exacting' as const,
+      seed: 7,
+      engineKind: 'fake' as const,
+    };
+    const baseline = renderCsv(await runSimulation(options));
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const originalRegard = ENGINE_CONFIG.BENEV_REGARD_STEP;
+    const originalRepair = ENGINE_CONFIG.BENEV_REPAIR_STEP;
+    config.BENEV_REGARD_STEP = 0;
+    config.BENEV_REPAIR_STEP = 0;
+    try {
+      expect(renderCsv(await runSimulation(options))).toBe(baseline);
+    } finally {
+      config.BENEV_REGARD_STEP = originalRegard;
+      config.BENEV_REPAIR_STEP = originalRepair;
+    }
+  });
+
   it('is byte-identical when repeated with the same seed', async () => {
     const options = {
       matches: 2,

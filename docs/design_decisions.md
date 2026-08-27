@@ -1414,6 +1414,22 @@ owner ruling: a demandingness axis independent of warmth (today "cold" and
 "demanding" are the same style), an outcome ceiling that separates the four tied
 styles, or both. Containment numbers must not be quoted before this passes.
 
+### D165 ✅ How does care cushion benevolence and repair rupture? (ADR 0064)
+**Answered 2026-08-27 by ADR 0064.** The regard writer is implemented in
+`src/psychology/credence.ts:37-52`; the repair writer is implemented in
+`src/psychology/credence.ts:64-87`; override debt accrual is wired through
+`src/psychology/override.ts:20-37` (the debt writer is
+`src/psychology/credence.ts:89-100`); honoured-refusal `REPAIR` emission is
+implemented in `src/orchestration/headlessMatch.ts:702-716` and
+`src/orchestration/matchSession.ts:508-522`. **Not wired (defaults 0):**
+`BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` remain at their control defaults,
+pending the D166 calibration ruling.
+
+### D166 ❓ What are the live magnitudes for regard and repair?
+**Open — not wired.** The live magnitudes for `BENEV_REGARD_STEP` and
+`BENEV_REPAIR_STEP` require an owner ruling on a before/after sweep. Do not
+invent candidate numbers in the register.
+
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
 semester start. It folds only integer relation effects into piece affinity and

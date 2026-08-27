@@ -10,7 +10,12 @@ import { ENGINE_CONFIG } from './config';
 import type { CredenceState, PieceRole, PieceState, RumorState } from './types';
 
 export function defaultCredence(): CredenceState {
-  return { tauBenev: 50, tauAbil: 50, abilityObservationCount: 0 };
+  return {
+    tauBenev: 50,
+    tauAbil: 50,
+    ruptureDebt: 0,
+    abilityObservationCount: 0,
+  };
 }
 
 export function defaultRumor(): RumorState {
@@ -40,6 +45,7 @@ export function normalizePieceState(piece: PieceState): PieceState {
     credence: {
       tauBenev: clampCredence(piece.credence.tauBenev),
       tauAbil: clampCredence(piece.credence.tauAbil),
+      ruptureDebt: clampCredence(piece.credence.ruptureDebt ?? 0),
       abilityObservationCount: Math.max(
         0,
         Math.trunc(piece.credence.abilityObservationCount ?? 0),

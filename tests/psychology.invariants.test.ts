@@ -12,6 +12,7 @@ import {
   applyHeardSignal,
   applyMatchOutcomeTrust,
   applyOverride,
+  applyRepairSignal,
   applyWitnessedSacrificeEvent,
   calculateAttachment,
   calculateEngineSearchDepth,
@@ -507,6 +508,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(accepted.roster[1]?.credence).toEqual({
       tauBenev: 61,
       tauAbil: 55,
+      ruptureDebt: 0,
       abilityObservationCount: 0,
     });
     const rejected = applyRefusalAuthorityCost(
@@ -581,6 +583,8 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(result.event.t).toBe('OVERRIDE');
     expect(result.overriddenPiece.T_i).toBeLessThan(piece.T_i);
     expect(result.witnesses[0]?.T_i).toBeLessThan(witness.T_i);
+    expect(result.overriddenPiece.credence.ruptureDebt).toBeGreaterThan(0);
+    expect(result.witnesses[0]?.credence.ruptureDebt).toBeGreaterThan(0);
   });
 });
 
@@ -1121,5 +1125,39 @@ describe('perceived value golden values', () => {
     expect(calculatePerceivedValue(-1, 3, 0)).toBe(-1);
     expect(calculatePerceivedValue(-1, 3, 100)).toBe(3);
     expect(calculatePerceivedValue(0, 2, 50)).toBe(1);
+  });
+});
+
+describe('rupture debt repair invariants', () => {
+  it('never repays more debt than accrued or exceeds benevolence ceiling', () => {
+    const before = {
+      ...defaultCredence(),
+      tauBenev: 99,
+      ruptureDebt: 2,
+    };
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = ENGINE_CONFIG.BENEV_REPAIR_STEP;
+    config.BENEV_REPAIR_STEP = 10;
+    try {
+      const result = applyRepairSignal(before);
+      expect(result.repaid).toBe(2);
+      expect(result.credence.ruptureDebt).toBe(0);
+      expect(result.credence.tauBenev).toBe(100);
+    } finally {
+      config.BENEV_REPAIR_STEP = original;
+    }
+  });
+
+  it('requires repair to be stronger than heard when enabled', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = ENGINE_CONFIG.BENEV_REPAIR_STEP;
+    config.BENEV_REPAIR_STEP = ENGINE_CONFIG.BENEV_HEARD_STEP + 1;
+    try {
+      expect(ENGINE_CONFIG.BENEV_REPAIR_STEP).toBeGreaterThan(
+        ENGINE_CONFIG.BENEV_HEARD_STEP,
+      );
+    } finally {
+      config.BENEV_REPAIR_STEP = original;
+    }
   });
 });

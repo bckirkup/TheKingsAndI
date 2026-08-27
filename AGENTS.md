@@ -43,7 +43,8 @@ implementation status from an ADR or the decision register alone.
 | `docs/calibration/2026-08-18-pawn-hope-sweep.md` | D147 promotion-hope and credence-floor calibration; raw sweep artifacts retained externally |
 | `docs/adr/0054-the-seminar-pool-and-what-a-player-knows.md` | D148–D150 seminar-pool direction and open decisions |
 | `docs/adr/0062-the-decision-journal-and-the-llm-player.md` | How a model may play at all: offline journal, enumerated options, no live LLM |
-| `docs/adr/0063-two-duties-coverage-and-containment.md` | **The NPCs owe coverage, the models owe containment;** D159–D163 answered, D164 open |
+| `docs/adr/0063-two-duties-coverage-and-containment.md` | **The NPCs owe coverage, the models owe containment;** D159–D163 answered, D164 open, D165 answered by ADR 0064 |
+| `docs/adr/0064-the-cushion-and-the-repair.md` | **Care cushions benevolence and rupture can be repaired;** D165 answered, D166 open |
 | `docs/calibration/2026-08-19-piece-quality-and-the-bench.md` | D149 piece-quality and bench calibration; design-only evidence |
 | `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
 | `docs/llm_integration.md` | Narration port, cost model, safety |

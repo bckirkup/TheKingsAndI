@@ -8,7 +8,7 @@ import type {
 import type { EngineAuditEntry } from '../engine';
 import type { LeaderId } from '../core/ids';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';

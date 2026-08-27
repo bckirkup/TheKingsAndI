@@ -10,6 +10,9 @@ import type { EnginePort } from '../engine/types';
 import type { EngineAuditEntry } from '../engine';
 import {
   applyFatalisticComplianceCosts,
+  applyRegardSignal,
+  isRegardEligible,
+  ENGINE_CONFIG,
   evaluateMoveResponse,
   normalizePieceState,
   shouldDesert,
@@ -78,6 +81,7 @@ export interface EnemyTurnResult {
     | 'quiet_quit'
     | 'fatalistic'
   )[];
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
   readonly engineAudit?: readonly EngineAuditEntry[];
 }
 
@@ -97,6 +101,7 @@ export function finishUntrackedMove(
   enemySide: Side,
   san: string,
   ply: number,
+  regardStreakByPiece: Readonly<Record<string, number>> = {},
 ): EnemyTurnResult {
   const applied = board.applySan(san);
   const events: MatchEvent[] = [];
@@ -130,6 +135,7 @@ export function finishUntrackedMove(
     enemyRout: false,
     lastMove: [applied.from, applied.to],
     observableBehaviours: ['move'],
+    regardStreakByPiece,
   };
 }
 
@@ -142,6 +148,7 @@ function enemyMoralRefusalTurn(input: {
   readonly ply: number;
   readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
   readonly audit: EngineAuditEntry;
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
 }): EnemyTurnResult {
   const events: MatchEvent[] = [
     {
@@ -169,6 +176,7 @@ function enemyMoralRefusalTurn(input: {
     enemyRout: false,
     lastMove: null,
     observableBehaviours: ['refusal'],
+    regardStreakByPiece: input.regardStreakByPiece,
   };
 }
 
@@ -186,6 +194,7 @@ function enemyDesertionTurn(input: {
   readonly ply: number;
   readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
   readonly audit: EngineAuditEntry;
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
 }): EnemyTurnResult {
   const cascade = applyDesertionWithCascade(
     input.enemyRoster,
@@ -231,6 +240,7 @@ function enemyDesertionTurn(input: {
     enemyRout: cascade.rout,
     lastMove: null,
     observableBehaviours: behaviours,
+    regardStreakByPiece: input.regardStreakByPiece,
   };
 }
 
@@ -252,6 +262,7 @@ function enemyCompliantTurn(input: {
   readonly bestAuditScore: number;
   readonly dreadExposureByPiece?: DreadExposureByPiece | undefined;
   readonly audit: EngineAuditEntry;
+  readonly regardStreakByPiece: Readonly<Record<string, number>>;
 }): EnemyTurnResult {
   const {
     board,
@@ -310,15 +321,25 @@ function enemyCompliantTurn(input: {
     { [actor.id]: ply % 3 },
   );
   events.push(...abilityObservations.events);
-  enemyRoster = abilityObservations.roster.map((piece) =>
-    piece.id === actor.id
-      ? applyPostMoveCredence(
-          { ...piece, engagementFactor: outcome.engagementFactor },
-          moveEval,
-          objectivelyGood,
-        )
-      : piece,
-  );
+  const regardStreak = isRegardEligible(
+    moveEval.P_captured,
+    moveEval.deltaV_board,
+  )
+    ? (input.regardStreakByPiece[actor.id] ?? 0) + 1
+    : 0;
+  const regardApplied = regardStreak >= ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES;
+  enemyRoster = abilityObservations.roster.map((piece) => {
+    if (piece.id !== actor.id) return piece;
+    const postMove = applyPostMoveCredence(
+      { ...piece, engagementFactor: outcome.engagementFactor },
+      moveEval,
+      objectivelyGood,
+    );
+    return {
+      ...postMove,
+      credence: applyRegardSignal(postMove.credence, regardStreak),
+    };
+  });
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
     const fatalistic = applyFatalisticComplianceCosts(
       enemyRoster,
@@ -355,6 +376,10 @@ function enemyCompliantTurn(input: {
     enemyRout: false,
     lastMove: [applied.from, applied.to],
     observableBehaviours: behaviours,
+    regardStreakByPiece: {
+      ...input.regardStreakByPiece,
+      [actor.id]: regardApplied ? 0 : regardStreak,
+    },
   };
 }
 
@@ -375,6 +400,7 @@ function applyTrackedEnemyDecision(input: {
   readonly objectivelyGood?: boolean;
   readonly bestAuditScore?: number;
   readonly preMoveAuditScore?: number;
+  readonly regardStreakByPiece?: Readonly<Record<string, number>>;
 }): EnemyTurnResult {
   const {
     board,
@@ -389,6 +415,7 @@ function applyTrackedEnemyDecision(input: {
     orderQualityCp = 0,
     bestAuditScore = orderQualityCp,
     preMoveAuditScore = bestAuditScore,
+    regardStreakByPiece = {},
   } = input;
   const audit = engineAuditEntry({
     ply,
@@ -431,6 +458,7 @@ function applyTrackedEnemyDecision(input: {
         ply,
         dreadExposureByPiece: input.dreadExposureByPiece,
         audit,
+        regardStreakByPiece,
       });
     }
   }
@@ -448,6 +476,7 @@ function applyTrackedEnemyDecision(input: {
       ply,
       dreadExposureByPiece: input.dreadExposureByPiece,
       audit,
+      regardStreakByPiece,
     });
   }
 
@@ -467,6 +496,7 @@ function applyTrackedEnemyDecision(input: {
     bestAuditScore,
     dreadExposureByPiece: input.dreadExposureByPiece,
     audit,
+    regardStreakByPiece,
   });
 }
 
@@ -494,12 +524,14 @@ export function applyEnemyTurnSync(input: {
   readonly archetype: OpponentArchetype;
   readonly ply: number;
   readonly overrideRefusals?: boolean;
+  readonly regardStreakByPiece?: Readonly<Record<string, number>>;
 }): EnemyTurnResult {
   const enemyRoster = syncSideRoster(
     input.board,
     trackEnemyIdentities(input.enemyRoster),
     input.enemySide,
   );
+  const regardStreakByPiece = input.regardStreakByPiece ?? {};
 
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
@@ -511,6 +543,7 @@ export function applyEnemyTurnSync(input: {
       enemyRout: true,
       lastMove: null,
       observableBehaviours: [],
+      regardStreakByPiece,
     };
   }
 
@@ -539,6 +572,7 @@ export function applyEnemyTurnSync(input: {
           input.enemySide,
           san,
           input.ply,
+          regardStreakByPiece,
         ),
       );
     }
@@ -558,6 +592,7 @@ export function applyEnemyTurnSync(input: {
           input.enemySide,
           san,
           input.ply,
+          regardStreakByPiece,
         ),
       );
     }
@@ -576,6 +611,7 @@ export function applyEnemyTurnSync(input: {
       overrideRefusals:
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
+      regardStreakByPiece,
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);
@@ -602,6 +638,7 @@ export async function applyEnemyTurn(input: {
   readonly insight?: InsightRoundHandle;
   readonly overrideRefusals?: boolean;
   readonly dreadExposureByPiece?: DreadExposureByPiece;
+  readonly regardStreakByPiece?: Readonly<Record<string, number>>;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
   const enemyRoster = syncSideRoster(
@@ -609,6 +646,7 @@ export async function applyEnemyTurn(input: {
     trackEnemyIdentities(input.enemyRoster),
     input.enemySide,
   );
+  const regardStreakByPiece = input.regardStreakByPiece ?? {};
 
   if (enemyRoster.filter((piece) => piece.role !== 'King').length === 0) {
     return {
@@ -620,6 +658,7 @@ export async function applyEnemyTurn(input: {
       enemyRout: true,
       lastMove: null,
       observableBehaviours: [],
+      regardStreakByPiece,
     };
   }
 
@@ -648,6 +687,7 @@ export async function applyEnemyTurn(input: {
           input.enemySide,
           san,
           input.ply,
+          regardStreakByPiece,
         ),
       );
     }
@@ -667,6 +707,7 @@ export async function applyEnemyTurn(input: {
           input.enemySide,
           san,
           input.ply,
+          regardStreakByPiece,
         ),
       );
     }
@@ -721,6 +762,7 @@ export async function applyEnemyTurn(input: {
         attempt === maxCandidates - 1,
       orderQualityCp,
       objectivelyGood,
+      regardStreakByPiece,
       bestAuditScore,
       preMoveAuditScore,
     });

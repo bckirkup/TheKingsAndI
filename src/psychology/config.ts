@@ -34,6 +34,12 @@ export const ENGINE_CONFIG = {
   HEROIC_BOARD_DELTA: 2.0,
   /** Benevolence heard signal (ADR 0019). */
   BENEV_HEARD_STEP: 15,
+  /** Benevolence regard signal after consecutive safe, valuable orders. */
+  BENEV_REGARD_STEP: 0,
+  BENEV_REGARD_STREAK_PLIES: 3,
+  BENEV_REGARD_RISK_CEILING: 0.15,
+  /** Benevolence repair applied after an honoured refusal. */
+  BENEV_REPAIR_STEP: 0,
   /** Logistic cliff scale for betrayal (ADR 0019). */
   BENEV_BETRAYAL_CLIFF_SCALE: 4,
   BENEV_BETRAYAL_CLIFF_DROP: 40,
