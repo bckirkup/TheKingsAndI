@@ -84,13 +84,17 @@ Run A, directly comparable to the 08-26 nine-style table:
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `exacting` | 20 | 80% | 97.5 | 0.133 | 0.191 | 0.419 | 0.57 | 0.00 | 61 |
 | `steady` | 8 | 40% | 100.0 | 0.507 | 0.208 | 0.385 | 1.11 | 0.05 | 84 |
+| `absentee` | 0.25 | 5% | 95.0 | 0.899 | 0.280 | 0.317 | 0.23 | 0.30 | 94 |
 
-`absentee` at the `random` opponent is still running at the time of writing —
-that pairing (refusal 0.839 against the longest campaigns in the set) is the
-most expensive cell in the matrix, and its row will be appended when it lands.
-Nothing in the readings below depends on it: `absentee`'s behaviour is measured
-in Run B, and Run A exists only for comparability with the superseded 08-26
-table.
+The `absentee` row landed after this report was first written; it was the most
+expensive cell in the matrix (refusal 0.899 against the longest campaigns in the
+set, 65 min of fake-engine wall time for 20 matches). It confirms the artifact
+reading from the other side: at the `random` opponent even the *least* engaged
+style in the harness scores 95.0 with a 19/0/1 record, so the 08-26 table's
+four-way tie at 100.00 was the opponent saturating and not a scoring ceiling.
+Note what does separate at that opponent while win score cannot: 0.30
+desertions per match against 0.00 for `exacting`, and `trust_delta` −41.94 —
+the roster feels the difference the scoreboard is blind to.
 
 Refusal rate separates cleanly with care held against insistence (0.133 for
 `exacting` against 0.507 for `steady` against 0.839 for `absentee` in Run B),
@@ -162,6 +166,7 @@ fires on either new style in Run A.
 | `exacting` | B | 28,500 | 251 | 47.8 | 145 MB |
 | `steady` | A | 41,727 | 499 | 64.9 | 144 MB |
 | `absentee` | B | 51,742 | 593 | 89.2 | 157 MB |
+| `absentee` | A | 196,596 | 2,099 | 150.8 | 157 MB |
 
 Consistent with 08-26: cost tracks refusal churn, not match count — `absentee`
 at refusal 0.839 costs 3.8× `tyrannical` per match despite the same 20 matches.
@@ -172,6 +177,12 @@ whole seven-style Run B took ≈ 3.4 h wall on two cores, so a coverage sweep at
 the honest opponent is affordable at roughly the same budget as the saturated
 one it replaces. Peak RSS 143–157 MB throughout; memory is still not the
 constraint on the fake engine.
+
+The last row is the worst cell in the matrix and the one to budget from:
+`absentee` against `random` runs 196.6 s/match, 14.5× `pure_tactician`, because
+refusal 0.899 at 150.8 engine calls/ply compounds with 94-ply campaigns that
+neither commander is trying to win. A sweep planned from the mean will be wrong
+by an order of magnitude on that cell alone.
 
 ## What follows
 
