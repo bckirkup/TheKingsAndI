@@ -58,47 +58,40 @@ export const MIGRATIONS: readonly MigrationStep[] = [
     version: 4,
     upgrade: async (db) => {
       const identities = await db.pieceIdentities.toArray();
-      const pieces = new Map(
-        (await db.pieceStates.toArray()).map((piece) => [piece.id, piece]),
-      );
       await db.pieceIdentities.bulkPut(
         identities.map((identity) => {
-          const piece = pieces.get(identity.id);
-          const disposition = {
-            ...defaultCredence(),
-            ...identity.disposition,
-            ruptureDebt: identity.disposition?.ruptureDebt ?? 0,
-          };
-          const accounts = Object.fromEntries(
-            Object.entries(identity.relationshipAccounts ?? {}).map(
-              ([leaderId, account]) => [
-                leaderId,
-                {
-                  ...defaultCredence(),
-                  ...account,
-                  ruptureDebt: account.ruptureDebt ?? 0,
-                },
-              ],
-            ),
-          );
-          const account =
-            accounts[PLAYER_LEADER_ID] ?? piece?.credence ?? disposition;
+          const disposition =
+            identity.disposition === undefined
+              ? undefined
+              : {
+                  ...identity.disposition,
+                  ruptureDebt: identity.disposition.ruptureDebt ?? 0,
+                };
+          const relationshipAccounts = identity.relationshipAccounts
+            ? Object.fromEntries(
+                Object.entries(identity.relationshipAccounts).map(
+                  ([leaderId, account]) => [
+                    leaderId,
+                    {
+                      ...account,
+                      ruptureDebt: account.ruptureDebt ?? 0,
+                    },
+                  ],
+                ),
+              )
+            : identity.relationshipAccounts;
           return {
             ...identity,
-            disposition,
-            relationshipAccounts: {
-              ...accounts,
-              [PLAYER_LEADER_ID]: {
-                ...defaultCredence(),
-                ...account,
-                ruptureDebt: account.ruptureDebt ?? 0,
-              },
-            },
+            ...(disposition === undefined ? {} : { disposition }),
+            ...(relationshipAccounts === undefined
+              ? {}
+              : { relationshipAccounts }),
           };
         }),
       );
+      const pieces = await db.pieceStates.toArray();
       await db.pieceStates.bulkPut(
-        [...pieces.values()].map((piece) => ({
+        pieces.map((piece) => ({
           ...piece,
           credence: {
             ...piece.credence,

@@ -340,8 +340,13 @@ describe('schema migrations', () => {
           tauAbil: 30,
           abilityObservationCount: 3,
         },
+        'other:commander': {
+          tauBenev: 25,
+          tauAbil: 75,
+          abilityObservationCount: 4,
+        },
       },
-    };
+    } as unknown as typeof identity;
     await db.pieceIdentities.put(legacyIdentity);
     await db.pieceStates.put({
       ...piece,
@@ -350,7 +355,7 @@ describe('schema migrations', () => {
         tauAbil: 50,
         abilityObservationCount: 0,
       },
-    });
+    } as typeof piece);
     await db.settings.put({ key: 'schemaVersion', value: '3' });
 
     await new CareerRepository(db).init();
@@ -361,6 +366,16 @@ describe('schema migrations', () => {
     expect(migrated?.relationshipAccounts?.['player:career']?.ruptureDebt).toBe(
       0,
     );
+    expect(Object.keys(migrated?.relationshipAccounts ?? {})).toEqual([
+      'player:career',
+      'other:commander',
+    ]);
+    expect(migrated?.relationshipAccounts?.['other:commander']).toEqual({
+      tauBenev: 25,
+      tauAbil: 75,
+      abilityObservationCount: 4,
+      ruptureDebt: 0,
+    });
     expect(migratedPiece?.credence.ruptureDebt).toBe(0);
   });
 });

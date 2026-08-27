@@ -38,10 +38,7 @@ export function applyRegardSignal(
   credence: CredenceState,
   streakLength: number,
 ): CredenceState {
-  if (
-    Math.trunc(streakLength) < ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES ||
-    ENGINE_CONFIG.BENEV_REGARD_STEP === 0
-  ) {
+  if (Math.trunc(streakLength) < ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES) {
     return credence;
   }
   return {
@@ -65,7 +62,7 @@ export function applyRepairSignal(credence: CredenceState): {
   readonly credence: CredenceState;
   readonly repaid: number;
 } {
-  const debt = clampCredence(credence.ruptureDebt ?? 0);
+  const debt = clampCredence(credence.ruptureDebt);
   const repaid = Math.min(
     debt,
     Math.max(0, Math.trunc(ENGINE_CONFIG.BENEV_REPAIR_STEP)),
@@ -95,7 +92,7 @@ export function applyBetrayalSignal(
   return {
     ...credence,
     tauBenev: clampCredence(credence.tauBenev - drop),
-    ruptureDebt: clampCredence((credence.ruptureDebt ?? 0) + drop),
+    ruptureDebt: clampCredence(credence.ruptureDebt + drop),
   };
 }
 

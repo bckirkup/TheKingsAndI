@@ -379,17 +379,17 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
     const trusting = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 100, tauAbil: 50 },
       B_i: 0,
     });
     const distrustful = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0, tauAbil: 50 },
       B_i: 0,
     });
     const traumatised = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 100, tauAbil: 50 },
       B_i: 100,
     });
     expect(expectedVindicationDelta(trusting, move)).toBe(-0.25);
@@ -402,7 +402,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const original = config.VINDICATION_PESSIMISM_SCALE ?? 100;
     const piece = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0, tauAbil: 50 },
       B_i: 0,
     });
     const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
@@ -495,7 +495,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const actor = makePiece({ id: 'w:N:g1' });
     const witness = makePiece({
       id: 'w:B:f1',
-      credence: { tauBenev: 61, tauAbil: 63, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 61, tauAbil: 63 },
     });
     const accepted = applyRefusalAuthorityCost(
       [actor, witness],
@@ -547,10 +547,10 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   it('uses credence-weighted perception instead of additive trust', () => {
     const lowAbil = makePiece({
       T_i: -80,
-      credence: { tauBenev: 80, tauAbil: 0, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 80, tauAbil: 0 },
     });
     const highAbil = makePiece({
-      credence: { tauBenev: 80, tauAbil: 100, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 80, tauAbil: 100 },
     });
     const move = makeMove({ deltaV_board: -1, vLeaderImplied: 3 });
     const toleratedMove = makeMove({ deltaV_board: 2, vLeaderImplied: 3 });
@@ -1039,6 +1039,7 @@ describe('credence channel updates', () => {
     const credence = {
       tauBenev: 80,
       tauAbil: 50,
+      ruptureDebt: 0,
       abilityObservationCount: 0,
     };
     const betrayed = applyBetrayalSignal(credence, 8);

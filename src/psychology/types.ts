@@ -33,7 +33,7 @@ export interface CredenceState {
   readonly tauBenev: number;
   readonly tauAbil: number;
   /** Rupture debt owed by this commander relationship, integer 0..100. */
-  readonly ruptureDebt?: number;
+  readonly ruptureDebt: number;
   /** Per-piece ability observations retained across matches. */
   readonly abilityObservationCount: number;
 }

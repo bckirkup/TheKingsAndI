@@ -21,6 +21,7 @@ import type { CredenceState } from '../src/psychology';
 const credence = (tauBenev: number): CredenceState => ({
   tauAbil: 50,
   tauBenev,
+  ruptureDebt: 0,
   abilityObservationCount: 0,
 });
 

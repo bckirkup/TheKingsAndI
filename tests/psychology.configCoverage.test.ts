@@ -306,7 +306,12 @@ describe('wiring — override penalties', () => {
 
   it('wiring: OVERRIDE_BENEV_CLIFF_INPUT changes benevolence drop', () => {
     const piece = makePiece({
-      credence: { tauBenev: 80, tauAbil: 50, abilityObservationCount: 0 },
+      credence: {
+        tauBenev: 80,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
     });
     mutateConfig('OVERRIDE_BENEV_CLIFF_INPUT', 0, () => {
       const mild = applyOverride(piece, [], 1, 'Nf3').overriddenPiece.credence
@@ -456,7 +461,7 @@ describe('wiring — benevolence & ability knobs', () => {
           const hard = applyBetrayalSignal(before, 6).tauBenev;
           expect(hard).toBeLessThan(soft);
           expect(applyBetrayalSignal(before, 6).ruptureDebt).toBeGreaterThan(
-            before.ruptureDebt ?? 0,
+            before.ruptureDebt,
           );
         });
       });
@@ -774,7 +779,12 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
   it('wiring: FATALISTIC_TAU_ABIL_CEILING gates fatalistic compliance', () => {
     const actor = makePiece({
       T_i: 0,
-      credence: { tauBenev: 50, tauAbil: 40, abilityObservationCount: 0 },
+      credence: {
+        tauBenev: 50,
+        tauAbil: 40,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
     });
     const move: CandidateMoveEvaluation = {
       moveNotation: 'Nxh7',
