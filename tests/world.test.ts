@@ -58,9 +58,16 @@ describe('world pairing layer', () => {
 
   it('rejects harness styles without an opposing commander archetype', () => {
     expect(opponentArchetypeForLeader('supportive')).toBe('supportive');
-    expect(() => opponentArchetypeForLeader('redeemer')).toThrow(
-      /no opposing commander archetype/,
-    );
+    for (const leader of [
+      'redeemer',
+      'exacting',
+      'absentee',
+      'steady',
+    ] as const) {
+      expect(() => opponentArchetypeForLeader(leader)).toThrow(
+        /no opposing commander archetype/,
+      );
+    }
   });
 
   it('returns per-pairing metrics and a style matrix', async () => {
