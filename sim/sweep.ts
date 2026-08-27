@@ -47,6 +47,8 @@ export interface SweepPoint {
   readonly meanEnemyDesertions: number;
   readonly plainChessWinDelta: number;
   readonly meanDripGainTotal: number;
+  readonly meanRegardEvents: number;
+  readonly meanRegardGainTotal: number;
   readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
   readonly meanQuietQuitRate: number;
@@ -151,6 +153,8 @@ export async function runCoefficientSweep(options: {
         meanEnemyDesertions: campaign.summary.meanEnemyDesertions,
         plainChessWinDelta: campaign.summary.meanWinScore - plainWin,
         meanDripGainTotal: campaign.summary.meanDripGainTotal,
+        meanRegardEvents: campaign.summary.meanRegardEvents,
+        meanRegardGainTotal: campaign.summary.meanRegardGainTotal,
         meanAdjudicationLoss: campaign.summary.meanAdjudicationLoss,
         meanTauBenev: campaign.summary.meanTauBenev,
         meanQuietQuitRate: campaign.summary.meanQuietQuitRate,
@@ -250,7 +254,7 @@ async function main(): Promise<void> {
     }
   }
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
   );
   for (const point of points) {
     console.log(
@@ -275,6 +279,8 @@ async function main(): Promise<void> {
         point.meanEnemyDesertions.toFixed(2),
         point.plainChessWinDelta.toFixed(1),
         point.meanDripGainTotal.toFixed(2),
+        point.meanRegardEvents.toFixed(2),
+        point.meanRegardGainTotal.toFixed(2),
         point.meanAdjudicationLoss.toFixed(2),
         point.meanTauBenev.toFixed(2),
         point.meanQuietQuitRate.toFixed(4),

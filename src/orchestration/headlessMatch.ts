@@ -14,7 +14,6 @@ import {
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   applyOverride,
-  applyRegardSignal,
   applyRepairSignal,
   isRegardEligible,
   ENGINE_CONFIG,
@@ -47,6 +46,7 @@ import {
   applyDesertionWithCascade,
   applyOutcomeVindication,
   applyPostMoveCredence,
+  applyRegardToPiece,
   applyHeededAbilityGrade,
   applyRosterAbilityObservations,
   applyPosthumousClassCredit,
@@ -313,10 +313,9 @@ function applyPlayerMoveConsequences(input: {
       moveEval,
       objectivelyGood,
     );
-    return {
-      ...postMove,
-      credence: applyRegardSignal(postMove.credence, regardStreak),
-    };
+    const regarded = applyRegardToPiece(postMove, regardStreak, ply);
+    if (regarded.event !== undefined) events.push(regarded.event);
+    return regarded.piece;
   });
 
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {

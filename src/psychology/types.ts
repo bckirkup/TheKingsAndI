@@ -233,6 +233,12 @@ export type MatchEvent =
       readonly repaid: number;
     }
   | {
+      readonly t: 'REGARD';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly gained: number;
+    }
+  | {
       readonly t: 'OVERRIDE';
       readonly ply: number;
       readonly pieceId: PieceId;

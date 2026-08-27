@@ -207,5 +207,36 @@ describe('coefficient sweep', () => {
     expect(point.meanTauBenev).toBe(campaignSummary.meanTauBenev);
     expect(point.meanQuietQuitRate).toBe(campaignSummary.meanQuietQuitRate);
     expect(typeof point.plainChessWinDelta).toBe('number');
+    expect(point.meanRegardEvents).toBe(campaignSummary.meanRegardEvents);
+    expect(point.meanRegardGainTotal).toBe(campaignSummary.meanRegardGainTotal);
+  }, 60_000);
+
+  it('sensitivity: non-zero regard step emits regard events', async () => {
+    const cfg = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = cfg.BENEV_REGARD_STEP ?? 0;
+    try {
+      cfg.BENEV_REGARD_STEP = 0;
+      const control = await runCampaign({
+        matches: 1,
+        leader: 'exacting',
+        opponent: 'tyrannical',
+        seed: 7,
+        engineKind: 'fake',
+      });
+      cfg.BENEV_REGARD_STEP = 100;
+      const regarded = await runCampaign({
+        matches: 1,
+        leader: 'exacting',
+        opponent: 'tyrannical',
+        seed: 7,
+        engineKind: 'fake',
+      });
+      expect(control.summary.meanRegardEvents).toBe(0);
+      expect(regarded.summary.meanRegardEvents).toBeGreaterThan(0);
+      expect(regarded.summary.meanRegardGainTotal).toBeGreaterThan(0);
+    } finally {
+      cfg.BENEV_REGARD_STEP = original;
+      await disposeSimEngine('fake');
+    }
   }, 60_000);
 });

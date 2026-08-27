@@ -1052,4 +1052,16 @@ describe('wiring — PieceTraits', () => {
     });
     expect(eligible).toBe(true);
   });
+
+  it('bounds: regard gain is positive, integral, and capped at 100', () => {
+    const before = { ...defaultCredence(), tauBenev: 99 };
+    let after = before;
+    mutateConfig('BENEV_REGARD_STEP', 100, () => {
+      after = applyRegardSignal(before, 3);
+    });
+    const gained = after.tauBenev - before.tauBenev;
+    expect(gained).toBeGreaterThan(0);
+    expect(Number.isSafeInteger(gained)).toBe(true);
+    expect(after.tauBenev).toBeLessThanOrEqual(100);
+  });
 });

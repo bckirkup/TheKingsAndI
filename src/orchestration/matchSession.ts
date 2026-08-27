@@ -10,7 +10,6 @@ import { createSeededRandom, type SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
-  applyRegardSignal,
   applyRepairSignal,
   isRegardEligible,
   ENGINE_CONFIG,
@@ -54,6 +53,7 @@ import {
   applyDesertionWithCascade,
   applyHeededAbilityGrade,
   applyPostMoveCredence,
+  applyRegardToPiece,
   applyPosthumousClassCredit,
   applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
@@ -916,10 +916,9 @@ export class MatchSession {
         moveEval,
         objectivelyGood,
       );
-      return {
-        ...postMove,
-        credence: applyRegardSignal(postMove.credence, regardStreak),
-      };
+      const regarded = applyRegardToPiece(postMove, regardStreak, this.ply);
+      if (regarded.event !== undefined) this.events.push(regarded.event);
+      return regarded.piece;
     });
     this.regardStreakByPiece = {
       ...this.regardStreakByPiece,

@@ -10,7 +10,6 @@ import type { EnginePort } from '../engine/types';
 import type { EngineAuditEntry } from '../engine';
 import {
   applyFatalisticComplianceCosts,
-  applyRegardSignal,
   isRegardEligible,
   ENGINE_CONFIG,
   evaluateMoveResponse,
@@ -37,6 +36,7 @@ import {
   applyDesertionWithCascade,
   applyHeededAbilityGrade,
   applyPostMoveCredence,
+  applyRegardToPiece,
   applyRosterAbilityObservations,
   expectedVindicationDelta,
   desertionContextFor,
@@ -335,10 +335,9 @@ function enemyCompliantTurn(input: {
       moveEval,
       objectivelyGood,
     );
-    return {
-      ...postMove,
-      credence: applyRegardSignal(postMove.credence, regardStreak),
-    };
+    const regarded = applyRegardToPiece(postMove, regardStreak, ply);
+    if (regarded.event !== undefined) events.push(regarded.event);
+    return regarded.piece;
   });
   if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
     const fatalistic = applyFatalisticComplianceCosts(

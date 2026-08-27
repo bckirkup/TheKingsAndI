@@ -44,9 +44,11 @@ export interface MatchMetrics {
   readonly vindicatedAbilityObservations?: number;
   readonly vindicationRate?: number;
   readonly dripEvents?: number;
+  readonly regardEvents?: number;
   readonly adjudicationObservations?: number;
   readonly adjudicationVindicationRate?: number;
   readonly dripGainTotal?: number;
+  readonly regardGainTotal?: number;
   readonly adjudicationLossTotal?: number;
   readonly meanAdjudicationLoss?: number;
   readonly finalTauAbilByRole?: Readonly<Record<string, number>>;
@@ -280,6 +282,8 @@ export interface CampaignMetrics {
   readonly meanRefusalRateDifferential: number;
   readonly meanTauAbil: number;
   readonly meanDripGainTotal: number;
+  readonly meanRegardEvents: number;
+  readonly meanRegardGainTotal: number;
   readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
   readonly abilityMin: number;
@@ -298,7 +302,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total';
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -323,6 +327,8 @@ function countEvents(
   vindicatedAbilityObservations: number;
   dripEvents: number;
   dripGainTotal: number;
+  regardEvents: number;
+  regardGainTotal: number;
   adjudicationLossTotal: number;
   desertedPieceIds: ReadonlySet<PieceId>;
 } {
@@ -338,6 +344,8 @@ function countEvents(
   let vindicatedAbilityObservations = 0;
   let dripEvents = 0;
   let dripGainTotal = 0;
+  let regardEvents = 0;
+  let regardGainTotal = 0;
   let adjudicationLossTotal = 0;
   const orderTerminatedDesertionPlies = new Set<number>();
   const desertedPieceIds = new Set<PieceId>();
@@ -386,6 +394,12 @@ function countEvents(
           dripGainTotal += event.gain;
         }
         break;
+      case 'REGARD':
+        if (isCommandedPiece) {
+          regardEvents += 1;
+          regardGainTotal += event.gained;
+        }
+        break;
       default:
         break;
     }
@@ -404,6 +418,8 @@ function countEvents(
     vindicatedAbilityObservations,
     dripEvents,
     dripGainTotal,
+    regardEvents,
+    regardGainTotal,
     adjudicationLossTotal,
     desertedPieceIds,
   };
@@ -666,6 +682,8 @@ export function metricsFromMatch(
     vindicationRate,
     dripEvents: counts.dripEvents,
     dripGainTotal: counts.dripGainTotal,
+    regardEvents: counts.regardEvents,
+    regardGainTotal: counts.regardGainTotal,
     adjudicationObservations: counts.abilityObservations,
     adjudicationVindicationRate,
     adjudicationLossTotal: counts.adjudicationLossTotal,
@@ -911,6 +929,8 @@ function aggregateCampaignCore(
     ),
     meanTauAbil: mean((metric) => metric.meanTauAbilEnd),
     meanDripGainTotal: mean((metric) => metric.dripGainTotal ?? 0),
+    meanRegardEvents: mean((metric) => metric.regardEvents ?? 0),
+    meanRegardGainTotal: mean((metric) => metric.regardGainTotal ?? 0),
     meanAdjudicationLoss: mean((metric) => metric.meanAdjudicationLoss ?? 0),
     meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
     abilityMin: mean((metric) => metric.abilityMin ?? 0),
@@ -1062,6 +1082,10 @@ export function renderCsv(
       metric.enemySurvivingRosterSize,
       metric.enemyDesertions,
       metric.enemyRefusalRate.toFixed(4),
+      metric.dripEvents ?? 0,
+      (metric.dripGainTotal ?? 0).toFixed(2),
+      metric.regardEvents ?? 0,
+      (metric.regardGainTotal ?? 0).toFixed(2),
     ]
       .map(csvField)
       .join(','),
