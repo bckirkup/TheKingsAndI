@@ -149,6 +149,20 @@ demandingness axis independent of warmth, so that "cold" and "demanding" stop
 being the same style; and an outcome ceiling that separates the four tied
 styles), and what magnitudes that costs. This ADR does not choose it.
 
+**Amendment, 2026-08-27 — D164 ruled; half the precondition is met.**
+Insistence is now independent of care (`exacting`, `absentee`, `steady` at
+`sim/leaders.ts:275-325`), and the outcome tie turned out to be a measurement
+artifact of the default `random` opponent rather than a ceiling: at
+`--opponent=tyrannical` the four tied styles score 82.5 / 65.0 / 40.0 / 30.0.
+Coverage sweeps are therefore run against `--opponent=tyrannical` from here on.
+The emotional axis did **not** widen — τ_benev is still 82.1 for `supportive`
+against ≤ 12.4 for everything else — so the ordering in §5 stands: **no
+containment number may be quoted yet.** The reason it did not widen is the open
+D165: benevolence credence appears to be bought by honouring a refusal rather
+than by ordering safely, which would make the emotional axis a psychology
+coefficient question rather than another NPC style. Evidence:
+`docs/calibration/2026-08-27-the-competent-opponent-and-the-two-axes.md`.
+
 ## Consequences
 
 - Every NPC run has a pass/fail duty, so the harness can report a *failed
