@@ -1399,20 +1399,67 @@ least two distinct NPC prefixes at a pinned model id, and is demoted into a
 widened NPC policy or a new option before it counts; coefficient changes remain
 owner rulings.
 
-### D164 ❓ Along which axis is the NPC span widened first? (ADR 0063 §5)
-**Open — not wired.** The NPCs owe **coverage** and the models owe
-**containment** (ADR 0063), so an envelope is only as honest as the span it is
-built from. The 2026-08-26 measurement
-(`docs/calibration/2026-08-26-npc-coverage-and-the-envelope.md`) finds the span
-compressed on both axes a student experiences: four of the nine styles in
-`sim/cli.ts:36-56` tie at exactly `100.00` win score with identical 20/0/0
-records, and `τ_benev` ends at `73.6` for `supportive` against `≤ 8.0` for every
-other style with trust at the floor for eight of nine — so the emotional axis is
-two points rather than a range, and no style ends a campaign with a merely
-strained roster. Widening changes balance, so the axis and its magnitudes are an
-owner ruling: a demandingness axis independent of warmth (today "cold" and
-"demanding" are the same style), an outcome ceiling that separates the four tied
-styles, or both. Containment numbers must not be quoted before this passes.
+### D164 ✅ Along which axis is the NPC span widened first? (ADR 0063 §5)
+**Answered 2026-08-27 (owner) — behavioural axis wired, emotional axis still
+open.** The span is widened on **insistence held independent of care**, and no
+balance magnitude is invented to do it: the three new styles at
+`sim/leaders.ts:275-325` are interpolations inside the ranges the file already
+used (care/`riskWeight` 0–25, `leaderImpliedBias` −0.5–2.5, override 0–90%) —
+`exacting` (care 20, override 80%), `absentee` (care 0.25, override 5%),
+`steady` (care 8, override 40%), registered in `sim/cli.ts:36-59` with trust
+priors following the axis at `sim/campaign.ts:152-171`. The off-diagonal
+quadrants that made "cold" and "demanding" the same style are now populated, and
+refusal rate separates them (0.133 / 0.449 / 0.839 at `--opponent=tyrannical`).
+
+The **outcome ceiling needed no widening at all**: the four styles tied at
+`100.00` were an artifact of sweeping at the default `random` opponent — the
+failure mode `docs/calibration/2026-08-18-rebaseline-on-the-fixed-harness.md`
+already recorded. Measured against `--opponent=tyrannical` they score
+`82.5 / 65.0 / 40.0 / 30.0` with records from 15/3/2 to 4/4/12
+(`docs/calibration/2026-08-27-the-competent-opponent-and-the-two-axes.md`).
+`winScore` therefore stays definitional at 0/50/100 and the correction is to
+method: a coverage sweep runs against `--opponent=tyrannical`, and win scores
+measured against `random` are read as saturated.
+
+**Still not wired: the emotional axis.** `τ_benev` remains 82.1 for `supportive`
+against ≤ 12.4 for every other style including `exacting`, so the axis is still
+two points and **containment must not be measured yet**. Why it did not widen is
+D165.
+
+### D165 ❓ What earns `τ_benev`? (D164 follow-up)
+**Open — not wired.** The sweep shows every style with an observed override rate
+≥ 0.27 ending at `τ_benev` ≤ 12.4 regardless of care, with `exacting` — the
+highest care value in `sim/leaders.ts` — at 5.7 against 82.1 for `supportive`,
+whose override rate is 0.000. Reading the writers rather than the sweep explains
+why, and the mechanism is structural rather than a magnitude accident. There are
+exactly three writes to `tauBenev` (`src/psychology/credence.ts:26-56`):
+
+- **compliance under private doubt** earns `BENEV_HEARD_STEP` = `+15`, and it is
+  the only gain in the engine — it fires when the actor plays a move it values
+  as losing while the leader's implied view was better
+  (`src/orchestration/psychologyHooks.ts:177-188`);
+- **override** costs `-40`, saturated: the cliff's logistic input is
+  `OVERRIDE_BENEV_CLIFF_INPUT × BENEV_BETRAYAL_CLIFF_SCALE = 24`
+  (`src/psychology/override.ts:20-37`, `src/psychology/config.ts:36-63`);
+- **refusing a move that was objectively good** costs `-3`
+  (`src/orchestration/headlessMatch.ts:662-668`).
+
+Three consequences follow. **Honouring a refusal earns nothing** — the
+no-override branch has no benevolence credit at all, so the hypothesis that
+deference buys benevolence is wrong; what buys it is obedience. **Care has no
+path**: no benevolence write reads capture risk or any protective feature, which
+is why the highest-care style cannot escape the floor. And **one rupture costs
+nearly three acts of faith** (`40` against `15`), with no repair term, so the
+relationship is unrecoverable by construction — which then saturates the
+desertion alienation term, since `benevolenceGapPermille` is
+`(50 - tauBenev) × 20` capped at `1_000`
+(`src/psychology/desertion.ts:116-119`): `0` for `supportive`, `752`–`885` for
+every style that ever overrode.
+
+So `τ_benev` is currently a **compliance meter**, which contradicts ADR 0024
+(warmth buys resilience, not compliance). Fixing it means changing what earns
+the channel and adding new persisted credence state, so it is an owner ruling
+with an ADR, not a coefficient tweak.
 
 ### D165 ✅ How does care cushion benevolence and repair rupture? (ADR 0064)
 **Answered 2026-08-27 by ADR 0064.** The regard writer is implemented in

@@ -29,7 +29,8 @@ implementation status from an ADR or the decision register alone.
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
 | `docs/calibration/2026-08-13-blocked-on-measurement.md` | **Current state: the model is degenerate for cold styles and the measurement pipelines are broken.** Read before planning calibration or new mechanics |
 | `docs/calibration/2026-08-13-cross-style-table.md` | All nine leader styles measured on 248cd08 — collapse is style-invariant and attrition is saturated; compute footprint is bounded. **Superseded by the 08-26 coverage pass:** outcome is no longer style-invariant |
-| `docs/calibration/2026-08-26-npc-coverage-and-the-envelope.md` | **Current nine-style span:** win score now ranges 40–100 but four styles tie at the ceiling and the emotional axis is two points (τ_benev 73.6 for `supportive` vs ≤ 8 for all others); also the per-style compute spread (10 s–348 s per match, fake engine) and the promotion-column CSV corruption |
+| `docs/calibration/2026-08-26-npc-coverage-and-the-envelope.md` | The nine-style span at the `random` opponent; its outcome-ceiling reading is superseded by the 08-27 pass. Still current for the per-style compute spread (10 s–348 s per match, fake engine) and the promotion-column CSV corruption |
+| `docs/calibration/2026-08-27-the-competent-opponent-and-the-two-axes.md` | **Read before any coverage sweep:** sweeps run `--opponent=tyrannical` (the 100.00 four-way tie was a `random`-opponent artifact; win score there ranges 10–82.5), the care/insistence quadrants are now populated, and the emotional axis is *still* two points, so **no containment number may be quoted** |
 | `docs/calibration/2026-08-15-desertion-gradient.md` | **Why style does not change the exit decision:** λ cancels out of the desertion comparison, the discriminator is an attachment knife edge at `tauBenev = 50`, and `DESERTION_STAY_ATTACHMENT_PERMILLE` (D145) measures the fix |
 | `docs/calibration/2026-08-16-exit-cost-asymmetry.md` | **Historical D146 diagnosis before ADR 0052:** desertion removed the piece just as capture did without an own-future cost, `P_captured` was a threat flag rather than a probability, and pawn standing was 0 by construction |
 | `docs/calibration/2026-08-16-exit-permanence-sweep.md` | **D146 default selection:** the CI-seed measurement adopts exit permanence `625`; seed-7 `750` was unsafe at the smoke boundary |
@@ -43,7 +44,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/calibration/2026-08-18-pawn-hope-sweep.md` | D147 promotion-hope and credence-floor calibration; raw sweep artifacts retained externally |
 | `docs/adr/0054-the-seminar-pool-and-what-a-player-knows.md` | D148–D150 seminar-pool direction and open decisions |
 | `docs/adr/0062-the-decision-journal-and-the-llm-player.md` | How a model may play at all: offline journal, enumerated options, no live LLM |
-| `docs/adr/0063-two-duties-coverage-and-containment.md` | **The NPCs owe coverage, the models owe containment;** D159–D163 answered, D164 open, D165 answered by ADR 0064 |
+| `docs/adr/0063-two-duties-coverage-and-containment.md` | **The NPCs owe coverage, the models owe containment;** D159–D164 answered, D165 answered by ADR 0064 |
 | `docs/adr/0064-the-cushion-and-the-repair.md` | **Care cushions benevolence and rupture can be repaired;** D165 answered, D166 open |
 | `docs/calibration/2026-08-19-piece-quality-and-the-bench.md` | D149 piece-quality and bench calibration; design-only evidence |
 | `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
