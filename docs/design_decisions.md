@@ -1426,18 +1426,40 @@ against ≤ 12.4 for every other style including `exacting`, so the axis is stil
 two points and **containment must not be measured yet**. Why it did not widen is
 D165.
 
-### D165 ❓ Is `τ_benev` bought by deference alone, or by care? (D164 follow-up)
-**Open — not wired.** Every style with an observed override rate ≥ 0.27 ends at
-`τ_benev` ≤ 12.4 regardless of care, and `exacting` — the highest care value in
-`sim/leaders.ts` — ends at 5.7 against 82.1 for `supportive`, whose override rate
-is 0.000. The leading hypothesis is that benevolence credence is earned by
-honouring a refusal rather than by issuing a safe order. The sweep cannot settle
-it: there is no low-care, never-override style, so "deference" and "deference
-plus care" are unseparated, and `cold_winner` holding the highest non-supportive
-`τ_benev` (12.4) at override 0.304 is mildly against the pure-deference reading.
-The discriminating cell is one policy arm; but if it confirms, widening the
-emotional axis means changing *what earns* `τ_benev` in `src/psychology/`, which
-is a coefficient ruling and therefore the owner's, not the harness's.
+### D165 ❓ What earns `τ_benev`? (D164 follow-up)
+**Open — not wired.** The sweep shows every style with an observed override rate
+≥ 0.27 ending at `τ_benev` ≤ 12.4 regardless of care, with `exacting` — the
+highest care value in `sim/leaders.ts` — at 5.7 against 82.1 for `supportive`,
+whose override rate is 0.000. Reading the writers rather than the sweep explains
+why, and the mechanism is structural rather than a magnitude accident. There are
+exactly three writes to `tauBenev` (`src/psychology/credence.ts:26-56`):
+
+- **compliance under private doubt** earns `BENEV_HEARD_STEP` = `+15`, and it is
+  the only gain in the engine — it fires when the actor plays a move it values
+  as losing while the leader's implied view was better
+  (`src/orchestration/psychologyHooks.ts:177-188`);
+- **override** costs `-40`, saturated: the cliff's logistic input is
+  `OVERRIDE_BENEV_CLIFF_INPUT × BENEV_BETRAYAL_CLIFF_SCALE = 24`
+  (`src/psychology/override.ts:20-37`, `src/psychology/config.ts:36-63`);
+- **refusing a move that was objectively good** costs `-3`
+  (`src/orchestration/headlessMatch.ts:662-668`).
+
+Three consequences follow. **Honouring a refusal earns nothing** — the
+no-override branch has no benevolence credit at all, so the hypothesis that
+deference buys benevolence is wrong; what buys it is obedience. **Care has no
+path**: no benevolence write reads capture risk or any protective feature, which
+is why the highest-care style cannot escape the floor. And **one rupture costs
+nearly three acts of faith** (`40` against `15`), with no repair term, so the
+relationship is unrecoverable by construction — which then saturates the
+desertion alienation term, since `benevolenceGapPermille` is
+`(50 - tauBenev) × 20` capped at `1_000`
+(`src/psychology/desertion.ts:116-119`): `0` for `supportive`, `752`–`885` for
+every style that ever overrode.
+
+So `τ_benev` is currently a **compliance meter**, which contradicts ADR 0024
+(warmth buys resilience, not compliance). Fixing it means changing what earns
+the channel and adding new persisted credence state, so it is an owner ruling
+with an ADR, not a coefficient tweak.
 
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at

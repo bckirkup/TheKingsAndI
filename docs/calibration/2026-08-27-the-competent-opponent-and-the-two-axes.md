@@ -110,19 +110,34 @@ coverage failure that matters for a seminar is still open.
 What the new quadrants buy is a mechanism reading. `supportive` (override 0.000)
 is the only style with high `τ_benev`; every style with an observed override rate
 at or above 0.27 lands at or below 12.4, regardless of care. `exacting` protects
-its pieces harder than any other style and ends at 5.7. The leading hypothesis
-is therefore that **benevolence credence is bought by deference, not by
-protection** — the piece scores whether its refusal was honoured, not whether
-the order was safe.
+its pieces harder than any other style and ends at 5.7. No NPC policy can move
+this, and reading the writers says why: `tauBenev` has exactly three, and none
+of them reads a protective feature.
 
-That is a hypothesis, not a result, and the sweep cannot settle it because the
-discriminating cell does not exist: there is no low-care, never-override style
-in the set, so "deference alone" and "deference plus care" are not separated by
-this data. `cold_winner` at override 0.304 holding the highest non-supportive
-`τ_benev` (12.4) is mildly against a pure-deference reading. The missing cell is
-one policy arm and is recorded as **D165**, since if it confirms, widening the
-emotional axis is a psychology-layer change (what earns `τ_benev`) rather than
-another NPC style — and psychology coefficients are an owner ruling.
+| write | magnitude | fires when | source |
+|---|---:|---|---|
+| heard signal | **+15** | the actor plays a move *it* values as losing while the leader's implied view was better | `src/orchestration/psychologyHooks.ts:177-188` |
+| betrayal cliff | **−40** | the commander overrides a refusal; saturated, since the logistic input is `6 × 4 = 24` | `src/psychology/override.ts:20-37` |
+| neglect erosion | **−3** | the piece refuses a move that was objectively good | `src/orchestration/headlessMatch.ts:662-668` |
+
+So the earlier guess that deference buys benevolence is **wrong**: the
+no-override branch carries no benevolence credit at all, and honouring a refusal
+earns exactly nothing. What the channel actually measures is *obedience under
+private doubt*, which is why `supportive` — which never overrides and therefore
+never pays the cliff — accumulates to 82.1 while everyone else is pinned near
+the floor at roughly 2.7 acts of faith per rupture, with no repair term in the
+engine. `cold_winner` holding the highest non-supportive `τ_benev` (12.4) at
+override 0.304 is consistent with this: it overrides least among the cold
+styles.
+
+That makes the compression a **compliance meter**, which contradicts ADR 0024
+(warmth buys resilience, not compliance), and it compounds in the exit decision:
+`benevolenceGapPermille` is `(50 - tauBenev) × 20` capped at `1_000`
+(`src/psychology/desertion.ts:116-119`), so it is 0 for `supportive` and 752–885
+for every style that ever overrode — nearly a binary switch on *did you override
+at all*. Changing what earns the channel needs new persisted credence state, so
+it is recorded as **D165** for an owner ruling with its own ADR, not a
+coefficient tweak.
 
 ## Detectors
 
@@ -170,5 +185,4 @@ Half of D164 is discharged and half is not, and the register says so:
   yet** — an envelope built from this span would still call almost any warm
   behaviour out-of-envelope.
 
-The next step is therefore D165 (does deference alone buy `τ_benev`?), not the
-journal.
+The next step is therefore D165 (what earns `τ_benev` at all), not the journal.

@@ -158,9 +158,12 @@ Coverage sweeps are therefore run against `--opponent=tyrannical` from here on.
 The emotional axis did **not** widen — τ_benev is still 82.1 for `supportive`
 against ≤ 12.4 for everything else — so the ordering in §5 stands: **no
 containment number may be quoted yet.** The reason it did not widen is the open
-D165: benevolence credence appears to be bought by honouring a refusal rather
-than by ordering safely, which would make the emotional axis a psychology
-coefficient question rather than another NPC style. Evidence:
+D165, and it is structural rather than a magnitude accident: the only write that
+*raises* `tauBenev` is compliance under private doubt (`+15`), override costs a
+saturated `-40`, honouring a refusal earns nothing, and no benevolence write
+reads protective features at all — so the channel is a compliance meter that no
+NPC style can widen, and the emotional axis is a psychology question rather than
+another leader policy. Evidence:
 `docs/calibration/2026-08-27-the-competent-opponent-and-the-two-axes.md`.
 
 ## Consequences
