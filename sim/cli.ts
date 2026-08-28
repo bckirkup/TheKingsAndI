@@ -94,6 +94,7 @@ export interface SimulationOptions {
   readonly campaigns: number;
   readonly campaignLength: number;
   readonly engine: SimEngineKind;
+  readonly coldSearch?: boolean;
   readonly depthCap: number | undefined;
   readonly checkpointOut: string | undefined;
   readonly resume: string | undefined;
@@ -138,6 +139,7 @@ function parseArguments(
     'campaigns',
     'out',
     'engine',
+    'cold-search',
     'depth-cap',
     'checkpoint-out',
     'resume',
@@ -217,6 +219,10 @@ function parseArguments(
   if (!ENGINES.includes(engineValue as SimEngineKind)) {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
+  const coldSearchValue = values.get('cold-search') ?? 'true';
+  if (coldSearchValue !== 'true' && coldSearchValue !== 'false') {
+    throw new Error('--cold-search must be true or false.');
+  }
   let depthCapValue: number | undefined;
   if (values.get('depth-cap') === undefined) {
     depthCapValue = engineValue === 'lozza' ? 4 : undefined;
@@ -261,6 +267,9 @@ function parseArguments(
     opponent,
     seed,
     engine: engineValue as SimEngineKind,
+    ...(values.has('cold-search')
+      ? { coldSearch: coldSearchValue === 'true' }
+      : {}),
     depthCap: depthCapValue,
     out: values.get('out'),
     checkpointOut: values.get('checkpoint-out'),
@@ -336,6 +345,7 @@ async function main(): Promise<void> {
     opponent: options.opponent,
     masterSeed: options.seed,
     engineKind: options.engine,
+    coldSearch: options.coldSearch,
     depthCap: options.depthCap,
     shardIndex: options.shardIndex,
     shardCount: options.shardCount,

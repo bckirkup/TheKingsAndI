@@ -25,6 +25,7 @@ import {
   type ControlHorizon,
 } from './metrics';
 import { type Leader } from './cli';
+import type { EnginePort } from '../src/engine/types';
 import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import {
   createSimEngine,
@@ -130,6 +131,7 @@ export interface ShardOptions {
   readonly opponent: OpponentArchetype;
   readonly masterSeed: number;
   readonly engineKind: SimEngineKind;
+  readonly coldSearch?: boolean | undefined;
   readonly depthCap: number | undefined;
   readonly shardIndex: number;
   readonly shardCount: number;
@@ -258,10 +260,15 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
     options.shardCount,
   );
   const campaignRunner = options.campaignRunner ?? runCampaign;
-  const engine =
-    options.campaignRunner === undefined
-      ? await createSimEngine(options.engineKind)
-      : undefined;
+  let engine: EnginePort | undefined;
+  if (options.campaignRunner === undefined) {
+    engine =
+      options.coldSearch === undefined
+        ? await createSimEngine(options.engineKind)
+        : await createSimEngine(options.engineKind, {
+            coldSearch: options.coldSearch,
+          });
+  }
   try {
     const campaigns: ShardCampaignResult[] = [];
     for (const campaignIndex of indices) {
@@ -276,6 +283,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
         seed: campaignSeed,
         ...(engine === undefined ? {} : { engine }),
         depthCap: options.depthCap,
+        ...(options.coldSearch === undefined
+          ? {}
+          : { coldSearch: options.coldSearch }),
         ...(options.checkpoint === undefined
           ? {}
           : { checkpoint: options.checkpoint }),

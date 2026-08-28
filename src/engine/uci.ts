@@ -14,6 +14,8 @@ export interface UciSearchResult {
 export interface UciEngineOptions {
   /** Absolute path to the engine script (e.g. lozza.cjs or stockfish-*.js). */
   readonly enginePath: string;
+  /** Clear carried engine state before every search; defaults to cold. */
+  readonly coldSearch?: boolean;
   /** Fixed hash size in MiB (deterministic mode). */
   readonly hashMb?: number;
   /** Must stay 1 for determinism (ADR 0005). */
@@ -107,6 +109,7 @@ export class UciEngine {
   private readonly hashMb: number;
   private readonly threads: number;
   private readonly multiPv: number;
+  private readonly coldSearch: boolean;
   private searchResolve: ((result: DepthLadder) => void) | undefined;
   private searchReject: ((cause: unknown) => void) | undefined;
   private targetDepth = 0;
@@ -127,6 +130,7 @@ export class UciEngine {
     this.hashMb = options.hashMb ?? 16;
     this.threads = options.threads ?? 1;
     this.multiPv = options.multiPv ?? 1;
+    this.coldSearch = options.coldSearch ?? true;
     if (this.threads !== 1) {
       throw new RangeError('Deterministic mode requires threads === 1.');
     }
@@ -322,6 +326,12 @@ export class UciEngine {
     });
   }
 
+  private async clearSearchState(): Promise<void> {
+    await this.send('ucinewgame');
+    await this.send('isready');
+    await this.waitForLine((line) => line === 'readyok');
+  }
+
   /** Full depth ladder for shared search (ADR 0017). */
   async searchLadder(fen: string, depth: number): Promise<DepthLadder> {
     if (!Number.isSafeInteger(depth) || depth < 1) {
@@ -347,8 +357,15 @@ export class UciEngine {
         reject(cause);
       };
     });
-    await this.send(`position fen ${fen}`);
-    await this.send(`go depth ${depth}`);
+    try {
+      if (this.coldSearch) await this.clearSearchState();
+      await this.send(`position fen ${fen}`);
+      await this.send(`go depth ${depth}`);
+    } catch (cause: unknown) {
+      this.searchReject?.(cause);
+      this.searchResolve = undefined;
+      this.searchReject = undefined;
+    }
     return result;
   }
 
