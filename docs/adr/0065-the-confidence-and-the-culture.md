@@ -1,10 +1,10 @@
 # ADR 0065 — The confidence and the culture: a private word that may not be kept
 
-- **Status:** accepted in direction (2026-08-28) — owner ruling on **D168**: the
-  private channel exists, subject to two riders that are now the ADR's spine
-  (§ *Nothing is free*). **D169** (may `leaderAppraisal` be read) remains open,
-  and no code ships under this ADR until it is ruled, since a leak has no
-  consequence without it. All magnitudes stay unruled.
+- **Status:** accepted (2026-08-28) — **D168** ruled (the private channel
+  exists, subject to the riders in §§ 0/0a/0b, which are the ADR's spine) and
+  **D169** ruled (`leaderAppraisal` is read by the ability-credence weight,
+  § 3). The D169 wiring ships **inert**; the private channel itself is designed
+  but not built, and all magnitudes stay unruled pending calibration.
 - **Refines:** ADR 0016 (perception, memory, rumor — rumor carries appraisals
   only), ADR 0024 (`τ_benev` buys resilience rather than compliance),
   ADR 0064 (the cushion and the repair)
@@ -13,7 +13,7 @@
   never shows arithmetic but always names a cause), ADR 0034 (the query
   barrier), ADR 0025 (no enemy psychological state reaches the player)
 - **Evidence:** `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
-- **Opens:** **D169** (**D168** answered 2026-08-28)
+- **Answers:** **D168**, **D169** (both 2026-08-28)
 
 ## Context
 
@@ -243,13 +243,34 @@ A leak emits an event, writes the speaker's `leaderAppraisal`, and runs one
 half of the ADR 0016 channel for the first time.
 
 For that to have any consequence, `leaderAppraisal` must be read by something.
-Because credence is the weight on the leader's judgment (ADR 0015), the natural
-sink is the credence channels themselves rather than any board value: a room
-that has been told the commander is careless should *interpret the same order
-more harshly*, which is what `calculatePerceivedValue` already models via
-`tauAbil` (`src/psychology/credence.ts:9-17`). Wiring it there moves a
-psychology coefficient and re-baselines calibration evidence, so it is a
-separate owner ruling — **D169**.
+**D169 is ruled: it is read by the ability-credence weight in the perceived-value
+blend, and by nothing else.** Because credence is the weight on the leader's
+judgment (ADR 0015), the sink is the credence channel rather than any board
+value: a room that has been told the commander is careless *interprets the same
+order more harshly*, which is exactly what `calculatePerceivedValue` already
+models via `tauAbil` (`src/psychology/credence.ts:9-17`).
+
+Three properties make this safe, and they are load-bearing rather than
+incidental:
+
+- **Derived, never stored.** The shift is computed at the point of judgment;
+  nothing writes `credence.tauAbil` from `leaderAppraisal`. Hearsay therefore
+  cannot permanently overwrite first-hand observation, and it cannot compound
+  across repeated diffusion steps — the failure mode that would let a single
+  rumour ratchet a roster to zero.
+- **Interpretation, not learning.** No other `tauAbil` reader changes
+  (fatalistic compliance, the drip, vindication, desertion). What the room says
+  colours how an order is read; what the piece has seen is still its own.
+- **Signed as the sociology requires.** A positive appraisal raises the weight
+  on the commander's implied value; a negative one lowers it, so a curdled room
+  refuses more without any coefficient having been aimed at refusal.
+
+The knob is `RUMOR_APPRAISAL_ABIL_WEIGHT`, shipping at `0` per § 5. Note the
+honest limitation on evidence: until the leak event of §§ 0–3 exists, nothing
+writes a non-zero `leaderAppraisal` — diffusion spreads zeros from its single
+desertion-cascade call site — so the AGENTS.md rule 6 wiring probe is necessarily
+a reducer-level one. An end-to-end sim sensitivity probe is impossible until the
+channel is built, and must not be faked.
 
 ### 4. The culture you inherit
 
@@ -271,7 +292,8 @@ Following ADR 0064: everything ships wired and inert (zero magnitudes, culture
 distribution defaulting to today's zeros), so every existing golden stays
 byte-identical and the live numbers are chosen from a measured before/after, not
 from a guess. Knobs to expose, each with a wiring probe per AGENTS.md rule 6:
-the regard deposit for being confided in, one discretion threshold per kind, a
+`RUMOR_APPRAISAL_ABIL_WEIGHT` (§ 3, the only one of these already in tree), the
+regard deposit for being confided in, one discretion threshold per kind, a
 per-kind gossip repeatability rate (§ 0a), the § 0b affinity split — the ally
 credit fraction, the outsider favoritism cost, and the affinity threshold
 separating them — the leaker's own
@@ -345,6 +367,10 @@ calibration that D168's ruling now requires.
   a factional one, erasing the culture effect this ADR exists to model.
 - **Confidences carrying board facts or plans.** Rejected under ADR 0016 and
   ADR 0013.
+- **Storing the rumour into `tauAbil`** rather than deriving the shift at the
+  point of judgment. Rejected under § 3: it would let hearsay overwrite
+  first-hand observation permanently and compound across diffusion steps, so a
+  single rumour could ratchet a roster to zero with no act by the commander.
 - **A separate secrecy subsystem.** Rejected: the affinity-weighted graph,
   credibility model, disclosure ladder, and witnessed-event pattern already
   exist; a parallel system would duplicate them and drift.
@@ -353,7 +379,9 @@ calibration that D168's ruling now requires.
 
 - ~~**D168** — does the private channel exist, and what may travel through
   it?~~ Ruled 2026-08-28: yes, subject to §§ 0/0a/0b.
-- **D169** — may `leaderAppraisal` be read, and by which term?
+- ~~**D169** — may `leaderAppraisal` be read, and by which term?~~ Ruled
+  2026-08-28: yes, by the ability-credence weight only, derived rather than
+  stored (§ 3), shipping inert.
 - Whether the commander is ever *told* that a confidence leaked, or must infer
   it from behaviour. Inference is the more honest simulation and the crueller
   game; notification is more teachable in a seminar.
