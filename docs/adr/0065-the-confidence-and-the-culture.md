@@ -1,8 +1,10 @@
 # ADR 0065 — The confidence and the culture: a private word that may not be kept
 
-- **Status:** proposed (2026-08-28) — requires an owner ruling on **D168** (does
-  the private channel exist, and what may travel through it) and **D169** (may
-  `leaderAppraisal` be read). No code ships under this ADR until both are ruled.
+- **Status:** accepted in direction (2026-08-28) — owner ruling on **D168**: the
+  private channel exists, subject to two riders that are now the ADR's spine
+  (§ *Nothing is free*). **D169** (may `leaderAppraisal` be read) remains open,
+  and no code ships under this ADR until it is ruled, since a leak has no
+  consequence without it. All magnitudes stay unruled.
 - **Refines:** ADR 0016 (perception, memory, rumor — rumor carries appraisals
   only), ADR 0024 (`τ_benev` buys resilience rather than compliance),
   ADR 0064 (the cushion and the repair)
@@ -11,7 +13,7 @@
   never shows arithmetic but always names a cause), ADR 0034 (the query
   barrier), ADR 0025 (no enemy psychological state reaches the player)
 - **Evidence:** `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
-- **Opens:** **D168**, **D169**
+- **Opens:** **D169** (**D168** answered 2026-08-28)
 
 ## Context
 
@@ -104,12 +106,66 @@ Two adjacent patterns should be reused rather than reinvented:
   AGENTS.md (the log is the source of truth) holds and the seminar debrief can
   show the exact ply where a private word became common knowledge.
 
-## Decision (proposed — D168)
+## Decision (D168 — ruled 2026-08-28)
 
 A commander may speak privately to one piece. Whether the piece keeps the
 confidence is a deterministic property of the roster's state, not of the
 commander's wish, and a broken confidence travels through the existing rumor
 graph.
+
+The owner's ruling attached two riders, and they change the mechanic's shape
+rather than decorating it:
+
+> D168 — the private channel must exist, but good news makes poor gossip, and
+> even benevolence can be read as favoritism […]. In leadership, almost nothing
+> is free.
+
+### 0. Nothing is free
+
+The governing constraint on every magnitude chosen later: **each act in this
+channel is priced, including the ones that look generous.** Confiding costs
+(the room prices the intimacy). Keeping costs (the confidant carries something
+it cannot unsay). Leaking costs the leaker too, not only the commander. And
+declining to confide costs the distance it leaves. This is a falsifiable
+constraint, not a slogan: if the calibration sweep finds *any* confiding
+strategy that is net-free, the knobs are mis-specified and the mechanic is
+rejected rather than shipped, because a free kindness is exactly the D166
+failure this ADR exists to avoid.
+
+### 0a. Good news makes poor gossip (valence asymmetry)
+
+Leak propensity is a property of the **content**, not only of the room.
+Criticism and warnings travel; an admission or an assurance largely dies where
+it is spoken. Mechanically this is a per-kind transmission rate, which is the
+shape the diffusion already has — `pLossTeam` and `leaderAppraisal` diffuse at
+separate rates today (`src/psychology/config.ts:143-144`), so per-kind rates
+add no new machinery.
+
+The consequence is deliberately harsh and is the interesting part of the
+ruling: **the two kinds a commander uses to repair are the two that do not
+travel, and the two that damage him are the two that do.** Private repair
+therefore cannot substitute for public repair — it can only mend the dyad it
+was spoken into, while a single leaked criticism reaches the whole affinity
+graph. That asymmetry must be *measured* rather than assumed: the sweep has to
+report whether any repair strategy through this channel produces net
+benevolence recovery at all, since a channel that can only lose is inert by
+construction.
+
+### 0b. Benevolence can be read as favoritism
+
+A confidence is **observable as an act even when its content is not**. The
+pieces who were not taken aside see that someone was, and price it. So a kept
+confidence is not free either: the dyadic regard deposit is paid for with a
+distributed cost among non-recipients — dyadic affinity toward the favourite,
+and the room's appraisal of a commander who has favourites.
+
+This makes confiding a **rivalrous** resource rather than a renewable one, and
+it turns the mechanic into a real leadership discrimination: confiding
+repeatedly in one trusted piece is measurably different from spreading it, and
+both differ from silence. It also gives the seminar its sharpest debrief
+question — *who did you take aside, and who noticed?* The witness-side
+appraisal pattern already exists and should be reused rather than reinvented
+(`src/psychology/witness.ts:17-56`).
 
 ### 1. A confidence is an appraisal, never a board fact
 
@@ -118,12 +174,15 @@ degenerate version of the mechanic ("tell the Knight the winning line"), which
 would smuggle engine truth past ADR 0013. Four kinds, matching what a leader
 actually says in private:
 
-| kind | content | if kept | if leaked |
-|---|---|---|---|
-| `admission` | the commander concedes he asked too much | repair against the recorded `ruptureDebt` (ADR 0064), larger than the public equivalent | the room learns the commander doubts himself — its appraisal moves, and not only downward |
-| `criticism` | the commander's appraisal of a *third* piece | confidant's regard rises; the third piece is untouched | the third piece learns it was disparaged; dyadic affinity and its own credence fall, and the room prices a commander who talks about people |
-| `warning` | the confidant's own standing is at risk | candour premium: the piece knows where it stands | the room reads a threat rather than candour |
-| `assurance` | a promise about future orders ("I will not spend you like that") | a commitment the piece can hold | breaking it later is the most expensive single act in the game |
+| kind | content | travels? (D168 rider 0a) | if kept | if leaked |
+|---|---|---|---|---|
+| `admission` | the commander concedes he asked too much | **poorly** — good news is dull | repair against the recorded `ruptureDebt` (ADR 0064), larger than the public equivalent | the room learns the commander doubts himself — its appraisal moves, and not only downward |
+| `criticism` | the commander's appraisal of a *third* piece | **readily** | confidant's regard rises; the third piece is untouched | the third piece learns it was disparaged; dyadic affinity and its own credence fall, and the room prices a commander who talks about people |
+| `warning` | the confidant's own standing is at risk | **readily** | candour premium: the piece knows where it stands | the room reads a threat rather than candour |
+| `assurance` | a promise about future orders ("I will not spend you like that") | **poorly**, until it is broken | a commitment the piece can hold | breaking it later is the most expensive single act in the game |
+
+Every row also carries the § 0b cost: the non-recipients price the fact that a
+confidence happened, whatever it contained.
 
 `assurance` is the one that makes the other three matter: it is the only place
 in the design where the commander's *past words* constrain the cost of a future
@@ -182,9 +241,22 @@ Following ADR 0064: everything ships wired and inert (zero magnitudes, culture
 distribution defaulting to today's zeros), so every existing golden stays
 byte-identical and the live numbers are chosen from a measured before/after, not
 from a guess. Knobs to expose, each with a wiring probe per AGENTS.md rule 6:
-the regard deposit for being confided in, one discretion threshold per kind, the
-leak's `leaderAppraisal` magnitude, the broken-`assurance` penalty, the existing
-diffusion rates, and the campaign-start culture parameters.
+the regard deposit for being confided in, one discretion threshold per kind, a
+per-kind transmission rate (§ 0a), the favoritism cost among non-recipients and
+its decay with how widely the commander confides (§ 0b), the leaker's own
+standing cost, the leak's `leaderAppraisal` magnitude, the broken-`assurance`
+penalty, the existing diffusion rates, and the campaign-start culture
+parameters.
+
+### 6. The acceptance test: no free kindness
+
+Because of § 0, the calibration pass that chooses live magnitudes must report,
+per NPC style: net benevolence change from confiding, the favoritism cost borne
+by non-recipients, the leak rate by kind, and whether any confiding strategy
+dominates silence at zero cost. A dominant free strategy fails the mechanic and
+sends the magnitudes back, rather than shipping. Equally, a channel in which
+confiding can only ever lose is also a failure — the knobs must be able to
+express both regimes, and the measurement decides which the game inhabits.
 
 ## Harness consequences (the response surface)
 
@@ -202,7 +274,7 @@ ADR's ruling:
   sweep must be widened to cover both registers.
 
 This ADR does not decide either; it records them as prerequisites for the
-calibration that would follow a `yes` on D168.
+calibration that D168's ruling now requires.
 
 ## Consequences
 
@@ -227,8 +299,12 @@ calibration that would follow a `yes` on D168.
 
 - **Random discretion.** Rejected: an unlearnable coin flip teaches nothing,
   and makes response-surface tuning meaningless.
-- **Perfect confidentiality.** Rejected: it makes the private channel a free
-  benevolence tap, which is precisely the failure D166 identified.
+- **Perfect confidentiality.** Rejected by D168: it makes the private channel a
+  free benevolence tap, which is precisely the failure D166 identified. Note
+  that rider 0b rejects it twice over — even *perfect* confidentiality would not
+  make the act free, because the room prices the intimacy it can see.
+- **Valence-neutral leaking** (one transmission rate for all kinds). Rejected by
+  D168 rider 0a: good news makes poor gossip, and the asymmetry is the mechanic.
 - **Confidences carrying board facts or plans.** Rejected under ADR 0016 and
   ADR 0013.
 - **A separate secrecy subsystem.** Rejected: the affinity-weighted graph,
@@ -237,7 +313,8 @@ calibration that would follow a `yes` on D168.
 
 ## Open questions for the owner
 
-- **D168** — does the private channel exist, and what may travel through it?
+- ~~**D168** — does the private channel exist, and what may travel through
+  it?~~ Ruled 2026-08-28: yes, subject to §§ 0/0a/0b.
 - **D169** — may `leaderAppraisal` be read, and by which term?
 - Whether the commander is ever *told* that a confidence leaked, or must infer
   it from behaviour. Inference is the more honest simulation and the crueller

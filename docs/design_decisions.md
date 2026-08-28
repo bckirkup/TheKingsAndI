@@ -1495,10 +1495,26 @@ standing. Each moves a psychology coefficient and re-baselines calibration
 evidence, so it is an owner ruling. Do not invent candidate numbers in the
 register.
 
-### D168 ❓ Does a private confidence exist, and what may travel through it? (ADR 0065)
-**Open — not wired.** ADR 0065 proposes a private commander-to-piece channel
-whose confidentiality is a property of the roster rather than of the
-commander's intention. The transmission machinery it would use already exists
+### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
+**Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
+with three riders that govern every magnitude chosen later: (a) **good news
+makes poor gossip** — leak propensity is a property of the content, so
+`criticism`/`warning` transmit readily while `admission`/`assurance` largely die
+where they are spoken, which means the two kinds a commander repairs with are
+the two that do not travel; (b) **even benevolence can be read as favoritism** —
+a confidence is observable as an act even when its content is not, so the
+non-recipients price the intimacy and a *kept* confidence is not free either;
+(c) **almost nothing in leadership is free** — confiding, keeping, leaking, and
+declining to confide are all priced, and a calibration pass that finds any
+net-free confiding strategy fails the magnitudes rather than shipping them
+(ADR 0065 §§ 0, 0a, 0b, 6). What may travel remains appraisal-only, never board
+facts (ADR 0016). Nothing is implemented: no channel, discretion ladder, leak
+event, favoritism term, or culture seed exists, and no magnitudes are chosen.
+Implementation additionally waits on D169, since a leak has no consequence
+until `leaderAppraisal` is read.
+
+ADR 0065 proposes the channel whose confidentiality is a property of the roster
+rather than of the commander's intention. The transmission machinery it would use already exists
 and is only half-live: `diffuseRumor`/`applyRumorDiffusion`
 (`src/psychology/belief.ts:14-53`) are shipped and knobbed
 (`src/psychology/config.ts:143-144`), but the only production call site is the
@@ -1509,9 +1525,10 @@ someone walks off the board. The proposed shape is four appraisal-only kinds
 ADR 0016), a deterministic discretion ladder mirroring the counsel ladder
 (`src/psychology/counsel.ts:54-61`), an explicit leak event following the
 witnessed-event pattern (`src/psychology/witness.ts:17-56`), and a
-campaign-start culture seed so an inherited room is an input to outcome. It
-adds persisted state and a psychology writer, so it is an owner ruling. Do not
-invent candidate magnitudes in the register.
+campaign-start culture seed so an inherited room is an input to outcome, plus a
+per-kind transmission rate and a favoritism cost among non-recipients from the
+riders above. It adds persisted state and a psychology writer. Do not invent
+candidate magnitudes in the register.
 
 ### D169 ❓ May `leaderAppraisal` be read, and by which term?
 **Open — not wired.** `rumor.leaderAppraisal` is currently a write-only field:
