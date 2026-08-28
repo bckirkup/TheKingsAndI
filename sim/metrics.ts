@@ -30,6 +30,10 @@ export interface MatchMetrics {
   readonly plies: number;
   readonly refusals: number;
   readonly overrides: number;
+  readonly freeOverrideCount?: number;
+  readonly benevLossTarget?: number;
+  readonly benevLossWitness?: number;
+  readonly freeInsistencePlyFraction?: number;
   readonly implicitOverrides: number;
   readonly quietQuitMoves: number;
   readonly desertions: number;
@@ -262,6 +266,11 @@ export interface CampaignMetrics {
   readonly meanQuietQuitRate: number;
   readonly meanRefusedGoodMoveRate: number;
   readonly meanOverrideRate: number;
+  readonly meanOverrideCount: number;
+  readonly meanFreeOverrideCount: number;
+  readonly meanBenevLossTarget: number;
+  readonly meanBenevLossWitness: number;
+  readonly meanFreeInsistencePlyFraction: number;
   readonly meanPlies: number;
   readonly winCount: number;
   readonly drawCount: number;
@@ -302,7 +311,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -313,6 +322,7 @@ export function csvField(value: string | number): string {
 function countEvents(
   events: readonly MatchEvent[],
   fieldedPieceIds: readonly PieceId[],
+  plies: number,
 ): {
   refusals: number;
   overrides: number;
@@ -329,6 +339,10 @@ function countEvents(
   dripGainTotal: number;
   regardEvents: number;
   regardGainTotal: number;
+  freeOverrideCount: number;
+  benevLossTarget: number;
+  benevLossWitness: number;
+  freeInsistencePlyFraction: number;
   adjudicationLossTotal: number;
   desertedPieceIds: ReadonlySet<PieceId>;
 } {
@@ -346,6 +360,18 @@ function countEvents(
   let dripGainTotal = 0;
   let regardEvents = 0;
   let regardGainTotal = 0;
+  let benevLossTarget = 0;
+  let benevLossWitness = 0;
+  const overrideEvents = events.filter(
+    (event): event is Extract<MatchEvent, { t: 'OVERRIDE' }> =>
+      event.t === 'OVERRIDE',
+  );
+  const overrideTargetByPly = new Map<number, PieceId>();
+  const overrideLossByPly = new Map<number, number>();
+  for (const event of overrideEvents) {
+    overrideTargetByPly.set(event.ply, event.pieceId);
+    overrideLossByPly.set(event.ply, 0);
+  }
   let adjudicationLossTotal = 0;
   const orderTerminatedDesertionPlies = new Set<number>();
   const desertedPieceIds = new Set<PieceId>();
@@ -360,6 +386,20 @@ function countEvents(
       case 'OVERRIDE':
         overrides += 1;
         if (event.implicit === true) implicitOverrides += 1;
+        break;
+      case 'PSYCH_DELTA':
+        if (event.field === 'tauBenev' && event.delta < 0) {
+          const targetId = overrideTargetByPly.get(event.ply);
+          if (targetId !== undefined) {
+            const loss = -event.delta;
+            overrideLossByPly.set(
+              event.ply,
+              (overrideLossByPly.get(event.ply) ?? 0) + loss,
+            );
+            if (event.pieceId === targetId) benevLossTarget += loss;
+            else benevLossWitness += loss;
+          }
+        }
         break;
       case 'MOVE':
         if (isCommandedPiece) {
@@ -404,6 +444,13 @@ function countEvents(
         break;
     }
   }
+  const freeOverrideCount = overrideEvents.filter(
+    (event) => (overrideLossByPly.get(event.ply) ?? 0) === 0,
+  ).length;
+  const firstFreeOverridePly = overrideEvents
+    .filter((event) => (overrideLossByPly.get(event.ply) ?? 0) === 0)
+    .map((event) => event.ply)
+    .sort((left, right) => left - right)[0];
   return {
     refusals,
     overrides,
@@ -420,6 +467,13 @@ function countEvents(
     dripGainTotal,
     regardEvents,
     regardGainTotal,
+    freeOverrideCount,
+    benevLossTarget,
+    benevLossWitness,
+    freeInsistencePlyFraction:
+      firstFreeOverridePly === undefined
+        ? 0
+        : Math.max(0, plies - firstFreeOverridePly) / Math.max(1, plies),
     adjudicationLossTotal,
     desertedPieceIds,
   };
@@ -615,7 +669,7 @@ export function metricsFromMatch(
   const abilityMovedCount = fieldedPieceIds.filter((pieceId) =>
     abilityMovedPieceIds.has(pieceId),
   ).length;
-  const counts = countEvents(result.events, fieldedPieceIds);
+  const counts = countEvents(result.events, fieldedPieceIds, result.plies);
   const enemyFieldedPieceIds = result.enemyFieldedPieceIds;
   const enemyCounts = countSideEvents(result.events, enemyFieldedPieceIds);
   const plies = Math.max(1, result.plies);
@@ -659,6 +713,10 @@ export function metricsFromMatch(
     plies: result.plies,
     refusals: counts.refusals,
     overrides: counts.overrides,
+    freeOverrideCount: counts.freeOverrideCount,
+    benevLossTarget: counts.benevLossTarget,
+    benevLossWitness: counts.benevLossWitness,
+    freeInsistencePlyFraction: counts.freeInsistencePlyFraction,
     implicitOverrides: counts.implicitOverrides,
     quietQuitMoves: counts.quietQuitMoves,
     desertions: counts.desertions,
@@ -883,6 +941,13 @@ function aggregateCampaignCore(
     meanQuietQuitRate: mean((metric) => metric.quietQuitRate),
     meanRefusedGoodMoveRate: mean((metric) => metric.refusedGoodMoveRate),
     meanOverrideRate: mean((metric) => metric.overrideRate),
+    meanOverrideCount: mean((metric) => metric.overrides),
+    meanFreeOverrideCount: mean((metric) => metric.freeOverrideCount ?? 0),
+    meanBenevLossTarget: mean((metric) => metric.benevLossTarget ?? 0),
+    meanBenevLossWitness: mean((metric) => metric.benevLossWitness ?? 0),
+    meanFreeInsistencePlyFraction: mean(
+      (metric) => metric.freeInsistencePlyFraction ?? 0,
+    ),
     meanPlies: mean((metric) => metric.plies),
     winCount: matchMetrics.filter((metric) => metric.winScore === 100).length,
     drawCount: matchMetrics.filter((metric) => metric.winScore === 50).length,
@@ -1086,6 +1151,10 @@ export function renderCsv(
       (metric.dripGainTotal ?? 0).toFixed(2),
       metric.regardEvents ?? 0,
       (metric.regardGainTotal ?? 0).toFixed(2),
+      metric.freeOverrideCount ?? 0,
+      (metric.benevLossTarget ?? 0).toFixed(2),
+      (metric.benevLossWitness ?? 0).toFixed(2),
+      (metric.freeInsistencePlyFraction ?? 0).toFixed(4),
     ]
       .map(csvField)
       .join(','),

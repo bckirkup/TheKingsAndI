@@ -34,6 +34,11 @@ export interface SweepPoint {
   readonly desertionMatchRate: number;
   readonly desertionAttrition: number;
   readonly meanOverrideRate: number;
+  readonly meanOverrideCount: number;
+  readonly meanFreeOverrideCount: number;
+  readonly meanBenevLossTarget: number;
+  readonly meanBenevLossWitness: number;
+  readonly meanFreeInsistencePlyFraction: number;
   readonly meanWinScore: number;
   readonly meanTrustDelta: number;
   readonly meanPlies: number;
@@ -140,6 +145,12 @@ export async function runCoefficientSweep(options: {
         desertionMatchRate: campaign.summary.desertionMatchRate,
         desertionAttrition: campaign.summary.desertionAttrition,
         meanOverrideRate: campaign.summary.meanOverrideRate,
+        meanOverrideCount: campaign.summary.meanOverrideCount,
+        meanFreeOverrideCount: campaign.summary.meanFreeOverrideCount,
+        meanBenevLossTarget: campaign.summary.meanBenevLossTarget,
+        meanBenevLossWitness: campaign.summary.meanBenevLossWitness,
+        meanFreeInsistencePlyFraction:
+          campaign.summary.meanFreeInsistencePlyFraction,
         meanWinScore: campaign.summary.meanWinScore,
         meanTrustDelta: campaign.summary.meanTrustDelta,
         meanPlies: campaign.summary.meanPlies,
@@ -254,7 +265,7 @@ async function main(): Promise<void> {
     }
   }
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
   );
   for (const point of points) {
     console.log(
@@ -281,6 +292,11 @@ async function main(): Promise<void> {
         point.meanDripGainTotal.toFixed(2),
         point.meanRegardEvents.toFixed(2),
         point.meanRegardGainTotal.toFixed(2),
+        point.meanOverrideCount.toFixed(2),
+        point.meanFreeOverrideCount.toFixed(2),
+        point.meanBenevLossTarget.toFixed(2),
+        point.meanBenevLossWitness.toFixed(2),
+        point.meanFreeInsistencePlyFraction.toFixed(4),
         point.meanAdjudicationLoss.toFixed(2),
         point.meanTauBenev.toFixed(2),
         point.meanQuietQuitRate.toFixed(4),

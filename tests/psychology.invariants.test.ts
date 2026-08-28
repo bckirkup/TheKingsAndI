@@ -36,6 +36,7 @@ import {
   shouldDesert,
   type CandidateMoveEvaluation,
   type DesertionContext,
+  type MatchEvent,
   type PieceState,
   type ReplayManifest,
 } from '../src/psychology';
@@ -585,6 +586,85 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(result.witnesses[0]?.T_i).toBeLessThan(witness.T_i);
     expect(result.overriddenPiece.credence.ruptureDebt).toBeGreaterThan(0);
     expect(result.witnesses[0]?.credence.ruptureDebt).toBeGreaterThan(0);
+  });
+
+  it('records ordered, clamped benevolence losses for the target and witnesses', () => {
+    const piece = makePiece({
+      credence: {
+        tauBenev: 30,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
+    });
+    const firstWitness = makePiece({
+      id: 'w:P:a2',
+      role: 'Pawn',
+      credence: {
+        tauBenev: 35,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
+    });
+    const secondWitness = makePiece({
+      id: 'w:P:b2',
+      role: 'Pawn',
+      credence: {
+        tauBenev: 100,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
+    });
+    const result = applyOverride(
+      piece,
+      [firstWitness, secondWitness],
+      3,
+      'Nf3',
+    );
+    expect(
+      result.witnessEvents
+        .filter(
+          (event): event is Extract<MatchEvent, { t: 'PSYCH_DELTA' }> =>
+            event.t === 'PSYCH_DELTA',
+        )
+        .map((event) => [event.pieceId, event.field, event.delta]),
+    ).toEqual([
+      [piece.id, 'tauBenev', -30],
+      [firstWitness.id, 'T_i', -8],
+      [firstWitness.id, 'tauBenev', -35],
+      [secondWitness.id, 'T_i', -8],
+      [secondWitness.id, 'tauBenev', -40],
+    ]);
+  });
+
+  it('omits benevolence loss events at the floor', () => {
+    const piece = makePiece({
+      credence: {
+        tauBenev: 0,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
+    });
+    const witness = makePiece({
+      id: 'w:P:a2',
+      role: 'Pawn',
+      credence: {
+        tauBenev: 0,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
+    });
+    const result = applyOverride(piece, [witness], 3, 'Nf3');
+    const benevEvents = result.witnessEvents.filter(
+      (event): event is Extract<MatchEvent, { t: 'PSYCH_DELTA' }> =>
+        event.t === 'PSYCH_DELTA' && event.field === 'tauBenev',
+    );
+    expect(benevEvents).toHaveLength(0);
+    expect(benevEvents.every((event) => event.delta <= 0)).toBe(true);
   });
 });
 

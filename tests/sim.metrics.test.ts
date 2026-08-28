@@ -130,4 +130,92 @@ describe('promotion harness metrics', () => {
     expect(metric.regardEvents).toBe(1);
     expect(metric.regardGainTotal).toBe(7);
   });
+
+  it('folds free and mixed override benevolence telemetry from events', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const actor = roster[0];
+    const witness = roster[1];
+    if (actor === undefined || witness === undefined) {
+      throw new Error('Starting roster must contain pieces.');
+    }
+    const makeResult = (
+      events: HeadlessMatchResult['events'],
+    ): HeadlessMatchResult => ({
+      events,
+      roster,
+      departedRoster: [],
+      enemyRoster,
+      departedEnemyRoster: [],
+      enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+      plies: 10,
+      winScore: 50,
+      rout: false,
+      enemyRout: false,
+      refusedGoodMoves: 0,
+      winningPositionDesertions: 0,
+      justifiedRefusalObviousness: [],
+      justifiedRefusalPrivateViewLosses: [],
+      determinismId: 'metrics-override-test',
+      enemyObservableBehaviours: [],
+    });
+    const free = metricsFromMatch(
+      1,
+      1,
+      'supportive',
+      roster,
+      makeResult([
+        {
+          t: 'OVERRIDE',
+          ply: 3,
+          pieceId: actor.id,
+          san: 'Nf3',
+          pieceTrustDelta: -35,
+        },
+      ]),
+      0,
+    );
+    expect(free.overrides).toBe(1);
+    expect(free.freeOverrideCount).toBe(1);
+    expect(free.benevLossTarget).toBe(0);
+    expect(free.benevLossWitness).toBe(0);
+    expect(free.freeInsistencePlyFraction).toBe(0.7);
+
+    const mixed = metricsFromMatch(
+      1,
+      1,
+      'supportive',
+      roster,
+      makeResult([
+        {
+          t: 'OVERRIDE',
+          ply: 3,
+          pieceId: actor.id,
+          san: 'Nf3',
+          pieceTrustDelta: -35,
+        },
+        {
+          t: 'PSYCH_DELTA',
+          ply: 3,
+          pieceId: actor.id,
+          field: 'tauBenev',
+          delta: -4,
+        },
+        {
+          t: 'PSYCH_DELTA',
+          ply: 3,
+          pieceId: witness.id,
+          field: 'tauBenev',
+          delta: -6,
+        },
+      ]),
+      0,
+    );
+    expect(mixed.overrides).toBe(1);
+    expect(mixed.freeOverrideCount).toBe(0);
+    expect(mixed.benevLossTarget).toBe(4);
+    expect(mixed.benevLossWitness).toBe(6);
+    expect(mixed.freeInsistencePlyFraction).toBe(0);
+  });
 });

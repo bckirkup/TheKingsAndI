@@ -1475,7 +1475,25 @@ pending the D166 calibration ruling.
 ### D166 ❓ What are the live magnitudes for regard and repair?
 **Open — not wired.** The live magnitudes for `BENEV_REGARD_STEP` and
 `BENEV_REPAIR_STEP` require an owner ruling on a before/after sweep. Do not
-invent candidate numbers in the register.
+invent candidate numbers in the register. The measured obstacle is recorded in
+`docs/calibration/2026-08-28-the-curdle-and-the-floor.md`: no regard magnitude
+can widen the emotional axis while the benevolence channel stops recording
+mid-match, so D167 precedes any D166 number.
+
+### D167 ❓ Should the override cliff be graded, proportional, or status-priced?
+**Open — not wired.** Measured at seed 7 against `--opponent=tyrannical`
+(`docs/calibration/2026-08-28-the-curdle-and-the-floor.md`): 42%–57% of
+overrides cost the roster zero benevolence because every payer is clamped at
+`0`, 62%–78% of plies are played after the first such override, and 78%–87% of
+all benevolence lost is paid by witnesses rather than by the overridden piece.
+The broadcast itself is not in question; what is open is whether the witness
+cliff should be graded the way the trust channel already grades it
+(`OVERRIDE_PIECE_TRUST_PENALTY` `−35` vs `OVERRIDE_WITNESS_TRUST_PENALTY`
+`−8`), whether the cliff should be proportional to remaining benevolence
+instead of saturating, and whether the cost should depend on the target's
+standing. Each moves a psychology coefficient and re-baselines calibration
+evidence, so it is an owner ruling. Do not invent candidate numbers in the
+register.
 
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
