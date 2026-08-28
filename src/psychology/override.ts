@@ -32,7 +32,7 @@ export function applyOverride(
     T_i: clampTrust(witness.T_i + ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY),
     credence: applyBetrayalSignal(
       witness.credence,
-      ENGINE_CONFIG.OVERRIDE_BENEV_CLIFF_INPUT,
+      ENGINE_CONFIG.OVERRIDE_WITNESS_BENEV_CLIFF_INPUT,
     ),
   }));
   const overriddenBenevDelta = credence.tauBenev - piece.credence.tauBenev;

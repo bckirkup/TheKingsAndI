@@ -15,6 +15,7 @@ export {
   clampInt,
   clampMorale,
   clampPermille,
+  clampRuptureDebt,
   clampTrauma,
   clampTrust,
 } from './clamp';

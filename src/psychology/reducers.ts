@@ -3,6 +3,7 @@ import {
   clampCredence,
   clampMorale,
   clampPermille,
+  clampRuptureDebt,
   clampTrauma,
   clampTrust,
 } from './clamp';
@@ -45,7 +46,7 @@ export function normalizePieceState(piece: PieceState): PieceState {
     credence: {
       tauBenev: clampCredence(piece.credence.tauBenev),
       tauAbil: clampCredence(piece.credence.tauAbil),
-      ruptureDebt: clampCredence(piece.credence.ruptureDebt),
+      ruptureDebt: clampRuptureDebt(piece.credence.ruptureDebt),
       abilityObservationCount: Math.max(
         0,
         Math.trunc(piece.credence.abilityObservationCount ?? 0),
