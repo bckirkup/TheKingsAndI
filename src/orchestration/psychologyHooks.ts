@@ -10,6 +10,7 @@ import {
   applyHeardSignal,
   applyWitnessedSacrificeEvent,
   applyPosthumousClassCreditEvent,
+  applyRegardSignal,
   desertionContextFor,
   evaluateMoveResponse,
   justifiedRefusalObviousness,
@@ -185,6 +186,30 @@ export function applyPostMoveCredence(
     moveEval.vLeaderImplied > moveEval.deltaV_board;
   const credence = applyHeardSignal(actor.credence, surrendered);
   return normalizePieceState({ ...actor, credence });
+}
+
+export function applyRegardToPiece(
+  piece: PieceState,
+  streakLength: number,
+  ply: number,
+): {
+  readonly piece: PieceState;
+  readonly event: Extract<MatchEvent, { t: 'REGARD' }> | undefined;
+} {
+  const credence = applyRegardSignal(piece.credence, streakLength);
+  const gained = credence.tauBenev - piece.credence.tauBenev;
+  return {
+    piece: { ...piece, credence },
+    event:
+      gained > 0
+        ? {
+            t: 'REGARD',
+            ply,
+            pieceId: piece.id,
+            gained,
+          }
+        : undefined,
+  };
 }
 
 export function expectedVindicationDelta(

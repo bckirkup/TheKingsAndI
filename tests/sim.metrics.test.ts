@@ -93,4 +93,41 @@ describe('promotion harness metrics', () => {
     expect(metric.abilityMax).toBeGreaterThan(metric.abilityMin ?? 0);
     expect(metric.abilityMovedCount).toBe(1);
   });
+
+  it('folds regard events and their applied gains for commanded pieces', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const first = roster[0];
+    if (first === undefined) throw new Error('Expected a starting piece.');
+    const result: HeadlessMatchResult = {
+      events: [
+        { t: 'REGARD', ply: 3, pieceId: first.id, gained: 7 },
+        {
+          t: 'REGARD',
+          ply: 4,
+          pieceId: enemyRoster[0]?.id ?? 'b:P:a7',
+          gained: 11,
+        },
+      ],
+      roster,
+      departedRoster: [],
+      enemyRoster,
+      departedEnemyRoster: [],
+      enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+      plies: 4,
+      winScore: 50,
+      rout: false,
+      enemyRout: false,
+      refusedGoodMoves: 0,
+      winningPositionDesertions: 0,
+      justifiedRefusalObviousness: [],
+      justifiedRefusalPrivateViewLosses: [],
+      determinismId: 'metrics-regard-test',
+      enemyObservableBehaviours: [],
+    };
+    const metric = metricsFromMatch(1, 1, 'supportive', roster, result, 0);
+    expect(metric.regardEvents).toBe(1);
+    expect(metric.regardGainTotal).toBe(7);
+  });
 });

@@ -69,21 +69,33 @@ describe('credence channels', () => {
     const identity = makeIdentity();
     const commanderA = checkInCredence(identity, 'leader:a', {
       ...piece,
-      credence: { tauAbil: 20, tauBenev: 30, abilityObservationCount: 2 },
+      credence: {
+        tauAbil: 20,
+        tauBenev: 30,
+        ruptureDebt: 0,
+        abilityObservationCount: 2,
+      },
     });
     const commanderB = checkInCredence(commanderA, 'leader:b', {
       ...piece,
-      credence: { tauAbil: 80, tauBenev: 70, abilityObservationCount: 4 },
+      credence: {
+        tauAbil: 80,
+        tauBenev: 70,
+        ruptureDebt: 0,
+        abilityObservationCount: 4,
+      },
     });
 
     expect(checkOutCredence(commanderB, 'leader:a', piece).credence).toEqual({
       tauAbil: 20,
       tauBenev: 30,
+      ruptureDebt: 0,
       abilityObservationCount: 2,
     });
     expect(checkOutCredence(commanderB, 'leader:b', piece).credence).toEqual({
       tauAbil: 80,
       tauBenev: 70,
+      ruptureDebt: 0,
       abilityObservationCount: 4,
     });
     expect(checkOutCredence(commanderB, 'leader:a', piece).B_i).toBe(12);
@@ -93,7 +105,12 @@ describe('credence channels', () => {
     const piece = makePiece();
     const identity = checkInCredence(makeIdentity(), 'leader:a', {
       ...piece,
-      credence: { tauAbil: 21, tauBenev: 63, abilityObservationCount: 5 },
+      credence: {
+        tauAbil: 21,
+        tauBenev: 63,
+        ruptureDebt: 0,
+        abilityObservationCount: 5,
+      },
     });
     const passport = exportPiecePassport({ piece, identity });
     const imported = importPiecePassport(passport);
@@ -114,23 +131,43 @@ describe('credence channels', () => {
     const firstOrder = checkInCredence(
       checkInCredence(identity, 'leader:a', {
         ...piece,
-        credence: { tauAbil: 11, tauBenev: 22, abilityObservationCount: 1 },
+        credence: {
+          tauAbil: 11,
+          tauBenev: 22,
+          ruptureDebt: 0,
+          abilityObservationCount: 1,
+        },
       }),
       'leader:b',
       {
         ...piece,
-        credence: { tauAbil: 33, tauBenev: 44, abilityObservationCount: 2 },
+        credence: {
+          tauAbil: 33,
+          tauBenev: 44,
+          ruptureDebt: 0,
+          abilityObservationCount: 2,
+        },
       },
     );
     const secondOrder = checkInCredence(
       checkInCredence(identity, 'leader:b', {
         ...piece,
-        credence: { tauAbil: 33, tauBenev: 44, abilityObservationCount: 2 },
+        credence: {
+          tauAbil: 33,
+          tauBenev: 44,
+          ruptureDebt: 0,
+          abilityObservationCount: 2,
+        },
       }),
       'leader:a',
       {
         ...piece,
-        credence: { tauAbil: 11, tauBenev: 22, abilityObservationCount: 1 },
+        credence: {
+          tauAbil: 11,
+          tauBenev: 22,
+          ruptureDebt: 0,
+          abilityObservationCount: 1,
+        },
       },
     );
     expect(firstOrder.relationshipAccounts).toEqual(

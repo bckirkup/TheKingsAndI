@@ -54,6 +54,53 @@ export const MIGRATIONS: readonly MigrationStep[] = [
       );
     },
   },
+  {
+    version: 4,
+    upgrade: async (db) => {
+      const identities = await db.pieceIdentities.toArray();
+      await db.pieceIdentities.bulkPut(
+        identities.map((identity) => {
+          const disposition =
+            identity.disposition === undefined
+              ? undefined
+              : {
+                  ...identity.disposition,
+                  ruptureDebt: identity.disposition.ruptureDebt ?? 0,
+                };
+          const relationshipAccounts = identity.relationshipAccounts
+            ? Object.fromEntries(
+                Object.entries(identity.relationshipAccounts).map(
+                  ([leaderId, account]) => [
+                    leaderId,
+                    {
+                      ...account,
+                      ruptureDebt: account.ruptureDebt ?? 0,
+                    },
+                  ],
+                ),
+              )
+            : identity.relationshipAccounts;
+          return {
+            ...identity,
+            ...(disposition === undefined ? {} : { disposition }),
+            ...(relationshipAccounts === undefined
+              ? {}
+              : { relationshipAccounts }),
+          };
+        }),
+      );
+      const pieces = await db.pieceStates.toArray();
+      await db.pieceStates.bulkPut(
+        pieces.map((piece) => ({
+          ...piece,
+          credence: {
+            ...piece.credence,
+            ruptureDebt: piece.credence.ruptureDebt ?? 0,
+          },
+        })),
+      );
+    },
+  },
 ];
 
 export async function assertSchemaVersion(

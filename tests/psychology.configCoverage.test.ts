@@ -19,6 +19,9 @@ import {
   applyFatalisticComplianceCosts,
   applyHeardSignal,
   applyNeglectSignal,
+  applyRegardSignal,
+  applyRepairSignal,
+  isRegardEligible,
   applyOverride,
   applySustainedDread,
   applyWitnessedSacrificeEvent,
@@ -43,6 +46,7 @@ import {
   normalizePieceState,
   shouldDesert,
   type CandidateMoveEvaluation,
+  type CredenceState,
   type DesertionContext,
   type PieceState,
 } from '../src/psychology';
@@ -302,7 +306,12 @@ describe('wiring — override penalties', () => {
 
   it('wiring: OVERRIDE_BENEV_CLIFF_INPUT changes benevolence drop', () => {
     const piece = makePiece({
-      credence: { tauBenev: 80, tauAbil: 50, abilityObservationCount: 0 },
+      credence: {
+        tauBenev: 80,
+        tauAbil: 50,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
     });
     mutateConfig('OVERRIDE_BENEV_CLIFF_INPUT', 0, () => {
       const mild = applyOverride(piece, [], 1, 'Nf3').overriddenPiece.credence
@@ -451,6 +460,9 @@ describe('wiring — benevolence & ability knobs', () => {
         mutateConfig('BENEV_BETRAYAL_CLIFF_SCALE', 8, () => {
           const hard = applyBetrayalSignal(before, 6).tauBenev;
           expect(hard).toBeLessThan(soft);
+          expect(applyBetrayalSignal(before, 6).ruptureDebt).toBeGreaterThan(
+            before.ruptureDebt,
+          );
         });
       });
     });
@@ -767,7 +779,12 @@ describe('wiring — rumor, attention, witness, heroic, fatalistic', () => {
   it('wiring: FATALISTIC_TAU_ABIL_CEILING gates fatalistic compliance', () => {
     const actor = makePiece({
       T_i: 0,
-      credence: { tauBenev: 50, tauAbil: 40, abilityObservationCount: 0 },
+      credence: {
+        tauBenev: 50,
+        tauAbil: 40,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
     });
     const move: CandidateMoveEvaluation = {
       moveNotation: 'Nxh7',
@@ -991,5 +1008,60 @@ describe('wiring — PieceTraits', () => {
     expect(calculateLambda(loyal, [loyal, ...peers])).toBeGreaterThan(
       calculateLambda(disloyal, [disloyal, ...peers]),
     );
+  });
+
+  it('wiring: regard and repair knobs change benevolence outputs', () => {
+    const before = { ...defaultCredence(), ruptureDebt: 20 };
+    let regarded = before.tauBenev;
+    mutateConfig('BENEV_REGARD_STEP', 7, () => {
+      regarded = applyRegardSignal(before, 3).tauBenev;
+    });
+    expect(regarded).not.toBe(before.tauBenev);
+
+    let repaired: CredenceState = before;
+    mutateConfig('BENEV_REPAIR_STEP', 6, () => {
+      repaired = applyRepairSignal(before).credence;
+    });
+    expect(repaired.tauBenev).toBeGreaterThan(before.tauBenev);
+    expect(repaired.ruptureDebt).toBeLessThan(before.ruptureDebt);
+  });
+
+  it('wiring: regard streak length gates the regard writer', () => {
+    const before = defaultCredence();
+    let belowThreshold = before;
+    let atThreshold = before;
+    mutateConfig('BENEV_REGARD_STEP', 7, () => {
+      mutateConfig('BENEV_REGARD_STREAK_PLIES', 4, () => {
+        belowThreshold = applyRegardSignal(before, 3);
+      });
+      mutateConfig('BENEV_REGARD_STREAK_PLIES', 3, () => {
+        atThreshold = applyRegardSignal(before, 3);
+      });
+    });
+    expect(atThreshold.tauBenev).toBeGreaterThan(belowThreshold.tauBenev);
+  });
+
+  it('wiring: regard risk ceiling changes eligibility', () => {
+    let eligible = false;
+    mutateConfig('BENEV_REGARD_RISK_CEILING', 0.1, () => {
+      eligible = isRegardEligible(0.15, 0);
+    });
+    expect(eligible).toBe(false);
+    mutateConfig('BENEV_REGARD_RISK_CEILING', 0.2, () => {
+      eligible = isRegardEligible(0.15, 0);
+    });
+    expect(eligible).toBe(true);
+  });
+
+  it('bounds: regard gain is positive, integral, and capped at 100', () => {
+    const before = { ...defaultCredence(), tauBenev: 99 };
+    let after = before;
+    mutateConfig('BENEV_REGARD_STEP', 100, () => {
+      after = applyRegardSignal(before, 3);
+    });
+    const gained = after.tauBenev - before.tauBenev;
+    expect(gained).toBeGreaterThan(0);
+    expect(Number.isSafeInteger(gained)).toBe(true);
+    expect(after.tauBenev).toBeLessThanOrEqual(100);
   });
 });

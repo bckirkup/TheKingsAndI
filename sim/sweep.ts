@@ -6,6 +6,10 @@
  *
  * Usage:
  *   pnpm exec tsx sim/sweep.ts --knob=BENEV_EXPENDABLE_FLOOR --values=15,25,35 --matches=4 --seed=7
+ *
+ * `--fixed=KEY=VALUE,KEY=VALUE` pins further knobs for every point of the
+ * sweep, so a coefficient that only has meaning in the presence of another
+ * (D165 regard and repair) can be measured jointly rather than one at a time.
  */
 
 import { ENGINE_CONFIG } from '../src/psychology/config';
@@ -43,7 +47,11 @@ export interface SweepPoint {
   readonly meanEnemyDesertions: number;
   readonly plainChessWinDelta: number;
   readonly meanDripGainTotal: number;
+  readonly meanRegardEvents: number;
+  readonly meanRegardGainTotal: number;
   readonly meanAdjudicationLoss: number;
+  readonly meanTauBenev: number;
+  readonly meanQuietQuitRate: number;
   readonly meanTauAbil: number;
   readonly roleTauAbil: Readonly<Record<string, number>>;
   readonly abilityMin: number;
@@ -63,6 +71,29 @@ function parseList(flag: string | undefined, fallback: number[]): number[] {
     }
     return value;
   });
+}
+
+function parseFixed(
+  flag: string | undefined,
+): Readonly<Record<string, number>> {
+  if (flag === undefined || flag.length === 0) return {};
+  const fixed: Record<string, number> = {};
+  for (const pair of flag.split(',')) {
+    const separator = pair.indexOf('=');
+    if (separator < 1) {
+      throw new Error(`Expected --fixed=KEY=VALUE, got ${pair}`);
+    }
+    const key = pair.slice(0, separator);
+    const value = Number(pair.slice(separator + 1));
+    if (typeof MUTABLE_CONFIG[key] !== 'number') {
+      throw new TypeError(`Knob ${key} is not a numeric config.`);
+    }
+    if (!Number.isFinite(value)) {
+      throw new TypeError(`Invalid fixed value: ${pair}`);
+    }
+    fixed[key] = value;
+  }
+  return fixed;
 }
 
 export async function runCoefficientSweep(options: {
@@ -122,7 +153,11 @@ export async function runCoefficientSweep(options: {
         meanEnemyDesertions: campaign.summary.meanEnemyDesertions,
         plainChessWinDelta: campaign.summary.meanWinScore - plainWin,
         meanDripGainTotal: campaign.summary.meanDripGainTotal,
+        meanRegardEvents: campaign.summary.meanRegardEvents,
+        meanRegardGainTotal: campaign.summary.meanRegardGainTotal,
         meanAdjudicationLoss: campaign.summary.meanAdjudicationLoss,
+        meanTauBenev: campaign.summary.meanTauBenev,
+        meanQuietQuitRate: campaign.summary.meanQuietQuitRate,
         meanTauAbil: campaign.summary.meanTauAbil,
         roleTauAbil:
           campaign.summary.trajectoryBands.at(-1)?.meanFinalTauAbilByRole ?? {},
@@ -147,6 +182,7 @@ function parseArgs(argv: readonly string[]): {
   opponent: OpponentArchetype;
   engine: SimEngineKind;
   depthCap: number | undefined;
+  fixed: Readonly<Record<string, number>>;
 } {
   const map = new Map<string, string>();
   for (const argument of argv) {
@@ -190,17 +226,35 @@ function parseArgs(argv: readonly string[]): {
     opponent,
     engine: engine as SimEngineKind,
     depthCap: depthCapValue,
+    fixed: parseFixed(map.get('fixed')),
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const points = await runCoefficientSweep({
-    ...options,
-    engineKind: options.engine,
-  });
+  const restore = new Map<string, number>();
+  for (const [key, value] of Object.entries(options.fixed)) {
+    const previous = MUTABLE_CONFIG[key];
+    if (previous === undefined) {
+      throw new TypeError(`Knob ${key} is not a numeric config.`);
+    }
+    restore.set(key, previous);
+    MUTABLE_CONFIG[key] = value;
+    console.error(`# fixed ${key}=${value}`);
+  }
+  let points;
+  try {
+    points = await runCoefficientSweep({
+      ...options,
+      engineKind: options.engine,
+    });
+  } finally {
+    for (const [key, value] of restore) {
+      MUTABLE_CONFIG[key] = value;
+    }
+  }
   console.log(
-    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,adjudication_loss,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
+    'knob,value,refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count',
   );
   for (const point of points) {
     console.log(
@@ -225,7 +279,11 @@ async function main(): Promise<void> {
         point.meanEnemyDesertions.toFixed(2),
         point.plainChessWinDelta.toFixed(1),
         point.meanDripGainTotal.toFixed(2),
+        point.meanRegardEvents.toFixed(2),
+        point.meanRegardGainTotal.toFixed(2),
         point.meanAdjudicationLoss.toFixed(2),
+        point.meanTauBenev.toFixed(2),
+        point.meanQuietQuitRate.toFixed(4),
         point.meanTauAbil.toFixed(2),
         JSON.stringify(point.roleTauAbil),
         point.abilityMin.toFixed(2),

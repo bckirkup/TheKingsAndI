@@ -30,6 +30,7 @@ import {
   dispositionForIdentitySeed,
   identityCreationSeed,
 } from '../src/orchestration';
+import { defaultCredence } from '../src/psychology';
 
 describe('seminar spine', () => {
   it('scales seminar purses monotonically with the asking-price ratio', () => {
@@ -589,9 +590,9 @@ describe('seminar spine', () => {
         relationshipAccounts: {
           ...(queen.credenceIdentity?.relationshipAccounts ?? {}),
           [aggressive.id]: {
+            ...defaultCredence(),
             tauAbil: 50,
             tauBenev: 100,
-            abilityObservationCount: 0,
           },
         },
       },
@@ -738,9 +739,9 @@ describe('seminar spine', () => {
         ...marketQueen.credenceIdentity,
         relationshipAccounts: {
           [commander.id]: {
+            ...defaultCredence(),
             tauAbil: 0,
             tauBenev: 100,
-            abilityObservationCount: 0,
           },
         },
       },

@@ -34,6 +34,55 @@ export function applyHeardSignal(
   };
 }
 
+export function applyRegardSignal(
+  credence: CredenceState,
+  streakLength: number,
+): CredenceState {
+  if (Math.trunc(streakLength) < ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES) {
+    return credence;
+  }
+  return {
+    ...credence,
+    tauBenev: clampCredence(
+      credence.tauBenev + ENGINE_CONFIG.BENEV_REGARD_STEP,
+    ),
+  };
+}
+
+export function isRegardEligible(
+  capturedRisk: number,
+  boardDelta: number,
+): boolean {
+  return (
+    capturedRisk <= ENGINE_CONFIG.BENEV_REGARD_RISK_CEILING && boardDelta >= 0
+  );
+}
+
+export function applyRepairSignal(credence: CredenceState): {
+  readonly credence: CredenceState;
+  readonly repaid: number;
+} {
+  const debt = clampCredence(credence.ruptureDebt);
+  const repaid = Math.min(
+    debt,
+    Math.max(0, Math.trunc(ENGINE_CONFIG.BENEV_REPAIR_STEP)),
+  );
+  if (repaid === 0) {
+    return {
+      credence: { ...credence, ruptureDebt: debt },
+      repaid,
+    };
+  }
+  return {
+    credence: {
+      ...credence,
+      tauBenev: clampCredence(credence.tauBenev + repaid),
+      ruptureDebt: debt - repaid,
+    },
+    repaid,
+  };
+}
+
 export function applyBetrayalSignal(
   credence: CredenceState,
   severity: number,
@@ -43,6 +92,7 @@ export function applyBetrayalSignal(
   return {
     ...credence,
     tauBenev: clampCredence(credence.tauBenev - drop),
+    ruptureDebt: clampCredence(credence.ruptureDebt + drop),
   };
 }
 

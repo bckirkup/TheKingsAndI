@@ -458,7 +458,12 @@ describe('learning delta (5.8q)', () => {
 
   it('wiring: NOBODY_DROWNED_CREDENCE_FLOOR', () => {
     const low = makePiece('a', 40, {
-      credence: { tauBenev: 8, tauAbil: 8, abilityObservationCount: 0 },
+      credence: {
+        tauBenev: 8,
+        tauAbil: 8,
+        ruptureDebt: 0,
+        abilityObservationCount: 0,
+      },
     });
     const matches = [
       {

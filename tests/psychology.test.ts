@@ -180,7 +180,7 @@ describe('verdict ladder', () => {
   it('returns MORAL_REFUSAL when perceived value is below threshold', () => {
     const actor = makePiece({
       T_i: -80,
-      credence: { tauBenev: 10, tauAbil: 10, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 10, tauAbil: 10 },
     });
     const outcome = evaluateMoveResponse(actor, quietMove, [actor]);
     expect(outcome.verdict).toBe('MORAL_REFUSAL');
@@ -191,7 +191,7 @@ describe('verdict ladder', () => {
   it('returns QUIET_QUITTING when trust is exhausted but the move is tolerable', () => {
     const actor = makePiece({
       T_i: 0,
-      credence: { tauBenev: 80, tauAbil: 80, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 80, tauAbil: 80 },
     });
     const toleratedMove: CandidateMoveEvaluation = {
       ...quietMove,
@@ -234,7 +234,7 @@ describe('independent leader view', () => {
 
   it('can still refuse when independent leader insight makes a large gap', () => {
     const actor = makePiece({
-      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0, tauAbil: 50 },
     });
     const moveEval: CandidateMoveEvaluation = {
       ...quietMove,
@@ -265,9 +265,9 @@ describe('independent leader view', () => {
           {
             ...actor,
             credence: {
+              ...defaultCredence(),
               tauBenev: 50,
               tauAbil: tau,
-              abilityObservationCount: 0,
             },
           },
           disagreement,

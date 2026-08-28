@@ -317,4 +317,65 @@ describe('schema migrations', () => {
       legacyCredence,
     );
   });
+
+  it('adds zero rupture debt when upgrading a v3 account', async () => {
+    const db = getDatabase();
+    await db.open();
+    const { identities, roster } = bootstrapRoster(45);
+    const identity = identities[0];
+    const piece = roster[0];
+    if (identity === undefined || piece === undefined) {
+      throw new Error('expected migration fixture');
+    }
+    const legacyIdentity = {
+      ...identity,
+      disposition: {
+        tauBenev: 60,
+        tauAbil: 40,
+        abilityObservationCount: 2,
+      },
+      relationshipAccounts: {
+        'player:career': {
+          tauBenev: 70,
+          tauAbil: 30,
+          abilityObservationCount: 3,
+        },
+        'other:commander': {
+          tauBenev: 25,
+          tauAbil: 75,
+          abilityObservationCount: 4,
+        },
+      },
+    } as unknown as typeof identity;
+    await db.pieceIdentities.put(legacyIdentity);
+    await db.pieceStates.put({
+      ...piece,
+      credence: {
+        tauBenev: 50,
+        tauAbil: 50,
+        abilityObservationCount: 0,
+      },
+    } as typeof piece);
+    await db.settings.put({ key: 'schemaVersion', value: '3' });
+
+    await new CareerRepository(db).init();
+
+    const migrated = await db.pieceIdentities.get(identity.id);
+    const migratedPiece = await db.pieceStates.get(piece.id);
+    expect(migrated?.disposition?.ruptureDebt).toBe(0);
+    expect(migrated?.relationshipAccounts?.['player:career']?.ruptureDebt).toBe(
+      0,
+    );
+    expect(Object.keys(migrated?.relationshipAccounts ?? {})).toEqual([
+      'player:career',
+      'other:commander',
+    ]);
+    expect(migrated?.relationshipAccounts?.['other:commander']).toEqual({
+      tauBenev: 25,
+      tauAbil: 75,
+      abilityObservationCount: 4,
+      ruptureDebt: 0,
+    });
+    expect(migratedPiece?.credence.ruptureDebt).toBe(0);
+  });
 });

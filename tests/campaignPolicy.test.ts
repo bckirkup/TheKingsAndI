@@ -121,6 +121,7 @@ describe('campaign policy', () => {
     const piece = makeStoredPiece({
       tauBenev: 20,
       tauAbil: 30,
+      ruptureDebt: 0,
       abilityObservationCount: 2,
     });
     const identity: PieceIdentityRecord = {
@@ -131,12 +132,14 @@ describe('campaign policy', () => {
       disposition: {
         tauBenev: 40,
         tauAbil: 60,
+        ruptureDebt: 0,
         abilityObservationCount: 3,
       },
       relationshipAccounts: {
         'other:commander': {
           tauBenev: 5,
           tauAbil: 5,
+          ruptureDebt: 0,
           abilityObservationCount: 9,
         },
       },

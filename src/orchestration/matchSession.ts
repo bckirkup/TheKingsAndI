@@ -10,6 +10,9 @@ import { createSeededRandom, type SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
+  applyRepairSignal,
+  isRegardEligible,
+  ENGINE_CONFIG,
   applyNeglectSignal,
   applyCaptureInjury,
   applyFatalisticComplianceCosts,
@@ -50,6 +53,7 @@ import {
   applyDesertionWithCascade,
   applyHeededAbilityGrade,
   applyPostMoveCredence,
+  applyRegardToPiece,
   applyPosthumousClassCredit,
   applyRosterAbilityObservations,
   applyRefusalAuthorityCost,
@@ -201,8 +205,10 @@ export class MatchSession {
   private readonly insight: InsightRoundHandle;
   private lastFriendlyCapturePly: number | undefined;
   private abilityDripStreakByPiece: Readonly<Record<string, number>> = {};
+  private regardStreakByPiece: Readonly<Record<string, number>> = {};
   private dreadExposureByPiece: DreadExposureByPiece = {};
   private enemyDreadExposureByPiece: DreadExposureByPiece = {};
+  private enemyRegardStreakByPiece: Readonly<Record<string, number>> = {};
   private readonly engineAudit: EngineAuditEntry[] = [];
 
   constructor(config: MatchSessionConfig) {
@@ -499,6 +505,22 @@ export class MatchSession {
     );
     this.roster = heeded.roster;
     this.events.push(...heeded.events);
+    const repair = applyRepairSignal(
+      this.roster.find((piece) => piece.id === pending.actor.id)?.credence ??
+        pending.actor.credence,
+    );
+    if (repair.repaid > 0) {
+      this.roster = updatePiece(this.roster, pending.actor.id, (piece) => ({
+        ...piece,
+        credence: repair.credence,
+      }));
+      this.events.push({
+        t: 'REPAIR',
+        ply: this.ply,
+        pieceId: pending.actor.id,
+        repaid: repair.repaid,
+      });
+    }
     this.pending = null;
     this.phase = 'playing';
   }
@@ -879,15 +901,29 @@ export class MatchSession {
     );
     this.events.push(...abilityObservations.events);
     this.abilityDripStreakByPiece = abilityObservations.dripStreakByPiece;
-    this.roster = abilityObservations.roster.map((piece) =>
-      piece.id === actor.id
-        ? applyPostMoveCredence(
-            { ...piece, engagementFactor: outcome.engagementFactor },
-            moveEval,
-            objectivelyGood,
-          )
-        : piece,
-    );
+    const regardStreak = isRegardEligible(
+      moveEval.P_captured,
+      moveEval.deltaV_board,
+    )
+      ? (this.regardStreakByPiece[actor.id] ?? 0) + 1
+      : 0;
+    const regardApplied =
+      regardStreak >= ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES;
+    this.roster = abilityObservations.roster.map((piece) => {
+      if (piece.id !== actor.id) return piece;
+      const postMove = applyPostMoveCredence(
+        { ...piece, engagementFactor: outcome.engagementFactor },
+        moveEval,
+        objectivelyGood,
+      );
+      const regarded = applyRegardToPiece(postMove, regardStreak, this.ply);
+      if (regarded.event !== undefined) this.events.push(regarded.event);
+      return regarded.piece;
+    });
+    this.regardStreakByPiece = {
+      ...this.regardStreakByPiece,
+      [actor.id]: regardApplied ? 0 : regardStreak,
+    };
 
     if (outcome.verdict === 'FATALISTIC_COMPLIANCE') {
       const fatalistic = applyFatalisticComplianceCosts(
@@ -985,9 +1021,11 @@ export class MatchSession {
       insight: this.insight,
       overrideRefusals: this.opponentArchetype === 'tyrannical',
       dreadExposureByPiece: this.enemyDreadExposureByPiece,
+      regardStreakByPiece: this.enemyRegardStreakByPiece,
     });
     this.enemyRoster = result.enemyRoster;
     this.enemyDreadExposureByPiece = result.dreadExposureByPiece;
+    this.enemyRegardStreakByPiece = result.regardStreakByPiece;
     this.engineAudit.push(...(result.engineAudit ?? []));
     this.events.push(...result.events);
     if (result.capturedPieceId !== undefined) {

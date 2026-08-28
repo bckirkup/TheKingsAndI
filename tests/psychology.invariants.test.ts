@@ -12,6 +12,7 @@ import {
   applyHeardSignal,
   applyMatchOutcomeTrust,
   applyOverride,
+  applyRepairSignal,
   applyWitnessedSacrificeEvent,
   calculateAttachment,
   calculateEngineSearchDepth,
@@ -378,17 +379,17 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
     const trusting = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 100, tauAbil: 50 },
       B_i: 0,
     });
     const distrustful = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0, tauAbil: 50 },
       B_i: 0,
     });
     const traumatised = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 100, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 100, tauAbil: 50 },
       B_i: 100,
     });
     expect(expectedVindicationDelta(trusting, move)).toBe(-0.25);
@@ -401,7 +402,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const original = config.VINDICATION_PESSIMISM_SCALE ?? 100;
     const piece = makePiece({
       id: 'w:P:a2',
-      credence: { tauBenev: 0, tauAbil: 50, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 0, tauAbil: 50 },
       B_i: 0,
     });
     const move = makeMove({ deltaV_board: 0, P_captured: 0.5 });
@@ -494,7 +495,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     const actor = makePiece({ id: 'w:N:g1' });
     const witness = makePiece({
       id: 'w:B:f1',
-      credence: { tauBenev: 61, tauAbil: 63, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 61, tauAbil: 63 },
     });
     const accepted = applyRefusalAuthorityCost(
       [actor, witness],
@@ -507,6 +508,7 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(accepted.roster[1]?.credence).toEqual({
       tauBenev: 61,
       tauAbil: 55,
+      ruptureDebt: 0,
       abilityObservationCount: 0,
     });
     const rejected = applyRefusalAuthorityCost(
@@ -545,10 +547,10 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
   it('uses credence-weighted perception instead of additive trust', () => {
     const lowAbil = makePiece({
       T_i: -80,
-      credence: { tauBenev: 80, tauAbil: 0, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 80, tauAbil: 0 },
     });
     const highAbil = makePiece({
-      credence: { tauBenev: 80, tauAbil: 100, abilityObservationCount: 0 },
+      credence: { ...defaultCredence(), tauBenev: 80, tauAbil: 100 },
     });
     const move = makeMove({ deltaV_board: -1, vLeaderImplied: 3 });
     const toleratedMove = makeMove({ deltaV_board: 2, vLeaderImplied: 3 });
@@ -581,6 +583,8 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
     expect(result.event.t).toBe('OVERRIDE');
     expect(result.overriddenPiece.T_i).toBeLessThan(piece.T_i);
     expect(result.witnesses[0]?.T_i).toBeLessThan(witness.T_i);
+    expect(result.overriddenPiece.credence.ruptureDebt).toBeGreaterThan(0);
+    expect(result.witnesses[0]?.credence.ruptureDebt).toBeGreaterThan(0);
   });
 });
 
@@ -1035,6 +1039,7 @@ describe('credence channel updates', () => {
     const credence = {
       tauBenev: 80,
       tauAbil: 50,
+      ruptureDebt: 0,
       abilityObservationCount: 0,
     };
     const betrayed = applyBetrayalSignal(credence, 8);
@@ -1121,5 +1126,39 @@ describe('perceived value golden values', () => {
     expect(calculatePerceivedValue(-1, 3, 0)).toBe(-1);
     expect(calculatePerceivedValue(-1, 3, 100)).toBe(3);
     expect(calculatePerceivedValue(0, 2, 50)).toBe(1);
+  });
+});
+
+describe('rupture debt repair invariants', () => {
+  it('never repays more debt than accrued or exceeds benevolence ceiling', () => {
+    const before = {
+      ...defaultCredence(),
+      tauBenev: 99,
+      ruptureDebt: 2,
+    };
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = ENGINE_CONFIG.BENEV_REPAIR_STEP;
+    config.BENEV_REPAIR_STEP = 10;
+    try {
+      const result = applyRepairSignal(before);
+      expect(result.repaid).toBe(2);
+      expect(result.credence.ruptureDebt).toBe(0);
+      expect(result.credence.tauBenev).toBe(100);
+    } finally {
+      config.BENEV_REPAIR_STEP = original;
+    }
+  });
+
+  it('requires repair to be stronger than heard when enabled', () => {
+    const config = ENGINE_CONFIG as unknown as Record<string, number>;
+    const original = ENGINE_CONFIG.BENEV_REPAIR_STEP;
+    config.BENEV_REPAIR_STEP = ENGINE_CONFIG.BENEV_HEARD_STEP + 1;
+    try {
+      expect(ENGINE_CONFIG.BENEV_REPAIR_STEP).toBeGreaterThan(
+        ENGINE_CONFIG.BENEV_HEARD_STEP,
+      );
+    } finally {
+      config.BENEV_REPAIR_STEP = original;
+    }
   });
 });
