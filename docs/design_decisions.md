@@ -1498,12 +1498,17 @@ register.
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
-makes poor gossip** — leak propensity is a property of the content, so
-`criticism`/`warning` transmit readily while `admission`/`assurance` largely die
-where they are spoken, which means the two kinds a commander repairs with are
-the two that do not travel; (b) **even benevolence can be read as favoritism** —
-a confidence is observable as an act even when its content is not, so the
-non-recipients price the intimacy and a *kept* confidence is not free either;
+makes poor gossip** — gossip repeatability is a property of the content, so
+`criticism`/`warning` are interesting to repeat while `admission`/`assurance`
+are dull, but *dull to repeat is not socially invisible*: kindness still reaches
+the recipient's intimates by observation, so there are two distinct transmission
+modes (gossip, and reputation among intimates), not one; (b) **even benevolence
+can be read as favoritism, and a favour for one may be read as a favour for
+all** — a confidence is observable as an act even when its content is not, and
+the non-recipients split by the *recipient's* affinity graph: close affinities
+read care and their appraisal rises, distant or rival pieces read favoritism and
+theirs falls, so one act carries opposite signs depending who is watching and a
+*kept* confidence is not free either;
 (c) **almost nothing in leadership is free** — confiding, keeping, leaking, and
 declining to confide are all priced, and a calibration pass that finds any
 net-free confiding strategy fails the magnitudes rather than shipping them
@@ -1526,8 +1531,8 @@ ADR 0016), a deterministic discretion ladder mirroring the counsel ladder
 (`src/psychology/counsel.ts:54-61`), an explicit leak event following the
 witnessed-event pattern (`src/psychology/witness.ts:17-56`), and a
 campaign-start culture seed so an inherited room is an input to outcome, plus a
-per-kind transmission rate and a favoritism cost among non-recipients from the
-riders above. It adds persisted state and a psychology writer. Do not invent
+per-kind gossip repeatability rate and an affinity-split observer term (ally
+credit, outsider favoritism cost, separating threshold) from the riders above. It adds persisted state and a psychology writer. Do not invent
 candidate magnitudes in the register.
 
 ### D169 ❓ May `leaderAppraisal` be read, and by which term?

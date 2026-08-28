@@ -132,37 +132,66 @@ strategy that is net-free, the knobs are mis-specified and the mechanic is
 rejected rather than shipped, because a free kindness is exactly the D166
 failure this ADR exists to avoid.
 
-### 0a. Good news makes poor gossip (valence asymmetry)
+### 0a. Good news makes poor gossip — which is not the same as not travelling
 
-Leak propensity is a property of the **content**, not only of the room.
-Criticism and warnings travel; an admission or an assurance largely dies where
-it is spoken. Mechanically this is a per-kind transmission rate, which is the
-shape the diffusion already has — `pLossTeam` and `leaderAppraisal` diffuse at
-separate rates today (`src/psychology/config.ts:143-144`), so per-kind rates
-add no new machinery.
+Leak propensity is a property of the **content**, not only of the room:
+criticism and warnings are *repeatable* — they are interesting to carry — while
+an admission or an assurance is dull to repeat. Mechanically this is a per-kind
+transmission rate, which is the shape the diffusion already has (`pLossTeam`
+and `leaderAppraisal` diffuse at separate rates today,
+`src/psychology/config.ts:143-144`), so per-kind rates add no new machinery.
 
-The consequence is deliberately harsh and is the interesting part of the
-ruling: **the two kinds a commander uses to repair are the two that do not
-travel, and the two that damage him are the two that do.** Private repair
-therefore cannot substitute for public repair — it can only mend the dyad it
-was spoken into, while a single leaked criticism reaches the whole affinity
-graph. That asymmetry must be *measured* rather than assumed: the sweep has to
-report whether any repair strategy through this channel produces net
-benevolence recovery at all, since a channel that can only lose is inert by
-construction.
+**Explicitly rejected reading:** "good news does not travel." It does; it simply
+does not travel *as gossip*. The two modes are distinct and both are modelled:
 
-### 0b. Benevolence can be read as favoritism
+| mode | driver | reaches | shape |
+|---|---|---|---|
+| gossip | the content is interesting to repeat | broadly, weighted by the speaker's credibility | the existing rumor step, at a per-kind rate |
+| reputation among intimates | someone close to the affected piece observes how it fared | narrowly — the affected piece's close affinities | § 0b's affinity-weighted split |
+
+So a commander's kindness is not socially silent, and the sweep must measure
+whether repair through this channel produces net benevolence recovery — but the
+answer is expected to run through *allies of the piece he was kind to*, not
+through the room at large.
+
+### 0b. A favour for one is a favour for all — or favoritism, depending who is watching
 
 A confidence is **observable as an act even when its content is not**. The
-pieces who were not taken aside see that someone was, and price it. So a kept
-confidence is not free either: the dyadic regard deposit is paid for with a
-distributed cost among non-recipients — dyadic affinity toward the favourite,
-and the room's appraisal of a commander who has favourites.
+pieces who were not taken aside see that someone was, and price it — but they do
+not all price it the same way, and this is the owner's second rider in full:
 
-This makes confiding a **rivalrous** resource rather than a renewable one, and
-it turns the mechanic into a real leadership discrimination: confiding
-repeatedly in one trusted piece is measurably different from spreading it, and
-both differ from silence. It also gives the seminar its sharpest debrief
+> especially pieces with close affinities may take a favor for one as some
+> favor for all.
+
+So the act splits by the **recipient's affinity graph**, not by the content:
+
+- pieces with high dyadic affinity toward the recipient read care — a commander
+  who treats my friend well is a commander who might treat me well — and their
+  own appraisal of him rises at a fraction of the recipient's deposit;
+- pieces distant from or in rivalry with the recipient read favoritism, and
+  theirs falls.
+
+One act, opposite signs, decided by who is watching. The magnitude is therefore
+not a single knob but a scaled read of the same deposit across the existing
+affinity graph — the identical structure the override cliff already uses for
+witnesses, with the sign no longer fixed.
+
+A kept confidence is still not free (§ 0), because a commander cannot be close
+to everyone: the ally credit and the outsider cost are both real and their
+balance is a property of the *room's* cohesion, not of the commander's
+intention. In a tight roster, kindness to one genuinely warms several; in a
+factional or curdled one, the same act buys a favourite and costs the rest —
+which is precisely the "good or bad culture on arrival" effect the owner's
+source described, arriving here as a consequence rather than as an authored
+rule.
+
+This makes confiding a **rivalrous but not zero-sum** resource, and it turns the
+mechanic into a real leadership discrimination: confiding repeatedly in one
+trusted piece is measurably different from spreading it, and both differ from
+silence — and *whom* you confide in matters as much as how often, because a
+well-connected confidant spreads credit that an isolated one cannot.
+
+It also gives the seminar its sharpest debrief
 question — *who did you take aside, and who noticed?* The witness-side
 appraisal pattern already exists and should be reused rather than reinvented
 (`src/psychology/witness.ts:17-56`).
@@ -174,15 +203,16 @@ degenerate version of the mechanic ("tell the Knight the winning line"), which
 would smuggle engine truth past ADR 0013. Four kinds, matching what a leader
 actually says in private:
 
-| kind | content | travels? (D168 rider 0a) | if kept | if leaked |
+| kind | content | repeatability as gossip (§ 0a) | if kept | if leaked |
 |---|---|---|---|---|
-| `admission` | the commander concedes he asked too much | **poorly** — good news is dull | repair against the recorded `ruptureDebt` (ADR 0064), larger than the public equivalent | the room learns the commander doubts himself — its appraisal moves, and not only downward |
-| `criticism` | the commander's appraisal of a *third* piece | **readily** | confidant's regard rises; the third piece is untouched | the third piece learns it was disparaged; dyadic affinity and its own credence fall, and the room prices a commander who talks about people |
-| `warning` | the confidant's own standing is at risk | **readily** | candour premium: the piece knows where it stands | the room reads a threat rather than candour |
-| `assurance` | a promise about future orders ("I will not spend you like that") | **poorly**, until it is broken | a commitment the piece can hold | breaking it later is the most expensive single act in the game |
+| `admission` | the commander concedes he asked too much | **low** — dull to repeat; its reputational effect runs through § 0b instead | repair against the recorded `ruptureDebt` (ADR 0064), larger than the public equivalent | the room learns the commander doubts himself — its appraisal moves, and not only downward |
+| `criticism` | the commander's appraisal of a *third* piece | **high** | confidant's regard rises; the third piece is untouched | the third piece learns it was disparaged; dyadic affinity and its own credence fall, and the room prices a commander who talks about people |
+| `warning` | the confidant's own standing is at risk | **high** | candour premium: the piece knows where it stands | the room reads a threat rather than candour |
+| `assurance` | a promise about future orders ("I will not spend you like that") | **low**, until it is broken — then high | a commitment the piece can hold | breaking it later is the most expensive single act in the game |
 
-Every row also carries the § 0b cost: the non-recipients price the fact that a
-confidence happened, whatever it contained.
+Every row also carries the § 0b split: the non-recipients price the fact that a
+confidence happened, whatever it contained — the recipient's friends as care,
+the rest as favoritism.
 
 `assurance` is the one that makes the other three matter: it is the only place
 in the design where the commander's *past words* constrain the cost of a future
@@ -242,8 +272,9 @@ distribution defaulting to today's zeros), so every existing golden stays
 byte-identical and the live numbers are chosen from a measured before/after, not
 from a guess. Knobs to expose, each with a wiring probe per AGENTS.md rule 6:
 the regard deposit for being confided in, one discretion threshold per kind, a
-per-kind transmission rate (§ 0a), the favoritism cost among non-recipients and
-its decay with how widely the commander confides (§ 0b), the leaker's own
+per-kind gossip repeatability rate (§ 0a), the § 0b affinity split — the ally
+credit fraction, the outsider favoritism cost, and the affinity threshold
+separating them — the leaker's own
 standing cost, the leak's `leaderAppraisal` magnitude, the broken-`assurance`
 penalty, the existing diffusion rates, and the campaign-start culture
 parameters.
@@ -305,6 +336,13 @@ calibration that D168's ruling now requires.
   make the act free, because the room prices the intimacy it can see.
 - **Valence-neutral leaking** (one transmission rate for all kinds). Rejected by
   D168 rider 0a: good news makes poor gossip, and the asymmetry is the mechanic.
+- **Good news simply not travelling.** Rejected — an earlier draft of this ADR
+  said so and the owner corrected it. Dull to repeat is not the same as
+  socially invisible: kindness reaches the recipient's intimates by observation
+  even when nobody gossips about it (§ 0b).
+- **A single-signed favoritism cost** on all non-recipients. Rejected by § 0b:
+  it would make a well-run, tightly-bonded roster punish care exactly as hard as
+  a factional one, erasing the culture effect this ADR exists to model.
 - **Confidences carrying board facts or plans.** Rejected under ADR 0016 and
   ADR 0013.
 - **A separate secrecy subsystem.** Rejected: the affinity-weighted graph,
