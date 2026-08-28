@@ -30,6 +30,7 @@ export {
   applyRepairSignal,
   isRegardEligible,
   calculateFaithGap,
+  effectiveAbilityCredence,
   calculatePerceivedValue,
   justifiedRefusalObviousness,
   justifiedRefusalAuthorityLoss,
