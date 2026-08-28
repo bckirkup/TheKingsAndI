@@ -206,6 +206,17 @@ describe('coefficient sweep', () => {
     expect(point.abilityMovedCount).toBe(campaignSummary.abilityMovedCount);
     expect(point.meanTauBenev).toBe(campaignSummary.meanTauBenev);
     expect(point.meanQuietQuitRate).toBe(campaignSummary.meanQuietQuitRate);
+    expect(point.meanOverrideCount).toBe(campaignSummary.meanOverrideCount);
+    expect(point.meanFreeOverrideCount).toBe(
+      campaignSummary.meanFreeOverrideCount,
+    );
+    expect(point.meanBenevLossTarget).toBe(campaignSummary.meanBenevLossTarget);
+    expect(point.meanBenevLossWitness).toBe(
+      campaignSummary.meanBenevLossWitness,
+    );
+    expect(point.meanFreeInsistencePlyFraction).toBe(
+      campaignSummary.meanFreeInsistencePlyFraction,
+    );
     expect(typeof point.plainChessWinDelta).toBe('number');
     expect(point.meanRegardEvents).toBe(campaignSummary.meanRegardEvents);
     expect(point.meanRegardGainTotal).toBe(campaignSummary.meanRegardGainTotal);
