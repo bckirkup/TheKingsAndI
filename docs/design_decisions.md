@@ -1525,6 +1525,55 @@ not exist yet (class prestige is per-observer, not a roster-wide standing) and a
 second calibration re-baseline on top of the D166/D167 surface. Do not invent
 candidate numbers in the register.
 
+### D171 ✅ Is an engine evaluation a function of the position, or of the search history? (ADR 0067)
+**Answered 2026-08-28 (owner) — see ADR 0067 for the contract.** Cold. Lozza
+runs as one long-lived child with a 16 MB transposition table and sends
+`ucinewgame` only in the handshake (`src/engine/uci.ts:299-310`), so every
+search begins with whatever the previous ones left behind — while the cache key
+`(position, depth, evalProfile, determinismId)` and its stated contract that a
+warm entry be byte-identical to a cold one (`src/engine/cache.ts:4-9`) assume
+the opposite. The ruling is that the engine is cleared before every search, so
+an evaluation depends on its arguments alone. Three consequences are binding:
+the cold/warm policy becomes part of `determinismId`, because otherwise a warm
+value can be served under a cold key; the ladder LRU may finally be bounded,
+since under cold search an eviction costs a re-search and never changes a
+result; and every **Lozza** number in `docs/calibration/` was taken warm and is
+re-baselined rather than reinterpreted — fake-engine evidence, which is most of
+the corpus including D164/D166/D167, is unaffected because it carries no state.
+The mechanism is `ucinewgame` per search, not process recycling: in the
+vendored artifact the transposition table is the only state that survives a
+search (`vendor/lozza/lozza.cjs:1145-1149,2857-2862`), killers and history
+being reset by the `position` command already
+(`vendor/lozza/lozza.cjs:2882-2883,3066-3067`). The price is lost table reuse
+across queries; it is measured with the implementation against the 2.82 s/match
+warm baseline in `docs/calibration/2026-08-13-blocked-on-measurement.md`, and if
+cold proves too slow the answer is a smaller depth cap or fewer matches, never a
+warm engine.
+
+### D172 ❓ May the vendored Lozza artifact be patched? (raised by ADR 0067)
+**Open — owner ruling required.** Measuring the D171 contract found that Lozza
+does not return at every position. At
+`Q1b1k3/8/8/4pP2/2pP3B/8/P1P2PPP/RN1QKBNR w KQ - 0 16`, a single `go depth 4`
+against a raw `vendor/lozza/lozza.cjs` child — no adapter involved — spins
+forever in the aspiration-window loop (`vendor/lozza/lozza.cjs:1080-1098`),
+re-reporting `score mate -500 lowerbound … pv a8c8` and allocating until the
+child's heap dies. It reproduces at `MultiPV 1` and `MultiPV 8`, warm and cold
+alike, so it is not caused by D171; the cold contract merely changed the game
+line and walked into it. A depth-limited search is precisely the thing that is
+supposed to be unable to run away (ADR 0005), so this is a hazard for every
+long campaign, not for one seed.
+
+Three options, all with costs. **Patch the artifact** (bound the aspiration
+loop): fixes it at the source, but a modified vendored engine is no longer the
+upstream engine, so provenance is on us — though it changes the artifact hash
+and therefore `determinismId`, which D171 is already re-baselining, so the
+timing is as cheap as it will ever be. **Guard in the adapter**: any abort rule
+must be deterministic (a node or output-line budget, never wall clock, ADR 0005)
+and a truncated search is a different answer, so the guard becomes part of the
+contract rather than a safety net. **Neither** — treat runaway positions as
+deterministic hard failures and route around them: honest, and it leaves
+campaigns that cannot be run at all. Do not choose in code.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
