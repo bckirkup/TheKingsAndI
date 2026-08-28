@@ -1480,20 +1480,50 @@ invent candidate numbers in the register. The measured obstacle is recorded in
 can widen the emotional axis while the benevolence channel stops recording
 mid-match, so D167 precedes any D166 number.
 
-### D167 ❓ Should the override cliff be graded, proportional, or status-priced?
-**Open — not wired.** Measured at seed 7 against `--opponent=tyrannical`
-(`docs/calibration/2026-08-28-the-curdle-and-the-floor.md`): 42%–57% of
-overrides cost the roster zero benevolence because every payer is clamped at
-`0`, 62%–78% of plies are played after the first such override, and 78%–87% of
-all benevolence lost is paid by witnesses rather than by the overridden piece.
-The broadcast itself is not in question; what is open is whether the witness
-cliff should be graded the way the trust channel already grades it
-(`OVERRIDE_PIECE_TRUST_PENALTY` `−35` vs `OVERRIDE_WITNESS_TRUST_PENALTY`
-`−8`), whether the cliff should be proportional to remaining benevolence
-instead of saturating, and whether the cost should depend on the target's
-standing. Each moves a psychology coefficient and re-baselines calibration
-evidence, so it is an owner ruling. Do not invent candidate numbers in the
-register.
+### D167 ✅ Should the override cliff be graded, proportional, or status-priced? (ADR 0066)
+**Answered 2026-08-28 (owner) — wired, inert.** Graded *and* proportional; the
+status question is deferred to D170. The broadcast curdle stays: witnesses must
+keep paying, because 78%–87% of all benevolence lost falls on pieces the
+commander never gave an order to, and that is the phenomenon the simulation
+exists to teach. What was ruled a defect is the saturation beneath it — measured
+at seed 7 against `--opponent=tyrannical`
+(`docs/calibration/2026-08-28-the-curdle-and-the-floor.md`), 42%–57% of
+overrides cost the roster exactly zero because every payer is already clamped at
+`0`, and 62%–78% of plies are played after the first such override, so the room
+stops keeping score and insisting becomes free. Three limbs ship, each behind a
+knob whose default reproduces today's behaviour byte-for-byte:
+(a) the witness cliff input is separable from the target's
+(`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT: 6`, `src/psychology/config.ts:74-75`, read
+for witnesses only in `src/psychology/override.ts:30-37`), so benevolence can be
+graded the way trust already grades it 4.4:1;
+(b) the cliff may charge a fraction of the standing that remains rather than a
+flat `40` (`BENEV_BETRAYAL_CLIFF_PERMILLE: 0`,
+`src/psychology/config.ts:46-47`, consumed in `applyBetrayalSignal`,
+`src/psychology/credence.ts:100-121`), which makes the decay geometric — the
+first override is dearest, and no later override is ever free;
+(c) the rupture ledger gets its own ceiling
+(`BENEV_RUPTURE_DEBT_CEILING: 100`, `src/psychology/config.ts:48-49`, applied by
+`clampRuptureDebt`, `src/psychology/clamp.ts:25-32`), so the record of what is
+owed can keep growing after benevolence itself has bottomed out.
+**Not wired (defaults inert):** the permille is `0`, the witness input equals
+the target's, and the ceiling is today's `100`, so every golden and the seed-7
+smoke headline are unchanged. The live magnitudes are **not** ruled here: they
+are one response surface with D166 (regard step, repair step, witness split,
+cliff permille, debt ceiling) and require a measured before/after. Two
+constraints bind that pass: the debt ceiling must not be raised while
+`BENEV_REPAIR_STEP` is still `0`, or the game records a debt no act can pay; and
+a candidate that lowers the zero-cost override share by weakening the witness
+share of total loss has failed the acceptance test, not passed it. Sensitivity
+probes for all three limbs are in `tests/curdle.floor.test.ts`.
+
+### D170 ❓ Should the cost of an override depend on the target's standing?
+**Open — not wired.** Raised by the same measurement and deliberately excluded
+from ADR 0066: overriding the Queen and overriding a pawn currently cost the
+identical benevolence, which is a strong and probably wrong claim about how a
+group prices a leader's defection. Resolving it needs a standing model that does
+not exist yet (class prestige is per-observer, not a roster-wide standing) and a
+second calibration re-baseline on top of the D166/D167 surface. Do not invent
+candidate numbers in the register.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
