@@ -176,7 +176,7 @@ describe('promotion harness metrics', () => {
       ]),
       0,
     );
-    expect(free.overrideCount).toBe(1);
+    expect(free.overrides).toBe(1);
     expect(free.freeOverrideCount).toBe(1);
     expect(free.benevLossTarget).toBe(0);
     expect(free.benevLossWitness).toBe(0);
@@ -212,7 +212,7 @@ describe('promotion harness metrics', () => {
       ]),
       0,
     );
-    expect(mixed.overrideCount).toBe(1);
+    expect(mixed.overrides).toBe(1);
     expect(mixed.freeOverrideCount).toBe(0);
     expect(mixed.benevLossTarget).toBe(4);
     expect(mixed.benevLossWitness).toBe(6);

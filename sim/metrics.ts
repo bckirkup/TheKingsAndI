@@ -30,7 +30,6 @@ export interface MatchMetrics {
   readonly plies: number;
   readonly refusals: number;
   readonly overrides: number;
-  readonly overrideCount?: number;
   readonly freeOverrideCount?: number;
   readonly benevLossTarget?: number;
   readonly benevLossWitness?: number;
@@ -312,7 +311,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -340,7 +339,6 @@ function countEvents(
   dripGainTotal: number;
   regardEvents: number;
   regardGainTotal: number;
-  overrideCount: number;
   freeOverrideCount: number;
   benevLossTarget: number;
   benevLossWitness: number;
@@ -362,7 +360,6 @@ function countEvents(
   let dripGainTotal = 0;
   let regardEvents = 0;
   let regardGainTotal = 0;
-  let overrideCount = 0;
   let benevLossTarget = 0;
   let benevLossWitness = 0;
   const overrideEvents = events.filter(
@@ -387,7 +384,6 @@ function countEvents(
         if (isCommandedPiece) refusals += 1;
         break;
       case 'OVERRIDE':
-        overrideCount += 1;
         overrides += 1;
         if (event.implicit === true) implicitOverrides += 1;
         break;
@@ -471,7 +467,6 @@ function countEvents(
     dripGainTotal,
     regardEvents,
     regardGainTotal,
-    overrideCount,
     freeOverrideCount,
     benevLossTarget,
     benevLossWitness,
@@ -718,7 +713,6 @@ export function metricsFromMatch(
     plies: result.plies,
     refusals: counts.refusals,
     overrides: counts.overrides,
-    overrideCount: counts.overrideCount,
     freeOverrideCount: counts.freeOverrideCount,
     benevLossTarget: counts.benevLossTarget,
     benevLossWitness: counts.benevLossWitness,
@@ -947,9 +941,7 @@ function aggregateCampaignCore(
     meanQuietQuitRate: mean((metric) => metric.quietQuitRate),
     meanRefusedGoodMoveRate: mean((metric) => metric.refusedGoodMoveRate),
     meanOverrideRate: mean((metric) => metric.overrideRate),
-    meanOverrideCount: mean(
-      (metric) => metric.overrideCount ?? metric.overrides,
-    ),
+    meanOverrideCount: mean((metric) => metric.overrides),
     meanFreeOverrideCount: mean((metric) => metric.freeOverrideCount ?? 0),
     meanBenevLossTarget: mean((metric) => metric.benevLossTarget ?? 0),
     meanBenevLossWitness: mean((metric) => metric.benevLossWitness ?? 0),
@@ -1159,7 +1151,6 @@ export function renderCsv(
       (metric.dripGainTotal ?? 0).toFixed(2),
       metric.regardEvents ?? 0,
       (metric.regardGainTotal ?? 0).toFixed(2),
-      metric.overrideCount ?? metric.overrides,
       metric.freeOverrideCount ?? 0,
       (metric.benevLossTarget ?? 0).toFixed(2),
       (metric.benevLossWitness ?? 0).toFixed(2),
