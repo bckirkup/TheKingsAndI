@@ -1495,6 +1495,39 @@ standing. Each moves a psychology coefficient and re-baselines calibration
 evidence, so it is an owner ruling. Do not invent candidate numbers in the
 register.
 
+### D168 ❓ Does a private confidence exist, and what may travel through it? (ADR 0065)
+**Open — not wired.** ADR 0065 proposes a private commander-to-piece channel
+whose confidentiality is a property of the roster rather than of the
+commander's intention. The transmission machinery it would use already exists
+and is only half-live: `diffuseRumor`/`applyRumorDiffusion`
+(`src/psychology/belief.ts:14-53`) are shipped and knobbed
+(`src/psychology/config.ts:143-144`), but the only production call site is the
+desertion cascade with the deserter as speaker
+(`src/psychology/cascade.ts:169`), so pieces exchange appraisals only when
+someone walks off the board. The proposed shape is four appraisal-only kinds
+(`admission`, `criticism`, `warning`, `assurance` — never board facts, per
+ADR 0016), a deterministic discretion ladder mirroring the counsel ladder
+(`src/psychology/counsel.ts:54-61`), an explicit leak event following the
+witnessed-event pattern (`src/psychology/witness.ts:17-56`), and a
+campaign-start culture seed so an inherited room is an input to outcome. It
+adds persisted state and a psychology writer, so it is an owner ruling. Do not
+invent candidate magnitudes in the register.
+
+### D169 ❓ May `leaderAppraisal` be read, and by which term?
+**Open — not wired.** `rumor.leaderAppraisal` is currently a write-only field:
+initialised to `0` (`src/psychology/reducers.ts:22`), clamped on load
+(`src/psychology/reducers.ts:56`), written only by the diffusion function
+itself (`src/psychology/belief.ts:33-38`), and read by no verdict, utility,
+desertion, or counsel term. Since nothing writes a non-zero value either, the
+channel diffuses zeros into zeros, while its sibling `pLossTeam` is consumed
+(`src/psychology/cascade.ts:30`, `src/psychology/desertion.ts:379`) — collective
+panic spreads today and collective opinion of the commander does not. A leak
+has no consequence until this field is read. Because credence is the weight on
+the leader's judgment (ADR 0015), the candidate sink is the credence channels
+rather than any board value (`src/psychology/credence.ts:9-17`), which moves a
+psychology coefficient and re-baselines calibration evidence. Owner ruling. Do
+not invent candidate magnitudes in the register.
+
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
 semester start. It folds only integer relation effects into piece affinity and

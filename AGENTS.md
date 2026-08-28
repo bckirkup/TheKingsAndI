@@ -47,6 +47,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/adr/0062-the-decision-journal-and-the-llm-player.md` | How a model may play at all: offline journal, enumerated options, no live LLM |
 | `docs/adr/0063-two-duties-coverage-and-containment.md` | **The NPCs owe coverage, the models owe containment;** D159–D164 answered, D165 answered by ADR 0064 |
 | `docs/adr/0064-the-cushion-and-the-repair.md` | **Care cushions benevolence and rupture can be repaired;** D165 answered, D166 open |
+| `docs/adr/0065-the-confidence-and-the-culture.md` | **Proposed, not ruled:** a private word that may not be kept. Records that rumor diffusion runs only in the desertion cascade and that `leaderAppraisal` is a write-only field; D168 and D169 open |
 | `docs/calibration/2026-08-19-piece-quality-and-the-bench.md` | D149 piece-quality and bench calibration; design-only evidence |
 | `docs/testing_strategy.md` | Unit + wiring probes (sensitivity); goldens for settled surfaces |
 | `docs/llm_integration.md` | Narration port, cost model, safety |
