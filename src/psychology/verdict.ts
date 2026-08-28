@@ -3,6 +3,7 @@ import { calculateEngineSearchDepth } from './depth';
 import {
   calculateFaithGap,
   calculatePerceivedValue,
+  effectiveAbilityCredence,
   isExpendableRefusal,
 } from './credence';
 import { shouldDesert } from './desertion';
@@ -45,7 +46,10 @@ export function evaluateMoveResponse(
   const perceivedValue = calculatePerceivedValue(
     moveEval.deltaV_board,
     moveEval.vLeaderImplied,
-    actor.credence.tauAbil,
+    effectiveAbilityCredence(
+      actor.credence.tauAbil,
+      actor.rumor.leaderAppraisal,
+    ),
   );
   const faithGap = calculateFaithGap(
     moveEval.deltaV_board,

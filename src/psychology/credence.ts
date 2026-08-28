@@ -1,9 +1,23 @@
 import { logistic, quantizeBoardValue } from '../core/math';
-import { clampCredence } from './clamp';
+import { clampCredence, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import type { CredenceState } from './types';
 
 const REFUSAL_AUTHORITY_OBVIOUSNESS_RANGE = 2.5;
+
+/** Hearsay about the commander shifts how heavily a piece weights his judgment (ADR 0065, D169). */
+export function effectiveAbilityCredence(
+  tauAbil: number,
+  leaderAppraisal: number,
+): number {
+  const weight = Math.max(
+    0,
+    Math.trunc(ENGINE_CONFIG.RUMOR_APPRAISAL_ABIL_WEIGHT),
+  );
+  if (weight === 0) return clampCredence(tauAbil);
+  const shift = Math.trunc((clampTrust(leaderAppraisal) * weight) / 100);
+  return clampCredence(clampCredence(tauAbil) + shift);
+}
 
 /** Blend the piece's own view with inferred leader judgment (ADR 0015). */
 export function calculatePerceivedValue(

@@ -142,6 +142,8 @@ export const ENGINE_CONFIG = {
   /** Rumor diffusion (docs/belief_model.md, D42 provisional). */
   RUMOR_P_LOSS_RATE: 0.15,
   RUMOR_LEADER_RATE: 0.1,
+  /** Percent of the roster's commander appraisal carried into ability credence (ADR 0065, D169). */
+  RUMOR_APPRAISAL_ABIL_WEIGHT: 0,
   /** Match outcome trust (docs/trust_dynamics.md). */
   OUTCOME_TRUST_LOSS_SCALE: 12,
   /** Costly signal credits (docs/trust_dynamics.md §3). */

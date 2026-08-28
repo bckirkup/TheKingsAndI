@@ -1495,6 +1495,78 @@ standing. Each moves a psychology coefficient and re-baselines calibration
 evidence, so it is an owner ruling. Do not invent candidate numbers in the
 register.
 
+### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
+**Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
+with three riders that govern every magnitude chosen later: (a) **good news
+makes poor gossip** — gossip repeatability is a property of the content, so
+`criticism`/`warning` are interesting to repeat while `admission`/`assurance`
+are dull, but *dull to repeat is not socially invisible*: kindness still reaches
+the recipient's intimates by observation, so there are two distinct transmission
+modes (gossip, and reputation among intimates), not one; (b) **even benevolence
+can be read as favoritism, and a favour for one may be read as a favour for
+all** — a confidence is observable as an act even when its content is not, and
+the non-recipients split by the *recipient's* affinity graph: close affinities
+read care and their appraisal rises, distant or rival pieces read favoritism and
+theirs falls, so one act carries opposite signs depending who is watching and a
+*kept* confidence is not free either;
+(c) **almost nothing in leadership is free** — confiding, keeping, leaking, and
+declining to confide are all priced, and a calibration pass that finds any
+net-free confiding strategy fails the magnitudes rather than shipping them
+(ADR 0065 §§ 0, 0a, 0b, 6). What may travel remains appraisal-only, never board
+facts (ADR 0016). Nothing is implemented: no channel, discretion ladder, leak
+event, favoritism term, or culture seed exists, and no magnitudes are chosen.
+The consequence channel a leak
+would use now exists (D169, below), so the remaining work is the channel itself
+and its magnitudes.
+
+ADR 0065 proposes the channel whose confidentiality is a property of the roster
+rather than of the commander's intention. The transmission machinery it would use already exists
+and is only half-live: `diffuseRumor`/`applyRumorDiffusion`
+(`src/psychology/belief.ts:14-53`) are shipped and knobbed
+(`src/psychology/config.ts:143-144`), but the only production call site is the
+desertion cascade with the deserter as speaker
+(`src/psychology/cascade.ts:169`), so pieces exchange appraisals only when
+someone walks off the board. The proposed shape is four appraisal-only kinds
+(`admission`, `criticism`, `warning`, `assurance` — never board facts, per
+ADR 0016), a deterministic discretion ladder mirroring the counsel ladder
+(`src/psychology/counsel.ts:54-61`), an explicit leak event following the
+witnessed-event pattern (`src/psychology/witness.ts:17-56`), and a
+campaign-start culture seed so an inherited room is an input to outcome, plus a
+per-kind gossip repeatability rate and an affinity-split observer term (ally
+credit, outsider favoritism cost, separating threshold) from the riders above. It adds persisted state and a psychology writer. Do not invent
+candidate magnitudes in the register.
+
+### D169 ✅ May `leaderAppraisal` be read, and by which term?
+**Answered 2026-08-28 (owner) — wired, inert.** Yes, and by exactly one term:
+the ability-credence weight in the perceived-value blend. A room that has been
+told the commander is careless interprets the same order more harshly
+(`effectiveAbilityCredence`, `src/psychology/credence.ts:9-21`; the single call
+site is `src/psychology/verdict.ts:46-54`; knob
+`RUMOR_APPRAISAL_ABIL_WEIGHT: 0`, `src/psychology/config.ts:145-146`). Three
+properties are binding, not incidental: the shift is **derived at the point of
+judgment and never stored**, so hearsay cannot overwrite first-hand observation
+or compound across diffusion steps; **no other `tauAbil` reader changes**
+(fatalistic compliance, the drip, vindication, desertion), because rumour
+colours interpretation rather than learning; and the sign is such that a
+curdled room refuses more without any coefficient having been aimed at refusal.
+The knob ships at `0`, so behaviour is inert and the seed-7 smoke headline is
+unchanged (`win=100.0 refusal=0.129 override=0.363 tau_benev=1.50`); the live
+magnitude is a later calibration choice. Wiring evidence is necessarily
+reducer-level (`tests/credence.rumor.test.ts`): until D168's leak event exists,
+nothing writes a non-zero `leaderAppraisal`, so an end-to-end sim sensitivity
+probe is impossible and must not be faked.
+
+The state before the ruling, for the record: `rumor.leaderAppraisal` was a
+write-only field, initialised to `0` (`src/psychology/reducers.ts:22`), clamped on load
+(`src/psychology/reducers.ts:56`), written only by the diffusion function
+itself (`src/psychology/belief.ts:33-38`), and read by no verdict, utility,
+desertion, or counsel term. Since nothing writes a non-zero value either, the
+channel diffuses zeros into zeros, while its sibling `pLossTeam` is consumed
+(`src/psychology/cascade.ts:30`, `src/psychology/desertion.ts:379`) — collective
+panic spreads today and collective opinion of the commander does not. A leak
+had no consequence until this field was read, which is what the ruling above
+changes. Do not invent candidate magnitudes in the register.
+
 ### Cohort-history seminar implementation note
 The seminar now generates one deterministic, private cohort-history ledger at
 semester start. It folds only integer relation effects into piece affinity and
