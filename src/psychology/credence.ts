@@ -1,5 +1,5 @@
 import { logistic, quantizeBoardValue } from '../core/math';
-import { clampCredence, clampTrust } from './clamp';
+import { clampCredence, clampRuptureDebt, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import type { CredenceState } from './types';
 
@@ -76,7 +76,7 @@ export function applyRepairSignal(credence: CredenceState): {
   readonly credence: CredenceState;
   readonly repaid: number;
 } {
-  const debt = clampCredence(credence.ruptureDebt);
+  const debt = clampRuptureDebt(credence.ruptureDebt);
   const repaid = Math.min(
     debt,
     Math.max(0, Math.trunc(ENGINE_CONFIG.BENEV_REPAIR_STEP)),
@@ -102,11 +102,20 @@ export function applyBetrayalSignal(
   severity: number,
 ): CredenceState {
   const cliff = logistic(severity * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_SCALE);
-  const drop = Math.trunc(cliff * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_DROP);
+  const permille = Math.max(
+    0,
+    Math.trunc(ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_PERMILLE),
+  );
+  const drop =
+    permille === 0
+      ? Math.trunc(cliff * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_DROP)
+      : Math.trunc(
+          (cliff * clampCredence(credence.tauBenev) * permille) / 1_000,
+        );
   return {
     ...credence,
     tauBenev: clampCredence(credence.tauBenev - drop),
-    ruptureDebt: clampCredence(credence.ruptureDebt + drop),
+    ruptureDebt: clampRuptureDebt(credence.ruptureDebt + drop),
   };
 }
 

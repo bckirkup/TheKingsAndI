@@ -43,6 +43,10 @@ export const ENGINE_CONFIG = {
   /** Logistic cliff scale for betrayal (ADR 0019). */
   BENEV_BETRAYAL_CLIFF_SCALE: 4,
   BENEV_BETRAYAL_CLIFF_DROP: 40,
+  /** Remaining benevolence fraction charged by a betrayal, in permille (D167). */
+  BENEV_BETRAYAL_CLIFF_PERMILLE: 0,
+  /** Maximum rupture debt recorded for a commander relationship (D167). */
+  BENEV_RUPTURE_DEBT_CEILING: 100,
   BENEV_NEGLECT_EROSION: 3,
   /** Benevolence floor below which expendable-refusal is possible. */
   BENEV_EXPENDABLE_FLOOR: 25,
@@ -67,6 +71,8 @@ export const ENGINE_CONFIG = {
   OVERRIDE_PIECE_TRUST_PENALTY: -35,
   OVERRIDE_WITNESS_TRUST_PENALTY: -8,
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
+  /** Logistic cliff input used for benevolence loss by override witnesses (D167). */
+  OVERRIDE_WITNESS_BENEV_CLIFF_INPUT: 6,
   /** Flat injury from being captured (ADR 0049). */
   CAPTURE_TRAUMA_GAIN: 20,
   /** Capture-risk threshold for sustained dread injury (ADR 0049). */
