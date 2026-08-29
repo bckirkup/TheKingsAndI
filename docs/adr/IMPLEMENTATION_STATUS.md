@@ -1,4 +1,4 @@
-# ADR implementation status (0035–0068)
+# ADR implementation status (0035–0071)
 
 Agent-facing matrix: **decided** ≠ **shipped**. Prefer this over README banners
 when answering “does three-channel credence exist yet?”
@@ -46,6 +46,7 @@ the discrepancy is corrected.
 | 0068 | The runaway and the unsound score | **Accepted** for D172 (patch the artifact, ruled 2026-08-29); D173 (is a deeper search's rung the canonical value for a depth?) was raised by it and is ruled by ADR 0069 | **Wired, live** — the vendored aspiration loop is bounded and the modification is recorded as a re-appliable diff (`vendor/lozza/lozza.cjs:1089,1099`, `vendor/lozza/patches/0001-bound-the-aspiration-loop.patch`, upstream `namanthanki/lozza#4`); `bench` is unchanged at `613926` nodes, so the patch is a termination fix and not an evaluation change. A parsed score now carries soundness and its raw token (`src/engine/uci.ts:98-140`), `mate 0 → 29_999` is withdrawn, an unsound rung triggers at most two deterministic one-ply re-searches before a typed `UciUnsoundScoreError` (`src/engine/uci.ts:481-520`, adapter and broker alike), and a search that exceeds `maxInfoLinesPerSearch` (default `512`, against a measured real maximum of 22) fails with `UciInfoLineLimitError` and disposes the child rather than truncating (`src/engine/uci.ts:283-297,394-406`). Both policies are in `determinismId` (`score-escalate-2/runaway-512`) and in the adapter's per-path state key; escalations are counted as engine calls in the cost telemetry (`sim/cost.ts`). Probes in `tests/engine.d172.test.ts` (both poison FENs at depths 3–8, classifier, bounded escalation, exhaustion, ceiling sensitivity, order invariance, determinism-ID separation). **Not done:** the Lozza calibration corpus is still un-re-baselined, and no pre-patch Lozza number may be quoted beside a post-patch one — the artifact hash in `determinismId` is what separates them |
 | 0069 | The canonical ladder rung: the rung is the value | **Accepted** for D173 (ruled 2026-08-29) | **Wired, live** — ladder reuse remains canonical in the Lozza adapter and shared broker; `ladder-rung-canonical` is included in the Lozza and Stockfish `determinismId` values (`src/engine/adapters/lozza.ts:247-248`, `src/engine/adapters/stockfish.ts:27-30`), while the fake engine has no ladder reuse. The broker's `sharedByFen` and `bestByFenDepth` caches are bounded by `ladderCacheCapacity` (`src/engine/broker.ts:125-129`); ADR 0062's future fork must replay per-piece `D_i` and ladder search depths |
 | 0070 | Graded witness loss and per-witness standing price | **Accepted** for D170 and D174 (ruled 2026-08-29); D176 ruled 2026-08-29 in the addendum | **Wired, live** — `OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE=500` and `OVERRIDE_STANDING_PRICE_PERMILLE=2000` are live under D176; `applyBetrayalSignal` accepts a final-drop scale and `witnessAttachmentPermille` prices each witness's own bond. The target charge, witness trust penalty, and `PSYCH_DELTA` audit events remain intact; the measured ledger ruling and linear attachment-shape decision are recorded in the D176 surface evidence |
+| 0071 | Captivity and the exchange: being taken is being held | **Accepted** for D177 (owner ruling 2026-08-29); D178–D180 remain open | **Not wired** — `runMatch` returns `departedRoster`, but `sim/campaign.ts:274-296` discards it and `mergeCampaignRoster` re-creates captured pieces with reset state; the season-pool path already folds departed state. D178–D180 hold the exchange arithmetic and omission/favoritism magnitudes |
 
 ## Confirmed implementation gaps
 
@@ -53,7 +54,13 @@ These are status distinctions, not new design decisions:
 
 - **Own-side capture attrition is not counted separately by the harness.** The
   enemy-side `enemyAttrition` counter exists, but player-side captures must be
-  inferred as `fielded − survivors − desertions`.
+  inferred as `fielded − survivors − desertions`. More seriously,
+  `sim/campaign.ts` discards `runMatch`'s `departedRoster`, so
+  `mergeCampaignRoster` re-creates every captured piece via
+  `createFreshPieceState` with empty `dyadicAffinity`, `B_i = 0`, and reset
+  credence; the season-pool path in `sim/pool.ts` already folds departed state
+  back in. This contradicts ADR 0026 §1, and repairing it moves measured
+  attrition, so it needs its own before/after evidence.
 - **Capture injury and sustained dread are wired.** Flat capture injury and
   private-risk dread are reduced in `src/psychology/trauma.ts:10-42` and
   applied before roster synchronization in
