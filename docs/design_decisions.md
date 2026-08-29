@@ -1656,7 +1656,7 @@ Grading the witness therefore requires a separate multiplier applied to the
 witness drop, not merely a different input to the sigmoid. Whether the witness
 limb should exist at all is the owner's to rule.
 
-### D175 ❓ Can a proportional cliff keep its promise in the deep tail?
+### D175 ✅ Can a proportional cliff keep its promise in the deep tail?
 **Answered 2026-08-29 (owner) — no code change; behaviour as shipped.** ADR
 0066 says the first override is dearest and no later override is ever free, but
 the proportional charge is asymptotic and truncates down. Once `tauBenev`
