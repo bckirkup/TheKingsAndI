@@ -51,6 +51,9 @@ the discrepancy is corrected.
 
 These are status distinctions, not new design decisions:
 
+- **Own-side capture attrition is not counted separately by the harness.** The
+  enemy-side `enemyAttrition` counter exists, but player-side captures must be
+  inferred as `fielded − survivors − desertions`.
 - **Capture injury and sustained dread are wired.** Flat capture injury and
   private-risk dread are reduced in `src/psychology/trauma.ts:10-42` and
   applied before roster synchronization in
