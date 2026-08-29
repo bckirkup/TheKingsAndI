@@ -100,6 +100,27 @@ function withExitPermanence<T>(value: number, run: () => T): T {
   }
 }
 
+function withConfig<T>(
+  values: Readonly<Record<string, number>>,
+  run: () => T,
+): T {
+  const config = ENGINE_CONFIG as unknown as Record<string, number>;
+  const originals: Array<[string, number]> = Object.keys(values).map((key) => [
+    key,
+    config[key] ?? 0,
+  ]);
+  try {
+    for (const [key, value] of Object.entries(values)) {
+      config[key] = value;
+    }
+    return run();
+  } finally {
+    for (const [key, value] of originals) {
+      config[key] = value;
+    }
+  }
+}
+
 function makeMove(
   overrides: Partial<CandidateMoveEvaluation> = {},
 ): CandidateMoveEvaluation {
@@ -631,11 +652,11 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
         )
         .map((event) => [event.pieceId, event.field, event.delta]),
     ).toEqual([
-      [piece.id, 'tauBenev', -30],
+      [piece.id, 'tauBenev', -7],
       [firstWitness.id, 'T_i', -8],
-      [firstWitness.id, 'tauBenev', -35],
+      [firstWitness.id, 'tauBenev', -8],
       [secondWitness.id, 'T_i', -8],
-      [secondWitness.id, 'tauBenev', -40],
+      [secondWitness.id, 'tauBenev', -25],
     ]);
   });
 
@@ -1122,8 +1143,22 @@ describe('credence channel updates', () => {
       ruptureDebt: 0,
       abilityObservationCount: 0,
     };
-    const betrayed = applyBetrayalSignal(credence, 8);
-    expect(betrayed.tauBenev).toBeLessThanOrEqual(credence.tauBenev - 30);
+    withConfig({ BENEV_BETRAYAL_CLIFF_PERMILLE: 0 }, () => {
+      // Flat-cliff control: this is a magnitude golden, not a live invariant.
+      const betrayed = applyBetrayalSignal(credence, 8);
+      expect(betrayed.tauBenev).toBeLessThanOrEqual(credence.tauBenev - 30);
+    });
+
+    const liveAt80 = applyBetrayalSignal(credence, 6);
+    const liveAt40 = applyBetrayalSignal({ ...credence, tauBenev: 40 }, 6);
+    const dropAt80 = credence.tauBenev - liveAt80.tauBenev;
+    const dropAt40 = 40 - liveAt40.tauBenev;
+    expect(dropAt80).toBeGreaterThan(3 * ENGINE_CONFIG.BENEV_NEGLECT_EROSION);
+    expect(dropAt80).toBeLessThanOrEqual(
+      ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_DROP,
+    );
+    expect(dropAt40).toBeLessThan(dropAt80);
+    expect(liveAt80.ruptureDebt).toBe(dropAt80);
   });
 });
 

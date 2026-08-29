@@ -151,3 +151,22 @@ a second calibration re-baseline. Recorded as **D170**, not smuggled in.
   measurement: the curdle is the phenomenon this simulation exists to teach.
 - **A hard cap on overrides per match.** Rejected under ADR 0014 — the player
   may always override, so no position is ever unplayable.
+
+## Addendum (2026-08-29): D166 live proportional cliff
+
+D166 was ruled by the owner on 2026-08-29. `BENEV_BETRAYAL_CLIFF_PERMILLE` is
+live at `250`, with its implementing default in `src/psychology/config.ts`.
+`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT` and `BENEV_RUPTURE_DEBT_CEILING` remain at
+their inert defaults for the reasons recorded in D174 and the
+repair-versus-accrual constraint. The ruling evidence is recorded in
+`docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md`.
+
+## Addendum (2026-08-29): D175 deep-tail gap
+
+D175 is open and owner-owned. At the ruled proportional cliff, a betrayal can
+truncate to no charge once benevolence standing reaches `3`, so the standing
+can stall there and later overrides can become free. Candidate closers are a
+minimum charge while standing remains, adopting witness input `1`, or allowing
+rupture debt to accrue at a bottomed-out benevolence standing. The gap and
+candidate resolutions are recorded in
+`docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`.

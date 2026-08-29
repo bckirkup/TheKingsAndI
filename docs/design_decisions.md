@@ -1468,28 +1468,45 @@ with an ADR, not a coefficient tweak.
 `src/psychology/override.ts:20-37` (the debt writer is
 `src/psychology/credence.ts:89-100`); honoured-refusal `REPAIR` emission is
 implemented in `src/orchestration/headlessMatch.ts:702-716` and
-`src/orchestration/matchSession.ts:508-522`. **Not wired (defaults 0):**
-`BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` remain at their control defaults,
-pending the D166 calibration ruling.
+`src/orchestration/matchSession.ts:508-522`. **Wired, live at D166 defaults:**
+`BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` are now ruled in D166.
 
-### D166 ❓ What are the live magnitudes for regard and repair?
-**Open — measured, awaiting the owner's ruling; not wired.** The live magnitudes
-for `BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` require an owner ruling on a
-before/after sweep. The obstacle recorded in `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
-— that no regard magnitude can widen the emotional axis while the benevolence
-channel stops recording mid-match — is now measured jointly with the D167 knobs
-in `docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md` (194
-cells, fake engine, seed 7, `--opponent=tyrannical`). The surface removes the
-floor entirely at or below 250 permille, and regard and repair both reduce free
-insistence while *raising* the absolute benevolence an override costs. It also
-records the limit on any ruling taken from it: not one behavioural metric
-(`refusal`, `desertion_attrition`, `quiet_quit`, `win`, `mean_plies`) moves
-anywhere on the surface, so these magnitudes can be chosen on ledger fidelity
-but not yet on conduct. Candidate magnitudes are recorded in that document and
-remain the owner's to rule; do not invent numbers in the register.
+### D166 ✅ What are the live magnitudes for regard and repair? (ADR 0064, ADR 0066)
+**Answered 2026-08-29 (owner) — wired, live.** The ruled magnitudes are:
+
+- `BENEV_REGARD_STEP = 50` (`src/psychology/config.ts:38`);
+- `BENEV_REPAIR_STEP = 30` (`src/psychology/config.ts:42`);
+- `BENEV_BETRAYAL_CLIFF_PERMILLE = 250`
+  (`src/psychology/config.ts:47`).
+
+The proportional cliff inside the interior window at or below `250` permille
+removes the free-insistence floor for some styles, but not entirely at the
+shipped witness input of `6`. Regard is opportunity-capped, so steps above `50`
+buy nothing. Repair at `30` reduces free insistence while *raising* what
+witnesses pay, which is the acceptance test required by ADR 0066. At the ruled
+defaults and witness input `6`, the tyrannical/tyrannical condition moves from
+`free_override_count=19.00` to `0.75` and
+`free_insistence_ply_fraction=0.7879` to `0.3411`. Free insistence reaches
+`0.0000` for servant, steady, and cold_winner, and `0.0731` for redeemer. The
+evidence is
+`docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`.
+
+The ruling rests on ledger fidelity and on a measured conduct shift outside the
+tyrannical/tyrannical condition: cold_winner
+`desertion_attrition=0.3125` to `0.1875` and `win=25.0` to `12.5`, redeemer
+`mean_plies=89.8` to `60.3` and `desertion_attrition=0.3750` to `0.3125`, and
+steady `override_count=40.50` to `31.25` and `mean_plies=121.3` to `101.8`.
+These conduct readings are directional but caveated by four matches per style.
+The tyrannical/tyrannical condition itself did not move on the measured
+behavioural metrics. `OVERRIDE_WITNESS_BENEV_CLIFF_INPUT` remains at its inert
+default deliberately; D174 records why a separate witness multiplier is
+needed. `BENEV_RUPTURE_DEBT_CEILING` also remains at its inert default because
+the repair-versus-accrual constraint leaves the larger ledger capacity
+unreachable at the ruled repair step. The witness split remains open under
+D174; do not invent further numbers in the register.
 
 ### D167 ✅ Should the override cliff be graded, proportional, or status-priced? (ADR 0066)
-**Answered 2026-08-28 (owner) — wired, inert.** Graded *and* proportional; the
+**Answered 2026-08-28 (owner) — wired, partly live.** Graded *and* proportional; the
 status question is deferred to D170. The broadcast curdle stays: witnesses must
 keep paying, because 78%–87% of all benevolence lost falls on pieces the
 commander never gave an order to, and that is the phenomenon the simulation
@@ -1513,11 +1530,11 @@ first override is dearest, and no later override is ever free;
 (`BENEV_RUPTURE_DEBT_CEILING: 100`, `src/psychology/config.ts:48-49`, applied by
 `clampRuptureDebt`, `src/psychology/clamp.ts:25-32`), so the record of what is
 owed can keep growing after benevolence itself has bottomed out.
-**Not wired (defaults inert):** the permille is `0`, the witness input equals
-the target's, and the ceiling is today's `100`, so every golden and the seed-7
-smoke headline are unchanged. The live magnitudes are **not** ruled here: they
-are one response surface with D166 (regard step, repair step, witness split,
-cliff permille, debt ceiling) and require a measured before/after. Two
+**Partly wired (D166):** `BENEV_BETRAYAL_CLIFF_PERMILLE` is live at `250`; the
+witness input remains equal to the target's at its inert default, and the
+ceiling remains today's `100`. The regard and repair magnitudes are ruled in
+D166; the witness split remains open under D174, and the debt ceiling remains
+inert under the repair-versus-accrual constraint. Two
 constraints bind that pass: the debt ceiling must not be raised while
 `BENEV_REPAIR_STEP` is still `0`, or the game records a debt no act can pay; and
 a candidate that lowers the zero-cost override share by weakening the witness
@@ -1628,17 +1645,29 @@ after D172 bounded the rest.
 ### D174 ❓ Should the witness cliff have its own multiplier rather than a shared logistic input?
 **Open — not wired.** ADR 0066 limb (a) intended the witness benevolence drop to
 be gradable the way trust already grades it 4.4:1, through
-`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT`. Measurement shows the parameter cannot
-express it: the drop is
-`logistic(severity * BENEV_BETRAYAL_CLIFF_SCALE)` and the logistic is already
-saturated across the whole expressible range, so inputs 6 and 3 yield
-byte-identical campaigns and 1 differs only at the truncation boundary
-(`docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md` §2).
+`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT`. At the ruled defaults, inputs `6` and `3`
+are byte-identical, but `1` is not inert: it is the one usable notch in the
+parameter. At that notch, `free_override_count` moves from `0.75` to `0.00`,
+`free_insistence_ply_fraction` from `0.3411` to `0.0000`,
+`benev_loss_witness` from `931.50` to `916.25`, and `benev_loss_target` from
+`222.00` to `230.25`. The measurements are recorded in
+`docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`.
 Grading the witness therefore requires a separate multiplier applied to the
-witness drop, not a different input to the sigmoid. Whether the witness limb
-should exist at all is the owner's to rule — the same document shows the floor
-can be removed by the proportional cliff alone, with the witness share of total
-loss still at 79.9%.
+witness drop, not merely a different input to the sigmoid. Whether the witness
+limb should exist at all is the owner's to rule.
+
+### D175 ❓ Can a proportional cliff keep its promise in the deep tail?
+**Open — owner-owned, not wired.** ADR 0066 says the first override is dearest
+and no later override is ever free, but the proportional charge truncates to
+zero once `tauBenev <= 3`; at `0` there is nothing to charge and no rupture debt
+accrues either. Standing can therefore stall at `3`, leaving further overrides
+free. Candidate closers, none chosen here, are:
+
+- a minimum charge of `1` while benevolence standing remains;
+- adopting witness input `1`; or
+- letting rupture debt accrue when benevolence is bottomed out, which is the
+  intent of ADR 0066 limb (c) and is currently unimplemented in spirit, not
+  merely unreachable by the ceiling.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

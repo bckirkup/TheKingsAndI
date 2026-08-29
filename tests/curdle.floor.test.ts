@@ -75,8 +75,8 @@ describe('D167 curdle floor controls', () => {
     const witness = makePiece('w:B:f1');
     const result = applyOverride(target, [witness], 3, 'Nf3');
 
-    expect(result.overriddenPiece.credence.tauBenev).toBe(10);
-    expect(result.witnesses[0]?.credence.tauBenev).toBe(10);
+    expect(result.overriddenPiece.credence.tauBenev).toBe(38);
+    expect(result.witnesses[0]?.credence.tauBenev).toBe(38);
   });
 
   it('grades witness loss when the cliff is not saturated', () => {
@@ -105,10 +105,10 @@ describe('D167 curdle floor controls', () => {
     );
   });
 
-  it('keeps the default absolute cliff and debt ceiling behavior', () => {
+  it('keeps the default proportional cliff and debt ceiling behavior', () => {
     const before = { ...defaultCredence(), tauBenev: 80, ruptureDebt: 80 };
     const betrayed = applyBetrayalSignal(before, 6);
-    expect(betrayed.tauBenev).toBe(40);
+    expect(betrayed.tauBenev).toBe(60);
     expect(betrayed.ruptureDebt).toBe(100);
 
     withConfig({ BENEV_REPAIR_STEP: 10 }, () => {
@@ -160,21 +160,36 @@ describe('D167 curdle floor controls', () => {
     });
   });
 
-  it('allows rupture debt to accrue above the historical ceiling', () => {
-    withConfig({ BENEV_RUPTURE_DEBT_CEILING: 250 }, () => {
-      const before = { ...defaultCredence(), tauBenev: 0, ruptureDebt: 240 };
-      const betrayed = applyBetrayalSignal(before, 6);
-      expect(betrayed.ruptureDebt).toBe(250);
-      expect(Number.isInteger(betrayed.ruptureDebt)).toBe(true);
+  it('records the D175 deep-tail proportional-cliff gap', () => {
+    // Change detector for the known D175 gap, not approved behavior.
+    const before = { ...defaultCredence(), tauBenev: 3 };
+    const first = applyBetrayalSignal(before, 6);
+    const second = applyBetrayalSignal(first, 6);
 
-      withConfig({ BENEV_REPAIR_STEP: 10 }, () => {
-        const repaired = applyRepairSignal({
-          ...betrayed,
-          ruptureDebt: 150,
+    expect(first.tauBenev).toBe(3);
+    expect(first.ruptureDebt).toBe(0);
+    expect(second.tauBenev).toBe(3);
+    expect(second.ruptureDebt).toBe(0);
+  });
+
+  it('allows rupture debt to accrue above the historical ceiling', () => {
+    withConfig(
+      { BENEV_RUPTURE_DEBT_CEILING: 250, BENEV_BETRAYAL_CLIFF_PERMILLE: 0 },
+      () => {
+        const before = { ...defaultCredence(), tauBenev: 0, ruptureDebt: 240 };
+        const betrayed = applyBetrayalSignal(before, 6);
+        expect(betrayed.ruptureDebt).toBe(250);
+        expect(Number.isInteger(betrayed.ruptureDebt)).toBe(true);
+
+        withConfig({ BENEV_REPAIR_STEP: 10 }, () => {
+          const repaired = applyRepairSignal({
+            ...betrayed,
+            ruptureDebt: 150,
+          });
+          expect(repaired.credence.ruptureDebt).toBe(140);
         });
-        expect(repaired.credence.ruptureDebt).toBe(140);
-      });
-    });
+      },
+    );
   });
 
   it('keeps normalized debt inside the configured ceiling', () => {
