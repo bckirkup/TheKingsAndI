@@ -100,17 +100,22 @@ export function applyRepairSignal(credence: CredenceState): {
 export function applyBetrayalSignal(
   credence: CredenceState,
   severity: number,
+  scalePermille = 1_000,
 ): CredenceState {
   const cliff = logistic(severity * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_SCALE);
   const permille = Math.max(
     0,
     Math.trunc(ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_PERMILLE),
   );
+  const scale = Math.max(0, Math.trunc(scalePermille));
   const drop =
     permille === 0
-      ? Math.trunc(cliff * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_DROP)
+      ? Math.trunc(
+          (cliff * ENGINE_CONFIG.BENEV_BETRAYAL_CLIFF_DROP * scale) / 1_000,
+        )
       : Math.trunc(
-          (cliff * clampCredence(credence.tauBenev) * permille) / 1_000,
+          (cliff * clampCredence(credence.tauBenev) * permille * scale) /
+            1_000_000,
         );
   return {
     ...credence,

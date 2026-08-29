@@ -1,6 +1,7 @@
 import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import { applyBetrayalSignal } from './credence';
+import { witnessAttachmentPermille } from './standing';
 import type { MatchEvent, PieceState } from './types';
 
 export interface OverrideResult {
@@ -27,14 +28,35 @@ export function applyOverride(
     M_i: clampMorale(piece.M_i - 10),
     credence,
   };
-  const updatedWitnesses = witnesses.map((witness) => ({
-    ...witness,
-    T_i: clampTrust(witness.T_i + ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY),
-    credence: applyBetrayalSignal(
-      witness.credence,
-      ENGINE_CONFIG.OVERRIDE_WITNESS_BENEV_CLIFF_INPUT,
-    ),
-  }));
+  const updatedWitnesses = witnesses.map((witness) => {
+    const attachment = witnessAttachmentPermille(witness, piece);
+    const standingFactor = Math.max(
+      1_000,
+      1_000 +
+        Math.trunc(
+          (ENGINE_CONFIG.OVERRIDE_STANDING_PRICE_PERMILLE * attachment) / 1_000,
+        ),
+    );
+    const witnessScale = Math.trunc(
+      (Math.max(
+        0,
+        Math.trunc(ENGINE_CONFIG.OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE),
+      ) *
+        standingFactor) /
+        1_000,
+    );
+    return {
+      ...witness,
+      T_i: clampTrust(
+        witness.T_i + ENGINE_CONFIG.OVERRIDE_WITNESS_TRUST_PENALTY,
+      ),
+      credence: applyBetrayalSignal(
+        witness.credence,
+        ENGINE_CONFIG.OVERRIDE_WITNESS_BENEV_CLIFF_INPUT,
+        witnessScale,
+      ),
+    };
+  });
   const overriddenBenevDelta = credence.tauBenev - piece.credence.tauBenev;
   const event: MatchEvent = {
     t: 'OVERRIDE',

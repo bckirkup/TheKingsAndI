@@ -323,6 +323,79 @@ describe('wiring — override penalties', () => {
       });
     });
   });
+
+  it('wiring: witness benevolence multiplier changes witnesses, not target', () => {
+    const piece = makePiece({
+      credence: { ...defaultCredence(), tauBenev: 80 },
+    });
+    const witness = makePiece({
+      id: 'w:P:a2',
+      credence: { ...defaultCredence(), tauBenev: 80 },
+    });
+    let baseTarget = 0;
+    let baseWitness = 0;
+    let reducedTarget = 0;
+    let reducedWitness = 0;
+    mutateConfig('OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE', 1_000, () => {
+      const result = applyOverride(piece, [witness], 1, 'Nf3');
+      baseTarget = result.overriddenPiece.credence.tauBenev;
+      baseWitness = result.witnesses[0]?.credence.tauBenev ?? 0;
+    });
+    mutateConfig('OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE', 500, () => {
+      const result = applyOverride(piece, [witness], 1, 'Nf3');
+      reducedTarget = result.overriddenPiece.credence.tauBenev;
+      reducedWitness = result.witnesses[0]?.credence.tauBenev ?? 0;
+    });
+    expect(reducedTarget).toBe(baseTarget);
+    expect(reducedWitness).toBeGreaterThan(baseWitness);
+  });
+
+  it('wiring: standing price changes attached witnesses but not indifferent ones', () => {
+    const piece = makePiece({ id: 'w:N:g1' });
+    const attachedWitness = makePiece({
+      id: 'w:B:f1',
+      dyadicAffinity: { [piece.id]: 100 },
+      classPrestige: {
+        Pawn: 0,
+        Knight: 100,
+        Bishop: 0,
+        Rook: 0,
+        Queen: 0,
+        King: 0,
+      },
+      credence: { ...defaultCredence(), tauBenev: 80 },
+    });
+    const indifferentWitness = makePiece({
+      id: 'w:P:a2',
+      credence: { ...defaultCredence(), tauBenev: 80 },
+    });
+    let baseAttached = 0;
+    let pricedAttached = 0;
+    let baseIndifferent = 0;
+    let pricedIndifferent = 0;
+    mutateConfig('OVERRIDE_STANDING_PRICE_PERMILLE', 0, () => {
+      const result = applyOverride(
+        piece,
+        [attachedWitness, indifferentWitness],
+        1,
+        'Nf3',
+      );
+      baseAttached = result.witnesses[0]?.credence.tauBenev ?? 0;
+      baseIndifferent = result.witnesses[1]?.credence.tauBenev ?? 0;
+    });
+    mutateConfig('OVERRIDE_STANDING_PRICE_PERMILLE', 1_000, () => {
+      const result = applyOverride(
+        piece,
+        [attachedWitness, indifferentWitness],
+        1,
+        'Nf3',
+      );
+      pricedAttached = result.witnesses[0]?.credence.tauBenev ?? 0;
+      pricedIndifferent = result.witnesses[1]?.credence.tauBenev ?? 0;
+    });
+    expect(pricedAttached).toBeLessThan(baseAttached);
+    expect(pricedIndifferent).toBe(baseIndifferent);
+  });
 });
 
 describe('wiring — injury and dread', () => {

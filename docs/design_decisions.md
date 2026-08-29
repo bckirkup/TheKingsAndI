@@ -1541,14 +1541,18 @@ a candidate that lowers the zero-cost override share by weakening the witness
 share of total loss has failed the acceptance test, not passed it. Sensitivity
 probes for all three limbs are in `tests/curdle.floor.test.ts`.
 
-### D170 ❓ Should the cost of an override depend on the target's standing?
-**Open — not wired.** Raised by the same measurement and deliberately excluded
-from ADR 0066: overriding the Queen and overriding a pawn currently cost the
-identical benevolence, which is a strong and probably wrong claim about how a
-group prices a leader's defection. Resolving it needs a standing model that does
-not exist yet (class prestige is per-observer, not a roster-wide standing) and a
-second calibration re-baseline on top of the D166/D167 surface. Do not invent
-candidate numbers in the register.
+### D170 ✅ Should the cost of an override depend on the target's standing?
+**Answered 2026-08-29 (owner) — see ADR 0070.** The witness limb is now
+prepared to price the override by the target's standing in each witness's own
+eyes, not by a roster-wide aggregate. `witnessAttachmentPermille` combines
+that witness's dyadic affinity for the overridden piece with the prestige it
+grants the piece's role, then `applyOverride` turns the attachment into a
+non-discounting per-witness scale
+(`src/psychology/standing.ts:6-14`,
+`src/psychology/override.ts:32-55`). The overridden piece's own charge is
+unchanged: it prices what was done to it, not its popularity. The mechanism
+ships inert at `OVERRIDE_STANDING_PRICE_PERMILLE: 0`; its live magnitude is
+deferred to D176.
 
 ### D171 ✅ Is an engine evaluation a function of the position, or of the search history? (ADR 0067)
 **Answered 2026-08-28 (owner) — see ADR 0067 for the contract.** Cold. Lozza
@@ -1642,19 +1646,23 @@ conversation covers the unbounded `bestByFenDepth` memo in the broker
 (`src/engine/broker.ts:122`), which is the last unbounded per-position cache
 after D172 bounded the rest.
 
-### D174 ❓ Should the witness cliff have its own multiplier rather than a shared logistic input?
-**Open — not wired.** ADR 0066 limb (a) intended the witness benevolence drop to
-be gradable the way trust already grades it 4.4:1, through
-`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT`. At the ruled defaults, inputs `6` and `3`
-are byte-identical, but `1` is not inert: it is the one usable notch in the
-parameter. At that notch, `free_override_count` moves from `0.75` to `0.00`,
+### D174 ✅ Should the witness cliff have its own multiplier rather than a shared logistic input?
+**Answered 2026-08-29 (owner) — see ADR 0070.** Witness benevolence now has
+its own multiplier, applied to the final betrayal drop through the optional
+`scalePermille` argument to `applyBetrayalSignal`
+(`src/psychology/credence.ts:100-123`,
+`src/psychology/config.ts:76-77`). The saturated
+`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT` remains the input to the shared sigmoid;
+the new multiplier is the grading mechanism. The mechanism ships inert at
+`OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1000`; its live magnitude is
+deferred to D176. At the ruled defaults, witness inputs `6` and `3` are
+byte-identical, but `1` is not inert under the proportional cliff: the measured
+surface moves `free_override_count` from `0.75` to `0.00`,
 `free_insistence_ply_fraction` from `0.3411` to `0.0000`,
-`benev_loss_witness` from `931.50` to `916.25`, and `benev_loss_target` from
-`222.00` to `230.25`. The measurements are recorded in
-`docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`.
-Grading the witness therefore requires a separate multiplier applied to the
-witness drop, not merely a different input to the sigmoid. Whether the witness
-limb should exist at all is the owner's to rule.
+`benev_loss_witness` from `931.50` to `916.25`, and
+`benev_loss_target` from `222.00` to `230.25`. The evidence is recorded in
+`docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`; the
+separate multiplier is still what provides witness grading.
 
 ### D175 ✅ Can a proportional cliff keep its promise in the deep tail?
 **Answered 2026-08-29 (owner) — no code change; behaviour as shipped.** ADR
@@ -1680,6 +1688,16 @@ grading is ever revisited. The implementing references are the
 `holds the ruled D175 asymptote where the charge truncates to zero` change
 detector in `tests/curdle.floor.test.ts:163-173` and `applyBetrayalSignal` in
 `src/psychology/credence.ts:100-119`.
+
+### D176 ❓ What are the live magnitudes for the graded witness and the priced standing?
+**Open — magnitudes not chosen.** D170 and D174 supply two interacting knobs:
+`OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE` and
+`OVERRIDE_STANDING_PRICE_PERMILLE`. Both mechanisms are wired but inert at
+their current defaults (`1000` and `0` respectively), and they must be chosen
+together because the standing price multiplies the witness multiplier. The
+owner's sweep must choose magnitudes jointly and gate them on the
+`free_insistence_ply_fraction` not exceeding the post-#151 baseline. Do not
+invent candidate numbers in the register.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
