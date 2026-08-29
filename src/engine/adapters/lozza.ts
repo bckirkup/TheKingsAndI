@@ -8,6 +8,7 @@ import {
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
 } from '../search';
+import { DEFAULT_ENGINE_LADDER_CACHE_CAPACITY, LruCache } from '../cache';
 import type { EngineEvaluation, EnginePort } from '../types';
 import {
   DEFAULT_MAX_INFO_LINES_PER_SEARCH,
@@ -22,7 +23,8 @@ import {
 const LOZZA_HASH_MB = 16;
 // Cold searches make eviction a latency choice: a re-search cannot change the
 // result, so bound the ladder cache for long campaigns.
-export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = 4_096;
+export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY =
+  DEFAULT_ENGINE_LADDER_CACHE_CAPACITY;
 // Process recycling remains an opt-in fallback for engines whose search state
 // is not cleared by ucinewgame.
 export const DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES = Number.MAX_SAFE_INTEGER;
@@ -76,51 +78,6 @@ const artifactIdentityByPath = new Map<
   string,
   { readonly build: string; readonly hash: string }
 >();
-
-class LruCache<K, V> {
-  private readonly values = new Map<K, V>();
-
-  constructor(private capacity: number) {
-    if (!Number.isSafeInteger(capacity) || capacity < 1) {
-      throw new RangeError('ladderCacheCapacity must be a positive integer.');
-    }
-  }
-
-  setCapacity(capacity: number): void {
-    if (!Number.isSafeInteger(capacity) || capacity < 1) {
-      throw new RangeError('ladderCacheCapacity must be a positive integer.');
-    }
-    this.capacity = capacity;
-    this.trim();
-  }
-
-  get(key: K): V | undefined {
-    const value = this.values.get(key);
-    if (value !== undefined) {
-      this.values.delete(key);
-      this.values.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: K, value: V): void {
-    this.values.delete(key);
-    this.values.set(key, value);
-    this.trim();
-  }
-
-  clear(): void {
-    this.values.clear();
-  }
-
-  private trim(): void {
-    while (this.values.size > this.capacity) {
-      const oldest = this.values.keys().next().value as K | undefined;
-      if (oldest === undefined) break;
-      this.values.delete(oldest);
-    }
-  }
-}
 
 function createSharedEngine(
   enginePath: string,

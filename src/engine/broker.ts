@@ -1,4 +1,5 @@
 import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
+import { DEFAULT_ENGINE_LADDER_CACHE_CAPACITY, LruCache } from './cache';
 import { EnginePool, type EnginePoolOptions } from './pool';
 import {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
@@ -22,6 +23,8 @@ export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly preferredMultiPv?: number;
   /** Worker count for the player-visible preferred-line search. */
   readonly preferredPoolSize?: number;
+  /** Capacity shared by the ladder and escalated-result caches. */
+  readonly ladderCacheCapacity?: number;
 }
 
 export interface SharedSearchBroker extends EnginePort {
@@ -99,6 +102,8 @@ export async function createSharedSearchBroker(
     options.preferredMultiPv ?? DEFAULT_PREFERRED_MULTIPV_WIDTH;
   const preferredPoolSize =
     options.preferredPoolSize ?? DEFAULT_PREFERRED_POOL_SIZE;
+  const ladderCacheCapacity =
+    options.ladderCacheCapacity ?? DEFAULT_ENGINE_LADDER_CACHE_CAPACITY;
   if (!Number.isSafeInteger(dMax) || dMax < 1) {
     throw new RangeError('dMax must be a positive integer.');
   }
@@ -120,11 +125,13 @@ export async function createSharedSearchBroker(
   const sharedByFen = new Map<string, DepthLadder>();
   const inflight = new Map<string, InflightShared>();
   const bestByFenDepth = new Map<string, EngineEvaluation>();
-  const escalatedResultsByFenDepth = new Map<string, UciSearchResult>();
-  const escalatedLinesByFenDepth = new Map<
+  const escalatedResultsByFenDepth = new LruCache<string, UciSearchResult>(
+    ladderCacheCapacity,
+  );
+  const escalatedLinesByFenDepth = new LruCache<
     string,
     readonly UciSearchResult[]
-  >();
+  >(ladderCacheCapacity);
 
   function ensureBestPool(): Promise<EnginePool> {
     bestPoolPromise ??= EnginePool.create({

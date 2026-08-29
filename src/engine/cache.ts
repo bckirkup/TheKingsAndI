@@ -14,6 +14,59 @@ export interface CacheConfig {
 }
 
 export const DEFAULT_CACHE_CONFIG: CacheConfig = { maxEntries: 4096 };
+export const DEFAULT_ENGINE_LADDER_CACHE_CAPACITY =
+  DEFAULT_CACHE_CONFIG.maxEntries;
+
+/**
+ * Bounded insertion-ordered cache for engine ladders and escalated results.
+ * Eviction can only cause a deterministic re-search; it cannot change a result.
+ */
+export class LruCache<K, V> {
+  private readonly values = new Map<K, V>();
+
+  constructor(private capacity: number) {
+    this.validateCapacity(capacity);
+  }
+
+  setCapacity(capacity: number): void {
+    this.validateCapacity(capacity);
+    this.capacity = capacity;
+    this.trim();
+  }
+
+  get(key: K): V | undefined {
+    const value = this.values.get(key);
+    if (value !== undefined) {
+      this.values.delete(key);
+      this.values.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    this.values.delete(key);
+    this.values.set(key, value);
+    this.trim();
+  }
+
+  clear(): void {
+    this.values.clear();
+  }
+
+  private validateCapacity(capacity: number): void {
+    if (!Number.isSafeInteger(capacity) || capacity < 1) {
+      throw new RangeError('ladderCacheCapacity must be a positive integer.');
+    }
+  }
+
+  private trim(): void {
+    while (this.values.size > this.capacity) {
+      const oldest = this.values.keys().next().value as K | undefined;
+      if (oldest === undefined) break;
+      this.values.delete(oldest);
+    }
+  }
+}
 
 export interface CacheStats {
   readonly hits: number;

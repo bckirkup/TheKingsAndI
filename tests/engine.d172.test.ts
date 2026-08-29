@@ -132,6 +132,15 @@ describe('D172 real Lozza regression', () => {
     const second = await deeperFirst.evaluate(poisonFens[0], 2);
 
     expect(second).toEqual(first);
+
+    const evicting = createLozzaPort({
+      enginePath: artifactPath,
+      ladderCacheCapacity: 1,
+    });
+    const beforeEviction = await evicting.evaluate(poisonFens[0], 3);
+    await evicting.evaluate(poisonFens[1], 3);
+    const afterEviction = await evicting.evaluate(poisonFens[0], 3);
+    expect(afterEviction).toEqual(beforeEviction);
   }, 120_000);
 
   it('measures adapter info lines across real harness search widths', async () => {
