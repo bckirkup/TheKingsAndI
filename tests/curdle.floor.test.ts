@@ -71,13 +71,19 @@ function withConfig<T>(
 }
 
 describe('D167 curdle floor controls', () => {
-  it('keeps the default witness input identical to the target input', () => {
+  it('keeps the pre-D176 witness behavior at explicit inert settings', () => {
     const target = makePiece('w:N:g1');
     const witness = makePiece('w:B:f1');
     const secondWitness = makePiece('w:P:a2', {
       credence: { ...defaultCredence(), tauBenev: 80 },
     });
-    const result = applyOverride(target, [witness, secondWitness], 3, 'Nf3');
+    const result = withConfig(
+      {
+        OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1_000,
+        OVERRIDE_STANDING_PRICE_PERMILLE: 0,
+      },
+      () => applyOverride(target, [witness, secondWitness], 3, 'Nf3'),
+    );
 
     expect(result.overriddenPiece.credence.tauBenev).toBe(38);
     expect(result.overriddenPiece.credence.ruptureDebt).toBe(12);
