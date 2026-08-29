@@ -1519,12 +1519,12 @@ stops keeping score and insisting becomes free. Three limbs ship, each behind a
 knob whose default reproduces today's behaviour byte-for-byte:
 (a) the witness cliff input is separable from the target's
 (`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT: 6`, `src/psychology/config.ts:74-75`, read
-for witnesses only in `src/psychology/override.ts:30-37`), so benevolence can be
+for witnesses only in `src/psychology/override.ts:31-59`), so benevolence can be
 graded the way trust already grades it 4.4:1;
 (b) the cliff may charge a fraction of the standing that remains rather than a
 flat `40` (`BENEV_BETRAYAL_CLIFF_PERMILLE: 0`,
 `src/psychology/config.ts:46-47`, consumed in `applyBetrayalSignal`,
-`src/psychology/credence.ts:100-121`), which makes the decay geometric — the
+`src/psychology/credence.ts:100-125`), which makes the decay geometric — the
 first override is dearest, and no later override is ever free;
 (c) the rupture ledger gets its own ceiling
 (`BENEV_RUPTURE_DEBT_CEILING: 100`, `src/psychology/config.ts:48-49`, applied by
@@ -1533,8 +1533,9 @@ owed can keep growing after benevolence itself has bottomed out.
 **Partly wired (D166):** `BENEV_BETRAYAL_CLIFF_PERMILLE` is live at `250`; the
 witness input remains equal to the target's at its inert default, and the
 ceiling remains today's `100`. The regard and repair magnitudes are ruled in
-D166; the witness split remains open under D174, and the debt ceiling remains
-inert under the repair-versus-accrual constraint. Two
+D166; the witness split is ruled in shape by ADR 0070 with its magnitude open
+under D176, and the debt ceiling remains inert under the repair-versus-accrual
+constraint. Two
 constraints bind that pass: the debt ceiling must not be raised while
 `BENEV_REPAIR_STEP` is still `0`, or the game records a debt no act can pay; and
 a candidate that lowers the zero-cost override share by weakening the witness
@@ -1548,8 +1549,8 @@ eyes, not by a roster-wide aggregate. `witnessAttachmentPermille` combines
 that witness's dyadic affinity for the overridden piece with the prestige it
 grants the piece's role, then `applyOverride` turns the attachment into a
 non-discounting per-witness scale
-(`src/psychology/standing.ts:6-14`,
-`src/psychology/override.ts:32-55`). The overridden piece's own charge is
+(`src/psychology/standing.ts:8-15`,
+`src/psychology/override.ts:31-59`). The overridden piece's own charge is
 unchanged: it prices what was done to it, not its popularity. The mechanism
 ships inert at `OVERRIDE_STANDING_PRICE_PERMILLE: 0`; its live magnitude is
 deferred to D176.
@@ -1650,8 +1651,8 @@ after D172 bounded the rest.
 **Answered 2026-08-29 (owner) — see ADR 0070.** Witness benevolence now has
 its own multiplier, applied to the final betrayal drop through the optional
 `scalePermille` argument to `applyBetrayalSignal`
-(`src/psychology/credence.ts:100-123`,
-`src/psychology/config.ts:76-77`). The saturated
+(`src/psychology/credence.ts:100-125`,
+`src/psychology/config.ts:76-79`). The saturated
 `OVERRIDE_WITNESS_BENEV_CLIFF_INPUT` remains the input to the shared sigmoid;
 the new multiplier is the grading mechanism. The mechanism ships inert at
 `OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1000`; its live magnitude is
@@ -1686,8 +1687,8 @@ tail. The three candidate closers are not adopted:
 Adopting witness input `1` remains separately available under D174 if witness
 grading is ever revisited. The implementing references are the
 `holds the ruled D175 asymptote where the charge truncates to zero` change
-detector in `tests/curdle.floor.test.ts:163-173` and `applyBetrayalSignal` in
-`src/psychology/credence.ts:100-119`.
+detector in `tests/curdle.floor.test.ts:284-295` and `applyBetrayalSignal` in
+`src/psychology/credence.ts:100-125`.
 
 ### D176 ❓ What are the live magnitudes for the graded witness and the priced standing?
 **Open — magnitudes not chosen.** D170 and D174 supply two interacting knobs:
