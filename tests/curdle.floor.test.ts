@@ -8,6 +8,7 @@ import {
   defaultCredence,
   defaultRumor,
   normalizePieceState,
+  witnessAttachmentPermille,
   type PieceState,
 } from '../src/psychology';
 
@@ -73,10 +74,130 @@ describe('D167 curdle floor controls', () => {
   it('keeps the default witness input identical to the target input', () => {
     const target = makePiece('w:N:g1');
     const witness = makePiece('w:B:f1');
-    const result = applyOverride(target, [witness], 3, 'Nf3');
+    const secondWitness = makePiece('w:P:a2', {
+      credence: { ...defaultCredence(), tauBenev: 80 },
+    });
+    const result = applyOverride(target, [witness, secondWitness], 3, 'Nf3');
 
     expect(result.overriddenPiece.credence.tauBenev).toBe(38);
+    expect(result.overriddenPiece.credence.ruptureDebt).toBe(12);
     expect(result.witnesses[0]?.credence.tauBenev).toBe(38);
+    expect(result.witnesses[0]?.credence.ruptureDebt).toBe(12);
+    expect(result.witnesses[1]?.credence.tauBenev).toBe(60);
+    expect(result.witnesses[1]?.credence.ruptureDebt).toBe(20);
+  });
+
+  it('records the measured zero-charge threshold as a graded-price change detector', () => {
+    // The threshold is the price of grading, measured rather than promised:
+    // the free-insistence metric gate belongs to the magnitude sweep, not here.
+    const target = makePiece('w:N:g1');
+    const attachedWitness = makePiece('w:B:f1', {
+      dyadicAffinity: { [target.id]: 100 },
+      classPrestige: {
+        Pawn: 0,
+        Knight: 100,
+        Bishop: 0,
+        Rook: 0,
+        Queen: 0,
+        King: 0,
+      },
+    });
+    const threshold = (multiplier: number, standingPrice: number): number =>
+      withConfig(
+        {
+          OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: multiplier,
+          OVERRIDE_STANDING_PRICE_PERMILLE: standingPrice,
+        },
+        () => {
+          for (let tauBenev = 1; tauBenev <= 100; tauBenev += 1) {
+            const witness = makePiece('w:B:f1', {
+              dyadicAffinity: attachedWitness.dyadicAffinity,
+              classPrestige: attachedWitness.classPrestige,
+              credence: { ...defaultCredence(), tauBenev },
+            });
+            const result = applyOverride(target, [witness], 3, 'Nf3');
+            if (
+              witness.credence.tauBenev -
+                (result.witnesses[0]?.credence.tauBenev ?? 0) >
+              0
+            ) {
+              return tauBenev;
+            }
+          }
+          return 0;
+        },
+      );
+
+    expect(threshold(1_000, 0)).toBe(4);
+    expect(threshold(500, 0)).toBe(8);
+    expect(threshold(1_000, 500)).toBe(3);
+  });
+
+  it('keeps witness charge monotone in attachment and multiplier without credit', () => {
+    const target = makePiece('w:N:g1');
+    const witness = (attachment: number, tauBenev = 80): PieceState =>
+      makePiece('w:B:f1', {
+        dyadicAffinity: { [target.id]: attachment },
+        credence: { ...defaultCredence(), tauBenev },
+      });
+    const drop = (piece: PieceState, multiplier: number): number =>
+      withConfig(
+        {
+          OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: multiplier,
+          OVERRIDE_STANDING_PRICE_PERMILLE: 1_000,
+        },
+        () => {
+          const result = applyOverride(target, [piece], 3, 'Nf3');
+          return (
+            piece.credence.tauBenev -
+            (result.witnesses[0]?.credence.tauBenev ?? 0)
+          );
+        },
+      );
+    const byAttachment = [0, 50, 100].map((attachment) =>
+      drop(witness(attachment), 1_000),
+    );
+    const byMultiplier = [0, 500, 1_000, 1_500].map((multiplier) =>
+      drop(witness(1_000), multiplier),
+    );
+
+    expect(witnessAttachmentPermille(witness(0), target)).toBe(0);
+    expect(witnessAttachmentPermille(witness(100), target)).toBe(500);
+    expect(
+      witnessAttachmentPermille(
+        makePiece('w:B:f1', {
+          dyadicAffinity: { [target.id]: 100 },
+          classPrestige: {
+            Pawn: 0,
+            Knight: 100,
+            Bishop: 0,
+            Rook: 0,
+            Queen: 0,
+            King: 0,
+          },
+        }),
+        target,
+      ),
+    ).toBe(1_000);
+    expect(byAttachment).toEqual([20, 25, 30]);
+    expect(byMultiplier).toEqual([0, 15, 30, 45]);
+    expect(byAttachment).toEqual([...byAttachment].sort((a, b) => a - b));
+    expect(byMultiplier).toEqual([...byMultiplier].sort((a, b) => a - b));
+    expect(byAttachment.every((value) => value >= 0)).toBe(true);
+    expect(byMultiplier.every((value) => value >= 0)).toBe(true);
+    const chargedResult = withConfig(
+      {
+        OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1_500,
+        OVERRIDE_STANDING_PRICE_PERMILLE: 1_000,
+      },
+      () => applyOverride(target, [witness(100)], 3, 'Nf3'),
+    );
+    const chargedWitness = chargedResult.witnesses[0];
+    expect(chargedWitness?.credence.ruptureDebt).toBe(
+      chargedWitness === undefined
+        ? 0
+        : witness(100).credence.tauBenev - chargedWitness.credence.tauBenev,
+    );
   });
 
   it('grades witness loss when the cliff is not saturated', () => {

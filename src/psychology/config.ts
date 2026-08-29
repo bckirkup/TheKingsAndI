@@ -73,6 +73,10 @@ export const ENGINE_CONFIG = {
   OVERRIDE_BENEV_CLIFF_INPUT: 6,
   /** Logistic cliff input used for benevolence loss by override witnesses (D167). */
   OVERRIDE_WITNESS_BENEV_CLIFF_INPUT: 6,
+  /** Scales the witness benevolence charge relative to the target's (D174). */
+  OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1_000,
+  /** How strongly a witness's bond to the overridden piece raises its own charge (D170). */
+  OVERRIDE_STANDING_PRICE_PERMILLE: 0,
   /** Flat injury from being captured (ADR 0049). */
   CAPTURE_TRAUMA_GAIN: 20,
   /** Capture-risk threshold for sustained dread injury (ADR 0049). */

@@ -69,6 +69,7 @@ export {
   compileCampaignCultureDrift,
 } from './events';
 export { applyOverride } from './override';
+export { witnessAttachmentPermille } from './standing';
 export {
   applyCaptureInjury,
   applySustainedDread,
