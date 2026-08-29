@@ -120,6 +120,11 @@ export async function createSharedSearchBroker(
   const sharedByFen = new Map<string, DepthLadder>();
   const inflight = new Map<string, InflightShared>();
   const bestByFenDepth = new Map<string, EngineEvaluation>();
+  const escalatedResultsByFenDepth = new Map<string, UciSearchResult>();
+  const escalatedLinesByFenDepth = new Map<
+    string,
+    readonly UciSearchResult[]
+  >();
 
   function ensureBestPool(): Promise<EnginePool> {
     bestPoolPromise ??= EnginePool.create({
@@ -135,20 +140,24 @@ export async function createSharedSearchBroker(
   async function ensureShared(
     fen: string,
     depth: number = dMax,
+    cache = true,
   ): Promise<DepthLadder> {
-    const cached = sharedByFen.get(fen);
-    if (cached !== undefined && cached.maxDepth >= depth) return cached;
+    if (cache) {
+      const cached = sharedByFen.get(fen);
+      if (cached !== undefined && cached.maxDepth >= depth) return cached;
+    }
     const key = `${fen}\u0000${depth}`;
     const pending = inflight.get(key);
-    if (pending !== undefined) return pending.promise;
-    const promise = pool.searchLadder(fen, depth).then((ladder) => {
-      sharedByFen.set(fen, ladder);
-      inflight.delete(key);
-      return ladder;
-    });
-    inflight.set(key, { promise });
+    const promise =
+      pending?.promise ??
+      pool.searchLadder(fen, depth).finally(() => {
+        inflight.delete(key);
+      });
+    if (pending === undefined) inflight.set(key, { promise });
     try {
-      return await promise;
+      const ladder = await promise;
+      if (cache) sharedByFen.set(fen, ladder);
+      return ladder;
     } catch (cause) {
       inflight.delete(key);
       throw cause;
@@ -159,18 +168,24 @@ export async function createSharedSearchBroker(
     fen: string,
     depth: number,
   ): Promise<UciSearchResult> {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = escalatedResultsByFenDepth.get(key);
+    if (memoized !== undefined) return memoized;
     for (
       let escalation = 0;
       escalation <= DEFAULT_MAX_SCORE_ESCALATIONS;
       escalation += 1
     ) {
       const searchDepth = depth + escalation;
-      const ladder = await ensureShared(fen, searchDepth);
+      const ladder = await ensureShared(fen, searchDepth, escalation === 0);
       const result = ladderAt(ladder, searchDepth);
       if (result === undefined) {
         throw new Error(`Shared search produced no score for depth ${depth}`);
       }
-      if (result.sound) return result;
+      if (result.sound) {
+        if (escalation > 0) escalatedResultsByFenDepth.set(key, result);
+        return result;
+      }
       if (escalation === DEFAULT_MAX_SCORE_ESCALATIONS) {
         throw new UciUnsoundScoreError(fen, depth, result.rawScore, escalation);
       }
@@ -182,15 +197,19 @@ export async function createSharedSearchBroker(
     fen: string,
     depth: number,
   ): Promise<readonly UciSearchResult[]> {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = escalatedLinesByFenDepth.get(key);
+    if (memoized !== undefined) return memoized;
     for (
       let escalation = 0;
       escalation <= DEFAULT_MAX_SCORE_ESCALATIONS;
       escalation += 1
     ) {
       const searchDepth = depth + escalation;
-      const ladder = await ensureShared(fen, searchDepth);
+      const ladder = await ensureShared(fen, searchDepth, escalation === 0);
       const lines = multiPvAt(ladder, searchDepth);
       if (lines.length > 0 && lines.every((line) => line.sound)) {
+        if (escalation > 0) escalatedLinesByFenDepth.set(key, lines);
         return lines;
       }
       if (escalation === DEFAULT_MAX_SCORE_ESCALATIONS) {
@@ -278,6 +297,8 @@ export async function createSharedSearchBroker(
       sharedByFen.clear();
       inflight.clear();
       bestByFenDepth.clear();
+      escalatedResultsByFenDepth.clear();
+      escalatedLinesByFenDepth.clear();
       await pool.dispose();
       if (bestPoolPromise !== undefined) {
         await (await bestPoolPromise).dispose();

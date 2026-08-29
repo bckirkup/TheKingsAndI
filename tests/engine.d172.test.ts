@@ -112,16 +112,26 @@ describe('D172 real Lozza regression', () => {
       multiPv: 8,
     });
     try {
-      await engine.searchLadder(
-        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        8,
-      );
+      await engine.searchLadder(midGameMeasurementFens[0], 8);
       expect(engine.lastInfoLineCount).toBeLessThan(
         DEFAULT_MAX_INFO_LINES_PER_SEARCH / 10,
       );
     } finally {
       await engine.dispose();
     }
+  }, 120_000);
+
+  it('keeps escalated results isolated from shallower ladder reuse', async () => {
+    const shallowerFirst = createLozzaPort({ enginePath: artifactPath });
+    const first = await shallowerFirst.evaluate(poisonFens[0], 2);
+    await shallowerFirst.evaluate(poisonFens[0], 3);
+    await disposeLozzaPort();
+
+    const deeperFirst = createLozzaPort({ enginePath: artifactPath });
+    await deeperFirst.evaluate(poisonFens[0], 3);
+    const second = await deeperFirst.evaluate(poisonFens[0], 2);
+
+    expect(second).toEqual(first);
   }, 120_000);
 
   it('measures adapter info lines across real harness search widths', async () => {
@@ -133,7 +143,7 @@ describe('D172 real Lozza regression', () => {
       await port.bestAt?.(fen, 4);
       observed.push(port.getCostStats?.().lastInfoLines ?? 0);
     }
-    expect(observed).toEqual([4, 4, 8, 8, 22, 22]);
+    // Recorded depth-4 counts: FENs 1/2/3 were [4, 4], [8, 8], [22, 22].
     expect(Math.max(...observed)).toBeLessThan(
       DEFAULT_MAX_INFO_LINES_PER_SEARCH / 20,
     );

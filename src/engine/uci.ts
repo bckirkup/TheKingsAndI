@@ -505,6 +505,7 @@ export class UciEngine {
       if (escalation === this.maxScoreEscalations) {
         const reported = selected ?? ladder.multiPvAtMax.get(1);
         if (reported !== undefined) {
+          if (reported.sound) return reported;
           throw new UciUnsoundScoreError(
             fen,
             depth,
