@@ -175,6 +175,23 @@ describe('D172 real Lozza regression', () => {
     120_000,
   );
 
+  it('escalates the earlier killer to a sound mating line', async () => {
+    const engine = new UciEngine({
+      enginePath: artifactPath,
+      multiPv: 8,
+    });
+    try {
+      const result = await engine.evaluate(
+        '2n5/7Q/1k6/p2P1PQ1/P3P3/8/8/RNBQK1NR b KQ - 2 32',
+        4,
+      );
+      expect(result.sound).toBe(true);
+      expect(result.pv[0]).toBe('c8e7');
+    } finally {
+      await engine.dispose();
+    }
+  }, 120_000);
+
   it('keeps the default runaway ceiling well above a real depth-8 MultiPV-8 search', async () => {
     const engine = new UciEngine({
       enginePath: artifactPath,
