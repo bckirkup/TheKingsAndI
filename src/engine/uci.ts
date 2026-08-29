@@ -14,8 +14,13 @@ export interface UciSearchResult {
 }
 
 export const MAX_PLAUSIBLE_MATE_DISTANCE = 100;
-// Honest material cannot reach 200 pawns; larger values are mate-band leakage.
-export const MAX_PLAUSIBLE_CENTIPAWNS = 20_000;
+// Lozza renders |score| >= MINMATE (30000) as a mate, so a cp token at or above
+// it is out of band by the engine's own definition. Honest evaluations do reach
+// the low 20 000s in overwhelming positions (measured: a monotone -12826 ->
+// -29557 -> mate -5 series over depths 1-12), so a tighter bound rejects truth.
+export const MAX_PLAUSIBLE_CENTIPAWNS = 30_000;
+// Measured worst-case searches need one escalation; four is headroom that costs
+// nothing on sound positions.
 export const DEFAULT_MAX_SCORE_ESCALATIONS = 4;
 // Real adapter searches at depth 4 with MultiPV 8 emit at most 22 lines
 // across the measured mid-game positions; 512 leaves over 20x headroom.

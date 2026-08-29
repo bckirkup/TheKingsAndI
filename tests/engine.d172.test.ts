@@ -34,6 +34,16 @@ const mateInOneFens = [
     move: 'd8d1',
   },
 ] as const;
+const highScoreFens = [
+  {
+    fen: '8/4n2p/4p2k/p3Qpp1/P2PPPPP/8/8/RNBQK1NR b KQ - 1 23',
+    move: 'e7c8',
+  },
+  {
+    fen: 'r7/5k2/5P2/RPP3P1/2P1P2P/8/3B1P2/1N2KBNR w K - 1 24',
+    move: 'a5a8',
+  },
+] as const;
 const midGameMeasurementFens = [
   'Nrb5/ppp3n1/n4kr1/1q5p/1b1pPPQ1/1P1PR3/P3B1P1/RKB3N1 b - - 5 24',
   'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
@@ -47,7 +57,7 @@ afterEach(async () => {
 describe('D172 score soundness', () => {
   it('classifies sentinel and ordinary scores', () => {
     expect(MAX_PLAUSIBLE_MATE_DISTANCE).toBe(100);
-    expect(MAX_PLAUSIBLE_CENTIPAWNS).toBe(20_000);
+    expect(MAX_PLAUSIBLE_CENTIPAWNS).toBe(30_000);
     expect(DEFAULT_MAX_SCORE_ESCALATIONS).toBe(4);
     expect(isUnsoundUciScore('mate', 0)).toBe(true);
     expect(isUnsoundUciScore('mate', -500)).toBe(true);
@@ -55,8 +65,8 @@ describe('D172 score soundness', () => {
     expect(isUnsoundUciScore('mate', -297)).toBe(true);
     expect(isUnsoundUciScore('mate', 3)).toBe(false);
     expect(isUnsoundUciScore('mate', -3)).toBe(false);
-    expect(isUnsoundUciScore('cp', 29_991)).toBe(true);
-    expect(isUnsoundUciScore('cp', -28_497)).toBe(true);
+    expect(isUnsoundUciScore('cp', 29_991)).toBe(false);
+    expect(isUnsoundUciScore('cp', -28_497)).toBe(false);
     expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS - 1)).toBe(false);
     expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS)).toBe(true);
     expect(isUnsoundUciScore('cp', 31_000)).toBe(true);
@@ -147,22 +157,23 @@ describe('D172 real Lozza regression', () => {
     120_000,
   );
 
-  it('escalates the second rebaseline killer to a sound mating line', async () => {
-    const engine = new UciEngine({
-      enginePath: artifactPath,
-      multiPv: 8,
-    });
-    try {
-      const result = await engine.evaluate(
-        '2n5/7Q/1k6/p2P1PQ1/P3P3/8/8/RNBQK1NR b KQ - 2 32',
-        4,
-      );
-      expect(result.sound).toBe(true);
-      expect(result.pv[0]).toBe('c8e7');
-    } finally {
-      await engine.dispose();
-    }
-  }, 120_000);
+  it.each(highScoreFens)(
+    'accepts a measured overwhelming-position score at depth 4 (%s)',
+    async ({ fen, move }) => {
+      const engine = new UciEngine({
+        enginePath: artifactPath,
+        multiPv: 8,
+      });
+      try {
+        const result = await engine.evaluate(fen, 4);
+        expect(result.sound).toBe(true);
+        expect(result.pv[0]).toBe(move);
+      } finally {
+        await engine.dispose();
+      }
+    },
+    120_000,
+  );
 
   it('keeps the default runaway ceiling well above a real depth-8 MultiPV-8 search', async () => {
     const engine = new UciEngine({
