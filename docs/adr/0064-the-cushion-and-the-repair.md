@@ -165,3 +165,10 @@ that flip is a separate PR with its own golden re-baseline.
 - **A fourth credence channel** for warmth. More expressive, but every consumer
   (desertion, counsel, draft, narration) would need a new weight, and the
   evidence says the existing channel is mis-*written*, not mis-*shaped*.
+
+## Addendum (2026-08-29): D166 live magnitudes
+
+D166 was ruled by the owner on 2026-08-29. `BENEV_REGARD_STEP` is live at `50`
+and `BENEV_REPAIR_STEP` is live at `30`, with both implementing defaults in
+`src/psychology/config.ts`. The ruling evidence is recorded in
+`docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md`.

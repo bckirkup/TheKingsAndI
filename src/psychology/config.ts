@@ -35,16 +35,16 @@ export const ENGINE_CONFIG = {
   /** Benevolence heard signal (ADR 0019). */
   BENEV_HEARD_STEP: 15,
   /** Benevolence regard signal after consecutive safe, valuable orders. */
-  BENEV_REGARD_STEP: 0,
+  BENEV_REGARD_STEP: 50,
   BENEV_REGARD_STREAK_PLIES: 3,
   BENEV_REGARD_RISK_CEILING: 0.15,
   /** Benevolence repair applied after an honoured refusal. */
-  BENEV_REPAIR_STEP: 0,
+  BENEV_REPAIR_STEP: 30,
   /** Logistic cliff scale for betrayal (ADR 0019). */
   BENEV_BETRAYAL_CLIFF_SCALE: 4,
   BENEV_BETRAYAL_CLIFF_DROP: 40,
   /** Remaining benevolence fraction charged by a betrayal, in permille (D167). */
-  BENEV_BETRAYAL_CLIFF_PERMILLE: 0,
+  BENEV_BETRAYAL_CLIFF_PERMILLE: 250,
   /** Maximum rupture debt recorded for a commander relationship (D167). */
   BENEV_RUPTURE_DEBT_CEILING: 100,
   BENEV_NEGLECT_EROSION: 3,
