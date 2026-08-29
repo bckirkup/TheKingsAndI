@@ -1550,8 +1550,9 @@ warm baseline in `docs/calibration/2026-08-13-blocked-on-measurement.md`, and if
 cold proves too slow the answer is a smaller depth cap or fewer matches, never a
 warm engine.
 
-### D172 ❓ May the vendored Lozza artifact be patched? (raised by ADR 0067)
-**Open — owner ruling required.** Measuring the D171 contract found that Lozza
+### D172 ✅ May the vendored Lozza artifact be patched? (ADR 0068)
+**Answered 2026-08-29 — yes, minimally, and the engine is not believed either.**
+Measuring the D171 contract found that Lozza
 does not return at every position. At
 `Q1b1k3/8/8/4pP2/2pP3B/8/P1P2PPP/RN1QKBNR w KQ - 0 16`, a single `go depth 4`
 against a raw `vendor/lozza/lozza.cjs` child — no adapter involved — spins
@@ -1563,16 +1564,58 @@ line and walked into it. A depth-limited search is precisely the thing that is
 supposed to be unable to run away (ADR 0005), so this is a hazard for every
 long campaign, not for one seed.
 
-Three options, all with costs. **Patch the artifact** (bound the aspiration
-loop): fixes it at the source, but a modified vendored engine is no longer the
-upstream engine, so provenance is on us — though it changes the artifact hash
-and therefore `determinismId`, which D171 is already re-baselining, so the
-timing is as cheap as it will ever be. **Guard in the adapter**: any abort rule
-must be deterministic (a node or output-line budget, never wall clock, ADR 0005)
-and a truncated search is a different answer, so the guard becomes part of the
-contract rather than a safety net. **Neither** — treat runaway positions as
-deterministic hard failures and route around them: honest, and it leaves
-campaigns that cannot be run at all. Do not choose in code.
+The ruling (ADR 0068) is all three layers, and investigating it found a second,
+quieter defect that changed the shape of the answer. **The artifact is patched**
+minimally — two conditions so a maximal aspiration window is never re-searched,
+carried as a recorded diff under `vendor/lozza/patches/` with the MIT notice
+intact, reported upstream as `namanthanki/lozza#4` (the canonical
+`op12no2/lozza` redirects there), and separated from unpatched evidence by the
+artifact hash that `determinismId` already carries. Lozza is MIT
+(`vendor/lozza/LICENSE`), so this is the permissive half of the licensing
+strategy and costs maintenance rather than provenance. **A score must prove
+itself sound**: the loop guard stops the hang but not the underlying bug, which
+is that a root search can return `INF` (32000, above `MATE`) at all — Lozza
+reports it as `score mate -500`, and the parser turned that into `-29_500`, a
+plausible *losing* number for a position that is a forced win in three. A mate
+distance of zero or an implausibly large one is engine unsoundness, answered by
+a deterministic re-search one ply deeper (at most twice, then a loud failure),
+and the old `mate 0 → 29_999` special case is withdrawn as a hand-wave over the
+same sentinel. **The adapter keeps a deterministic runaway guard** as a hard
+failure — a ceiling on the output one search may produce, never a wall clock and
+never a `nodes` budget that can bind, because Lozza's node net fires only at
+100× the budget and its soft net stops honest deepening. Truncation is rejected:
+it buys silence at the price of making the next engine's pathology invisible.
+
+### D173 ❓ Is a ladder rung from a deeper search the canonical value for that depth? (raised by ADR 0068)
+**Open — architecture decision, do not resolve in code.** The adapter and the
+broker both cache one ladder per FEN and reuse it whenever
+`maxDepth >= requestedDepth` (`src/engine/adapters/lozza.ts:327-333`,
+`src/engine/broker.ts:139-149`), which is the trick that lets one shared search
+at `D_max` serve every piece's depth. It assumes the depth-`d` rung of a
+`go depth N` search equals a standalone `go depth d`, and **that assumption is
+false**: over five ordinary positions, 17 of 18 rungs matched and one did not —
+`2r3k1/p4p2/3Rp2p/1p2P1pK/8/1P4P1/P3Q2P/1q6 b - - 0 1` at depth 3 gives
+`cp 461 … e2b5` standalone and `cp 464 … e2d3` as the rung of a depth-6 search.
+Iterative deepening warms its own table and windows within a single search, so a
+rung is not the same object as the search that would have produced it alone.
+
+Consequently the value returned for `(position, depth)` depends on the depth of
+the search that happened to run first for that position — fixed within a run by
+the `PieceId` order of the barrier (ADR 0034), but *not* fixed across runs whose
+rosters request different depths, which is exactly the replay-and-fork purity
+ADR 0067 claimed. D172's escalation was kept out of it deliberately: an escalated
+search neither reads nor writes the ladder cache and memoizes its own result
+(`src/engine/adapters/lozza.ts:363-386`), with an order-invariance probe in
+`tests/engine.d172.test.ts`. Three candidate answers: **declare the rung
+canonical** (cheapest, and the honest description of what ships — but the
+ladder-depth policy then belongs in `determinismId`, and a fork must reproduce
+the parent's ladder depths, not just its positions); **key the cache by
+`(fen, searchDepth)`** (pure, and multiplies engine calls by the number of
+distinct depths a roster asks for); **always search at `D_max`** (pure and
+single-cost, and pays `D_max` for every pawn's shallow query). The same
+conversation covers the unbounded `bestByFenDepth` memo in the broker
+(`src/engine/broker.ts:122`), which is the last unbounded per-position cache
+after D172 bounded the rest.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
