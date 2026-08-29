@@ -15,7 +15,13 @@ import {
 } from '../sim/baseline';
 import { matchSeedForCampaign, runCampaign } from '../sim/campaign';
 import { disposeSimEngine } from '../sim/engine';
-import { runCoefficientSweep } from '../sim/sweep';
+import {
+  enumerateGrid,
+  parseGridSpec,
+  parseSweepArgs,
+  runCoefficientSweep,
+  runGridSweep,
+} from '../sim/sweep';
 
 const samplePiece = normalizePieceState({
   id: 'w:P:a2',
@@ -249,5 +255,154 @@ describe('coefficient sweep', () => {
       cfg.BENEV_REGARD_STEP = original;
       await disposeSimEngine('fake');
     }
+  }, 60_000);
+});
+
+describe('grid sweep', () => {
+  const campaignOptions = {
+    matches: 1,
+    seed: 7,
+    leader: 'exacting' as const,
+    opponent: 'tyrannical' as const,
+    engineKind: 'fake' as const,
+  };
+
+  it('enumerates axes in command-line order with the last axis fastest', () => {
+    const axes = parseGridSpec('BENEV_REGARD_STEP=1,2;BENEV_REPAIR_STEP=3,4,5');
+    const cells = enumerateGrid(axes);
+    expect(cells.map((cell) => cell.axisValues)).toEqual([
+      { BENEV_REGARD_STEP: 1, BENEV_REPAIR_STEP: 3 },
+      { BENEV_REGARD_STEP: 1, BENEV_REPAIR_STEP: 4 },
+      { BENEV_REGARD_STEP: 1, BENEV_REPAIR_STEP: 5 },
+      { BENEV_REGARD_STEP: 2, BENEV_REPAIR_STEP: 3 },
+      { BENEV_REGARD_STEP: 2, BENEV_REPAIR_STEP: 4 },
+      { BENEV_REGARD_STEP: 2, BENEV_REPAIR_STEP: 5 },
+    ]);
+    expect(cells).toHaveLength(6);
+  });
+
+  it.each([
+    ['unknown key', 'NO_SUCH_KNOB=1', 'NO_SUCH_KNOB=1'],
+    ['non-numeric key', 'VINDICATION_BASELINE=1', 'VINDICATION_BASELINE=1'],
+    [
+      'repeated axis',
+      'BENEV_REGARD_STEP=1;BENEV_REGARD_STEP=2',
+      'BENEV_REGARD_STEP=2',
+    ],
+    ['empty value list', 'BENEV_REGARD_STEP=', 'BENEV_REGARD_STEP='],
+    [
+      'non-finite value',
+      'BENEV_REGARD_STEP=Infinity',
+      'BENEV_REGARD_STEP=Infinity',
+    ],
+    ['empty grid', '', '--grid'],
+  ])('rejects %s (%s)', (_name, spec, token) => {
+    expect(() => parseGridSpec(spec)).toThrow(token);
+  });
+
+  it('rejects --grid together with --knob', async () => {
+    expect(() =>
+      parseSweepArgs([
+        '--grid=BENEV_REGARD_STEP=1,2',
+        '--knob=BENEV_EXPENDABLE_FLOOR',
+      ]),
+    ).toThrow('--knob=BENEV_EXPENDABLE_FLOOR');
+  });
+
+  it('reassembles deterministic skip and limit shards', async () => {
+    const axes = parseGridSpec(
+      'BENEV_REGARD_STEP=0,100;BENEV_REPAIR_STEP=0,10',
+    );
+    const full = await runGridSweep({ ...campaignOptions, axes });
+    const first = await runGridSweep({
+      ...campaignOptions,
+      axes,
+      skip: 0,
+      limit: 2,
+    });
+    const second = await runGridSweep({
+      ...campaignOptions,
+      axes,
+      skip: 2,
+      limit: 2,
+    });
+    const shape = (point: (typeof full)[number]) => ({
+      cell: point.cell,
+      axisValues: point.axisValues,
+      meanRegardEvents: point.meanRegardEvents,
+      meanPlies: point.meanPlies,
+      engineCalls: point.engineCalls,
+    });
+    expect([...first, ...second].map(shape)).toEqual(full.map(shape));
+  }, 120_000);
+
+  it('dry-run returns no rows and never invokes cell execution', async () => {
+    const axes = parseGridSpec('BENEV_REGARD_STEP=0,100');
+    const points = await runGridSweep({
+      ...campaignOptions,
+      axes,
+      dryRun: true,
+      onCell: () => {
+        throw new Error('dry-run executed a cell');
+      },
+    });
+    expect(points).toEqual([]);
+  });
+
+  it('applies grid values to a live knob', async () => {
+    const axes = parseGridSpec('OVERRIDE_BENEV_CLIFF_INPUT=0,12');
+    const points = await runGridSweep({ ...campaignOptions, axes });
+    expect(points.map((point) => point.meanBenevLossTarget)).toEqual([
+      expect.any(Number),
+      expect.any(Number),
+    ]);
+    expect(points[1]?.meanBenevLossTarget).toBeGreaterThan(
+      points[0]?.meanBenevLossTarget ?? 0,
+    );
+  }, 60_000);
+
+  it('restores axes and fixed values after a successful grid', async () => {
+    const cfg = ENGINE_CONFIG as unknown as Record<string, number>;
+    const keys = [
+      'BENEV_REGARD_STEP',
+      'BENEV_REPAIR_STEP',
+      'BENEV_RUPTURE_DEBT_CEILING',
+    ] as const;
+    const original = Object.fromEntries(keys.map((key) => [key, cfg[key]]));
+    const axes = parseGridSpec('BENEV_REGARD_STEP=100;BENEV_REPAIR_STEP=10');
+    await runGridSweep({
+      ...campaignOptions,
+      axes,
+      fixed: { BENEV_RUPTURE_DEBT_CEILING: 77 },
+    });
+    expect(Object.fromEntries(keys.map((key) => [key, cfg[key]]))).toEqual(
+      original,
+    );
+  }, 60_000);
+
+  it('restores axes and fixed values after a mid-grid failure', async () => {
+    const cfg = ENGINE_CONFIG as unknown as Record<string, number>;
+    const keys = [
+      'BENEV_REGARD_STEP',
+      'BENEV_REPAIR_STEP',
+      'BENEV_RUPTURE_DEBT_CEILING',
+    ] as const;
+    const original = Object.fromEntries(keys.map((key) => [key, cfg[key]]));
+    const axes = parseGridSpec(
+      'BENEV_REGARD_STEP=0,100;BENEV_REPAIR_STEP=0,10',
+    );
+    await expect(
+      runGridSweep({
+        ...campaignOptions,
+        axes,
+        fixed: { BENEV_RUPTURE_DEBT_CEILING: 77 },
+        onCell: (cell) => {
+          if (cell.cell === 2) throw new Error('mid-grid failure');
+        },
+      }),
+    ).rejects.toThrow('mid-grid failure');
+    expect(Object.fromEntries(keys.map((key) => [key, cfg[key]]))).toEqual(
+      original,
+    );
   }, 60_000);
 });
