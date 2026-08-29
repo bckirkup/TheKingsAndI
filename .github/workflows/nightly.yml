@@ -1,6 +1,10 @@
 # Agent-free heavy calibration. PR CI stays on fake-engine smoke; this workflow
 # carries Lozza N~100 metrics (and optional on-demand Stockfish) without burning
 # Cursor agent time. See docs/testing_strategy.md §7.
+#
+# Lozza campaigns run as parallel jobs: on the cold clamped artifact, supportive
+# is ~54 s/match (refusal-driven MultiPV load) so N=100 alone is ~90 min — a
+# single sequential 45-minute job cannot finish both leaders.
 name: Nightly calibration
 
 on:
@@ -55,12 +59,14 @@ permissions:
   contents: read
 
 jobs:
-  lozza-calibration:
-    name: Lozza calibration + sweep
+  lozza-tyrannical:
+    name: Lozza tyrannical campaign
     if: >-
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.engine == 'lozza')
     runs-on: ubuntu-latest
+    # Measured ~15 min for N=100 on the cold clamped artifact; headroom for
+    # runner variance.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -76,22 +82,16 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_MATCHES: ${{ inputs.matches }}
-          INPUT_RUN_SWEEP: ${{ inputs.run_sweep }}
         run: |
           if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$INPUT_MATCHES" ]; then
             MATCHES="$INPUT_MATCHES"
           else
             MATCHES='100'
           fi
-          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$INPUT_RUN_SWEEP" ]; then
-            RUN_SWEEP="$INPUT_RUN_SWEEP"
-          else
-            RUN_SWEEP='true'
-          fi
           echo "matches=${MATCHES}" >> "$GITHUB_OUTPUT"
-          echo "run_sweep=${RUN_SWEEP}" >> "$GITHUB_OUTPUT"
 
       - name: Tyrannical Lozza campaign
+        id: campaign
         env:
           MATCHES: ${{ steps.cfg.outputs.matches }}
         run: |
@@ -106,10 +106,59 @@ jobs:
             --out=artifacts/nightly/tyrannical.csv \
             --artifact-out=artifacts/nightly/tyrannical.metrics.json
 
+      - name: Upload metrics artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-lozza-tyrannical
+          path: artifacts/nightly/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce tyrannical calibration bounds
+        if: steps.campaign.outcome == 'success'
+        run: |
+          pnpm sim:aggregate \
+            --inputs=artifacts/nightly/tyrannical.metrics.json \
+            --enforce-calibration=true
+
+  lozza-supportive:
+    name: Lozza supportive campaign
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.engine == 'lozza')
+    runs-on: ubuntu-latest
+    # Measured ~54 s/match on the cold clamped artifact (refusal MultiPV load),
+    # so N=100 is ~90 min; keep headroom for runner variance.
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Resolve run configuration
+        id: cfg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MATCHES: ${{ inputs.matches }}
+        run: |
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ -n "$INPUT_MATCHES" ]; then
+            MATCHES="$INPUT_MATCHES"
+          else
+            MATCHES='100'
+          fi
+          echo "matches=${MATCHES}" >> "$GITHUB_OUTPUT"
+
       - name: Supportive Lozza campaign
+        id: campaign
         env:
           MATCHES: ${{ steps.cfg.outputs.matches }}
         run: |
+          mkdir -p artifacts/nightly
           pnpm --silent sim \
             --matches="$MATCHES" \
             --leader=supportive \
@@ -120,9 +169,43 @@ jobs:
             --out=artifacts/nightly/supportive.csv \
             --artifact-out=artifacts/nightly/supportive.metrics.json
 
-      - name: Coefficient sweep (OUTCOME_TRUST_LOSS_SCALE)
-        if: steps.cfg.outputs.run_sweep == 'true'
+      - name: Upload metrics artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-lozza-supportive
+          path: artifacts/nightly/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce supportive calibration bounds
+        if: steps.campaign.outcome == 'success'
         run: |
+          pnpm sim:aggregate \
+            --inputs=artifacts/nightly/supportive.metrics.json \
+            --enforce-calibration=true
+
+  lozza-sweep:
+    name: Lozza coefficient sweep
+    if: >-
+      (github.event_name == 'schedule') ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.engine == 'lozza' &&
+       inputs.run_sweep == true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Coefficient sweep (OUTCOME_TRUST_LOSS_SCALE)
+        run: |
+          mkdir -p artifacts/nightly
           pnpm --silent sim:sweep \
             --knob=OUTCOME_TRUST_LOSS_SCALE \
             --values=6,12,18 \
@@ -133,28 +216,14 @@ jobs:
             --leader=tyrannical \
             | tee artifacts/nightly/sweep-outcome-trust-loss.csv
 
-      - name: Upload metrics artifacts
+      - name: Upload sweep artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: nightly-lozza-metrics
+          name: nightly-lozza-sweep
           path: artifacts/nightly/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
-
-      - name: Enforce tyrannical calibration bounds
-        if: always()
-        run: |
-          pnpm sim:aggregate \
-            --inputs=artifacts/nightly/tyrannical.metrics.json \
-            --enforce-calibration=true
-
-      - name: Enforce supportive calibration bounds
-        if: always()
-        run: |
-          pnpm sim:aggregate \
-            --inputs=artifacts/nightly/supportive.metrics.json \
-            --enforce-calibration=true
 
   vitest-heavy:
     # The campaign-scale tier that used to run on every push: whole seeded

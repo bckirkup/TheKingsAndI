@@ -144,11 +144,11 @@ next match's roster merge; there is no mid-match resume. Resuming requires the
 same engine determinism ID, psychology configuration, leader, and seed, and
 throws a mismatch error instead of silently producing incomparable numbers.
 
-Scheduled Lozza calibration (N≈100, tyrannical + supportive, plus a one-knob
-sweep) runs in GitHub Actions via `.github/workflows/nightly.yml` so balance
-signal does not require Cursor agent time. Stockfish production-depth runs are
-`workflow_dispatch` only on that same workflow, with an explicit match budget.
-See `docs/testing_strategy.md` §7.
+Scheduled Lozza calibration (N≈100 tyrannical and supportive as parallel jobs,
+plus a one-knob sweep) runs in GitHub Actions via
+`.github/workflows/nightly.yml` so balance signal does not require Cursor agent
+time. Stockfish production-depth runs are `workflow_dispatch` only on that same
+workflow, with an explicit match budget. See `docs/testing_strategy.md` §7.
 
 ## Layout
 
