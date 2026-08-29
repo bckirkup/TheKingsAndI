@@ -185,6 +185,19 @@ describe('D167 curdle floor controls', () => {
     expect(byMultiplier).toEqual([...byMultiplier].sort((a, b) => a - b));
     expect(byAttachment.every((value) => value >= 0)).toBe(true);
     expect(byMultiplier.every((value) => value >= 0)).toBe(true);
+    const chargedResult = withConfig(
+      {
+        OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1_500,
+        OVERRIDE_STANDING_PRICE_PERMILLE: 1_000,
+      },
+      () => applyOverride(target, [witness(100)], 3, 'Nf3'),
+    );
+    const chargedWitness = chargedResult.witnesses[0];
+    expect(chargedWitness?.credence.ruptureDebt).toBe(
+      chargedWitness === undefined
+        ? 0
+        : witness(100).credence.tauBenev - chargedWitness.credence.tauBenev,
+    );
   });
 
   it('grades witness loss when the cliff is not saturated', () => {
