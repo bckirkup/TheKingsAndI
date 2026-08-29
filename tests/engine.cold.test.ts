@@ -95,6 +95,7 @@ describe('Lozza cold-search contract', () => {
     });
     expect(cold.determinismId).toContain('/search-cold');
     expect(warm.determinismId).toContain('/search-warm');
+    expect(cold.determinismId).toContain('/ladder-rung-canonical/');
     expect(cold.determinismId).not.toBe(warm.determinismId);
   });
 

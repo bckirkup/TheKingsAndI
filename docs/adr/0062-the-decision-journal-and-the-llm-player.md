@@ -174,3 +174,14 @@ nothing in it is a model.
   evidence.
 - **Letting the model tune coefficients directly.** Rejected: it would make a
   vendor checkpoint a term in the balance of the game.
+
+## Addendum (2026-08-29): D173 canonical ladder rungs
+
+D173 rules that the rung is the value: a depth-`d` rung from the deeper search
+that runs first is canonical for `(position, d)`. When the journal and fork
+machinery described here are built, a fork must therefore replay the parent's
+per-piece `D_i` and ladder search depths, not merely its positions and seeds.
+The `PieceId` barrier order fixes those depths within a run, but a different
+roster can ask for a different first search depth and receive a different
+rung. This is a specification obligation; no journal or fork implementation
+exists in tree yet.
