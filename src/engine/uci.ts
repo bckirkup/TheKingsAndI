@@ -14,10 +14,12 @@ export interface UciSearchResult {
 }
 
 export const MAX_PLAUSIBLE_MATE_DISTANCE = 100;
-// Lozza renders |score| >= MINMATE (30000) as a mate, so a cp token at or above
-// it is out of band by the engine's own definition. Honest evaluations do reach
-// the low 20 000s in overwhelming positions (measured: a monotone -12826 ->
-// -29557 -> mate -5 series over depths 1-12), so a tighter bound rejects truth.
+// Lozza clamps static evaluations to MAXEVAL = MINMATE - 1 and renders
+// |score| >= MINMATE (30000) as a mate, so a cp token at or above it is out of
+// band by the artifact's own clamp and output definition. Honest evaluations do
+// reach the low 20 000s in overwhelming positions (measured: a monotone -12826
+// -> -29557 -> mate -5 series over depths 1-12), so a tighter bound rejects
+// truth.
 export const MAX_PLAUSIBLE_CENTIPAWNS = 30_000;
 // Measured worst-case searches need one escalation; four is headroom that costs
 // nothing on sound positions.

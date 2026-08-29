@@ -36,6 +36,10 @@ const mateInOneFens = [
 ] as const;
 const highScoreFens = [
   {
+    fen: 'Q1b2k2/8/8/2p1pP2/3P3B/8/P1P2PPP/RN1QKBNR w KQ - 1 16',
+    move: 'a8c8',
+  },
+  {
     fen: '8/4n2p/4p2k/p3Qpp1/P2PPPPP/8/8/RNBQK1NR b KQ - 1 23',
     move: 'e7c8',
   },
@@ -56,6 +60,8 @@ afterEach(async () => {
 
 describe('D172 score soundness', () => {
   it('classifies sentinel and ordinary scores', () => {
+    // These tokens must remain unsound as classifier defenses even though the
+    // patched artifact clamps ordinary evaluations before they can be emitted.
     expect(MAX_PLAUSIBLE_MATE_DISTANCE).toBe(100);
     expect(MAX_PLAUSIBLE_CENTIPAWNS).toBe(30_000);
     expect(DEFAULT_MAX_SCORE_ESCALATIONS).toBe(4);
@@ -158,16 +164,19 @@ describe('D172 real Lozza regression', () => {
   );
 
   it.each(highScoreFens)(
-    'accepts a measured overwhelming-position score at depth 4 (%s)',
+    'accepts a measured overwhelming-position score without escalation at depth 4 (%s)',
     async ({ fen, move }) => {
       const engine = new UciEngine({
         enginePath: artifactPath,
         multiPv: 8,
       });
       try {
-        const result = await engine.evaluate(fen, 4);
-        expect(result.sound).toBe(true);
-        expect(result.pv[0]).toBe(move);
+        // Reading the requested rung directly proves this is a single depth-4
+        // search rather than an escalated result selected by evaluate().
+        const ladder = await engine.searchLadder(fen, 4);
+        const result = ladder.at.get(4);
+        expect(result?.sound).toBe(true);
+        expect(result?.pv[0]).toBe(move);
       } finally {
         await engine.dispose();
       }
@@ -175,18 +184,19 @@ describe('D172 real Lozza regression', () => {
     120_000,
   );
 
-  it('escalates the earlier killer to a sound mating line', async () => {
+  it('keeps the earlier killer sound at depth 4 without escalation', async () => {
     const engine = new UciEngine({
       enginePath: artifactPath,
       multiPv: 8,
     });
     try {
-      const result = await engine.evaluate(
+      const ladder = await engine.searchLadder(
         '2n5/7Q/1k6/p2P1PQ1/P3P3/8/8/RNBQK1NR b KQ - 2 32',
         4,
       );
-      expect(result.sound).toBe(true);
-      expect(result.pv[0]).toBe('c8e7');
+      const result = ladder.at.get(4);
+      expect(result?.sound).toBe(true);
+      expect(result?.pv[0]).toBe('b6c5');
     } finally {
       await engine.dispose();
     }
