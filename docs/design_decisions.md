@@ -1842,18 +1842,31 @@ and a piece that was spent carelessly is expensive or declines outright (ADR
 leader who lost him than for anyone else** — the first place in the design
 where a leader's reputation is quoted back to him as a number.
 
-Two boundaries remain unruled: whether the purse is spent per match or per
-cycle, since ransom settles per match while the purse refills per cycle; and
-what ADR 0025 permits a commander to know about a captive's cash or the roster
-to know about self-payment versus redemption.
+The second addendum rules both boundaries. Ransom is drawn from the **cycle
+purse**, not a per-match allowance: a bad match is paid for over the weeks that
+follow, at the expense of the next draft. With ~19 a piece, ~125 a purse, and
+10–15 pieces taken per match, a commander who loses badly twice in a cycle
+cannot both redeem his people and compete at the next draft.
+
+The ransom terms are private to the two commanders and the piece concerned.
+Under ADR 0025 this withdraws the claim in §5 that the roster observes the
+exchange: the roster sees only **who came home**. Whether the commander paid,
+the piece paid, they split it, or the enemy released him is not visible as
+fact. A return must be inferred and travels as testimony and rumour through
+the ADR 0065 channel, with every party motivated to shade it. The favoritism
+tell of §5 therefore survives only coarsely: presence is observable,
+generosity is not. *(ADR 0071 second addendum, 2026-08-29.)*
 
 ### D182 ✅ Does a piece read its own price as its worth? (ADR 0071 addendum)
-**Answered in principle 2026-08-29 (owner) — magnitude open, not wired.** A
-piece's clearing price and ransom feed its self-regard: being bought back
-cheaply is an injury even though coming home is good news. The reading must be
-relative to the expectation for the piece's role, not absolute. Absolute price
-would deterministically demoralise pawns, cheap by construction (D146), and
-confirm ADR 0019's class lean.
+**Answered in principle 2026-08-29 (owner) — expectation baseline confirmed,
+magnitude open, not wired.** A piece's clearing price and ransom feed its
+self-regard: being bought back cheaply is an injury even though coming home is
+good news. The appraisal is a **signed difference from a persistent, moving
+expectation** the piece carries, updated by what that piece was previously
+paid. Expectation is everything: a piece compares its recovery with what a
+piece of its role and history expected, never with the absolute price. Absolute
+price would deterministically demoralise pawns, cheap by construction (D146),
+and confirm ADR 0019's class lean.
 
 No price exists in `PieceState` today. A clearing price lives only in the draft
 observation (`sim/seminarDraft.ts:443,713-744`), while `PieceState`
@@ -1869,11 +1882,33 @@ decay path no authored penalty currently produces. It also prices the leader's
 self-serving option — let the cheap pieces buy themselves out and spend the
 purse on the Queen — as an observable act.
 
+Under the privacy ruling, those four outcomes are **not distinguishable by the
+roster**. The roster sees only who came home; self-payment is carried by
+inference and possibly false testimony or rumour, not by an exposed fact.
+
 ### D184 ❓ Does an unransomed captive enter the next draft as a lot?
 **Open — raised 2026-08-29 by the ADR 0071 addendum, not wired.** Failing to
 bring people home would mean watching a rival buy them, the harshest and most
 legible consequence available. It also risks a rich commander farming another
 commander's veterans, so the draft-lot path and its boundary remain unresolved.
+
+### D185 ❓ What claim does the loyal survivor have on the purse?
+**Open — raised 2026-08-29 by the ADR 0071 second addendum, not wired.** The
+purse is one pot, so redeeming the piece that got itself taken spends money not
+only on wages and lots but on the pieces who were never captured. The parable is
+the loyal survivor watching the returning captive receive the fatted calf
+while nobody ever spent that money on him. This claim needs no private
+information: presence is observable, and everyone knows what a purse is for.
+
+It is a leadership trap with no clean answer. Redeem the captives and the
+faithful pay for it; leave them and the roster learns that they do not come.
+Reliability is currently unpriced: a piece earns regard for showing up, but the
+commander's ledger records nothing for the service it never had to buy.
+Possible shapes remain open: an expectation term, with unrewarded service
+raising the veteran's D182 expectation; a benevolence charge at redemption,
+making the commander pay the room for the spend like an override; or a
+standing claim on the next draft, where the veteran expects money spent on
+their cohort.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

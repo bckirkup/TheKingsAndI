@@ -230,10 +230,74 @@ Queen. The roster can see that, and under ADR 0065 §D168 it will read it.
   bring your people home would then mean watching a rival buy them, which is the
   harshest and most legible consequence available; it also risks a rich commander
   farming another's veterans.
-- **The boundary.** Ransom settles per **match** while the purse refills per
-  **cycle**, so a bad match hurts for weeks (sharpest), or ransom draws on a
-  smaller per-match allowance (gentler, and weaker as a lesson). Unruled.
-- **The information rules.** Whether a commander may see a captive's cash before
-  choosing whom to redeem, and whether the roster can tell self-payment from
-  redemption, both fall under ADR 0025 (no enemy psychological state, and no
-  arithmetic shown to the player) and are unruled.
+
+## Addendum, 2026-08-29 (second) — The purse, the privacy, and the fatted calf
+
+**Status:** accepted in principle (owner ruling); **not wired**. Closes the
+boundary and information questions left open by the first addendum, confirms
+D182's baseline, and opens **D185**.
+
+> *"Expectation is everything. I think it is all drawn from the cycle purse. I
+> think the conditions of ransom are private to the two players and the piece in
+> question."*
+> *"You never slaughtered the fatted calf for me…"*
+
+### The baseline is expectation (D182 confirmed)
+Self-appraisal is measured against what a piece of that role and history
+*expected*, never against the absolute number. This is the owner's ruling, not an
+implementation convenience, and it fixes the shape of the eventual magnitude: the
+term is a signed difference from an expectation the piece carries, so a cheap
+pawn is uninjured by a pawn's price and an officer is injured by one. It follows
+that expectation is itself persistent state and must move — a piece bought high
+once will price its own recovery against that memory, which is exactly the
+foolishness D182 is for.
+
+### The purse is the cycle purse (the boundary, ruled)
+Ransom is drawn from the **cycle** purse, not from a per-match allowance. A match
+that goes badly is therefore paid for over the weeks that follow, at the expense
+of the next draft — the strongest available version, because the lesson survives
+the match that taught it. Combined with the first addendum's measured numbers
+(~19 a piece, ~125 a purse, 10–15 taken per match), a commander who loses badly
+twice in a cycle cannot both redeem his people and compete at the next draft.
+
+### The terms are private (the information rules, ruled)
+The conditions of a ransom are known only to the two commanders and the piece
+concerned. Under ADR 0025 this is the tighter reading, and it withdraws something
+§5 of this ADR claimed: **the roster does not observe the exchange.** It observes
+only *who came home*. Whether the commander paid, the piece paid, they split it,
+or the enemy simply released him is not visible to anyone else.
+
+The consequence is better than the mechanic it replaces. A return has to be
+*inferred*, so the story of it travels as testimony and rumour through the ADR
+0065 confidence channel rather than as fact — and every party to it has a motive
+to shade it. A piece that sprang itself may let the room believe its commander
+came for it (protecting a leader it still likes, or its own standing); a piece
+nobody came for may claim it was redeemed rather than admit it was abandoned; a
+commander may take credit for a release he did not buy. This is the first place in
+the design where a piece has both a motive and the means to misrepresent its own
+history, and the rumour system is the only thing that can carry it. It also means
+the favoritism tell of §5 is real but *coarse*: presence is observable, generosity
+is not.
+
+### D185 — what claim does the loyal survivor have on the purse? (open)
+The purse is one pot, so money spent redeeming the piece that got itself taken is
+money not spent on wages, lots, or the pieces who were never captured. Redemption
+is therefore paid for by the faithful, and the parable holds: the survivor of
+twenty matches watches the returning captive bought back at a price nobody ever
+spent on him. Unlike the ransom terms, this grievance needs no private
+information — presence is observable and everyone knows what a purse is for — so
+the room can hold it without violating the privacy ruling above.
+
+That is a leadership trap with no clean answer, which is why it is a decision and
+not a coefficient: redeem your people and the loyal pay for it; leave them and the
+roster learns you do not come. It is also the first mechanism in the model that
+prices *reliability*, which today earns a piece nothing at all (its regard for the
+commander accrues, but the commander's ledger never records what it never had to
+spend on it).
+
+Unresolved: whether the claim is an expectation term (the veteran's expectation
+rises with unrewarded service, so D182's machinery carries it), a benevolence
+charge at redemption time (the commander pays the room for the spend, like an
+override), or a standing claim on the next draft (the veteran expects a lot spent
+on *his* cohort). The first is cheapest and reuses ruled machinery; the second is
+the most legible as leadership; the third is the most economic and the slowest.
