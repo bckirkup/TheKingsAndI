@@ -332,7 +332,7 @@ gates; agents triage failures and interpret balance deltas.
 | Trigger | Workflow | Engine | What it proves |
 |---|---|---|---|
 | Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, build, fast Vitest goldens + sensitivity + coverage, 6-match smoke degeneracy bounds, Sonar. The `app` and `sim-smoke` jobs run in parallel; the gate is budgeted at ~5 min |
-| Nightly cron, or `workflow_dispatch` | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Fake heavy tier and Lozza `--depth-cap=4` | The whole campaign-scale Vitest tier (`vitest.heavy.config.ts`), the 20-match two-leader smoke, N≈100 tyrannical + supportive campaigns, and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
+| Nightly cron, or `workflow_dispatch` | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Fake heavy tier and Lozza `--depth-cap=4` | The whole campaign-scale Vitest tier (`vitest.heavy.config.ts`), the 20-match two-leader smoke, N≈100 tyrannical and supportive Lozza campaigns as **parallel jobs** (supportive alone is ~90 min on the cold clamped artifact), and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
 | Manual `workflow_dispatch` only | same nightly workflow, `engine=stockfish` | Stockfish uncapped | Explicit budgeted fidelity spot check (`stockfish_matches`, default 1). Never on the cron path |
 
 **PR path rules.** Keep Stockfish, campaign-scale balance measurements, and
