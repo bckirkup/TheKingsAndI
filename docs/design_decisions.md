@@ -1720,8 +1720,33 @@ choice, not a claim of improved conduct. The implementing defaults are
 `src/psychology/config.ts:76-79`; the explicit pre-D176 change detector is
 `tests/curdle.floor.test.ts:74-93`.
 
-### D177 ❓ Do pieces stay together long enough for a social graph to exist?
-**Open — raised 2026-08-29 by the D176 attachment measurement, not wired.**
+### D177 ✅ Do pieces stay together long enough for a social graph to exist? (ADR 0071)
+**Answered 2026-08-29 (owner) — not wired.** *"Being taken isn't being held as a
+POW, or if it is, there should be a prisoner exchange at the end of each match."*
+Capture is **captivity**: the piece leaves the board into the captor's hands with
+its state intact, an exchange settles at the end of every match bounded by what
+each side holds, what is not exchanged stays held (and judges its own commander
+for the omission), and a captive's square is filled by a replacement — so a
+roster's social density becomes an outcome of leadership rather than a constant.
+ADR 0071 records the shape and opens D178–D180 for the arithmetic. Nothing is
+wired; the measured evidence and the harness defect below stand as recorded.
+
+Reading the harness while ruling this found that the campaign is not modelling
+loss at all but **amnesia**: `mergeCampaignRoster` rebuilds the full lineup each
+match and re-uses the same `PieceId` per starting square, but carries
+psychological state only for pieces present in the returned roster — survivors
+only — so a captured piece is re-created by `createFreshPieceState` with empty
+`dyadicAffinity`, `B_i = 0`, and reset credence (`sim/roster.ts:120-146`,
+`sim/campaign.ts:259-296`). The state is not lost by design: `runMatch` returns
+`departedRoster` including the capture injury, and the season pool path already
+folds it back (`sim/pool.ts:469-500`). The campaign path discards it — and the
+campaign path is the instrument every committed psychology magnitude was
+calibrated on. This contradicts ADR 0026 §1 (a captured piece remembers who took
+it and who spent it) and silently voids its accumulated-trauma pool. Recorded as
+a harness defect in `docs/adr/IMPLEMENTATION_STATUS.md`; repairing it moves
+measured attrition, so it needs its own before/after evidence.
+
+**Original measurement (unchanged by the ruling).**
 Every social mechanism now specified prices a *bond*: D170 charges each witness
 by its attachment to the piece that was overridden, and D168/D169 route a
 private word through affinity (intimates read care, the rest read favoritism).
@@ -1737,10 +1762,11 @@ only 2–4 non-zero edges each, so the modal piece plays one match and never mee
 the same witness twice. That is why half of all witness attachments at override
 time are exactly zero.
 
-The open question is which of three answers the design wants, and it must be
-ruled before any D168 magnitude is chosen or D170's effect is judged too weak:
+Three answers were available; the owner ruled the first, in the sharper form of
+captivity plus exchange (ADR 0071). The other two are recorded because they
+remain the alternatives if the exchange arithmetic (D178) proves unworkable:
 
-1. **Roster continuity** — pieces should return (ADR 0026 already makes capture
+1. **Roster continuity** *(ruled)* — pieces should return (ADR 0026 already makes capture
    non-permanent at the community level, and nothing in the harness exercises
    the return path), or a bench/reserve should carry a cohort across matches.
    The sociology then works because the same faces come back.
@@ -1756,9 +1782,36 @@ Not answerable from the current evidence: affinity accrual *per shared ply* is
 unmeasured (only the stock held by survivors is), the accounting is one seed,
 and own-side capture is a subtraction residual because the harness counts
 `enemyAttrition` but has no player-side capture counter — which is itself a
-harness gap this decision should close. D177 is **not** a claim that attrition
-is a defect; it is the question of whether the social layer is being tuned
-against a roster that cannot hold it.
+harness gap this decision should close. D177 was **not** a claim that attrition
+is a defect; it was the question of whether the social layer is being tuned
+against a roster that cannot hold it, and the answer is that it was.
+
+### D178 ❓ What does a prisoner exchange settle? (ADR 0071)
+**Open — raised 2026-08-29 by ADR 0071, not wired.** One-for-one by count, or by
+role value? Count is simple and lets a commander buy an officer back with pawns,
+which is itself a leadership tell and a class-prejudice event (ADR 0019's class
+bias reads directly on "three pawns for the Queen"). Value is fairer and makes
+losing an officer slow to recover from. Whichever is chosen, the exchange must
+stay bounded by what each side holds — an unbounded return is respawn, which ADR
+0071 §2 rejects because it makes capture free beyond the match.
+
+### D179 ❓ May a commander refuse an exchange? (ADR 0071)
+**Open — raised 2026-08-29 by ADR 0071, not wired.** A tyrant who holds an
+officer as leverage is good drama and produces genuine asymmetry between leader
+archetypes. The hazard is informational: under ADR 0025 no enemy psychological
+state may reach the player except as observable behaviour, so a refusal must be
+legible as an act (*they would not give him back*) without exposing the enemy
+commander's reasoning. Also unresolved is whether the player may refuse, which
+would make abandoning one's own piece a *choosable* act rather than a
+consequence of a thin ledger.
+
+### D180 ❓ What does a returned piece owe the replacement who took its square?
+**Open — raised 2026-08-29 by ADR 0071, not wired.** Captivity fills the
+captive's square with a fresh piece, so on return two pieces claim one square.
+Whether that is resentment, seniority, or nothing at all decides whether
+replacements are socially inert filler or a second faction inside the roster —
+and it is the first place in the design where a piece's grievance is against a
+peer rather than the commander.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
