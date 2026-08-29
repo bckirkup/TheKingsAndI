@@ -1814,6 +1814,67 @@ replacements are socially inert filler or a second faction inside the roster —
 and it is the first place in the design where a piece's grievance is against a
 peer rather than the commander.
 
+### D181 ✅ What does an exchange settle in? (ADR 0071 addendum)
+**Answered 2026-08-29 (owner) — not wired.** An exchange settles in money, paid
+out of the unspent draft purse. This largely dissolves D178: the market already
+prices a Queen above a pawn, so the class prejudice of ADR 0019 appears in what
+the market charges rather than in an authored exchange table.
+
+The money is already there and is currently wasted. On seed 7 (`pnpm
+sim:seminar --seed=7 --weeks=2 --matches=1 --commanders=2 --engine=fake
+--draft-at-cycle-one=true`) the cycle-2 draft cleared **all 8 lots at a mean
+price of 19** and still ended with **393 unspent across four commanders** —
+roughly 98 of a ~125 purse, i.e. about 80% dead money — and
+`PURSE_CARRY_PERMILLE = 500` then destroys half of the remainder at the cycle
+boundary. Ransom needs no new currency; it needs the existing one to stop being
+burned.
+
+The scarcity also lands in the right place without tuning. At ~19 a piece and
+~125 a purse, a commander can buy back **five or six** of the 10–15 pieces a
+match takes. He therefore **must choose whom to ask back**, which is the ADR
+0071 §5 leadership act arriving as an arithmetic consequence rather than a
+rule. The piece's side of the price is also already in tree:
+`acceptanceDiscountPermille` (`src/core/draftEconomy.ts:116-135`) already
+discounts what a piece asks by its benevolence credence in the commander and its
+roster's testimony. Pointed at ransom, a piece that wants to come home is cheap
+and a piece that was spent carelessly is expensive or declines outright (ADR
+0026 free agency). **The same prisoner therefore has a different price for the
+leader who lost him than for anyone else** — the first place in the design
+where a leader's reputation is quoted back to him as a number.
+
+Two boundaries remain unruled: whether the purse is spent per match or per
+cycle, since ransom settles per match while the purse refills per cycle; and
+what ADR 0025 permits a commander to know about a captive's cash or the roster
+to know about self-payment versus redemption.
+
+### D182 ✅ Does a piece read its own price as its worth? (ADR 0071 addendum)
+**Answered in principle 2026-08-29 (owner) — magnitude open, not wired.** A
+piece's clearing price and ransom feed its self-regard: being bought back
+cheaply is an injury even though coming home is good news. The reading must be
+relative to the expectation for the piece's role, not absolute. Absolute price
+would deterministically demoralise pawns, cheap by construction (D146), and
+confirm ADR 0019's class lean.
+
+No price exists in `PieceState` today. A clearing price lives only in the draft
+observation (`sim/seminarDraft.ts:443,713-744`), while `PieceState`
+(`src/psychology/types.ts:50-62`) has no price, wage, or cash field. This ruling
+therefore adds persistent piece state.
+
+### D183 ✅ Do pieces hold cash and may they pay their own ransom? (ADR 0071 addendum)
+**Answered in principle 2026-08-29 (owner) — not wired.** Pieces hold cash and
+may pay part or all of their own ransom, creating four captivity outcomes:
+**he paid**, **I paid**, **we split it**, or **nobody came**. A piece that sprang
+itself owes the commander nothing, and knows it: independence is an authority-
+decay path no authored penalty currently produces. It also prices the leader's
+self-serving option — let the cheap pieces buy themselves out and spend the
+purse on the Queen — as an observable act.
+
+### D184 ❓ Does an unransomed captive enter the next draft as a lot?
+**Open — raised 2026-08-29 by the ADR 0071 addendum, not wired.** Failing to
+bring people home would mean watching a rival buy them, the harshest and most
+legible consequence available. It also risks a rich commander farming another
+commander's veterans, so the draft-lot path and its boundary remain unresolved.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
