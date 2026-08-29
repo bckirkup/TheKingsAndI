@@ -70,6 +70,19 @@ export interface CampaignResult {
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
 
+function carryMatchRoster(
+  survivingRoster: readonly PieceState[],
+  departedRoster: readonly PieceState[],
+): PieceState[] {
+  const carriedById = new Map(
+    survivingRoster.map((piece) => [piece.id, piece]),
+  );
+  for (const piece of departedRoster) {
+    carriedById.set(piece.id, piece);
+  }
+  return [...carriedById.values()];
+}
+
 export function matchSeedForCampaign(
   campaignSeed: number,
   match: number,
@@ -292,8 +305,11 @@ export async function runCampaign(
       result.refusedGoodMoves,
     );
     metrics.push(metric);
-    roster = [...result.roster];
-    enemyRoster = [...result.enemyRoster];
+    roster = carryMatchRoster(result.roster, result.departedRoster);
+    enemyRoster = carryMatchRoster(
+      result.enemyRoster,
+      result.departedEnemyRoster,
+    );
     justifiedRefusalObviousness.push(...result.justifiedRefusalObviousness);
     justifiedRefusalPrivateViewLosses.push(
       ...result.justifiedRefusalPrivateViewLosses,
