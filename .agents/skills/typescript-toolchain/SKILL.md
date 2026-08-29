@@ -17,11 +17,12 @@ pnpm dev              # Vite dev server (app shell only until Milestone 4)
 pnpm lint             # eslint + prettier --check
 pnpm format           # prettier --write
 pnpm typecheck        # tsc --noEmit, strict, covers src/ sim/ and tests
-pnpm test             # vitest run
-pnpm test:coverage    # vitest run --coverage -> coverage/lcov.info (Sonar reads this)
+pnpm test             # fast tier: vitest run (campaign-scale cases skipped)
+pnpm test:heavy       # every case, campaign-scale included; nightly owns this
+pnpm test:coverage    # fast tier + coverage/lcov.info (Sonar reads this)
 pnpm build            # vite build
 pnpm sim --matches=20 --leader=tyrannical    # Lozza depth-cap-4 smoke
-pnpm sim --matches=20 --leader=tyrannical --engine=fake  # CI smoke
+pnpm sim --matches=6 --leader=tyrannical --engine=fake   # CI smoke (nightly: 20, both leaders)
 pre-commit run --all-files                   # repo hygiene hooks
 ```
 
@@ -65,11 +66,11 @@ For status questions, read committed calibration results in
 
 GitHub Actions owns routine verification — see `docs/testing_strategy.md` §7.
 
-- **PR / `main`:** `.github/workflows/ci.yml` — lint, typecheck, Vitest coverage,
-  `pnpm sim --matches=20 --leader=tyrannical --engine=fake`.
-- **Nightly / dispatch:** `.github/workflows/nightly.yml` — Lozza N≈100
-  calibration + one-knob sweep; Stockfish only via `workflow_dispatch` with an
-  explicit match budget.
+- **PR / `main`:** `.github/workflows/ci.yml` — lint, typecheck, build, fast-tier
+  Vitest coverage, and `pnpm sim --matches=6 --leader=tyrannical --engine=fake`.
+- **Nightly / dispatch:** `.github/workflows/nightly.yml` — `pnpm test:heavy`,
+  the 20-match two-leader smoke, Lozza N≈100 calibration + one-knob sweep;
+  Stockfish only via `workflow_dispatch` with an explicit match budget.
 - **Cursor agents:** triage red CI/nightly jobs and interpret metric deltas.
   Do not re-run the full suite inside an agent session when Actions already
   ran it. Do not schedule Automations to `pnpm test` / `pnpm sim`.

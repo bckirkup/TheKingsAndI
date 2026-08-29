@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { digest } from '../src/core/digest';
+
+import { describeHeavy } from './tier';
 import {
   aggregateCampaign,
   buildTrajectoryBands,
@@ -161,7 +163,8 @@ describe('parallel campaign planning', () => {
   });
 });
 
-describe('parallel campaign sharding', () => {
+// Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+describeHeavy('parallel campaign sharding', () => {
   const fourCampaignOptions = {
     plan: { totalMatches: 8, campaignLength: 2, campaigns: 4 },
     leader: 'supportive' as const,

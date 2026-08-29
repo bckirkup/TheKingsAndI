@@ -5,10 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+# Superseded pushes on the same ref stop paying for a runner.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -38,8 +44,9 @@ jobs:
           done
 
   app:
-    name: Lint / typecheck / build / test / sim smoke
+    name: Lint / typecheck / build / fast tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -58,12 +65,30 @@ jobs:
           name: coverage-lcov
           path: coverage/lcov.info
           if-no-files-found: error
-      - run: pnpm sim --matches=20 --leader=tyrannical --engine=fake
+
+  sim-smoke:
+    # Runs beside `app` rather than after it: the smoke is the second-longest
+    # step in the gate, so serializing it doubles the wall clock for nothing.
+    # 6 matches keeps this inside the <3 min budget in
+    # docs/testing_strategy.md §1; nightly runs the 20-match, two-leader form.
+    name: Headless sim smoke (fake engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm sim --matches=6 --leader=tyrannical --engine=fake
 
   sonar:
     name: SonarQube Cloud
     runs-on: ubuntu-latest
     needs: app
+    timeout-minutes: 15
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:

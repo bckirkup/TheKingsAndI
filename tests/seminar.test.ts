@@ -32,6 +32,8 @@ import {
 } from '../src/orchestration';
 import { defaultCredence } from '../src/psychology';
 
+import { itHeavy } from './tier';
+
 describe('seminar spine', () => {
   it('scales seminar purses monotonically with the asking-price ratio', () => {
     const priorities = [
@@ -92,7 +94,8 @@ describe('seminar spine', () => {
     expect(record.result).toBe('DRAW');
   });
 
-  it('settles each week into registers and commendations', async () => {
+  // Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+  itHeavy('settles each week into registers and commendations', async () => {
     const result = await runSeminar({
       seed: 19,
       config: {
@@ -141,7 +144,7 @@ describe('seminar spine', () => {
     expect(payload).not.toContain('"records"');
   });
 
-  it('repeats a semester byte-identically for the same seed', async () => {
+  itHeavy('repeats a semester byte-identically for the same seed', async () => {
     const options = {
       seed: 23,
       config: {
@@ -157,32 +160,35 @@ describe('seminar spine', () => {
     );
   });
 
-  it('folds private cohort history without publishing its ledger', async () => {
-    const result = await runSeminar({
-      seed: 41,
-      config: {
-        ...SEMINAR_CONFIG,
-        WEEKS_PER_SEMESTER: 1,
-        MATCHES_PER_WEEK: 1,
-        COMMANDERS_PER_COHORT: 1,
-        DRAFT_AT_CYCLE_ONE: true,
-        COHORT_HISTORY_RELATIONS_PER_PIECE: 2,
-      },
-      engineKind: 'fake',
-    });
-    const poolStates = Object.values(result.weeks[0]?.poolStates ?? {});
-    expect(
-      poolStates.some((pool) =>
-        pool.members.some(
-          (member) => Object.keys(member.state.dyadicAffinity).length > 0,
+  itHeavy(
+    'folds private cohort history without publishing its ledger',
+    async () => {
+      const result = await runSeminar({
+        seed: 41,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 1,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 1,
+          DRAFT_AT_CYCLE_ONE: true,
+          COHORT_HISTORY_RELATIONS_PER_PIECE: 2,
+        },
+        engineKind: 'fake',
+      });
+      const poolStates = Object.values(result.weeks[0]?.poolStates ?? {});
+      expect(
+        poolStates.some((pool) =>
+          pool.members.some(
+            (member) => Object.keys(member.state.dyadicAffinity).length > 0,
+          ),
         ),
-      ),
-    ).toBe(true);
-    const payload = seminarPayload(result);
-    expect(payload).not.toContain('intakeByMember');
-    expect(payload).not.toContain('"relations"');
-    expect(payload).not.toContain('cohort:');
-  });
+      ).toBe(true);
+      const payload = seminarPayload(result);
+      expect(payload).not.toContain('intakeByMember');
+      expect(payload).not.toContain('"relations"');
+      expect(payload).not.toContain('cohort:');
+    },
+  );
 
   it('counts direct affinity in consultations and acquisitions', () => {
     const white = createCommanderPool({
@@ -269,39 +275,42 @@ describe('seminar spine', () => {
     expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
   });
 
-  it('keeps cohort state quantitative across density controls', async () => {
-    const runs = await Promise.all(
-      [0, 1, 2].map((density) =>
-        runSeminar({
-          seed: 43,
-          config: {
-            ...SEMINAR_CONFIG,
-            WEEKS_PER_SEMESTER: 1,
-            MATCHES_PER_WEEK: 1,
-            COMMANDERS_PER_COHORT: 1,
-            DRAFT_AT_CYCLE_ONE: false,
-            COHORT_HISTORY_RELATIONS_PER_PIECE: density,
-          },
-          engineKind: 'fake',
-        }),
-      ),
-    );
-    const affinityCounts = runs.map((result) =>
-      Object.values(result.weeks[0]?.poolStates ?? {}).reduce(
-        (total, pool) =>
-          total +
-          pool.members.reduce(
-            (count, member) =>
-              count + Object.keys(member.state.dyadicAffinity).length,
-            0,
-          ),
-        0,
-      ),
-    );
-    expect(new Set(affinityCounts).size).toBeGreaterThan(1);
-  });
+  itHeavy(
+    'keeps cohort state quantitative across density controls',
+    async () => {
+      const runs = await Promise.all(
+        [0, 1, 2].map((density) =>
+          runSeminar({
+            seed: 43,
+            config: {
+              ...SEMINAR_CONFIG,
+              WEEKS_PER_SEMESTER: 1,
+              MATCHES_PER_WEEK: 1,
+              COMMANDERS_PER_COHORT: 1,
+              DRAFT_AT_CYCLE_ONE: false,
+              COHORT_HISTORY_RELATIONS_PER_PIECE: density,
+            },
+            engineKind: 'fake',
+          }),
+        ),
+      );
+      const affinityCounts = runs.map((result) =>
+        Object.values(result.weeks[0]?.poolStates ?? {}).reduce(
+          (total, pool) =>
+            total +
+            pool.members.reduce(
+              (count, member) =>
+                count + Object.keys(member.state.dyadicAffinity).length,
+              0,
+            ),
+          0,
+        ),
+      );
+      expect(new Set(affinityCounts).size).toBeGreaterThan(1);
+    },
+  );
 
-  it('wires each loop dimension into the output', async () => {
+  itHeavy('wires each loop dimension into the output', async () => {
     const base = {
       seed: 29,
       config: {
@@ -336,29 +345,32 @@ describe('seminar spine', () => {
     );
   });
 
-  it('carries pool state into week two and settles a new register', async () => {
-    const result = await runSeminar({
-      seed: 31,
-      config: {
-        ...SEMINAR_CONFIG,
-        WEEKS_PER_SEMESTER: 2,
-        MATCHES_PER_WEEK: 1,
-        COMMANDERS_PER_COHORT: 1,
-      },
-      engineKind: 'fake',
-    });
-    const first = result.weeks[0];
-    const second = result.weeks[1];
-    expect(first).toBeDefined();
-    expect(second).toBeDefined();
-    const commanderId = 'w:commander:00';
-    expect(first?.poolStates[commanderId]).not.toEqual(
-      second?.poolStates[commanderId],
-    );
-    expect(first?.registerDeltas[commanderId]).not.toEqual(
-      second?.registerDeltas[commanderId],
-    );
-  });
+  itHeavy(
+    'carries pool state into week two and settles a new register',
+    async () => {
+      const result = await runSeminar({
+        seed: 31,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 2,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 1,
+        },
+        engineKind: 'fake',
+      });
+      const first = result.weeks[0];
+      const second = result.weeks[1];
+      expect(first).toBeDefined();
+      expect(second).toBeDefined();
+      const commanderId = 'w:commander:00';
+      expect(first?.poolStates[commanderId]).not.toEqual(
+        second?.poolStates[commanderId],
+      );
+      expect(first?.registerDeltas[commanderId]).not.toEqual(
+        second?.registerDeltas[commanderId],
+      );
+    },
+  );
 
   it('keeps drafted members distinct in pool metrics', () => {
     const pool = createCommanderPool({
@@ -395,35 +407,38 @@ describe('seminar spine', () => {
     expect(metrics.draftedMembers).toBe(1);
   });
 
-  it('keeps cycle-one drafting opt-in and wires seminar counsel controls', async () => {
-    const base = {
-      seed: 37,
-      config: {
-        ...SEMINAR_CONFIG,
-        WEEKS_PER_SEMESTER: 2,
-        MATCHES_PER_WEEK: 1,
-        COMMANDERS_PER_COHORT: 1,
-      },
-      engineKind: 'fake' as const,
-    };
-    const disabled = await runSeminar(base);
-    const enabled = await runSeminar({
-      ...base,
-      config: { ...base.config, DRAFT_AT_CYCLE_ONE: true },
-    });
-    expect(disabled.weeks[0]?.draftEconomy.clearingPrices).toEqual([]);
-    expect(enabled.draftEconomy.standingSeries.length).toBeGreaterThan(0);
-    const noConsultations = await runSeminar({
-      ...base,
-      config: {
-        ...base.config,
-        DRAFT_CONSULTATIONS_PER_CYCLE: 0,
-      },
-    });
-    expect(noConsultations.counselCorrelationPairs.length).toBeLessThanOrEqual(
-      enabled.counselCorrelationPairs.length,
-    );
-  });
+  itHeavy(
+    'keeps cycle-one drafting opt-in and wires seminar counsel controls',
+    async () => {
+      const base = {
+        seed: 37,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 2,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 1,
+        },
+        engineKind: 'fake' as const,
+      };
+      const disabled = await runSeminar(base);
+      const enabled = await runSeminar({
+        ...base,
+        config: { ...base.config, DRAFT_AT_CYCLE_ONE: true },
+      });
+      expect(disabled.weeks[0]?.draftEconomy.clearingPrices).toEqual([]);
+      expect(enabled.draftEconomy.standingSeries.length).toBeGreaterThan(0);
+      const noConsultations = await runSeminar({
+        ...base,
+        config: {
+          ...base.config,
+          DRAFT_CONSULTATIONS_PER_CYCLE: 0,
+        },
+      });
+      expect(
+        noConsultations.counselCorrelationPairs.length,
+      ).toBeLessThanOrEqual(enabled.counselCorrelationPairs.length);
+    },
+  );
 
   it('treats unavailable members as absent only in the strict demand branch', () => {
     const white = createCommanderPool({

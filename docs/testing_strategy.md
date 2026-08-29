@@ -16,7 +16,9 @@ optional and should not block retunes._
 | Golden regression (settled surfaces only) | fixed inputs → exact reference | <30 s |
 | Replay determinism | same seed / checkpoint → byte-identical | <60 s |
 | Migration | fixture DBs at each schema version load and upgrade | <10 s |
-| Headless sim smoke (CI) | 20 matches × 2 leader styles, assert metric bounds | <3 min |
+| Headless sim smoke (CI) | 6 matches, tyrannical, assert metric bounds | <3 min |
+| Headless sim smoke (nightly GHA) | 20 matches × 2 leader styles, assert metric bounds | <20 min |
+| Campaign-scale Vitest (nightly GHA) | whole campaigns, seasons, and seminars under Vitest | <150 min |
 | Headless calibration (nightly GHA) | Lozza depth-cap-4, N≈100 × leader styles + one-knob sweep | minutes |
 | Headless calibration (on-demand) | Stockfish production depth via `workflow_dispatch` only | minutes–hours |
 
@@ -329,20 +331,41 @@ gates; agents triage failures and interpret balance deltas.
 
 | Trigger | Workflow | Engine | What it proves |
 |---|---|---|---|
-| Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, fast Vitest goldens + sensitivity + coverage, 20-match smoke degeneracy bounds, Sonar |
-| Manual `workflow_dispatch` (targeted) plus nightly cron for Lozza only | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Selected fake heavy test, or Lozza `--depth-cap=4` | On-demand trajectory, sweep, or large identity-fuzz tests; N≈100 tyrannical + supportive campaigns and an `OUTCOME_TRUST_LOSS_SCALE` sweep remain unattended calibration; metrics uploaded as artifacts |
+| Every PR / `main` push | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `--engine=fake` | Lint, typecheck, build, fast Vitest goldens + sensitivity + coverage, 6-match smoke degeneracy bounds, Sonar. The `app` and `sim-smoke` jobs run in parallel; the gate is budgeted at ~5 min |
+| Nightly cron, or `workflow_dispatch` | [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml) | Fake heavy tier and Lozza `--depth-cap=4` | The whole campaign-scale Vitest tier (`vitest.heavy.config.ts`), the 20-match two-leader smoke, N≈100 tyrannical + supportive campaigns, and an `OUTCOME_TRUST_LOSS_SCALE` sweep; metrics uploaded as artifacts |
 | Manual `workflow_dispatch` only | same nightly workflow, `engine=stockfish` | Stockfish uncapped | Explicit budgeted fidelity spot check (`stockfish_matches`, default 1). Never on the cron path |
 
 **PR path rules.** Keep Stockfish, campaign-scale balance measurements, and
-large-N calibration off PRs. `pnpm test` is the fast default and retains all
-load-bearing determinism anchors, reducer goldens, configuration goldens, and
-sensitivity probes. `pnpm test:heavy` contains the campaign trajectory-band
-measurement, coefficient sweep, and large identity-fuzz corpus; these are
-purposeful behavior or measurement workloads rather than harness correctness
-checks. The `vitest-heavy` job is manual and accepts a target plus trajectory
-campaign length. The Lozza calibration job remains on the cron path because it
-produces unattended balance measurements; large parameter sweeps are intended
-for the Spot scale-out path rather than this workflow.
+large-N calibration off PRs. The tier boundary is drawn in two places:
+
+- Files that are campaign-scale throughout are listed in `HEAVY_TEST_FILES`
+  (`vitest.shared.ts`). `vitest.config.ts` excludes them, so the fast tier never
+  loads them: the world-pairing layer, the trajectory-band measurement, the
+  coefficient sweep, and the identity-fuzz corpus.
+- Files that mix cheap wiring checks with a few whole-campaign cases guard only
+  the expensive cases with `skipIf(FAST_TIER)` from `tests/tier.ts` — the
+  determinism and sensitivity suites in `tests/sim.test.ts`, the season replay
+  and selection-knob goldens, the seminar week/semester runs, and the shard
+  equivalence suite. Their unit and argument-parsing cases still run on every
+  push, which is where most of those files' assertions live.
+
+`vitest.config.ts` sets `VITEST_TIER=fast`, so `pnpm test` and
+`pnpm test:coverage` are the fast tier by construction; `vitest.heavy.config.ts`
+sets `heavy` and includes every file, so `pnpm test:heavy` is the full suite,
+optionally narrowed by a positional filter (`pnpm test:heavy season`).
+
+The cases the fast tier drops were measured at 56 of the 67 minutes the PR gate
+used to take. Each runs whole seeded campaigns inside Vitest, so they are
+behaviour measurements rather than harness correctness checks. `vitest-heavy` now
+runs on the cron path as well as on demand. The Lozza
+calibration job remains on the cron path because it produces unattended balance
+measurements; large parameter sweeps are intended for the Spot scale-out path
+rather than this workflow.
+
+The PR smoke is 6 matches rather than 20. Detectors that need more samples
+(class-bias variance after 20 matches, the seed-matched counterfactual
+approximation) stay silent at that length by their own minimum-sample guards, so
+the 20-match, two-leader form runs nightly in `sim-smoke-full`.
 
 The fixed campaign CSV transcript golden was retired because it pinned exact
 behavior while the model is deliberately changing; it moved in five consecutive
