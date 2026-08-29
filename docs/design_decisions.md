@@ -1702,8 +1702,20 @@ detector in `tests/curdle.floor.test.ts:284-295` and `applyBetrayalSignal` in
 their current defaults (`1000` and `0` respectively), and they must be chosen
 together because the standing price multiplies the witness multiplier. The
 owner's sweep must choose magnitudes jointly and gate them on the
-`free_insistence_ply_fraction` not exceeding the post-#151 baseline. Do not
-invent candidate numbers in the register.
+`free_insistence_ply_fraction` not exceeding the post-#151 baseline.
+The surface is now measured — `docs/calibration/2026-08-29-the-graded-witness-surface.md`,
+a 12-cell grid on each of the two conditions that still carry residual free
+insistence, plus an extended standing axis — and
+it inverts the intuition the acceptance test was written from: over a campaign,
+*lowering* the witness multiplier removes free insistence rather than widening
+it (0.3411 → 0.0000 for `tyrannical`, 0.0731 → 0.0000 for `redeemer` at `500`),
+because what makes a later override free is a room already drained to zero.
+The standing price sits on the same axis, weaker, and re-opens the floor for
+`tyrannical` at `8000`. No behavioural metric moves anywhere on the surface
+except at `mult = 2000`, where `redeemer` gets *more* overrides and longer
+campaigns, so this is a ledger ruling and may not be defended as a conduct
+improvement. The recommendation carried to the owner is multiplier `500` with
+standing price `2000`; no value is live until the owner rules.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
