@@ -1473,10 +1473,9 @@ implemented in `src/orchestration/headlessMatch.ts:702-716` and
 pending the D166 calibration ruling.
 
 ### D166 ❓ What are the live magnitudes for regard and repair?
-**Open — not wired.** The live magnitudes for `BENEV_REGARD_STEP` and
-`BENEV_REPAIR_STEP` require an owner ruling on a before/after sweep. Do not
-invent candidate numbers in the register. **Measured, awaiting ruling.** The
-obstacle recorded in `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
+**Open — measured, awaiting the owner's ruling; not wired.** The live magnitudes
+for `BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` require an owner ruling on a
+before/after sweep. The obstacle recorded in `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
 — that no regard magnitude can widen the emotional axis while the benevolence
 channel stops recording mid-match — is now measured jointly with the D167 knobs
 in `docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md` (194
