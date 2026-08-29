@@ -3,7 +3,10 @@
  * Transcendentals here use fixed algorithms with quantized outputs.
  */
 
-const EXP_TERMS = 20;
+const EXP_TAYLOR_TERMS = 16;
+const EXP_MIN_INPUT = -40;
+const EXP_MAX_INPUT = 40;
+const LN2 = 0.6931471805599453;
 
 /** Fixed-point scale for comparing board-valued quantities. */
 export const BOARD_VALUE_SCALE = 1_000;
@@ -14,16 +17,27 @@ export function quantizeBoardValue(value: number): number {
 }
 
 /**
- * exp(x) via Taylor series around 0, truncated at EXP_TERMS.
- * Valid for x in [-10, 10]; outside that range clamps the input.
+ * exp(x) via range reduction and a Taylor series around zero.
+ * Inputs are clamped to the documented domain [-40, 40].
  */
 export function exp(x: number): number {
-  const bounded = Math.max(-10, Math.min(10, x));
+  const bounded = Math.max(EXP_MIN_INPUT, Math.min(EXP_MAX_INPUT, x));
+  const power = Math.round(bounded / LN2);
+  const reduced = bounded - power * LN2;
   let term = 1;
   let sum = 1;
-  for (let index = 1; index < EXP_TERMS; index += 1) {
-    term = (term * bounded) / index;
+  for (let index = 1; index < EXP_TAYLOR_TERMS; index += 1) {
+    term = (term * reduced) / index;
     sum += term;
+  }
+  if (power >= 0) {
+    for (let index = 0; index < power; index += 1) {
+      sum *= 2;
+    }
+  } else {
+    for (let index = 0; index > power; index -= 1) {
+      sum /= 2;
+    }
   }
   return sum;
 }
