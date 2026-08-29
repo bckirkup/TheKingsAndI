@@ -119,3 +119,143 @@ clamping fabricates a confident lie). Routing around the two positions
   memoizes its own result, with an order-invariance probe — but the reuse rule
   itself is a purity claim that does not hold, and it is an architecture decision,
   not a patch.
+
+## Addendum (2026-08-29): `mate 0` was two different things, and one of them was legal
+
+The ruling above shipped and immediately failed at the first thing it was
+supposed to unblock. Both re-baseline campaigns died within the first few dozen
+insight rounds, not at the poison positions but at ordinary ones:
+
+```text
+UciUnsoundScoreError: Unsound engine score mate 0 for FEN
+rnbqkbnr/ppppp2p/8/5pp1/P3P3/8/1PPP1PPP/RNBQKBNR w KQkq - 0 3 at depth 4 after 2 escalations
+UciUnsoundScoreError: Unsound engine score mate 0 for FEN
+3rkr2/1p3R2/2p3p1/p3P3/P1P1n1b1/8/R7/1N2KBN1 b - - 2 17 at depth 4 after 2 escalations
+```
+
+The returned moves — `d1h5` and `d8d1` — are **checkmate**, verified on the board
+rather than inferred. So `mate 0` was never only the `INF` sentinel: it is also
+how this engine renders a mate in one, which is among the most common decisive
+results in ordinary play. Deepening cannot cure it, because there is nothing
+wrong with it, so the escalation ladder exhausted and the campaign died on a
+correct answer. Withdrawing the `mate 0 → 29_999` case was right about the
+sentinel and wrong about the token: two causes were sharing one symbol, and the
+first ruling read the symbol.
+
+**The cause is a second defect in the same function.** `report()` renders
+
+```js
+let mateScore = ((MATE - Math.abs(score)) / 2) | 0;   // floor(ply / 2)
+```
+
+With `score = MATE - ply`, that is `floor(ply/2)`: mate in one (`ply = 1`) prints
+`mate 0`, mate in three prints `mate 2`. Every mate distance this engine reports
+is one short, and the error lands exactly on the value the out-of-range scores
+also produce. The correct UCI distance is `ceil(ply/2)`, which is the same
+expression plus one:
+
+```js
+let mateScore = ((MATE - Math.abs(score) + 1) / 2) | 0;
+```
+
+**Decision.** Extend the vendored patch to correct the rendering at both report
+sites, and keep the soundness contract exactly as ruled above. This is preferred
+to relaxing the classifier because it removes the ambiguity at its source rather
+than choosing a side of it: after the fix a genuine mate always renders
+`|mate| >= 1`, while the out-of-range values still render outside the plausible
+band (`31001 → mate 0`, `INF = 32000 → mate -499`). `mate 0` therefore keeps
+meaning "unsound", and now means *only* that. Accepting `mate 0` instead would
+have restored the original hazard in full: a forced win reported as `-29_500`,
+arriving silently in the one field the audit trail treats as truth.
+
+**Consequences beyond the first ruling.**
+
+- Reported mate distances shift by one for every mating line, so mate-derived
+  scores in the calibration corpus change by one ply's worth. This is a
+  correction, not a re-tuning, but it is an artifact-identity change like the
+  first patch and separates evidence the same way.
+- `bench` remains `613926` nodes: rendering is output-only.
+- The regression that merged code failed — a mate in one must be *sound* — is now
+  a probe, and it is the cheap test that was missing. The first ruling was
+  measured only against the two positions that provoked the runaway, so it
+  learned the pathological reading of a token and never met the ordinary one.
+- The rendering fix has not been reported upstream: the integration account that
+  filed `namanthanki/lozza#4` cannot comment on it.
+
+## Addendum 2 (2026-08-29): the mate scores were never mates, and the band belongs to the engine
+
+The rendering fix let the campaigns run further and they died again, three times,
+each time on a *different* class of score: `cp 29991`, `cp -28497`, `cp 21349`,
+`cp -24782`, `mate 354`, `mate -297`, `mate 500`. Two corrections came out of
+chasing them, and the second makes the first unnecessary.
+
+**A plausibility bound argued from material was wrong.** The first response was
+to reject centipawn scores past `20_000`, on the reasoning that honest material
+cannot reach 200 pawns. The engine refuted it. Measured over depths 1–12:
+
+```text
+8/4n2p/4p2k/p3Qpp1/P2PPPPP/8/8/RNBQK1NR b KQ - 1 23
+  -12826  -14775  -17002  -20112  -20535  -21560  -24782  -29557  mate -5
+r7/5k2/5P2/RPP3P1/2P1P2P/8/3B1P2/1N2KBNR w K - 1 24
+  cp 20727 / 21191 / 21372 at every depth, always a5a8
+```
+
+That series is monotone, stable in its move, and converges on a real mate: these
+are the engine's honest evaluations of grotesquely lopsided positions, where its
+own terms pile up far past what a material argument allows. A bound chosen from
+outside the engine rejects truth. The bound is therefore the engine's own:
+`MINMATE = 30000`, above which it renders a score as a mate by definition.
+
+**The mate tokens were the same phenomenon, not a mate at all.** Printing every
+`info` line for the position the campaign died on shows what escalation could
+never fix:
+
+```text
+Q1b2k2/8/8/2p1pP2/3P3B/8/P1P2PPP/RN1QKBNR w KQ - 1 16, MultiPV 8, go depth 5
+  d1 cp 28386   d2 cp 29880   d3 mate 354   d4 mate 349 lb   d5 mate 500 lb
+```
+
+The static evaluation here is ~29 880–29 991 — just under `MINMATE`. `netEval` is
+unbounded, so as soon as the aspiration window widens past 30 000 the search
+returns *ordinary evaluations inside the mate band*, and `report()` renders them
+as mates. `mate 354`, `mate 349`, `mate 500` are evaluations, not distances. This
+also explains what looked inexplicable: the corruption was stable under
+deepening (so no ladder of re-searches could cure it), and `MultiPV 1` and
+`MultiPV 8` disagreed on the same position at the same depth, because the window
+differs.
+
+**Decision.** Extend the vendored patch a third time, clamping the static
+evaluation so it cannot enter the mate band:
+
+```js
+const MAXEVAL = MINMATE - 1;
+// in evaluate(), around netEval()
+if (ev > MAXEVAL) return MAXEVAL;
+if (ev < -MAXEVAL) return -MAXEVAL;
+```
+
+With it applied the position above reports `cp 29999` with a sane PV at every
+depth from 1 to 8, `bench` is still exactly `613926` nodes (the clamp never binds
+on ordinary positions), and the mate-in-one probes still report `mate 1`. This is
+the root cause of all three symptom classes in this ADR's history, including the
+original `INF` leak: a score that is not a mate had been free to occupy the mate
+range.
+
+**Consequences.**
+
+- `MAX_PLAUSIBLE_CENTIPAWNS = 30_000` is now correct *by construction* rather
+  than by taste: a clamped evaluation cannot reach it, so any `cp` at or above it
+  is out of band by the artifact's own definition.
+- The escalation ladder survives but is no longer load-bearing for these
+  positions: both re-baseline campaigns now complete with
+  `score_escalations=0`. The allowance is four searches — headroom that costs
+  nothing when nothing is unsound. The classifier still rejects `mate 0`,
+  `mate 354` and `cp >= 30_000` even though the patched artifact no longer emits
+  them, because the contract is about what we will believe, not about what this
+  build happens to produce.
+- Three of the four earlier symptom classes were misdiagnosed as separate
+  hazards. That is the cost of ruling from the positions that happened to fail:
+  each ruling was measured, each was locally right, and only reading every
+  `info` line of a failing search showed the single cause underneath.
+- The clamp is not reported upstream yet; it belongs in `namanthanki/lozza#4`
+  alongside the rendering fix.

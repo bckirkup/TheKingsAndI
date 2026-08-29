@@ -25,6 +25,7 @@ const LMR_LOOKUP = new Uint8Array(MAX_PLY * MAX_MOVES);
 const INF = 32000;
 const MATE = 31000;
 const MINMATE = 30000;
+const MAXEVAL = MINMATE - 1;
 const TTSCORE_UNKNOWN = INF + 1;
 const EMPTY = 0;
 
@@ -1723,7 +1724,7 @@ function report(score, depth, bound) {
 
   let scoreStr;
   if (Math.abs(score) > MINMATE) {
-    let mateScore = ((MATE - Math.abs(score)) / 2) | 0;
+    let mateScore = ((MATE - Math.abs(score) + 1) / 2) | 0;
     if (score < 0) mateScore = -mateScore;
     scoreStr = 'score mate ' + mateScore;
   } else {
@@ -1756,7 +1757,7 @@ function reportMultiPV(depth) {
 
     let scoreStr;
     if (Math.abs(entry.score) > MINMATE) {
-      let mateScore = ((MATE - Math.abs(entry.score)) / 2) | 0;
+      let mateScore = ((MATE - Math.abs(entry.score) + 1) / 2) | 0;
       if (entry.score < 0) mateScore = -mateScore;
       scoreStr = 'score mate ' + mateScore;
     } else {
@@ -3882,7 +3883,14 @@ function evaluate(node, turn) {
 
   if (numPieces === 4 && wNumQueens !== 0 && bNumQueens !== 0) return 0;
 
-  return netEval(node, turn);
+  const ev = netEval(node, turn);
+
+  // A static evaluation must never enter the mate band; otherwise an ordinary
+  // (if absurd) advantage is reported and searched as a forced mate.
+  if (ev > MAXEVAL) return MAXEVAL;
+  if (ev < -MAXEVAL) return -MAXEVAL;
+
+  return ev;
 }
 
 const objHistory = new Uint32Array(15 * 256);

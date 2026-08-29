@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 import {
+  DEFAULT_MAX_SCORE_ESCALATIONS,
   DEFAULT_MAX_INFO_LINES_PER_SEARCH,
+  MAX_PLAUSIBLE_CENTIPAWNS,
   MAX_PLAUSIBLE_MATE_DISTANCE,
   UciEngine,
   UciInfoLineLimitError,
@@ -22,6 +24,30 @@ const poisonFens = [
   'Q1b1k3/8/8/4pP2/2pP3B/8/P1P2PPP/RN1QKBNR w KQ - 0 16',
   '6Q1/2k1n2Q/8/p2P1P2/P3P3/8/8/RNBQK1NR w KQ - 1 32',
 ] as const;
+const mateInOneFens = [
+  {
+    fen: 'rnbqkbnr/ppppp2p/8/5pp1/P3P3/8/1PPP1PPP/RNBQKBNR w KQkq - 0 3',
+    move: 'd1h5',
+  },
+  {
+    fen: '3rkr2/1p3R2/2p3p1/p3P3/P1P1n1b1/8/R7/1N2KBN1 b - - 2 17',
+    move: 'd8d1',
+  },
+] as const;
+const highScoreFens = [
+  {
+    fen: 'Q1b2k2/8/8/2p1pP2/3P3B/8/P1P2PPP/RN1QKBNR w KQ - 1 16',
+    move: 'a8c8',
+  },
+  {
+    fen: '8/4n2p/4p2k/p3Qpp1/P2PPPPP/8/8/RNBQK1NR b KQ - 1 23',
+    move: 'e7c8',
+  },
+  {
+    fen: 'r7/5k2/5P2/RPP3P1/2P1P2P/8/3B1P2/1N2KBNR w K - 1 24',
+    move: 'a5a8',
+  },
+] as const;
 const midGameMeasurementFens = [
   'Nrb5/ppp3n1/n4kr1/1q5p/1b1pPPQ1/1P1PR3/P3B1P1/RKB3N1 b - - 5 24',
   'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
@@ -34,11 +60,21 @@ afterEach(async () => {
 
 describe('D172 score soundness', () => {
   it('classifies sentinel and ordinary scores', () => {
+    // These tokens must remain unsound as classifier defenses even though the
+    // patched artifact clamps ordinary evaluations before they can be emitted.
     expect(MAX_PLAUSIBLE_MATE_DISTANCE).toBe(100);
+    expect(MAX_PLAUSIBLE_CENTIPAWNS).toBe(30_000);
+    expect(DEFAULT_MAX_SCORE_ESCALATIONS).toBe(4);
     expect(isUnsoundUciScore('mate', 0)).toBe(true);
     expect(isUnsoundUciScore('mate', -500)).toBe(true);
+    expect(isUnsoundUciScore('mate', 354)).toBe(true);
+    expect(isUnsoundUciScore('mate', -297)).toBe(true);
     expect(isUnsoundUciScore('mate', 3)).toBe(false);
     expect(isUnsoundUciScore('mate', -3)).toBe(false);
+    expect(isUnsoundUciScore('cp', 29_991)).toBe(false);
+    expect(isUnsoundUciScore('cp', -28_497)).toBe(false);
+    expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS - 1)).toBe(false);
+    expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS)).toBe(true);
     expect(isUnsoundUciScore('cp', 31_000)).toBe(true);
     expect(isUnsoundUciScore('cp', 120)).toBe(false);
     expect(parseUciScore(['info', 'score', 'mate', '0']).sound).toBe(false);
@@ -106,6 +142,66 @@ describe('D172 real Lozza regression', () => {
     120_000,
   );
 
+  it.each(mateInOneFens)(
+    'reports a sound mate-in-one and its mating move (%s)',
+    async ({ fen, move }) => {
+      const engine = new UciEngine({
+        enginePath: artifactPath,
+        multiPv: 8,
+      });
+      try {
+        for (const depth of [3, 4, 5, 6]) {
+          const result = await engine.evaluate(fen, depth);
+          expect(result.sound).toBe(true);
+          expect(result.scoreCp).toBe(29_999);
+          expect(result.pv[0]).toBe(move);
+        }
+      } finally {
+        await engine.dispose();
+      }
+    },
+    120_000,
+  );
+
+  it.each(highScoreFens)(
+    'accepts a measured overwhelming-position score without escalation at depth 4 (%s)',
+    async ({ fen, move }) => {
+      const engine = new UciEngine({
+        enginePath: artifactPath,
+        multiPv: 8,
+      });
+      try {
+        // Reading the requested rung directly proves this is a single depth-4
+        // search rather than an escalated result selected by evaluate().
+        const ladder = await engine.searchLadder(fen, 4);
+        const result = ladder.at.get(4);
+        expect(result?.sound).toBe(true);
+        expect(result?.pv[0]).toBe(move);
+      } finally {
+        await engine.dispose();
+      }
+    },
+    120_000,
+  );
+
+  it('keeps the earlier killer sound at depth 4 without escalation', async () => {
+    const engine = new UciEngine({
+      enginePath: artifactPath,
+      multiPv: 8,
+    });
+    try {
+      const ladder = await engine.searchLadder(
+        '2n5/7Q/1k6/p2P1PQ1/P3P3/8/8/RNBQK1NR b KQ - 2 32',
+        4,
+      );
+      const result = ladder.at.get(4);
+      expect(result?.sound).toBe(true);
+      expect(result?.pv[0]).toBe('b6c5');
+    } finally {
+      await engine.dispose();
+    }
+  }, 120_000);
+
   it('keeps the default runaway ceiling well above a real depth-8 MultiPV-8 search', async () => {
     const engine = new UciEngine({
       enginePath: artifactPath,
@@ -172,7 +268,7 @@ describe('D172 determinism policy identity', () => {
     });
     expect(escalations.determinismId).not.toBe(base.determinismId);
     expect(runaway.determinismId).not.toBe(base.determinismId);
-    expect(base.determinismId).toContain('score-escalate-2');
+    expect(base.determinismId).toContain('score-escalate-4');
     expect(base.determinismId).toContain('runaway-512');
   });
 });

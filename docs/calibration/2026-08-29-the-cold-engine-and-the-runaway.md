@@ -184,3 +184,36 @@ claimed. D172's escalation is deliberately kept out of that path (an escalated
 search neither reads nor writes the ladder cache, memoizes its own result, and
 carries an order-invariance probe), so the reuse rule is recorded as **D173** and
 left for a ruling rather than patched here.
+
+## Post-patch re-baseline: the cold, clamped artifact (2026-08-29)
+
+The two campaigns ADR 0067 left blocked now complete. Both are cold, real Lozza,
+`--depth-cap=4`, five matches, on the artifact carrying all three patch hunks
+(aspiration guard, mate-distance rendering, evaluation clamp):
+
+| run | wall | ms/match | ms/ply | engine calls | escalations | peak RSS |
+|---|---|---|---|---|---|---|
+| seed 7 `tyrannical` | 31.4 s | 6 283 | 151.0 | 11 361 | 0 | 140.6 MB |
+| seed 11 `tyrannical` | 43.0 s | 8 604 | 150.4 | 14 917 | 0 | 141.4 MB |
+
+Three things worth keeping.
+
+**`ms_per_ply` is stable across the two runs (151.0 vs 150.4) while
+`ms_per_match` differs by 37%.** Per-match cost is a function of how long the
+games ran, not of engine speed; per-ply is the honest unit for planning a
+campaign budget.
+
+**Peak RSS is ~141 MB and flat**, against ~450 MB when a runaway search was
+escaping through its node net. A long campaign is now a plan rather than a memory
+bet, which was the other half of what ADR 0067 wanted.
+
+**`score_escalations=0` in both runs.** The escalation ladder is the contract's
+backstop, not its mechanism: with the evaluation clamped below the mate band,
+nothing in ~26 000 engine calls produced a score we refuse to believe. That is
+the measurement that would catch a regression in the clamp, and it belongs in any
+future Lozza run's cost line.
+
+These numbers supersede every warm Lozza figure in this directory and are not
+comparable to the pre-patch cold measurements above: the artifact hash differs,
+and the clamp changes the engine's answers in lopsided positions, so it changes
+the game.
