@@ -181,3 +181,81 @@ arriving silently in the one field the audit trail treats as truth.
   learned the pathological reading of a token and never met the ordinary one.
 - The rendering fix has not been reported upstream: the integration account that
   filed `namanthanki/lozza#4` cannot comment on it.
+
+## Addendum 2 (2026-08-29): the mate scores were never mates, and the band belongs to the engine
+
+The rendering fix let the campaigns run further and they died again, three times,
+each time on a *different* class of score: `cp 29991`, `cp -28497`, `cp 21349`,
+`cp -24782`, `mate 354`, `mate -297`, `mate 500`. Two corrections came out of
+chasing them, and the second makes the first unnecessary.
+
+**A plausibility bound argued from material was wrong.** The first response was
+to reject centipawn scores past `20_000`, on the reasoning that honest material
+cannot reach 200 pawns. The engine refuted it. Measured over depths 1–12:
+
+```text
+8/4n2p/4p2k/p3Qpp1/P2PPPPP/8/8/RNBQK1NR b KQ - 1 23
+  -12826  -14775  -17002  -20112  -20535  -21560  -24782  -29557  mate -5
+r7/5k2/5P2/RPP3P1/2P1P2P/8/3B1P2/1N2KBNR w K - 1 24
+  cp 20727 / 21191 / 21372 at every depth, always a5a8
+```
+
+That series is monotone, stable in its move, and converges on a real mate: these
+are the engine's honest evaluations of grotesquely lopsided positions, where its
+own terms pile up far past what a material argument allows. A bound chosen from
+outside the engine rejects truth. The bound is therefore the engine's own:
+`MINMATE = 30000`, above which it renders a score as a mate by definition.
+
+**The mate tokens were the same phenomenon, not a mate at all.** Printing every
+`info` line for the position the campaign died on shows what escalation could
+never fix:
+
+```text
+Q1b2k2/8/8/2p1pP2/3P3B/8/P1P2PPP/RN1QKBNR w KQ - 1 16, MultiPV 8, go depth 5
+  d1 cp 28386   d2 cp 29880   d3 mate 354   d4 mate 349 lb   d5 mate 500 lb
+```
+
+The static evaluation here is ~29 880–29 991 — just under `MINMATE`. `netEval` is
+unbounded, so as soon as the aspiration window widens past 30 000 the search
+returns *ordinary evaluations inside the mate band*, and `report()` renders them
+as mates. `mate 354`, `mate 349`, `mate 500` are evaluations, not distances. This
+also explains what looked inexplicable: the corruption was stable under
+deepening (so no ladder of re-searches could cure it), and `MultiPV 1` and
+`MultiPV 8` disagreed on the same position at the same depth, because the window
+differs.
+
+**Decision.** Extend the vendored patch a third time, clamping the static
+evaluation so it cannot enter the mate band:
+
+```js
+const MAXEVAL = MINMATE - 1;
+// in evaluate(), around netEval()
+if (ev > MAXEVAL) return MAXEVAL;
+if (ev < -MAXEVAL) return -MAXEVAL;
+```
+
+With it applied the position above reports `cp 29999` with a sane PV at every
+depth from 1 to 8, `bench` is still exactly `613926` nodes (the clamp never binds
+on ordinary positions), and the mate-in-one probes still report `mate 1`. This is
+the root cause of all three symptom classes in this ADR's history, including the
+original `INF` leak: a score that is not a mate had been free to occupy the mate
+range.
+
+**Consequences.**
+
+- `MAX_PLAUSIBLE_CENTIPAWNS = 30_000` is now correct *by construction* rather
+  than by taste: a clamped evaluation cannot reach it, so any `cp` at or above it
+  is out of band by the artifact's own definition.
+- The escalation ladder survives but is no longer load-bearing for these
+  positions: both re-baseline campaigns now complete with
+  `score_escalations=0`. The allowance is four searches — headroom that costs
+  nothing when nothing is unsound. The classifier still rejects `mate 0`,
+  `mate 354` and `cp >= 30_000` even though the patched artifact no longer emits
+  them, because the contract is about what we will believe, not about what this
+  build happens to produce.
+- Three of the four earlier symptom classes were misdiagnosed as separate
+  hazards. That is the cost of ruling from the positions that happened to fail:
+  each ruling was measured, each was locally right, and only reading every
+  `info` line of a failing search showed the single cause underneath.
+- The clamp is not reported upstream yet; it belongs in `namanthanki/lozza#4`
+  alongside the rendering fix.
