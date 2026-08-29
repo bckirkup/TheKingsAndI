@@ -350,13 +350,15 @@ describe('grid sweep', () => {
   });
 
   it('applies grid values to a live knob', async () => {
-    const axes = parseGridSpec('BENEV_REGARD_STEP=0,100');
+    const axes = parseGridSpec('OVERRIDE_BENEV_CLIFF_INPUT=0,12');
     const points = await runGridSweep({ ...campaignOptions, axes });
-    expect(points.map((point) => point.meanRegardEvents)).toEqual([
-      0,
+    expect(points.map((point) => point.meanBenevLossTarget)).toEqual([
+      expect.any(Number),
       expect.any(Number),
     ]);
-    expect(points[1]?.meanRegardEvents).toBeGreaterThan(0);
+    expect(points[1]?.meanBenevLossTarget).toBeGreaterThan(
+      points[0]?.meanBenevLossTarget ?? 0,
+    );
   }, 60_000);
 
   it('restores axes and fixed values after a successful grid', async () => {
