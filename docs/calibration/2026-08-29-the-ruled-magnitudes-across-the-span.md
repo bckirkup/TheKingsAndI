@@ -113,7 +113,8 @@ chosen here: a minimum charge of `1` while any standing remains; adopting witnes
 input `1` (measured above, and it closes this condition); or letting rupture debt
 accrue while benevolence is bottomed out, which is ADR 0066's third limb and is
 currently unimplemented in spirit rather than merely unreachable by its ceiling.
-That is D175 and it is the owner's.
+That is D175. The owner accepted the shipped asymptotic behavior on
+2026-08-29; none of the three candidate closers is adopted.
 
 ## What this does not say
 

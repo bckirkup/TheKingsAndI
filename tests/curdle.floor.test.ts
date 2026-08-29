@@ -160,8 +160,9 @@ describe('D167 curdle floor controls', () => {
     });
   });
 
-  it('records the D175 deep-tail proportional-cliff gap', () => {
-    // Change detector for the known D175 gap, not approved behavior.
+  it('holds the ruled D175 asymptote where the charge truncates to zero', () => {
+    // D175: the truncating asymptote is ruled behavior, accepted 2026-08-29.
+    // This change detector guards it against silent drift.
     const before = { ...defaultCredence(), tauBenev: 3 };
     const first = applyBetrayalSignal(before, 6);
     const second = applyBetrayalSignal(first, 6);
