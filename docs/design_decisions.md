@@ -1736,7 +1736,8 @@ loss at all but **amnesia**: `mergeCampaignRoster` rebuilds the full lineup each
 match and re-uses the same `PieceId` per starting square, but carries
 psychological state only for pieces present in the returned roster — survivors
 only — so a captured piece is re-created by `createFreshPieceState` with empty
-`dyadicAffinity`, `B_i = 0`, and reset credence (`sim/roster.ts:120-146`,
+`dyadicAffinity`, `B_i = 0`, and reset credence (`sim/roster.ts:120-146` for the
+survivor-only merge, `sim/roster.ts:68-87` for the reset constructor,
 `sim/campaign.ts:259-296`). The state is not lost by design: `runMatch` returns
 `departedRoster` including the capture injury, and the season pool path already
 folds it back (`sim/pool.ts:469-500`). The campaign path discards it — and the
