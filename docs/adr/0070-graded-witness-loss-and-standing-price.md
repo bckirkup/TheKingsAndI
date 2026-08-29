@@ -80,3 +80,35 @@ OVERRIDE_STANDING_PRICE_PERMILLE = 0
   insistence route and rewarding cruelty.
 - **Use a roster-wide standing aggregate.** Rejected: D170 is explicitly
   per-witness and must preserve asymmetric bonds and class prejudice.
+
+## Addendum — 2026-08-29: D176 live magnitudes
+
+The owner ruled the joint live magnitudes after the measured surface in
+`docs/calibration/2026-08-29-the-graded-witness-surface.md`:
+
+```text
+OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE = 500
+OVERRIDE_STANDING_PRICE_PERMILLE = 2000
+```
+
+The mechanism is no longer inert. The multiplier is deliberately half the
+previous inert value, and the standing price is four times below the nearest
+measured cell (`8000`) that re-opens the free-insistence floor for
+`tyrannical`. Over a campaign, halving the witness multiplier removes free
+insistence rather than widening it: later free overrides arise from a room
+already drained to zero, and the old multiplier was what drained it.
+
+This is a ledger ruling, not a demonstrated conduct improvement. The measured
+seed-7, four-match results were:
+
+| condition | cell | free_insistence_ply_fraction | target benev loss | witness benev loss | ending tauBenev |
+|---|---|---:|---:|---:|---:|
+| tyrannical | before (1000 / 0) | 0.3411 | 222.00 | 931.50 | 19.75 |
+| tyrannical | after (500 / 2000) | 0.0000 | 301.00 | 740.50 | 22.69 |
+| redeemer | before (1000 / 0) | 0.0731 | 140.00 | 654.50 | 48.75 |
+| redeemer | after (500 / 2000) | 0.0000 | 175.00 | 481.50 | 55.00 |
+
+The attachment shape remains linear. Half of witness observations are exactly
+at zero attachment, about `72%` are at or below `100` permille, only about
+`1.5%` are at or above `500`, and none saturate. A curve or knee would bend
+regions with little or no mass and was not adopted.

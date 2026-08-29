@@ -652,11 +652,13 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
         )
         .map((event) => [event.pieceId, event.field, event.delta]),
     ).toEqual([
+      // D176 live magnitudes: target remains on the D166 path while witnesses
+      // use multiplier 500 and standing price 2000.
       [piece.id, 'tauBenev', -7],
       [firstWitness.id, 'T_i', -8],
-      [firstWitness.id, 'tauBenev', -8],
+      [firstWitness.id, 'tauBenev', -4],
       [secondWitness.id, 'T_i', -8],
-      [secondWitness.id, 'tauBenev', -25],
+      [secondWitness.id, 'tauBenev', -12],
     ]);
   });
 

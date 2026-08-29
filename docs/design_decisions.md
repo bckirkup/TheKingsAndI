@@ -1695,27 +1695,30 @@ grading is ever revisited. The implementing references are the
 detector in `tests/curdle.floor.test.ts:284-295` and `applyBetrayalSignal` in
 `src/psychology/credence.ts:100-125`.
 
-### D176 ❓ What are the live magnitudes for the graded witness and the priced standing?
-**Open — magnitudes not chosen.** D170 and D174 supply two interacting knobs:
-`OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE` and
-`OVERRIDE_STANDING_PRICE_PERMILLE`. Both mechanisms are wired but inert at
-their current defaults (`1000` and `0` respectively), and they must be chosen
-together because the standing price multiplies the witness multiplier. The
-owner's sweep must choose magnitudes jointly and gate them on the
-`free_insistence_ply_fraction` not exceeding the post-#151 baseline.
-The surface is now measured — `docs/calibration/2026-08-29-the-graded-witness-surface.md`,
-a 12-cell grid on each of the two conditions that still carry residual free
-insistence, plus an extended standing axis — and
-it inverts the intuition the acceptance test was written from: over a campaign,
-*lowering* the witness multiplier removes free insistence rather than widening
-it (0.3411 → 0.0000 for `tyrannical`, 0.0731 → 0.0000 for `redeemer` at `500`),
-because what makes a later override free is a room already drained to zero.
-The standing price sits on the same axis, weaker, and re-opens the floor for
-`tyrannical` at `8000`. No behavioural metric moves anywhere on the surface
-except at `mult = 2000`, where `redeemer` gets *more* overrides and longer
-campaigns, so this is a ledger ruling and may not be defended as a conduct
-improvement. The recommendation carried to the owner is multiplier `500` with
-standing price `2000`; no value is live until the owner rules.
+### D176 ✅ What are the live magnitudes for the graded witness and the priced standing?
+**Answered 2026-08-29 (owner) — see ADR 0070 addendum.** The live magnitudes
+are `OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE = 500` and
+`OVERRIDE_STANDING_PRICE_PERMILLE = 2000`. The ruling is a ledger ruling, not a
+demonstrated conduct improvement: at the measured seed-7, four-match surface,
+the `tyrannical` condition moved from `free_insistence_ply_fraction = 0.3411`
+to `0.0000`, target benevolence loss `222.00` to `301.00`, witness loss
+`931.50` to `740.50`, and ending `tauBenev` `19.75` to `22.69`; `redeemer`
+moved from `0.0731` to `0.0000`, target loss `140.00` to `175.00`, witness
+loss `654.50` to `481.50`, and ending `tauBenev` `48.75` to `55.00`.
+The evidence is `docs/calibration/2026-08-29-the-graded-witness-surface.md`.
+
+The mechanism remains linear in attachment. The measured attachment
+distribution has half of witness observations at exactly `0`, about `72%` at
+or below `100` permille, only about `1.5%` at or above `500`, and none
+saturating; adding a curve or knee would therefore bend a region with little
+or no mass. The sweep showed that halving the witness multiplier removes free
+insistence over a campaign rather than widening it, because later free
+overrides come from a room already drained to zero by the old multiplier.
+Standing price `2000` is four times below the nearest failing cell, `8000`,
+that re-opens the floor for `tyrannical`. The surface supports the ledger
+choice, not a claim of improved conduct. The implementing defaults are
+`src/psychology/config.ts:76-79`; the explicit pre-D176 change detector is
+`tests/curdle.floor.test.ts:74-93`.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
