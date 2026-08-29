@@ -66,6 +66,10 @@ the escape is always `D_max` plus a re-baseline.
   the parent's per-piece depths and ladder search depths.
 - Fake-engine calibration remains unchanged because it has no ladder state or
   ladder reuse.
+- D172's score escalation stays outside this policy: an escalated search neither
+  reads nor writes the ladder cache and memoizes its own result
+  (`src/engine/adapters/lozza.ts:363-386`), with an order-invariance probe in
+  `tests/engine.d172.test.ts`.
 
 ## Alternatives considered
 
