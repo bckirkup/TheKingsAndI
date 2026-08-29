@@ -14,7 +14,9 @@ export interface UciSearchResult {
 }
 
 export const MAX_PLAUSIBLE_MATE_DISTANCE = 100;
-export const DEFAULT_MAX_SCORE_ESCALATIONS = 2;
+// Honest material cannot reach 200 pawns; larger values are mate-band leakage.
+export const MAX_PLAUSIBLE_CENTIPAWNS = 20_000;
+export const DEFAULT_MAX_SCORE_ESCALATIONS = 4;
 // Real adapter searches at depth 4 with MultiPV 8 emit at most 22 lines
 // across the measured mid-game positions; 512 leaves over 20x headroom.
 export const DEFAULT_MAX_INFO_LINES_PER_SEARCH = 512;
@@ -98,7 +100,7 @@ export interface DepthLadder {
 export function isUnsoundUciScore(kind: 'cp' | 'mate', value: number): boolean {
   return kind === 'mate'
     ? value === 0 || Math.abs(value) > MAX_PLAUSIBLE_MATE_DISTANCE
-    : Math.abs(value) >= 31_000;
+    : Math.abs(value) >= MAX_PLAUSIBLE_CENTIPAWNS;
 }
 
 export function parseUciScore(tokens: readonly string[]): {

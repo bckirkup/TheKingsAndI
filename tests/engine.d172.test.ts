@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 import {
+  DEFAULT_MAX_SCORE_ESCALATIONS,
   DEFAULT_MAX_INFO_LINES_PER_SEARCH,
+  MAX_PLAUSIBLE_CENTIPAWNS,
   MAX_PLAUSIBLE_MATE_DISTANCE,
   UciEngine,
   UciInfoLineLimitError,
@@ -45,10 +47,18 @@ afterEach(async () => {
 describe('D172 score soundness', () => {
   it('classifies sentinel and ordinary scores', () => {
     expect(MAX_PLAUSIBLE_MATE_DISTANCE).toBe(100);
+    expect(MAX_PLAUSIBLE_CENTIPAWNS).toBe(20_000);
+    expect(DEFAULT_MAX_SCORE_ESCALATIONS).toBe(4);
     expect(isUnsoundUciScore('mate', 0)).toBe(true);
     expect(isUnsoundUciScore('mate', -500)).toBe(true);
+    expect(isUnsoundUciScore('mate', 354)).toBe(true);
+    expect(isUnsoundUciScore('mate', -297)).toBe(true);
     expect(isUnsoundUciScore('mate', 3)).toBe(false);
     expect(isUnsoundUciScore('mate', -3)).toBe(false);
+    expect(isUnsoundUciScore('cp', 29_991)).toBe(true);
+    expect(isUnsoundUciScore('cp', -28_497)).toBe(true);
+    expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS - 1)).toBe(false);
+    expect(isUnsoundUciScore('cp', MAX_PLAUSIBLE_CENTIPAWNS)).toBe(true);
     expect(isUnsoundUciScore('cp', 31_000)).toBe(true);
     expect(isUnsoundUciScore('cp', 120)).toBe(false);
     expect(parseUciScore(['info', 'score', 'mate', '0']).sound).toBe(false);
@@ -137,6 +147,23 @@ describe('D172 real Lozza regression', () => {
     120_000,
   );
 
+  it('escalates the second rebaseline killer to a sound mating line', async () => {
+    const engine = new UciEngine({
+      enginePath: artifactPath,
+      multiPv: 8,
+    });
+    try {
+      const result = await engine.evaluate(
+        '2n5/7Q/1k6/p2P1PQ1/P3P3/8/8/RNBQK1NR b KQ - 2 32',
+        4,
+      );
+      expect(result.sound).toBe(true);
+      expect(result.pv[0]).toBe('c8e7');
+    } finally {
+      await engine.dispose();
+    }
+  }, 120_000);
+
   it('keeps the default runaway ceiling well above a real depth-8 MultiPV-8 search', async () => {
     const engine = new UciEngine({
       enginePath: artifactPath,
@@ -203,7 +230,7 @@ describe('D172 determinism policy identity', () => {
     });
     expect(escalations.determinismId).not.toBe(base.determinismId);
     expect(runaway.determinismId).not.toBe(base.determinismId);
-    expect(base.determinismId).toContain('score-escalate-2');
+    expect(base.determinismId).toContain('score-escalate-4');
     expect(base.determinismId).toContain('runaway-512');
   });
 });
