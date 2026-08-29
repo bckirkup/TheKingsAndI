@@ -170,3 +170,11 @@ minimum charge while standing remains, adopting witness input `1`, or allowing
 rupture debt to accrue at a bottomed-out benevolence standing. The gap and
 candidate resolutions are recorded in
 `docs/calibration/2026-08-29-the-ruled-magnitudes-across-the-span.md`.
+
+## Addendum (2026-08-29): D175 ruling
+
+D175 was ruled by the owner on 2026-08-29 with no code change. The proportional
+charge is asymptotic and rounds down, so once benevolence standing reaches `3`
+the charge is `0` and no further benevolence or rupture debt is recorded. This
+is accepted as shipped behavior. The third limb's debt-accrual closer is not
+pursued, and the retained D175 change detector guards against silent drift.

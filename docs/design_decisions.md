@@ -1656,18 +1656,30 @@ Grading the witness therefore requires a separate multiplier applied to the
 witness drop, not merely a different input to the sigmoid. Whether the witness
 limb should exist at all is the owner's to rule.
 
-### D175 ❓ Can a proportional cliff keep its promise in the deep tail?
-**Open — owner-owned, not wired.** ADR 0066 says the first override is dearest
-and no later override is ever free, but the proportional charge truncates to
-zero once `tauBenev <= 3`; at `0` there is nothing to charge and no rupture debt
-accrues either. Standing can therefore stall at `3`, leaving further overrides
-free. Candidate closers, none chosen here, are:
+### D175 ✅ Can a proportional cliff keep its promise in the deep tail?
+**Answered 2026-08-29 (owner) — no code change; behaviour as shipped.** ADR
+0066 says the first override is dearest and no later override is ever free, but
+the proportional charge is asymptotic and truncates down. Once `tauBenev`
+reaches `3`, the charge rounds to `0`, so no further benevolence or rupture
+debt is recorded. The owner accepted this as the intended shape rather than a
+defect.
+
+The consequence is plain: ADR 0066's "no later override is ever free" holds
+almost everywhere but not literally. The residual `0.75` free overrides in the
+tyrannical/tyrannical condition at witness input `6` are made of exactly this
+tail. The three candidate closers are not adopted:
 
 - a minimum charge of `1` while benevolence standing remains;
 - adopting witness input `1`; or
 - letting rupture debt accrue when benevolence is bottomed out, which is the
   intent of ADR 0066 limb (c) and is currently unimplemented in spirit, not
   merely unreachable by the ceiling.
+
+Adopting witness input `1` remains separately available under D174 if witness
+grading is ever revisited. The implementing references are the
+`holds the ruled D175 asymptote where the charge truncates to zero` change
+detector in `tests/curdle.floor.test.ts:163-173` and `applyBetrayalSignal` in
+`src/psychology/credence.ts:100-119`.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
