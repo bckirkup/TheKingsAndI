@@ -1473,12 +1473,20 @@ implemented in `src/orchestration/headlessMatch.ts:702-716` and
 pending the D166 calibration ruling.
 
 ### D166 ❓ What are the live magnitudes for regard and repair?
-**Open — not wired.** The live magnitudes for `BENEV_REGARD_STEP` and
-`BENEV_REPAIR_STEP` require an owner ruling on a before/after sweep. Do not
-invent candidate numbers in the register. The measured obstacle is recorded in
-`docs/calibration/2026-08-28-the-curdle-and-the-floor.md`: no regard magnitude
-can widen the emotional axis while the benevolence channel stops recording
-mid-match, so D167 precedes any D166 number.
+**Open — measured, awaiting the owner's ruling; not wired.** The live magnitudes
+for `BENEV_REGARD_STEP` and `BENEV_REPAIR_STEP` require an owner ruling on a
+before/after sweep. The obstacle recorded in `docs/calibration/2026-08-28-the-curdle-and-the-floor.md`
+— that no regard magnitude can widen the emotional axis while the benevolence
+channel stops recording mid-match — is now measured jointly with the D167 knobs
+in `docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md` (194
+cells, fake engine, seed 7, `--opponent=tyrannical`). The surface removes the
+floor entirely at or below 250 permille, and regard and repair both reduce free
+insistence while *raising* the absolute benevolence an override costs. It also
+records the limit on any ruling taken from it: not one behavioural metric
+(`refusal`, `desertion_attrition`, `quiet_quit`, `win`, `mean_plies`) moves
+anywhere on the surface, so these magnitudes can be chosen on ledger fidelity
+but not yet on conduct. Candidate magnitudes are recorded in that document and
+remain the owner's to rule; do not invent numbers in the register.
 
 ### D167 ✅ Should the override cliff be graded, proportional, or status-priced? (ADR 0066)
 **Answered 2026-08-28 (owner) — wired, inert.** Graded *and* proportional; the
@@ -1616,6 +1624,21 @@ single-cost, and pays `D_max` for every pawn's shallow query). The same
 conversation covers the unbounded `bestByFenDepth` memo in the broker
 (`src/engine/broker.ts:122`), which is the last unbounded per-position cache
 after D172 bounded the rest.
+
+### D174 ❓ Should the witness cliff have its own multiplier rather than a shared logistic input?
+**Open — not wired.** ADR 0066 limb (a) intended the witness benevolence drop to
+be gradable the way trust already grades it 4.4:1, through
+`OVERRIDE_WITNESS_BENEV_CLIFF_INPUT`. Measurement shows the parameter cannot
+express it: the drop is
+`logistic(severity * BENEV_BETRAYAL_CLIFF_SCALE)` and the logistic is already
+saturated across the whole expressible range, so inputs 6 and 3 yield
+byte-identical campaigns and 1 differs only at the truncation boundary
+(`docs/calibration/2026-08-29-the-response-surface-under-the-curdle.md` §2).
+Grading the witness therefore requires a separate multiplier applied to the
+witness drop, not a different input to the sigmoid. Whether the witness limb
+should exist at all is the owner's to rule — the same document shows the floor
+can be removed by the proportional cliff alone, with the witness share of total
+loss still at 79.9%.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
