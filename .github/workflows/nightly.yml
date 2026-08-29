@@ -30,15 +30,12 @@ on:
         description: Run a one-knob Lozza coefficient sweep (skipped for stockfish).
         type: boolean
         default: true
-      vitest_target:
-        description: Heavy Vitest target to run on demand.
-        type: choice
-        options:
-          - trajectory
-          - sweep
-          - chess-fuzz
-          - all
-        default: trajectory
+      vitest_filter:
+        description: >
+          Optional Vitest positional filter, e.g. "season" or "world". Empty
+          runs the whole suite with the campaign-scale cases enabled.
+        type: string
+        default: ''
       campaign_matches:
         description: Trajectory campaign length (all, 16, or 52).
         type: choice
@@ -48,9 +45,11 @@ on:
           - '52'
         default: all
       run_vitest:
-        description: Run the selected heavy Vitest target.
+        description: >
+          Run the heavy Vitest tier. The cron path always runs it; this only
+          controls workflow_dispatch.
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -158,12 +157,15 @@ jobs:
             --enforce-calibration=true
 
   vitest-heavy:
+    # The campaign-scale tier that used to run on every push: whole seeded
+    # campaigns, seasons, and seminars inside Vitest. It was 56 of the 67
+    # minutes of PR CI, so it now runs unattended here.
     name: Heavy Vitest balance tests
     if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.run_vitest == true
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_vitest == true)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -172,30 +174,38 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Run selected heavy Vitest target
+      - name: Run the heavy Vitest tier
         env:
-          VITEST_TARGET: ${{ inputs.vitest_target }}
-          CAMPAIGN_MATCHES: ${{ inputs.campaign_matches }}
+          VITEST_FILTER: ${{ inputs.vitest_filter }}
+          CAMPAIGN_MATCHES: ${{ inputs.campaign_matches || 'all' }}
         run: |
-          case "$VITEST_TARGET" in
-            trajectory)
-              HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" \
-                pnpm exec vitest run tests/sim.trajectory.test.ts
-              ;;
-            sweep)
-              pnpm exec vitest run tests/sim.sweep.test.ts
-              ;;
-            chess-fuzz)
-              pnpm exec vitest run tests/chess.board.fuzz.test.ts
-              ;;
-            all)
-              HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" pnpm test:heavy
-              ;;
-            *)
-              echo "Unknown heavy Vitest target: $VITEST_TARGET" >&2
-              exit 1
-              ;;
-          esac
+          if [ -n "$VITEST_FILTER" ]; then
+            HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" \
+              pnpm test:heavy "$VITEST_FILTER"
+          else
+            HEAVY_CAMPAIGN_MATCHES="$CAMPAIGN_MATCHES" pnpm test:heavy
+          fi
+
+  sim-smoke-full:
+    # The 20-match, two-leader form of the PR smoke. PR CI runs 6 matches of
+    # the tyrannical leader; the detectors that need more samples (class-bias
+    # variance, counterfactual approximation) are measured here.
+    name: Full sim smoke (20 matches, both leaders)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Tyrannical smoke
+        run: pnpm sim --matches=20 --leader=tyrannical --engine=fake
+      - name: Supportive smoke
+        run: pnpm sim --matches=20 --leader=supportive --engine=fake
 
   stockfish-spot:
     name: Stockfish spot check (dispatch only)

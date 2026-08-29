@@ -40,7 +40,10 @@ import {
 } from '../sim/metrics';
 import type { PoolSeasonMetrics } from '../sim/pool';
 
-describe('simulation harness determinism', () => {
+import { describeHeavy, itHeavy } from './tier';
+
+// Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+describeHeavy('simulation harness determinism', () => {
   it('keeps the campaign digest unchanged with zero regard and repair steps', async () => {
     const options = {
       matches: 1,
@@ -239,7 +242,8 @@ describe('simulation harness determinism', () => {
 });
 
 describe('simulation harness sensitivity', () => {
-  it('changes output when the harness depth cap changes', async () => {
+  // Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+  itHeavy('changes output when the harness depth cap changes', async () => {
     const base = await runCampaign({
       matches: 1,
       leader: 'tyrannical',
@@ -259,7 +263,7 @@ describe('simulation harness sensitivity', () => {
     expect(base.determinismId).not.toBe(deeper.determinismId);
   });
 
-  it('changes output when seed changes', async () => {
+  itHeavy('changes output when seed changes', async () => {
     expect(
       renderCsv(
         await runSimulation({
@@ -281,7 +285,7 @@ describe('simulation harness sensitivity', () => {
     );
   });
 
-  it('changes output when leader changes', async () => {
+  itHeavy('changes output when leader changes', async () => {
     expect(
       renderCsv(
         await runSimulation({

@@ -31,6 +31,8 @@ import {
 import { runSeason } from '../sim/season';
 import { detectPoolDegeneracy } from '../sim/degeneracy';
 
+import { itHeavy } from './tier';
+
 function emptyResult(
   roster: readonly PieceState[],
   enemyRoster: readonly PieceState[],
@@ -555,48 +557,57 @@ describe('scarce season pools', () => {
     );
   });
 
-  it('threads the pool-depth config through season output', async () => {
-    const baseline = await runSeason({
-      seed: 7,
-      matches: 1,
-      whiteStyle: 'servant',
-      blackStyle: 'supportive',
-      engineKind: 'fake',
-    });
-    const shallow = await runSeason({
-      seed: 7,
-      matches: 1,
-      whiteStyle: 'servant',
-      blackStyle: 'supportive',
-      engineKind: 'fake',
-      config: { ...SEASON_CONFIG, POOL_DEPTH_FACTOR: 1 },
-    });
-    expect(JSON.stringify(shallow)).not.toBe(JSON.stringify(baseline));
-  }, 30_000);
+  // Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+  itHeavy(
+    'threads the pool-depth config through season output',
+    async () => {
+      const baseline = await runSeason({
+        seed: 7,
+        matches: 1,
+        whiteStyle: 'servant',
+        blackStyle: 'supportive',
+        engineKind: 'fake',
+      });
+      const shallow = await runSeason({
+        seed: 7,
+        matches: 1,
+        whiteStyle: 'servant',
+        blackStyle: 'supportive',
+        engineKind: 'fake',
+        config: { ...SEASON_CONFIG, POOL_DEPTH_FACTOR: 1 },
+      });
+      expect(JSON.stringify(shallow)).not.toBe(JSON.stringify(baseline));
+    },
+    30_000,
+  );
 
-  it('replays a season byte-for-byte and emits raw metrics without a scorecard', async () => {
-    const options = {
-      seed: 42,
-      matches: 2,
-      whiteStyle: 'supportive' as const,
-      blackStyle: 'servant' as const,
-      engineKind: 'fake' as const,
-    };
-    const first = await runSeason(options);
-    const second = await runSeason(options);
-    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.metrics).toHaveLength(2);
-    expect(first.horizon).toHaveLength(2);
-    expect('aggregateSeasonScore' in first).toBe(false);
-    expect(first.whiteSnapshots[0]).toMatchObject({
-      available: expect.any(Number),
-      total: 31,
-      recovering: expect.any(Number),
-      retired: expect.any(Number),
-      conscriptsFielded: 0,
-      veteransRested: expect.any(Number),
-    });
-  }, 30_000);
+  itHeavy(
+    'replays a season byte-for-byte and emits raw metrics without a scorecard',
+    async () => {
+      const options = {
+        seed: 42,
+        matches: 2,
+        whiteStyle: 'supportive' as const,
+        blackStyle: 'servant' as const,
+        engineKind: 'fake' as const,
+      };
+      const first = await runSeason(options);
+      const second = await runSeason(options);
+      expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+      expect(first.metrics).toHaveLength(2);
+      expect(first.horizon).toHaveLength(2);
+      expect('aggregateSeasonScore' in first).toBe(false);
+      expect(first.whiteSnapshots[0]).toMatchObject({
+        available: expect.any(Number),
+        total: 31,
+        recovering: expect.any(Number),
+        retired: expect.any(Number),
+        conscriptsFielded: 0,
+        veteransRested: expect.any(Number),
+      });
+    },
+    30_000,
+  );
 
   it('conscripts role shortfalls and transfers the pool appraisal', () => {
     const pool = createCommanderPool({
@@ -973,84 +984,93 @@ describe('scarce season pools', () => {
     );
   });
 
-  it('has golden and sensitivity coverage for selection knobs', async () => {
-    const config = SEASON_CONFIG;
-    expect(config.NON_SELECTION_TRUST_THRESHOLD).toBe(2);
-    expect(config.NON_SELECTION_SELF_TRUST_PENALTY).toBe(-10);
-    expect(config.NON_SELECTION_PEER_TRUST_PENALTY).toBe(-2);
-    expect(config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY).toBe(4);
-    expect(config.OBSOLESCENCE_NON_SELECTION_THRESHOLD).toBe(6);
+  // Campaign-scale: nightly tier (docs/testing_strategy.md §7).
+  itHeavy(
+    'has golden and sensitivity coverage for selection knobs',
+    async () => {
+      const config = SEASON_CONFIG;
+      expect(config.NON_SELECTION_TRUST_THRESHOLD).toBe(2);
+      expect(config.NON_SELECTION_SELF_TRUST_PENALTY).toBe(-10);
+      expect(config.NON_SELECTION_PEER_TRUST_PENALTY).toBe(-2);
+      expect(config.NON_SELECTION_REDEMPTION_TRUST_RECOVERY).toBe(4);
+      expect(config.OBSOLESCENCE_NON_SELECTION_THRESHOLD).toBe(6);
 
-    const baseline = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-    });
-    expect(
-      baseline.poolEvents.some(
-        (event) =>
-          event.t === 'POOL_TRUST_ADJUSTMENT' &&
-          event.reason === 'selection_redemption',
-      ),
-    ).toBe(true);
-    const changedThreshold = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-      config: { ...config, NON_SELECTION_TRUST_THRESHOLD: 1 },
-    });
-    const changedSelfPenalty = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-      config: { ...config, NON_SELECTION_SELF_TRUST_PENALTY: -20 },
-    });
-    const changedPeerPenalty = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-      config: { ...config, NON_SELECTION_PEER_TRUST_PENALTY: -8 },
-    });
-    const changedRecovery = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-      config: { ...config, NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 1 },
-    });
-    const changedObsolescence = await runSeason({
-      seed: 1,
-      matches: 4,
-      whiteStyle: 'tyrannical',
-      blackStyle: 'supportive',
-      depthFactor: 3,
-      engineKind: 'fake',
-      config: { ...config, OBSOLESCENCE_NON_SELECTION_THRESHOLD: 2 },
-    });
-    expect(JSON.stringify(changedThreshold)).not.toBe(JSON.stringify(baseline));
-    expect(JSON.stringify(changedSelfPenalty)).not.toBe(
-      JSON.stringify(baseline),
-    );
-    expect(JSON.stringify(changedPeerPenalty)).not.toBe(
-      JSON.stringify(baseline),
-    );
-    expect(JSON.stringify(changedRecovery)).not.toBe(JSON.stringify(baseline));
-    expect(JSON.stringify(changedObsolescence)).not.toBe(
-      JSON.stringify(baseline),
-    );
-  }, 120_000);
+      const baseline = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+      });
+      expect(
+        baseline.poolEvents.some(
+          (event) =>
+            event.t === 'POOL_TRUST_ADJUSTMENT' &&
+            event.reason === 'selection_redemption',
+        ),
+      ).toBe(true);
+      const changedThreshold = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+        config: { ...config, NON_SELECTION_TRUST_THRESHOLD: 1 },
+      });
+      const changedSelfPenalty = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+        config: { ...config, NON_SELECTION_SELF_TRUST_PENALTY: -20 },
+      });
+      const changedPeerPenalty = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+        config: { ...config, NON_SELECTION_PEER_TRUST_PENALTY: -8 },
+      });
+      const changedRecovery = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+        config: { ...config, NON_SELECTION_REDEMPTION_TRUST_RECOVERY: 1 },
+      });
+      const changedObsolescence = await runSeason({
+        seed: 1,
+        matches: 4,
+        whiteStyle: 'tyrannical',
+        blackStyle: 'supportive',
+        depthFactor: 3,
+        engineKind: 'fake',
+        config: { ...config, OBSOLESCENCE_NON_SELECTION_THRESHOLD: 2 },
+      });
+      expect(JSON.stringify(changedThreshold)).not.toBe(
+        JSON.stringify(baseline),
+      );
+      expect(JSON.stringify(changedSelfPenalty)).not.toBe(
+        JSON.stringify(baseline),
+      );
+      expect(JSON.stringify(changedPeerPenalty)).not.toBe(
+        JSON.stringify(baseline),
+      );
+      expect(JSON.stringify(changedRecovery)).not.toBe(
+        JSON.stringify(baseline),
+      );
+      expect(JSON.stringify(changedObsolescence)).not.toBe(
+        JSON.stringify(baseline),
+      );
+    },
+    120_000,
+  );
 });
