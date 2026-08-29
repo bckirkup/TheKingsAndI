@@ -1,6 +1,7 @@
-Subject: [PATCH] Bound Lozza aspiration loop (namanthanki/lozza#4)
+Subject: [PATCH] Bound aspiration loop and correct mate distances
 
 Upstream issue: namanthanki/lozza#4
+Mate-distance rendering fix: not yet reported upstream.
 
 diff --git a/vendor/lozza/lozza.cjs b/vendor/lozza/lozza.cjs
 --- a/vendor/lozza/lozza.cjs
@@ -11,3 +12,9 @@ diff --git a/vendor/lozza/lozza.cjs b/vendor/lozza/lozza.cjs
 @@ -1099 +1099 @@
 -      } else if (score >= beta) {
 +      } else if (score >= beta && beta < INF) {
+@@ -1726 +1726 @@
+-    let mateScore = ((MATE - Math.abs(score)) / 2) | 0;
++    let mateScore = ((MATE - Math.abs(score) + 1) / 2) | 0;
+@@ -1759 +1759 @@
+-      let mateScore = ((MATE - Math.abs(entry.score)) / 2) | 0;
++      let mateScore = ((MATE - Math.abs(entry.score) + 1) / 2) | 0;

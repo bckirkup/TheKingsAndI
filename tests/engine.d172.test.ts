@@ -22,6 +22,16 @@ const poisonFens = [
   'Q1b1k3/8/8/4pP2/2pP3B/8/P1P2PPP/RN1QKBNR w KQ - 0 16',
   '6Q1/2k1n2Q/8/p2P1P2/P3P3/8/8/RNBQK1NR w KQ - 1 32',
 ] as const;
+const mateInOneFens = [
+  {
+    fen: 'rnbqkbnr/ppppp2p/8/5pp1/P3P3/8/1PPP1PPP/RNBQKBNR w KQkq - 0 3',
+    move: 'd1h5',
+  },
+  {
+    fen: '3rkr2/1p3R2/2p3p1/p3P3/P1P1n1b1/8/R7/1N2KBN1 b - - 2 17',
+    move: 'd8d1',
+  },
+] as const;
 const midGameMeasurementFens = [
   'Nrb5/ppp3n1/n4kr1/1q5p/1b1pPPQ1/1P1PR3/P3B1P1/RKB3N1 b - - 5 24',
   'r4bnr/2n1p1p1/2N1bp1k/3p3p/8/8/2QPP2P/2B2BKR w - - 0 22',
@@ -98,6 +108,27 @@ describe('D172 real Lozza regression', () => {
           const result = await engine.evaluate(fen, depth);
           expect(Number.isSafeInteger(result.scoreCp)).toBe(true);
           expect(result.sound).toBe(true);
+        }
+      } finally {
+        await engine.dispose();
+      }
+    },
+    120_000,
+  );
+
+  it.each(mateInOneFens)(
+    'reports a sound mate-in-one and its mating move (%s)',
+    async ({ fen, move }) => {
+      const engine = new UciEngine({
+        enginePath: artifactPath,
+        multiPv: 8,
+      });
+      try {
+        for (const depth of [3, 4, 5, 6]) {
+          const result = await engine.evaluate(fen, depth);
+          expect(result.sound).toBe(true);
+          expect(result.scoreCp).toBe(29_999);
+          expect(result.pv[0]).toBe(move);
         }
       } finally {
         await engine.dispose();

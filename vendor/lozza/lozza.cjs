@@ -1723,7 +1723,7 @@ function report(score, depth, bound) {
 
   let scoreStr;
   if (Math.abs(score) > MINMATE) {
-    let mateScore = ((MATE - Math.abs(score)) / 2) | 0;
+    let mateScore = ((MATE - Math.abs(score) + 1) / 2) | 0;
     if (score < 0) mateScore = -mateScore;
     scoreStr = 'score mate ' + mateScore;
   } else {
@@ -1756,7 +1756,7 @@ function reportMultiPV(depth) {
 
     let scoreStr;
     if (Math.abs(entry.score) > MINMATE) {
-      let mateScore = ((MATE - Math.abs(entry.score)) / 2) | 0;
+      let mateScore = ((MATE - Math.abs(entry.score) + 1) / 2) | 0;
       if (entry.score < 0) mateScore = -mateScore;
       scoreStr = 'score mate ' + mateScore;
     } else {
