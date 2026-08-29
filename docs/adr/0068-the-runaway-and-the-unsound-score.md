@@ -119,3 +119,65 @@ clamping fabricates a confident lie). Routing around the two positions
   memoizes its own result, with an order-invariance probe — but the reuse rule
   itself is a purity claim that does not hold, and it is an architecture decision,
   not a patch.
+
+## Addendum (2026-08-29): `mate 0` was two different things, and one of them was legal
+
+The ruling above shipped and immediately failed at the first thing it was
+supposed to unblock. Both re-baseline campaigns died within the first few dozen
+insight rounds, not at the poison positions but at ordinary ones:
+
+```text
+UciUnsoundScoreError: Unsound engine score mate 0 for FEN
+rnbqkbnr/ppppp2p/8/5pp1/P3P3/8/1PPP1PPP/RNBQKBNR w KQkq - 0 3 at depth 4 after 2 escalations
+UciUnsoundScoreError: Unsound engine score mate 0 for FEN
+3rkr2/1p3R2/2p3p1/p3P3/P1P1n1b1/8/R7/1N2KBN1 b - - 2 17 at depth 4 after 2 escalations
+```
+
+The returned moves — `d1h5` and `d8d1` — are **checkmate**, verified on the board
+rather than inferred. So `mate 0` was never only the `INF` sentinel: it is also
+how this engine renders a mate in one, which is among the most common decisive
+results in ordinary play. Deepening cannot cure it, because there is nothing
+wrong with it, so the escalation ladder exhausted and the campaign died on a
+correct answer. Withdrawing the `mate 0 → 29_999` case was right about the
+sentinel and wrong about the token: two causes were sharing one symbol, and the
+first ruling read the symbol.
+
+**The cause is a second defect in the same function.** `report()` renders
+
+```js
+let mateScore = ((MATE - Math.abs(score)) / 2) | 0;   // floor(ply / 2)
+```
+
+With `score = MATE - ply`, that is `floor(ply/2)`: mate in one (`ply = 1`) prints
+`mate 0`, mate in three prints `mate 2`. Every mate distance this engine reports
+is one short, and the error lands exactly on the value the out-of-range scores
+also produce. The correct UCI distance is `ceil(ply/2)`, which is the same
+expression plus one:
+
+```js
+let mateScore = ((MATE - Math.abs(score) + 1) / 2) | 0;
+```
+
+**Decision.** Extend the vendored patch to correct the rendering at both report
+sites, and keep the soundness contract exactly as ruled above. This is preferred
+to relaxing the classifier because it removes the ambiguity at its source rather
+than choosing a side of it: after the fix a genuine mate always renders
+`|mate| >= 1`, while the out-of-range values still render outside the plausible
+band (`31001 → mate 0`, `INF = 32000 → mate -499`). `mate 0` therefore keeps
+meaning "unsound", and now means *only* that. Accepting `mate 0` instead would
+have restored the original hazard in full: a forced win reported as `-29_500`,
+arriving silently in the one field the audit trail treats as truth.
+
+**Consequences beyond the first ruling.**
+
+- Reported mate distances shift by one for every mating line, so mate-derived
+  scores in the calibration corpus change by one ply's worth. This is a
+  correction, not a re-tuning, but it is an artifact-identity change like the
+  first patch and separates evidence the same way.
+- `bench` remains `613926` nodes: rendering is output-only.
+- The regression that merged code failed — a mate in one must be *sound* — is now
+  a probe, and it is the cheap test that was missing. The first ruling was
+  measured only against the two positions that provoked the runaway, so it
+  learned the pathological reading of a token and never met the ordinary one.
+- The rendering fix has not been reported upstream: the integration account that
+  filed `namanthanki/lozza#4` cannot comment on it.
