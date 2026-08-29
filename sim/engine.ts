@@ -59,12 +59,13 @@ export async function disposeSimEngine(kind: SimEngineKind): Promise<void> {
  */
 export async function createSimEngine(
   kind: SimEngineKind = 'lozza',
+  options: { readonly coldSearch?: boolean | undefined } = {},
 ): Promise<EnginePort> {
   switch (kind) {
     case 'fake':
       return createFakeEnginePort('sim-fake/depth-fixed');
     case 'lozza':
-      return createLozzaPort();
+      return createLozzaPort({ coldSearch: options.coldSearch ?? true });
     case 'stockfish':
       return createStockfishPort({ poolSize: 2 });
     default: {

@@ -30,6 +30,7 @@ export interface CampaignOptions {
   readonly initialTrust?: number;
   readonly engine?: EnginePort;
   readonly engineKind?: SimEngineKind;
+  readonly coldSearch?: boolean | undefined;
   /** Harness-only tractability cap; does not alter psychology depth allocation. */
   readonly depthCap?: number | undefined;
   readonly checkpoint?: CampaignCheckpoint;
@@ -205,7 +206,13 @@ export async function runCampaign(
   options: CampaignOptions,
 ): Promise<CampaignResult> {
   const baseEngine =
-    options.engine ?? (await createSimEngine(options.engineKind ?? 'lozza'));
+    options.engine ??
+    (await createSimEngine(
+      options.engineKind ?? 'lozza',
+      options.coldSearch === undefined
+        ? {}
+        : { coldSearch: options.coldSearch },
+    ));
   const costTracker = new CostTracker(baseEngine);
   const board = LivingBoard.standard();
   const instrumentedBaseEngine = instrumentEngine(baseEngine, costTracker);

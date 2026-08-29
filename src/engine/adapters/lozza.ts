@@ -12,12 +12,11 @@ import type { EngineEvaluation, EnginePort } from '../types';
 import { UciEngine, type DepthLadder } from '../uci';
 
 const LOZZA_HASH_MB = 16;
-// Keep the cache unbounded by default: eviction forces re-searches on the warm
-// child, and Lozza's carried state makes those results path-dependent. Whether
-// bounded eviction may change campaign numbers belongs in the determinism ADR.
-export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = Number.MAX_SAFE_INTEGER;
-// Lozza's warm transposition-table state affects search results. Keep
-// recycling opt-in until its determinism contract is decided.
+// Cold searches make eviction a latency choice: a re-search cannot change the
+// result, so bound the ladder cache for long campaigns.
+export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = 4_096;
+// Process recycling remains an opt-in fallback for engines whose search state
+// is not cleared by ucinewgame.
 export const DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES = Number.MAX_SAFE_INTEGER;
 const LOZZA_BUILD_PATTERN = /\bconst BUILD = ['"]([^'"]+)['"];/;
 const LOZZA_ARTIFACT_HASH_PREFIX_LENGTH = 12;
@@ -30,6 +29,8 @@ const defaultEnginePath = join(
 export interface LozzaPortOptions {
   /** Override the vendored lozza.cjs path (tests only). */
   readonly enginePath?: string;
+  /** Clear carried engine state before every search; defaults to cold. */
+  readonly coldSearch?: boolean;
   /** Maximum number of FEN ladders retained by the adapter's LRU. */
   readonly ladderCacheCapacity?: number;
   /** Recycle each child after this many completed searches (opt-in). */
@@ -44,6 +45,7 @@ interface LozzaEngineState {
   ladderByFen: LruCache<string, DepthLadder>;
   ladderCacheCapacity: number;
   recycleAfterSearches: number;
+  coldSearch: boolean;
   sharedSearches: number;
   bestSearches: number;
   restarts: number;
@@ -96,9 +98,13 @@ class LruCache<K, V> {
   }
 }
 
-function createSharedEngine(enginePath: string): UciEngine {
+function createSharedEngine(
+  enginePath: string,
+  coldSearch: boolean,
+): UciEngine {
   return new UciEngine({
     enginePath,
+    coldSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: DEFAULT_PRIVATE_MULTIPV_WIDTH,
@@ -108,8 +114,10 @@ function createSharedEngine(enginePath: string): UciEngine {
 function getState(
   enginePath: string,
   options: LozzaPortOptions,
+  coldSearch: boolean,
 ): LozzaEngineState {
-  const existing = statesByPath.get(enginePath);
+  const stateKey = `${enginePath}/search-${coldSearch ? 'cold' : 'warm'}`;
+  const existing = statesByPath.get(stateKey);
   if (existing !== undefined) {
     if (options.ladderCacheCapacity !== undefined) {
       existing.ladderCacheCapacity = options.ladderCacheCapacity;
@@ -125,24 +133,26 @@ function getState(
   const recycleAfterSearches =
     options.recycleAfterSearches ?? DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES;
   const state: LozzaEngineState = {
-    sharedEngine: createSharedEngine(enginePath),
+    sharedEngine: createSharedEngine(enginePath, coldSearch),
     bestEngine: undefined,
     searchQueue: Promise.resolve(),
     bestSearchQueue: Promise.resolve(),
     ladderByFen: new LruCache(ladderCacheCapacity),
     ladderCacheCapacity,
     recycleAfterSearches,
+    coldSearch,
     sharedSearches: 0,
     bestSearches: 0,
     restarts: 0,
   };
-  statesByPath.set(enginePath, state);
+  statesByPath.set(stateKey, state);
   return state;
 }
 
 function getBestEngine(state: LozzaEngineState, enginePath: string): UciEngine {
   state.bestEngine ??= new UciEngine({
     enginePath,
+    coldSearch: state.coldSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: 1,
@@ -155,7 +165,7 @@ async function recycleSharedEngine(
   enginePath: string,
 ): Promise<void> {
   await state.sharedEngine.dispose();
-  state.sharedEngine = createSharedEngine(enginePath);
+  state.sharedEngine = createSharedEngine(enginePath, state.coldSearch);
   state.sharedSearches = 0;
   state.restarts += 1;
 }
@@ -167,6 +177,7 @@ async function recycleBestEngine(
   if (state.bestEngine !== undefined) await state.bestEngine.dispose();
   state.bestEngine = new UciEngine({
     enginePath,
+    coldSearch: state.coldSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: 1,
@@ -198,14 +209,15 @@ function getArtifactIdentity(enginePath: string): {
   return identity;
 }
 
-function lozzaDeterminismId(enginePath: string): string {
+function lozzaDeterminismId(enginePath: string, coldSearch: boolean): string {
   const { build, hash } = getArtifactIdentity(enginePath);
   // The short hash is an equality token, not a security boundary.
   return (
     `lozza-${build}/artifact-${hash}/depth-fixed/hash-${LOZZA_HASH_MB}/` +
     `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
     `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
-    `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`
+    `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}/` +
+    `search-${coldSearch ? 'cold' : 'warm'}`
   );
 }
 
@@ -229,8 +241,9 @@ function bestAvailableResult(
  */
 export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   const enginePath = resolve(options.enginePath ?? defaultEnginePath);
-  const determinismId = lozzaDeterminismId(enginePath);
-  const state = getState(enginePath, options);
+  const coldSearch = options.coldSearch ?? true;
+  const determinismId = lozzaDeterminismId(enginePath, coldSearch);
+  const state = getState(enginePath, options, coldSearch);
   const ladderFor = async (
     fen: string,
     depth: number,
