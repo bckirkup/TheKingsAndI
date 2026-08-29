@@ -1720,6 +1720,46 @@ choice, not a claim of improved conduct. The implementing defaults are
 `src/psychology/config.ts:76-79`; the explicit pre-D176 change detector is
 `tests/curdle.floor.test.ts:74-93`.
 
+### D177 ❓ Do pieces stay together long enough for a social graph to exist?
+**Open — raised 2026-08-29 by the D176 attachment measurement, not wired.**
+Every social mechanism now specified prices a *bond*: D170 charges each witness
+by its attachment to the piece that was overridden, and D168/D169 route a
+private word through affinity (intimates read care, the rest read favoritism).
+Measurement says the bonds are mostly absent, and not because they accrue
+slowly. Over 20 matches at seed 7, fake engine, `--opponent=tyrannical`
+(`docs/calibration/2026-08-29-the-roster-nobody-stays-in.md`): mean survivors
+per match `1.95` of `16` fielded for `tyrannical` and `2.85` of `16` for
+`redeemer`; desertion is 0–5 per match while **capture** removes 10–15; only
+`1` piece (`tyrannical`) and `2` (`redeemer`) survive five or more matches, and
+the one that survives all twenty is the King. The pieces that *do* persist hold
+strong bonds — mean |affinity| `68.1`/`66.7` with maxima at the `100` cap — but
+only 2–4 non-zero edges each, so the modal piece plays one match and never meets
+the same witness twice. That is why half of all witness attachments at override
+time are exactly zero.
+
+The open question is which of three answers the design wants, and it must be
+ruled before any D168 magnitude is chosen or D170's effect is judged too weak:
+
+1. **Roster continuity** — pieces should return (ADR 0026 already makes capture
+   non-permanent at the community level, and nothing in the harness exercises
+   the return path), or a bench/reserve should carry a cohort across matches.
+   The sociology then works because the same faces come back.
+2. **Accrual rate** — the affinity magnitudes should build a graph inside one
+   match, so a roster of near-strangers still forms readable factions. This is
+   the cheapest to measure and the easiest to over-tune.
+3. **Accept the turnover** — 12 of 16 pieces lost per match against a competent
+   opponent is the honest chess, so the social mechanics must be specified to
+   work on a sparse graph (the King and two or three veterans), and their
+   magnitudes chosen against *that* roster rather than an imagined cohort.
+
+Not answerable from the current evidence: affinity accrual *per shared ply* is
+unmeasured (only the stock held by survivors is), the accounting is one seed,
+and own-side capture is a subtraction residual because the harness counts
+`enemyAttrition` but has no player-side capture counter — which is itself a
+harness gap this decision should close. D177 is **not** a claim that attrition
+is a defect; it is the question of whether the social layer is being tuned
+against a roster that cannot hold it.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
