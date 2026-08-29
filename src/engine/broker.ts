@@ -122,9 +122,11 @@ export async function createSharedSearchBroker(
   });
   let bestPoolPromise: Promise<EnginePool> | undefined;
 
-  const sharedByFen = new Map<string, DepthLadder>();
+  const sharedByFen = new LruCache<string, DepthLadder>(ladderCacheCapacity);
   const inflight = new Map<string, InflightShared>();
-  const bestByFenDepth = new Map<string, EngineEvaluation>();
+  const bestByFenDepth = new LruCache<string, EngineEvaluation>(
+    ladderCacheCapacity,
+  );
   const escalatedResultsByFenDepth = new LruCache<string, UciSearchResult>(
     ladderCacheCapacity,
   );

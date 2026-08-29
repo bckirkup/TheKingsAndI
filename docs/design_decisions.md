@@ -1616,36 +1616,41 @@ never a `nodes` budget that can bind, because Lozza's node net fires only at
 100× the budget and its soft net stops honest deepening. Truncation is rejected:
 it buys silence at the price of making the next engine's pathology invisible.
 
-### D173 ❓ Is a ladder rung from a deeper search the canonical value for that depth? (raised by ADR 0068)
-**Open — architecture decision, do not resolve in code.** The adapter and the
-broker both cache one ladder per FEN and reuse it whenever
-`maxDepth >= requestedDepth` (`src/engine/adapters/lozza.ts:327-333`,
-`src/engine/broker.ts:139-149`), which is the trick that lets one shared search
-at `D_max` serve every piece's depth. It assumes the depth-`d` rung of a
-`go depth N` search equals a standalone `go depth d`, and **that assumption is
-false**: over five ordinary positions, 17 of 18 rungs matched and one did not —
-`2r3k1/p4p2/3Rp2p/1p2P1pK/8/1P4P1/P3Q2P/1q6 b - - 0 1` at depth 3 gives
-`cp 461 … e2b5` standalone and `cp 464 … e2d3` as the rung of a depth-6 search.
-Iterative deepening warms its own table and windows within a single search, so a
-rung is not the same object as the search that would have produced it alone.
+### D173 ✅ Is a ladder rung from a deeper search the canonical value for that depth? (raised by ADR 0068)
+**Answered 2026-08-29 (owner) — see ADR 0069.** The adapter and the broker
+both cache one ladder per FEN and reuse it whenever `maxDepth >= requestedDepth`
+(`src/engine/adapters/lozza.ts:327-333`, `src/engine/broker.ts:139-149`).
+The honest description of what ships is therefore: **the rung is the value**.
+The ruling does not switch to `(fen, searchDepth)` keying or always search at
+`D_max`; the reuse path stays as it is.
 
-Consequently the value returned for `(position, depth)` depends on the depth of
-the search that happened to run first for that position — fixed within a run by
-the `PieceId` order of the barrier (ADR 0034), but *not* fixed across runs whose
-rosters request different depths, which is exactly the replay-and-fork purity
-ADR 0067 claimed. D172's escalation was kept out of it deliberately: an escalated
-search neither reads nor writes the ladder cache and memoizes its own result
-(`src/engine/adapters/lozza.ts:363-386`), with an order-invariance probe in
-`tests/engine.d172.test.ts`. Three candidate answers: **declare the rung
-canonical** (cheapest, and the honest description of what ships — but the
-ladder-depth policy then belongs in `determinismId`, and a fork must reproduce
-the parent's ladder depths, not just its positions); **key the cache by
-`(fen, searchDepth)`** (pure, and multiplies engine calls by the number of
-distinct depths a roster asks for); **always search at `D_max`** (pure and
-single-cost, and pays `D_max` for every pawn's shallow query). The same
-conversation covers the unbounded `bestByFenDepth` memo in the broker
-(`src/engine/broker.ts:122`), which is the last unbounded per-position cache
-after D172 bounded the rest.
+The evidence remains that the depth-`d` rung of a `go depth N` search is not
+always a standalone `go depth d`: over five ordinary positions, 17 of 18 rungs
+matched and one did not —
+`2r3k1/p4p2/3Rp2p/1p2P1pK/8/1P4P1/P3Q2P/1q6 b - - 0 1` at depth 3 gives
+`cp 461 … e2b5` standalone and `cp 464 … e2d3` as the rung of a depth-6
+search. Iterative deepening warms its own table and windows within a single
+search, so this is a policy choice, not a claim of standalone equivalence.
+
+Three consequences follow. First, `ladder-rung-canonical` is part of the
+Lozza and Stockfish determinism identities
+(`src/engine/adapters/lozza.ts:247-248`,
+`src/engine/adapters/stockfish.ts:27-30`); the fake engine has no ladder reuse
+and therefore does not carry the token. Second, both broker per-position
+caches are bounded by `ladderCacheCapacity`: `sharedByFen` and
+`bestByFenDepth` use `LruCache` (`src/engine/broker.ts:125-129`), so under the
+cold contract an eviction costs a re-search but cannot change a result.
+Third, the future ADR 0062 journal/fork machinery must replay the parent's
+per-piece `D_i` and ladder search depths, not merely its positions and seeds,
+because the first search depth fixes the rung within a run by the `PieceId`
+barrier order.
+
+The two pure alternatives were priced and rejected: keying by
+`(fen, searchDepth)` multiplies engine calls by the number of distinct depths a
+roster asks for, with `D_i` spanning `MIN_SEARCH_DEPTH=2` through
+`MAX_SEARCH_DEPTH=16`; always searching at `D_max` makes every pawn's shallow
+query pay `D_max`. If the fork programme later proves the canonical-rung policy
+intolerable, the escape is always `D_max` plus a re-baseline.
 
 ### D174 ✅ Should the witness cliff have its own multiplier rather than a shared logistic input?
 **Answered 2026-08-29 (owner) — see ADR 0070.** Witness benevolence now has

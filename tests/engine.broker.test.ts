@@ -56,6 +56,7 @@ describe('shared-search broker (Stockfish)', () => {
     expect(STOCKFISH_DETERMINISM_ID).toContain(
       `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}`,
     );
+    expect(STOCKFISH_DETERMINISM_ID).toContain('/ladder-rung-canonical');
     expect(stockfishDeterminismId(16, 4)).not.toBe(STOCKFISH_DETERMINISM_ID);
     expect(stockfishDeterminismId(16, 8, 2)).not.toBe(STOCKFISH_DETERMINISM_ID);
     expect(stockfishDeterminismId(16, 8, 1, 2)).not.toBe(

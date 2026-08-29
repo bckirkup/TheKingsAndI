@@ -26,7 +26,8 @@ export function stockfishDeterminismId(
   return (
     `stockfish-js-${STOCKFISH_BUILD}-${STOCKFISH_FLAVOR}/` +
     `hash-${STOCKFISH_HASH_MB}/threads-1/dmax-${dMax}/multipv-${multiPv}/` +
-    `preferred-multipv-${preferredMultiPv}/preferred-pool-${preferredPoolSize}`
+    `preferred-multipv-${preferredMultiPv}/preferred-pool-${preferredPoolSize}/` +
+    'ladder-rung-canonical'
   );
 }
 

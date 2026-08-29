@@ -244,7 +244,7 @@ export function lozzaDeterminismId(
     `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
     `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
     `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}/` +
-    `search-${coldSearch ? 'cold' : 'warm'}/` +
+    `search-${coldSearch ? 'cold' : 'warm'}/ladder-rung-canonical/` +
     `score-escalate-${maxScoreEscalations}/runaway-${maxInfoLinesPerSearch}`
   );
 }
