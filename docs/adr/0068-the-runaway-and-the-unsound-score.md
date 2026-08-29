@@ -1,0 +1,121 @@
+# ADR 0068 — The runaway and the unsound score: no engine gets to hang us, and no engine gets to be believed
+
+- **Status:** accepted (2026-08-29). The owner authorised the upstream report and
+  the carried patch ("Go ahead, proud to be the name on good work"). The
+  score-soundness rule below is the author's ruling on the same evidence and is
+  reversible.
+- **Refines:** ADR 0005 (depth-limited search only, never wall-clock), ADR 0020
+  (the narrow engine port), ADR 0034 (the per-ply query barrier), ADR 0067 (the
+  cold engine contract)
+- **Answers:** **D172**.
+
+## Context
+
+Measuring the D171 cold contract found two positions where a single `go depth 4`
+against a raw `vendor/lozza/lozza.cjs` child — no adapter involved — never
+returns, and the child dies of heap exhaustion:
+
+```text
+Q1b1k3/8/8/4pP2/2pP3B/8/P1P2PPP/RN1QKBNR w KQ - 0 16
+6Q1/2k1n2Q/8/p2P1P2/P3P3/8/8/RNBQK1NR w KQ - 1 32
+```
+
+It reproduces at `MultiPV` 1 and 8, warm and cold alike, and it reproduces
+against the current upstream head, which is the same `BUILD = "11"` we vendor.
+It is therefore an engine bug, not a harness artifact, and it is reported
+upstream as `namanthanki/lozza#4` (the canonical `op12no2/lozza` now redirects
+there).
+
+Three things were established by measurement, and each one rules out an
+otherwise attractive answer.
+
+**1. The aspiration loop cannot terminate once the window is maximal.** In
+`go()`, the widening step is `beta = Math.min(INF, beta + delta)`. Once `beta`
+has reached `INF` and the search keeps returning a score `>= beta`, widening is
+a no-op, `depth = Math.max(1, depth - 1)` pins the depth at 1, and the loop
+re-searches and re-reports forever. Refusing to re-search a window that cannot
+be widened is a two-line change and leaves Lozza's own `bench` unchanged at
+`613926` nodes.
+
+**2. The deeper defect is that a root search returns `INF` at all, and our
+parser believed it.** `INF` (32000) is not a score; it is above `MATE` (31000).
+`report()` renders it as `score mate -500`, and `parseScoreCp`
+(`src/engine/uci.ts:74-85`) dutifully turns that into `-29_500` — a plausible
+*losing* score for a position that is in fact a forced win in three, so the sign
+is inverted from the truth. The existing `mate 0 → 29_999` special case
+(`src/engine/uci.ts:79-82`), documented as "an immediate forced mate", is the
+same sentinel seen from the other side: a mate distance of zero is not a
+distance, and at the first position above `go depth 3` reports `mate 0` for what
+is really mate in three. So the corruption is not loud — it arrives as an
+ordinary number, in the one channel (`scoreCp`) that the audit trail, the
+opponent policy, and every derived psychology signal treat as truth.
+
+With the loop guard applied, both positions return the correct move in under
+100 ms at every depth tried, but the *score* is only sound from depth 5 (first
+position) and depth 4 (second). Tracing the `INF` back reached a child
+`search()` that already returns `INF` with legal moves available; the origin is
+further down and is left to upstream.
+
+**3. A node budget is an escape hatch, not a contract.** Lozza honours
+`go depth N nodes M`, and `nodes 20000` does turn both positions from "never
+returns" into a return with the same best move. But its hard net fires only at
+`statsNodes >= statsMaxNodes * 100` while each runaway lap adds ~3 nodes and
+prints a line, so escape costs ~666k `info` lines and ~450 MB RSS; and the soft
+net stops *deepening*, so a budget low enough to be cheap would silently
+truncate honest deep searches. Node counts are machine-independent and therefore
+replayable, but a budget that can bind is a budget that changes answers.
+
+## Decision
+
+1. **Carry a minimal patch to the vendored artifact.** Two conditions on the
+   aspiration loop, so a maximal window is never re-searched. The patch is
+   recorded as a diff under `vendor/lozza/patches/` so an upstream bump can
+   re-apply or drop it, the MIT copyright and permission notice stay in the
+   file, and the artifact hash — already part of `determinismId`
+   (`src/engine/adapters/lozza.ts:212-222`) — separates patched from unpatched
+   evidence automatically. Lozza is MIT (`vendor/lozza/LICENSE`), so this is the
+   permissive half of the licensing strategy and carries no AGPL/commercial
+   consequence; the cost is maintenance, which the recorded diff bounds.
+2. **A score must prove itself sound before it leaves `engine/`.** A reported
+   mate distance of zero, and any mate distance too large to be a real distance
+   in a fixed-depth search, are engine unsoundness, not evaluations. The
+   response is deterministic and pure in `(position, depth)`: re-search the same
+   position one ply deeper, at most twice, and take that evaluation as the value
+   for the requested depth; if it is still unsound, fail loudly. The escalation
+   policy is part of `determinismId`, because it changes what the port returns.
+   The `mate 0 → 29_999` special case is withdrawn: it was a hand-wave over this
+   bug.
+3. **Keep a deterministic runaway guard in the adapter, as a hard failure.** A
+   ceiling on the output a single search may produce (`info` lines), never a
+   wall-clock timeout and never a node budget that can bind. Exceeding it throws;
+   it does not truncate. Truncation buys silence at the price of making every
+   future engine's pathology invisible, and a campaign that dies loudly is worth
+   more than one that quietly returns a shallower answer.
+
+**Rejected.** A node budget as the search contract (see finding 3). Truncating a
+runaway to whatever it had reported (a different answer, presented as the
+answer). Clamping an unsound mate score into range (the sign can be wrong, so
+clamping fabricates a confident lie). Routing around the two positions
+(leaves campaigns that cannot be run, and the next such position is unknown).
+
+## Consequences
+
+- Long Lozza campaigns become runnable, which unblocks the seed-7 `tyrannical`
+  re-baseline that ADR 0067 left blocked.
+- Lozza evidence taken before this ADR carries a different artifact hash and
+  must not be quoted beside evidence taken after it.
+- Any position whose score needs escalation costs one or two extra searches;
+  this is a latency cost only, and it is recorded rather than hidden.
+- The guard's ceiling is a knob and therefore needs a sensitivity probe: a
+  search that exceeds it must fail, and an ordinary search must never approach
+  it.
+- Fake-engine evidence is unaffected: the fake engine reports neither mate
+  scores nor runaway output.
+- Implementing the escalation exposed a **larger, pre-existing** hazard, raised
+  as **D173** rather than settled here: the adapter and the broker serve a
+  shallow query from a deeper search's ladder rung, and a rung is measurably not
+  the same value a standalone search at that depth would give. Escalation is kept
+  out of it — an escalated search neither reads nor writes the ladder cache and
+  memoizes its own result, with an order-invariance probe — but the reuse rule
+  itself is a purity claim that does not hold, and it is an architecture decision,
+  not a patch.

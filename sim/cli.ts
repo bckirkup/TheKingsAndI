@@ -409,7 +409,7 @@ async function main(): Promise<void> {
   );
   if (result.cost !== undefined) {
     console.log(
-      `cost wall_ms=${result.cost.wallClockMs.toFixed(1)} ms_per_match=${result.cost.msPerMatch.toFixed(1)} ms_per_ply=${result.cost.msPerPly.toFixed(3)} engine_calls=${result.cost.engineCalls} evaluate=${result.cost.evaluateCalls} multi_pv_at=${result.cost.multiPvAtCalls} calls_per_ply=${result.cost.engineCallsPerPly.toFixed(3)} restarts=${result.cost.restarts} peak_rss_mb=${(result.cost.peakRssBytes / (1024 * 1024)).toFixed(1)} resource_max_rss_mb=${(result.cost.resourceMaxRssBytes / (1024 * 1024)).toFixed(1)}`,
+      `cost wall_ms=${result.cost.wallClockMs.toFixed(1)} ms_per_match=${result.cost.msPerMatch.toFixed(1)} ms_per_ply=${result.cost.msPerPly.toFixed(3)} engine_calls=${result.cost.engineCalls} score_escalations=${result.cost.scoreEscalations} evaluate=${result.cost.evaluateCalls} multi_pv_at=${result.cost.multiPvAtCalls} calls_per_ply=${result.cost.engineCallsPerPly.toFixed(3)} restarts=${result.cost.restarts} peak_rss_mb=${(result.cost.peakRssBytes / (1024 * 1024)).toFixed(1)} resource_max_rss_mb=${(result.cost.resourceMaxRssBytes / (1024 * 1024)).toFixed(1)}`,
     );
   }
   for (const band of result.trajectoryBands) {

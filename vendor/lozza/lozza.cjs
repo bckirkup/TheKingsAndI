@@ -1086,7 +1086,7 @@ function go(maxPly) {
 
       delta += (delta / 2) | 0;
 
-      if (score <= alpha) {
+      if (score <= alpha && alpha > -INF) {
         // upper bound
 
         beta = Math.min(INF, ((alpha + beta) / 2) | 0);
@@ -1096,7 +1096,7 @@ function go(maxPly) {
         reported = 1;
 
         if (!statsMaxNodes) statsBestMove = 0;
-      } else if (score >= beta) {
+      } else if (score >= beta && beta < INF) {
         // lower bound
 
         beta = Math.min(INF, beta + delta);

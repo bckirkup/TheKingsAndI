@@ -1,0 +1,13 @@
+Subject: [PATCH] Bound Lozza aspiration loop (namanthanki/lozza#4)
+
+Upstream issue: namanthanki/lozza#4
+
+diff --git a/vendor/lozza/lozza.cjs b/vendor/lozza/lozza.cjs
+--- a/vendor/lozza/lozza.cjs
++++ b/vendor/lozza/lozza.cjs
+@@ -1089 +1089 @@
+-      if (score <= alpha) {
++      if (score <= alpha && alpha > -INF) {
+@@ -1099 +1099 @@
+-      } else if (score >= beta) {
++      } else if (score >= beta && beta < INF) {

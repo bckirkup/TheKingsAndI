@@ -8,13 +8,23 @@ import {
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,
 } from '../search';
+import { DEFAULT_ENGINE_LADDER_CACHE_CAPACITY, LruCache } from '../cache';
 import type { EngineEvaluation, EnginePort } from '../types';
-import { UciEngine, type DepthLadder } from '../uci';
+import {
+  DEFAULT_MAX_INFO_LINES_PER_SEARCH,
+  DEFAULT_MAX_SCORE_ESCALATIONS,
+  UciEngine,
+  UciInfoLineLimitError,
+  UciUnsoundScoreError,
+  type DepthLadder,
+  type UciSearchResult,
+} from '../uci';
 
 const LOZZA_HASH_MB = 16;
 // Cold searches make eviction a latency choice: a re-search cannot change the
 // result, so bound the ladder cache for long campaigns.
-export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY = 4_096;
+export const DEFAULT_LOZZA_LADDER_CACHE_CAPACITY =
+  DEFAULT_ENGINE_LADDER_CACHE_CAPACITY;
 // Process recycling remains an opt-in fallback for engines whose search state
 // is not cleared by ucinewgame.
 export const DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES = Number.MAX_SAFE_INTEGER;
@@ -35,6 +45,10 @@ export interface LozzaPortOptions {
   readonly ladderCacheCapacity?: number;
   /** Recycle each child after this many completed searches (opt-in). */
   readonly recycleAfterSearches?: number;
+  /** Maximum deterministic one-ply re-searches for unsound scores. */
+  readonly maxScoreEscalations?: number;
+  /** Hard ceiling on info lines emitted by one search. */
+  readonly maxInfoLinesPerSearch?: number;
 }
 
 interface LozzaEngineState {
@@ -43,12 +57,20 @@ interface LozzaEngineState {
   searchQueue: Promise<void>;
   bestSearchQueue: Promise<void>;
   ladderByFen: LruCache<string, DepthLadder>;
+  escalatedResultsByFenDepth: LruCache<string, UciSearchResult>;
+  escalatedBestResultsByFenDepth: LruCache<string, UciSearchResult>;
+  escalatedLinesByFenDepth: LruCache<string, readonly UciSearchResult[]>;
   ladderCacheCapacity: number;
   recycleAfterSearches: number;
   coldSearch: boolean;
+  maxScoreEscalations: number;
+  maxInfoLinesPerSearch: number;
   sharedSearches: number;
   bestSearches: number;
   restarts: number;
+  scoreEscalations: number;
+  maxInfoLines: number;
+  lastInfoLines: number;
 }
 
 const statesByPath = new Map<string, LozzaEngineState>();
@@ -57,54 +79,17 @@ const artifactIdentityByPath = new Map<
   { readonly build: string; readonly hash: string }
 >();
 
-class LruCache<K, V> {
-  private readonly values = new Map<K, V>();
-
-  constructor(private capacity: number) {
-    if (!Number.isSafeInteger(capacity) || capacity < 1) {
-      throw new RangeError('ladderCacheCapacity must be a positive integer.');
-    }
-  }
-
-  setCapacity(capacity: number): void {
-    if (!Number.isSafeInteger(capacity) || capacity < 1) {
-      throw new RangeError('ladderCacheCapacity must be a positive integer.');
-    }
-    this.capacity = capacity;
-    this.trim();
-  }
-
-  get(key: K): V | undefined {
-    const value = this.values.get(key);
-    if (value !== undefined) {
-      this.values.delete(key);
-      this.values.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: K, value: V): void {
-    this.values.delete(key);
-    this.values.set(key, value);
-    this.trim();
-  }
-
-  private trim(): void {
-    while (this.values.size > this.capacity) {
-      const oldest = this.values.keys().next().value as K | undefined;
-      if (oldest === undefined) break;
-      this.values.delete(oldest);
-    }
-  }
-}
-
 function createSharedEngine(
   enginePath: string,
   coldSearch: boolean,
+  maxScoreEscalations: number,
+  maxInfoLinesPerSearch: number,
 ): UciEngine {
   return new UciEngine({
     enginePath,
     coldSearch,
+    maxScoreEscalations,
+    maxInfoLinesPerSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: DEFAULT_PRIVATE_MULTIPV_WIDTH,
@@ -116,12 +101,27 @@ function getState(
   options: LozzaPortOptions,
   coldSearch: boolean,
 ): LozzaEngineState {
-  const stateKey = `${enginePath}/search-${coldSearch ? 'cold' : 'warm'}`;
+  const maxScoreEscalations =
+    options.maxScoreEscalations ?? DEFAULT_MAX_SCORE_ESCALATIONS;
+  const maxInfoLinesPerSearch =
+    options.maxInfoLinesPerSearch ?? DEFAULT_MAX_INFO_LINES_PER_SEARCH;
+  const stateKey =
+    `${enginePath}/search-${coldSearch ? 'cold' : 'warm'}` +
+    `/score-escalate-${maxScoreEscalations}/runaway-${maxInfoLinesPerSearch}`;
   const existing = statesByPath.get(stateKey);
   if (existing !== undefined) {
     if (options.ladderCacheCapacity !== undefined) {
       existing.ladderCacheCapacity = options.ladderCacheCapacity;
       existing.ladderByFen.setCapacity(options.ladderCacheCapacity);
+      existing.escalatedResultsByFenDepth.setCapacity(
+        options.ladderCacheCapacity,
+      );
+      existing.escalatedBestResultsByFenDepth.setCapacity(
+        options.ladderCacheCapacity,
+      );
+      existing.escalatedLinesByFenDepth.setCapacity(
+        options.ladderCacheCapacity,
+      );
     }
     if (options.recycleAfterSearches !== undefined) {
       existing.recycleAfterSearches = options.recycleAfterSearches;
@@ -133,17 +133,30 @@ function getState(
   const recycleAfterSearches =
     options.recycleAfterSearches ?? DEFAULT_LOZZA_RECYCLE_AFTER_SEARCHES;
   const state: LozzaEngineState = {
-    sharedEngine: createSharedEngine(enginePath, coldSearch),
+    sharedEngine: createSharedEngine(
+      enginePath,
+      coldSearch,
+      maxScoreEscalations,
+      maxInfoLinesPerSearch,
+    ),
     bestEngine: undefined,
     searchQueue: Promise.resolve(),
     bestSearchQueue: Promise.resolve(),
     ladderByFen: new LruCache(ladderCacheCapacity),
+    escalatedResultsByFenDepth: new LruCache(ladderCacheCapacity),
+    escalatedBestResultsByFenDepth: new LruCache(ladderCacheCapacity),
+    escalatedLinesByFenDepth: new LruCache(ladderCacheCapacity),
     ladderCacheCapacity,
     recycleAfterSearches,
     coldSearch,
+    maxScoreEscalations,
+    maxInfoLinesPerSearch,
     sharedSearches: 0,
     bestSearches: 0,
     restarts: 0,
+    scoreEscalations: 0,
+    maxInfoLines: 0,
+    lastInfoLines: 0,
   };
   statesByPath.set(stateKey, state);
   return state;
@@ -153,6 +166,8 @@ function getBestEngine(state: LozzaEngineState, enginePath: string): UciEngine {
   state.bestEngine ??= new UciEngine({
     enginePath,
     coldSearch: state.coldSearch,
+    maxScoreEscalations: state.maxScoreEscalations,
+    maxInfoLinesPerSearch: state.maxInfoLinesPerSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: 1,
@@ -165,7 +180,12 @@ async function recycleSharedEngine(
   enginePath: string,
 ): Promise<void> {
   await state.sharedEngine.dispose();
-  state.sharedEngine = createSharedEngine(enginePath, state.coldSearch);
+  state.sharedEngine = createSharedEngine(
+    enginePath,
+    state.coldSearch,
+    state.maxScoreEscalations,
+    state.maxInfoLinesPerSearch,
+  );
   state.sharedSearches = 0;
   state.restarts += 1;
 }
@@ -178,6 +198,8 @@ async function recycleBestEngine(
   state.bestEngine = new UciEngine({
     enginePath,
     coldSearch: state.coldSearch,
+    maxScoreEscalations: state.maxScoreEscalations,
+    maxInfoLinesPerSearch: state.maxInfoLinesPerSearch,
     hashMb: LOZZA_HASH_MB,
     threads: 1,
     multiPv: 1,
@@ -209,7 +231,12 @@ function getArtifactIdentity(enginePath: string): {
   return identity;
 }
 
-function lozzaDeterminismId(enginePath: string, coldSearch: boolean): string {
+export function lozzaDeterminismId(
+  enginePath: string,
+  coldSearch: boolean,
+  maxScoreEscalations = DEFAULT_MAX_SCORE_ESCALATIONS,
+  maxInfoLinesPerSearch = DEFAULT_MAX_INFO_LINES_PER_SEARCH,
+): string {
   const { build, hash } = getArtifactIdentity(enginePath);
   // The short hash is an equality token, not a security boundary.
   return (
@@ -217,14 +244,15 @@ function lozzaDeterminismId(enginePath: string, coldSearch: boolean): string {
     `threads-1/multipv-${DEFAULT_PRIVATE_MULTIPV_WIDTH}/` +
     `preferred-multipv-${DEFAULT_PREFERRED_MULTIPV_WIDTH}/` +
     `preferred-pool-${DEFAULT_PREFERRED_POOL_SIZE}/` +
-    `search-${coldSearch ? 'cold' : 'warm'}`
+    `search-${coldSearch ? 'cold' : 'warm'}/` +
+    `score-escalate-${maxScoreEscalations}/runaway-${maxInfoLinesPerSearch}`
   );
 }
 
 function bestAvailableResult(
   ladder: DepthLadder,
   requestedDepth: number,
-): { readonly scoreCp: number; readonly pv: readonly string[] } | undefined {
+): UciSearchResult | undefined {
   // Lozza can terminate early when only one legal move is forced; that
   // deterministic ladder rung is valid even when it is shallower than asked.
   for (let depth = requestedDepth; depth >= 1; depth -= 1) {
@@ -242,110 +270,251 @@ function bestAvailableResult(
 export function createLozzaPort(options: LozzaPortOptions = {}): EnginePort {
   const enginePath = resolve(options.enginePath ?? defaultEnginePath);
   const coldSearch = options.coldSearch ?? true;
-  const determinismId = lozzaDeterminismId(enginePath, coldSearch);
+  const maxScoreEscalations =
+    options.maxScoreEscalations ?? DEFAULT_MAX_SCORE_ESCALATIONS;
+  const maxInfoLinesPerSearch =
+    options.maxInfoLinesPerSearch ?? DEFAULT_MAX_INFO_LINES_PER_SEARCH;
+  const determinismId = lozzaDeterminismId(
+    enginePath,
+    coldSearch,
+    maxScoreEscalations,
+    maxInfoLinesPerSearch,
+  );
   const state = getState(enginePath, options, coldSearch);
   const ladderFor = async (
     fen: string,
     depth: number,
+    cache = true,
   ): Promise<DepthLadder> => {
-    const cached = state.ladderByFen.get(fen);
-    if (cached !== undefined && cached.maxDepth >= depth) return cached;
+    if (cache) {
+      const cached = state.ladderByFen.get(fen);
+      if (cached !== undefined && cached.maxDepth >= depth) return cached;
+    }
     const search = state.searchQueue.then(async () => {
       if (state.sharedSearches >= state.recycleAfterSearches) {
         await recycleSharedEngine(state, enginePath);
       }
       state.sharedSearches += 1;
-      return state.sharedEngine.searchLadder(fen, depth);
+      try {
+        const ladder = await state.sharedEngine.searchLadder(fen, depth);
+        state.maxInfoLines = Math.max(
+          state.maxInfoLines,
+          state.sharedEngine.lastInfoLineCount,
+        );
+        state.lastInfoLines = state.sharedEngine.lastInfoLineCount;
+        return ladder;
+      } catch (cause: unknown) {
+        if (cause instanceof UciInfoLineLimitError) {
+          await recycleSharedEngine(state, enginePath);
+        }
+        throw cause;
+      }
     });
     state.searchQueue = search.then(
       () => undefined,
       () => undefined,
     );
     const ladder = await search;
-    state.ladderByFen.set(fen, ladder);
+    if (cache) state.ladderByFen.set(fen, ladder);
     return ladder;
+  };
+  const soundResult = async (
+    fen: string,
+    depth: number,
+    search: (searchDepth: number, cache: boolean) => Promise<DepthLadder>,
+    resultCache = state.escalatedResultsByFenDepth,
+  ): Promise<UciSearchResult> => {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = resultCache.get(key);
+    if (memoized !== undefined) return memoized;
+    for (
+      let escalation = 0;
+      escalation <= maxScoreEscalations;
+      escalation += 1
+    ) {
+      const ladder = await search(depth + escalation, escalation === 0);
+      const result = bestAvailableResult(ladder, depth + escalation);
+      if (result === undefined) {
+        throw new Error(`Lozza produced no score at depth ${depth}`);
+      }
+      if (result.sound) {
+        state.scoreEscalations += escalation;
+        if (escalation > 0) {
+          resultCache.set(key, result);
+        }
+        return result;
+      }
+      if (escalation === maxScoreEscalations) {
+        throw new UciUnsoundScoreError(fen, depth, result.rawScore, escalation);
+      }
+    }
+    throw new Error(`Lozza produced no score at depth ${depth}`);
+  };
+  const soundLines = async (
+    fen: string,
+    depth: number,
+    search: (searchDepth: number, cache: boolean) => Promise<DepthLadder>,
+    at: (
+      ladder: DepthLadder,
+      searchDepth: number,
+    ) => readonly UciSearchResult[],
+  ): Promise<readonly UciSearchResult[]> => {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = state.escalatedLinesByFenDepth.get(key);
+    if (memoized !== undefined) return memoized;
+    for (
+      let escalation = 0;
+      escalation <= maxScoreEscalations;
+      escalation += 1
+    ) {
+      const searchDepth = depth + escalation;
+      const ladder = await search(searchDepth, escalation === 0);
+      const lines = at(ladder, searchDepth);
+      if (lines.length > 0 && lines.every((line) => line.sound)) {
+        state.scoreEscalations += escalation;
+        if (escalation > 0) {
+          state.escalatedLinesByFenDepth.set(key, lines);
+        }
+        return lines;
+      }
+      if (escalation === maxScoreEscalations) {
+        const reported = lines.find((line) => !line.sound);
+        throw new UciUnsoundScoreError(
+          fen,
+          depth,
+          reported?.rawScore ?? 'missing',
+          escalation,
+        );
+      }
+    }
+    return Object.freeze([]);
   };
   return {
     determinismId,
     async evaluate(fen: string, depth: number): Promise<EngineEvaluation> {
-      const ladder = await ladderFor(fen, depth);
-      const result = bestAvailableResult(ladder, depth);
-      if (result === undefined) {
-        throw new Error(`Lozza produced no score at depth ${depth}`);
-      }
+      const result = await soundResult(fen, depth, (searchDepth, cache) =>
+        ladderFor(fen, searchDepth, cache),
+      );
       return Object.freeze({
         scoreCp: result.scoreCp,
         pv: result.pv,
       });
     },
     async multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]> {
-      const ladder = await ladderFor(fen, 16);
-      return linesAt(ladder, ladder.maxDepth);
+      const lines = await soundLines(
+        fen,
+        16,
+        (searchDepth, cache) => ladderFor(fen, searchDepth, cache),
+        (ladder, searchDepth) => linesAtResults(ladder, searchDepth),
+      );
+      return evaluationsAt(lines);
     },
     async multiPvAt(
       fen: string,
       depth: number,
     ): Promise<readonly EngineEvaluation[]> {
-      const ladder = await ladderFor(fen, depth);
-      for (let rung = Math.min(depth, ladder.maxDepth); rung >= 1; rung -= 1) {
-        const lines = ladder.multiPvAt.get(rung);
-        if (lines !== undefined && lines.size > 0) {
-          return linesAt(ladder, rung);
-        }
-      }
-      return Object.freeze([]);
+      const lines = await soundLines(
+        fen,
+        depth,
+        (searchDepth, cache) => ladderFor(fen, searchDepth, cache),
+        (ladder, searchDepth) => linesAtResults(ladder, searchDepth),
+      );
+      return evaluationsAt(lines);
     },
     async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
-      const search = state.bestSearchQueue.then(async () => {
-        if (state.bestSearches >= state.recycleAfterSearches) {
-          await recycleBestEngine(state, enginePath);
-        }
-        state.bestSearches += 1;
-        return getBestEngine(state, enginePath).searchLadder(fen, depth);
-      });
-      state.bestSearchQueue = search.then(
-        () => undefined,
-        () => undefined,
+      const result = await soundResult(
+        fen,
+        depth,
+        async (searchDepth) => {
+          const pending = state.bestSearchQueue.then(async () => {
+            if (state.bestSearches >= state.recycleAfterSearches) {
+              await recycleBestEngine(state, enginePath);
+            }
+            state.bestSearches += 1;
+            const engine = getBestEngine(state, enginePath);
+            try {
+              const ladder = await engine.searchLadder(fen, searchDepth);
+              state.maxInfoLines = Math.max(
+                state.maxInfoLines,
+                engine.lastInfoLineCount,
+              );
+              state.lastInfoLines = engine.lastInfoLineCount;
+              return ladder;
+            } catch (cause: unknown) {
+              if (cause instanceof UciInfoLineLimitError) {
+                await recycleBestEngine(state, enginePath);
+              }
+              throw cause;
+            }
+          });
+          state.bestSearchQueue = pending.then(
+            () => undefined,
+            () => undefined,
+          );
+          return pending;
+        },
+        state.escalatedBestResultsByFenDepth,
       );
-      const ladder = await search;
-      const result = bestAvailableResult(ladder, depth);
-      if (result === undefined) {
-        throw new Error(`Lozza produced no best line at depth ${depth}`);
-      }
       return Object.freeze({
         scoreCp: result.scoreCp,
         pv: Object.freeze([...result.pv]),
       });
     },
-    getCostStats: () => ({ restarts: state.restarts }),
+    getCostStats: () => ({
+      restarts: state.restarts,
+      scoreEscalations: state.scoreEscalations,
+      maxInfoLines: state.maxInfoLines,
+      lastInfoLines: state.lastInfoLines,
+    }),
   };
 }
 
-function linesAt(
+function linesAtResults(
   ladder: DepthLadder,
   depth: number,
-): readonly EngineEvaluation[] {
-  const lines = ladder.multiPvAt.get(depth);
+): readonly UciSearchResult[] {
+  let lines: ReadonlyMap<number, UciSearchResult> | undefined;
+  for (let rung = depth; rung >= 1; rung -= 1) {
+    const candidate = ladder.multiPvAt.get(rung);
+    if (candidate !== undefined && candidate.size > 0) {
+      lines = candidate;
+      break;
+    }
+  }
   if (lines === undefined) return Object.freeze([]);
-  const evaluations: EngineEvaluation[] = [];
+  const evaluations: UciSearchResult[] = [];
   for (const key of [...lines.keys()].sort((left, right) => left - right)) {
     const line = lines.get(key);
     if (line !== undefined) {
-      evaluations.push(
-        Object.freeze({
-          scoreCp: line.scoreCp,
-          pv: Object.freeze([...line.pv]),
-        }),
-      );
+      evaluations.push(line);
     }
   }
   return Object.freeze(evaluations);
+}
+
+function evaluationsAt(
+  lines: readonly UciSearchResult[],
+): readonly EngineEvaluation[] {
+  return Object.freeze(
+    lines.map((line) =>
+      Object.freeze({
+        scoreCp: line.scoreCp,
+        pv: Object.freeze([...line.pv]),
+      }),
+    ),
+  );
 }
 
 /** Tear down the shared process (test cleanup). */
 export async function disposeLozzaPort(): Promise<void> {
   const states = [...statesByPath.values()];
   statesByPath.clear();
+  for (const state of states) {
+    state.ladderByFen.clear();
+    state.escalatedResultsByFenDepth.clear();
+    state.escalatedBestResultsByFenDepth.clear();
+    state.escalatedLinesByFenDepth.clear();
+  }
   await Promise.all(
     states.flatMap((state) => [
       state.sharedEngine.dispose(),

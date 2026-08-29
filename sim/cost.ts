@@ -6,6 +6,7 @@ export interface EngineCallCost {
   readonly multiPvAtMaxCalls: number;
   readonly bestAtCalls: number;
   readonly engineCalls: number;
+  readonly scoreEscalations: number;
   readonly depthHistogram: Readonly<Record<string, number>>;
 }
 
@@ -78,7 +79,10 @@ function emptyCalls(): MutableCalls {
   };
 }
 
-function callsSnapshot(calls: MutableCalls): EngineCallCost {
+function callsSnapshot(
+  calls: MutableCalls,
+  scoreEscalations: number,
+): EngineCallCost {
   const evaluateCalls = calls.evaluateCalls;
   const multiPvAtCalls = calls.multiPvAtCalls;
   const multiPvAtMaxCalls = calls.multiPvAtMaxCalls;
@@ -89,7 +93,12 @@ function callsSnapshot(calls: MutableCalls): EngineCallCost {
     multiPvAtMaxCalls,
     bestAtCalls,
     engineCalls:
-      evaluateCalls + multiPvAtCalls + multiPvAtMaxCalls + bestAtCalls,
+      evaluateCalls +
+      multiPvAtCalls +
+      multiPvAtMaxCalls +
+      bestAtCalls +
+      scoreEscalations,
+    scoreEscalations,
     depthHistogram: Object.fromEntries(
       [...calls.depthHistogram.entries()]
         .sort(([left], [right]) => {
@@ -121,18 +130,22 @@ function elapsedMs(start: bigint): number {
 export class CostTracker {
   private readonly startedAt = process.hrtime.bigint();
   private readonly startedRestarts: number;
+  private readonly startedScoreEscalations: number;
   private calls = emptyCalls();
   private peakRssBytes = 0;
   private resourceMaxRssBytes = 0;
   private matchStart: bigint | undefined;
   private matchCalls = emptyCalls();
   private matchStartRestarts = 0;
+  private matchStartScoreEscalations = 0;
   private matchStartRss = 0;
   private matchStartMaxRss = 0;
   private readonly matchCosts: MatchCost[] = [];
 
   constructor(private readonly engine: EnginePort) {
     this.startedRestarts = engine.getCostStats?.().restarts ?? 0;
+    this.startedScoreEscalations =
+      engine.getCostStats?.().scoreEscalations ?? 0;
     this.sample();
   }
 
@@ -140,6 +153,7 @@ export class CostTracker {
     this.matchStart = process.hrtime.bigint();
     this.matchCalls = emptyCalls();
     this.matchStartRestarts = this.restarts();
+    this.matchStartScoreEscalations = this.scoreEscalations();
     this.sample();
     this.matchStartRss = this.peakRssBytes;
     this.matchStartMaxRss = this.resourceMaxRssBytes;
@@ -150,7 +164,10 @@ export class CostTracker {
       throw new Error('CostTracker match was not started.');
     }
     this.sample();
-    const calls = callsSnapshot(this.matchCalls);
+    const calls = callsSnapshot(
+      this.matchCalls,
+      this.scoreEscalations() - this.matchStartScoreEscalations,
+    );
     const wallClockMs = elapsedMs(this.matchStart);
     const safePlies = Math.max(1, plies);
     this.matchCosts.push({
@@ -192,7 +209,10 @@ export class CostTracker {
 
   finish(): CampaignCost {
     this.sample();
-    const calls = callsSnapshot(this.calls);
+    const calls = callsSnapshot(
+      this.calls,
+      this.scoreEscalations() - this.startedScoreEscalations,
+    );
     const matches = this.matchCosts.length;
     const plies = this.matchCosts.reduce((sum, cost) => sum + cost.plies, 0);
     const wallClockMs = elapsedMs(this.startedAt);
@@ -231,6 +251,10 @@ export class CostTracker {
 
   private restarts(): number {
     return this.engine.getCostStats?.().restarts ?? 0;
+  }
+
+  private scoreEscalations(): number {
+    return this.engine.getCostStats?.().scoreEscalations ?? 0;
   }
 
   private sample(): void {
@@ -297,11 +321,13 @@ export function shardCost(
     campaign.cost.matchCosts.map((cost) => ({ ...cost })),
   );
   const calls = emptyCalls();
+  let scoreEscalations = 0;
   for (const campaign of campaignCosts) {
     calls.evaluateCalls += campaign.cost.evaluateCalls;
     calls.multiPvAtCalls += campaign.cost.multiPvAtCalls;
     calls.multiPvAtMaxCalls += campaign.cost.multiPvAtMaxCalls;
     calls.bestAtCalls += campaign.cost.bestAtCalls;
+    scoreEscalations += campaign.cost.scoreEscalations;
     for (const [depth, count] of Object.entries(campaign.cost.depthHistogram)) {
       calls.depthHistogram.set(
         depth,
@@ -309,7 +335,7 @@ export function shardCost(
       );
     }
   }
-  const snapshot = callsSnapshot(calls);
+  const snapshot = callsSnapshot(calls, scoreEscalations);
   const matches = matchCosts.length;
   const plies = matchCosts.reduce((sum, cost) => sum + cost.plies, 0);
   const wallClockMs = elapsedMs(startedAt);

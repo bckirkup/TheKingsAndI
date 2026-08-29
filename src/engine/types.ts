@@ -59,7 +59,12 @@ export interface EnginePort {
   /** Cheapest top-line query for authored pre-move opportunity signals. */
   readonly bestAt?: (fen: string, depth: number) => Promise<EngineEvaluation>;
   /** Harness-only lifecycle telemetry; absent for pure/in-process engines. */
-  readonly getCostStats?: () => { readonly restarts: number };
+  readonly getCostStats?: () => {
+    readonly restarts: number;
+    readonly scoreEscalations?: number;
+    readonly maxInfoLines?: number;
+    readonly lastInfoLines?: number;
+  };
   /** Engine + version + settings. Goes into every `MatchRecord`. */
   readonly determinismId: string;
 }

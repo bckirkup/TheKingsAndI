@@ -45,6 +45,8 @@ export interface StockfishPortOptions {
   readonly preferredMultiPv?: number;
   /** Worker count used by the player-visible preferred-line search. */
   readonly preferredPoolSize?: number;
+  /** Capacity shared by the ladder and escalated-result caches. */
+  readonly ladderCacheCapacity?: number;
 }
 
 function defaultStockfishPath(): string {
@@ -90,6 +92,9 @@ export async function createStockfishPort(
     preferredMultiPv,
     preferredPoolSize,
     dMax,
+    ...(options.ladderCacheCapacity !== undefined
+      ? { ladderCacheCapacity: options.ladderCacheCapacity }
+      : {}),
   });
   if (options.enginePath === undefined) {
     sharedBroker = broker;

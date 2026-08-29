@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
 import { terminalMoveScore } from '../src/orchestration/insight';
-import { UciEngine } from '../src/engine/uci';
+import { UciEngine, parseUciScore } from '../src/engine/uci';
 
 describe('terminal post-move evaluation', () => {
   it('scores checkmate as a decisive mover win', () => {
@@ -61,15 +61,10 @@ describe('UCI score failures', () => {
     await engine.dispose();
   });
 
-  it('accepts Lozza mate zero as a decisive score', async () => {
-    const engine = new UciEngine({
-      enginePath: fileURLToPath(
-        new URL('./fixtures/uci-mate-zero.mjs', import.meta.url),
-      ),
+  it("treats Lozza's mate-zero sentinel as unsound", () => {
+    // ADR 0068 withdraws mate 0 as an immediate-mate evaluation.
+    expect(parseUciScore(['info', 'score', 'mate', '0'])).toMatchObject({
+      sound: false,
     });
-    await expect(
-      engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 1),
-    ).resolves.toMatchObject({ scoreCp: 29_999 });
-    await engine.dispose();
   });
 });

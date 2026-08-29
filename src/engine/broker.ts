@@ -1,4 +1,5 @@
 import type { EngineEvaluation, EnginePort, EvalProfile } from './types';
+import { DEFAULT_ENGINE_LADDER_CACHE_CAPACITY, LruCache } from './cache';
 import { EnginePool, type EnginePoolOptions } from './pool';
 import {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
@@ -7,7 +8,12 @@ import {
   SHARED_SEARCH_D_MAX,
   applyPrivateScoring,
 } from './search';
-import type { DepthLadder } from './uci';
+import {
+  DEFAULT_MAX_SCORE_ESCALATIONS,
+  UciUnsoundScoreError,
+  type DepthLadder,
+  type UciSearchResult,
+} from './uci';
 
 export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly determinismId: string;
@@ -17,6 +23,8 @@ export interface SharedSearchBrokerOptions extends EnginePoolOptions {
   readonly preferredMultiPv?: number;
   /** Worker count for the player-visible preferred-line search. */
   readonly preferredPoolSize?: number;
+  /** Capacity shared by the ladder and escalated-result caches. */
+  readonly ladderCacheCapacity?: number;
 }
 
 export interface SharedSearchBroker extends EnginePort {
@@ -49,22 +57,21 @@ function freezeEval(result: {
   });
 }
 
-function ladderAt(ladder: DepthLadder, depth: number): EngineEvaluation {
+function ladderAt(
+  ladder: DepthLadder,
+  depth: number,
+): UciSearchResult | undefined {
   for (let d = depth; d >= 1; d -= 1) {
     const hit = ladder.at.get(d);
-    if (hit !== undefined) return freezeEval(hit);
+    if (hit !== undefined) return hit;
   }
-  const fallback = ladder.multiPvAtMax.get(1);
-  if (fallback === undefined) {
-    throw new Error(`Shared search produced no score for depth ${depth}`);
-  }
-  return freezeEval(fallback);
+  return ladder.multiPvAtMax.get(1);
 }
 
 function multiPvAt(
   ladder: DepthLadder,
   depth: number,
-): readonly EngineEvaluation[] {
+): readonly UciSearchResult[] {
   for (let d = depth; d >= 1; d -= 1) {
     const lines = ladder.multiPvAt.get(d);
     if (lines !== undefined && lines.size > 0) {
@@ -73,7 +80,7 @@ function multiPvAt(
           .sort((left, right) => left - right)
           .flatMap((key) => {
             const line = lines.get(key);
-            return line === undefined ? [] : [freezeEval(line)];
+            return line === undefined ? [] : [line];
           }),
       );
     }
@@ -95,6 +102,8 @@ export async function createSharedSearchBroker(
     options.preferredMultiPv ?? DEFAULT_PREFERRED_MULTIPV_WIDTH;
   const preferredPoolSize =
     options.preferredPoolSize ?? DEFAULT_PREFERRED_POOL_SIZE;
+  const ladderCacheCapacity =
+    options.ladderCacheCapacity ?? DEFAULT_ENGINE_LADDER_CACHE_CAPACITY;
   if (!Number.isSafeInteger(dMax) || dMax < 1) {
     throw new RangeError('dMax must be a positive integer.');
   }
@@ -116,6 +125,13 @@ export async function createSharedSearchBroker(
   const sharedByFen = new Map<string, DepthLadder>();
   const inflight = new Map<string, InflightShared>();
   const bestByFenDepth = new Map<string, EngineEvaluation>();
+  const escalatedResultsByFenDepth = new LruCache<string, UciSearchResult>(
+    ladderCacheCapacity,
+  );
+  const escalatedLinesByFenDepth = new LruCache<
+    string,
+    readonly UciSearchResult[]
+  >(ladderCacheCapacity);
 
   function ensureBestPool(): Promise<EnginePool> {
     bestPoolPromise ??= EnginePool.create({
@@ -128,23 +144,116 @@ export async function createSharedSearchBroker(
     return bestPoolPromise;
   }
 
-  async function ensureShared(fen: string): Promise<DepthLadder> {
-    const cached = sharedByFen.get(fen);
-    if (cached !== undefined) return cached;
-    const pending = inflight.get(fen);
-    if (pending !== undefined) return pending.promise;
-    const promise = pool.searchLadder(fen, dMax).then((ladder) => {
-      sharedByFen.set(fen, ladder);
-      inflight.delete(fen);
-      return ladder;
-    });
-    inflight.set(fen, { promise });
+  async function ensureShared(
+    fen: string,
+    depth: number = dMax,
+    cache = true,
+  ): Promise<DepthLadder> {
+    if (cache) {
+      const cached = sharedByFen.get(fen);
+      if (cached !== undefined && cached.maxDepth >= depth) return cached;
+    }
+    const key = `${fen}\u0000${depth}`;
+    const pending = inflight.get(key);
+    const promise =
+      pending?.promise ??
+      pool.searchLadder(fen, depth).finally(() => {
+        inflight.delete(key);
+      });
+    if (pending === undefined) inflight.set(key, { promise });
     try {
-      return await promise;
+      const ladder = await promise;
+      if (cache) sharedByFen.set(fen, ladder);
+      return ladder;
     } catch (cause) {
-      inflight.delete(fen);
+      inflight.delete(key);
       throw cause;
     }
+  }
+
+  async function soundSharedResult(
+    fen: string,
+    depth: number,
+  ): Promise<UciSearchResult> {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = escalatedResultsByFenDepth.get(key);
+    if (memoized !== undefined) return memoized;
+    for (
+      let escalation = 0;
+      escalation <= DEFAULT_MAX_SCORE_ESCALATIONS;
+      escalation += 1
+    ) {
+      const searchDepth = depth + escalation;
+      const ladder = await ensureShared(fen, searchDepth, escalation === 0);
+      const result = ladderAt(ladder, searchDepth);
+      if (result === undefined) {
+        throw new Error(`Shared search produced no score for depth ${depth}`);
+      }
+      if (result.sound) {
+        if (escalation > 0) escalatedResultsByFenDepth.set(key, result);
+        return result;
+      }
+      if (escalation === DEFAULT_MAX_SCORE_ESCALATIONS) {
+        throw new UciUnsoundScoreError(fen, depth, result.rawScore, escalation);
+      }
+    }
+    throw new Error(`Shared search produced no score for depth ${depth}`);
+  }
+
+  async function soundSharedLines(
+    fen: string,
+    depth: number,
+  ): Promise<readonly UciSearchResult[]> {
+    const key = `${fen}\u0000${depth}`;
+    const memoized = escalatedLinesByFenDepth.get(key);
+    if (memoized !== undefined) return memoized;
+    for (
+      let escalation = 0;
+      escalation <= DEFAULT_MAX_SCORE_ESCALATIONS;
+      escalation += 1
+    ) {
+      const searchDepth = depth + escalation;
+      const ladder = await ensureShared(fen, searchDepth, escalation === 0);
+      const lines = multiPvAt(ladder, searchDepth);
+      if (lines.length > 0 && lines.every((line) => line.sound)) {
+        if (escalation > 0) escalatedLinesByFenDepth.set(key, lines);
+        return lines;
+      }
+      if (escalation === DEFAULT_MAX_SCORE_ESCALATIONS) {
+        const reported = lines.find((line) => !line.sound);
+        throw new UciUnsoundScoreError(
+          fen,
+          depth,
+          reported?.rawScore ?? 'missing',
+          escalation,
+        );
+      }
+    }
+    return Object.freeze([]);
+  }
+
+  async function soundBestResult(
+    fen: string,
+    depth: number,
+  ): Promise<UciSearchResult> {
+    for (
+      let escalation = 0;
+      escalation <= DEFAULT_MAX_SCORE_ESCALATIONS;
+      escalation += 1
+    ) {
+      const ladder = await (
+        await ensureBestPool()
+      ).searchLadder(fen, depth + escalation);
+      const result = ladderAt(ladder, depth + escalation);
+      if (result === undefined) {
+        throw new Error(`Best search produced no score for depth ${depth}`);
+      }
+      if (result.sound) return result;
+      if (escalation === DEFAULT_MAX_SCORE_ESCALATIONS) {
+        throw new UciUnsoundScoreError(fen, depth, result.rawScore, escalation);
+      }
+    }
+    throw new Error(`Best search produced no score for depth ${depth}`);
   }
 
   return {
@@ -159,29 +268,24 @@ export async function createSharedSearchBroker(
         throw new RangeError('Depth must be a positive integer.');
       }
       const capped = Math.min(depth, dMax);
-      const ladder = await ensureShared(fen);
-      return applyPrivateScoring(ladderAt(ladder, capped), evalProfile);
+      return applyPrivateScoring(
+        freezeEval(await soundSharedResult(fen, capped)),
+        evalProfile,
+      );
     },
     async evaluateTrue(fen: string): Promise<EngineEvaluation> {
-      const ladder = await ensureShared(fen);
-      return ladderAt(ladder, dMax);
+      return freezeEval(await soundSharedResult(fen, dMax));
     },
     async multiPvAtMax(fen: string): Promise<readonly EngineEvaluation[]> {
-      const ladder = await ensureShared(fen);
-      const lines: EngineEvaluation[] = [];
-      const keys = [...ladder.multiPvAtMax.keys()].sort((a, b) => a - b);
-      for (const key of keys) {
-        const line = ladder.multiPvAtMax.get(key);
-        if (line !== undefined) lines.push(freezeEval(line));
-      }
-      return Object.freeze(lines);
+      return Object.freeze((await soundSharedLines(fen, dMax)).map(freezeEval));
     },
     async multiPvAt(
       fen: string,
       depth: number,
     ): Promise<readonly EngineEvaluation[]> {
-      const ladder = await ensureShared(fen);
-      return multiPvAt(ladder, Math.min(depth, dMax));
+      return Object.freeze(
+        (await soundSharedLines(fen, Math.min(depth, dMax))).map(freezeEval),
+      );
     },
     async bestAt(fen: string, depth: number): Promise<EngineEvaluation> {
       if (!Number.isSafeInteger(depth) || depth < 1) {
@@ -191,7 +295,7 @@ export async function createSharedSearchBroker(
       const key = `${fen}\u0000${capped}`;
       const cached = bestByFenDepth.get(key);
       if (cached !== undefined) return cached;
-      const result = await (await ensureBestPool()).evaluate(fen, capped);
+      const result = await soundBestResult(fen, capped);
       const frozen = freezeEval(result);
       bestByFenDepth.set(key, frozen);
       return frozen;
@@ -200,6 +304,8 @@ export async function createSharedSearchBroker(
       sharedByFen.clear();
       inflight.clear();
       bestByFenDepth.clear();
+      escalatedResultsByFenDepth.clear();
+      escalatedLinesByFenDepth.clear();
       await pool.dispose();
       if (bestPoolPromise !== undefined) {
         await (await bestPoolPromise).dispose();
