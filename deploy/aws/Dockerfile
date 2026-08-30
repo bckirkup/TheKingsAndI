@@ -10,8 +10,15 @@ WORKDIR /app
 COPY --from=aws-cli /usr/local/aws-cli/v2/2.30.3 /usr/local/aws-cli/v2/2.30.3
 
 COPY package.json pnpm-lock.yaml ./
+# --no-optional keeps the GPL stockfish package out of the image; the esbuild
+# platform binary tsx needs is also optional, so it is restored explicitly.
 RUN corepack enable \
-  && pnpm install --frozen-lockfile --no-optional --ignore-scripts
+  && pnpm install --frozen-lockfile --no-optional --ignore-scripts \
+  && cd /tmp \
+  && npm pack @esbuild/linux-x64@0.23.1 \
+  && mkdir -p /app/node_modules/@esbuild/linux-x64 \
+  && tar -xzf esbuild-linux-x64-0.23.1.tgz -C /app/node_modules/@esbuild/linux-x64 --strip-components=1 \
+  && rm esbuild-linux-x64-0.23.1.tgz
 
 COPY src ./src
 COPY sim ./sim
