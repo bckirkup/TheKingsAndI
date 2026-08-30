@@ -112,3 +112,11 @@ The gate itself is still un-evaluated. What is established is the instrument —
 retirements, careers per seat, and distinct careers are measurable per horizon, and
 win score is nearly insensitive to them over 40 matches, so the gate must read the
 permanent quantities — plus the reason the kind arm cannot yet be compared.
+
+## Superseded scope (2026-08-30, later the same day)
+
+Every run above was taken before D192: `mergeCampaignRoster` dropped `E_i` at the
+match boundary, so no piece kept earned experience between matches. The
+retirement before/after remains the record for retirement itself, but none of
+these numbers may be quoted beside a run taken after that fix — see
+`docs/calibration/2026-08-30-the-veteran-that-remembers.md`.
