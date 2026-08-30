@@ -1912,22 +1912,24 @@ their cohort.
 
 ### D186 ✅ Can accumulated trauma end a career on every path? (ADR 0072)
 **Answered 2026-08-29 (owner: "we need both retirement and amazing grace") —
-not wired.** Yes: a non-King identity whose trauma reaches the threshold is
-permanently retired, and the campaign path may not be exempt. The machinery
-exists on one path only — `RETIREMENT_TRAUMA_THRESHOLD = 100` is checked by
-`statusForConscript` at `src/orchestration/squadFielding.ts:329-334`, while
-`retirementCause: 'trauma'` is recorded by the season fold at
-`src/orchestration/squadFielding.ts:505-512`. Both are reachable only through
-the season pool, and the campaign path has no pool, so `B_i` saturates at the
-`clampTrauma` ceiling and no career ever ends. The King's exemption stands (ADR 0021). Retirement is
+wired 2026-08-30.** Yes: a non-King identity whose trauma reaches the threshold
+is permanently retired, and the campaign path is not exempt. The threshold is now
+one number consumed by both paths — `ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD`
+at `src/psychology/config.ts:89`, referenced by the squad default at
+`src/orchestration/squadFielding.ts:46` — so the season pool
+(`statusForConscript`, `src/orchestration/squadFielding.ts:329-334`;
+`retirementCause: 'trauma'`, `src/orchestration/squadFielding.ts:505-512`) and
+the campaign boundary (`applyCampaignBoundary`, `sim/campaign.ts:144-158`) cannot
+drift apart. The King's exemption stands (ADR 0021). Retirement is
 the accumulated cost of every commander who spent the piece (ADR 0026), not a
 penalty on the piece. The threshold keeps its `100`; nothing here re-opens
-D130's calibration.
+D130's calibration. What retires is a **career**, not a seat — see D189.
 
 ### D187 ✅ Does trauma ever recover, and on what terms? (ADR 0072)
 **Answered 2026-08-29 (owner: "Amazing grace is when you expect nothing";
-"Nobody can buy grace") — not wired.** Trauma can be relieved, and the relief is
-unearned. The ruling is a set of constraints on the eventual term rather than a
+"Nobody can buy grace") — wired 2026-08-30, inert by default.** Trauma can be
+relieved, and the relief is unearned. The ruling is a set of constraints rather
+than a
 mechanism: (a) **no leader-controlled input may appear in it** — not standing,
 purse, `τ_abil`, `τ_benev`, style, match result, override count, or *whether the
 commander ransomed the piece*; (b) **the leader receives no credit**, because a
@@ -1940,25 +1942,61 @@ armies** (ADR 0025). Relief in `B_i` is flat; what varies with expectation is ho
 the same relief *registers* (D182). This is explicitly not time-based decay, so
 ADR 0007 is untouched: nothing drifts toward a baseline, an event happens.
 
-### D188 ❓ What is the grace rate and magnitude?
-**Open — raised 2026-08-29 by ADR 0072, not wired.** No rate, relief size, or
-registration coefficient is chosen. The acceptance gate is stated before any
-sweep because the hazard is structural rather than numeric: if relief registers
-more strongly against low expectation, a commander can farm grace by grinding
-his roster into hopelessness. **A cruel style must not out-perform a kind one on
-retention or outcome through grace.** Rarity (grace cannot be relied upon) and
-scope (registration moves morale and outlook, never `B_i` itself, so cruelty
-still accrues the permanent quantity) are the intended defences, and both must be
-measured. Flat registration is the fallback if the surface shows farming works.
+The reducer is `applyGrace` at `src/psychology/trauma.ts:17-23`: it takes a piece
+and a relief and writes only `B_i`, so no leader-controlled input can reach the
+term by construction. The boundary draw is `sim/campaign.ts:117-143`, using the
+campaign's own seeded PRNG over both armies, ascending `PieceId`, non-Kings with
+`B_i > 0`, once each. `GRACE_RATE_PERMILLE` and `GRACE_RELIEF`
+(`src/psychology/config.ts:91-93`) both default to `0` and the draw loop is
+skipped entirely at that rate, so no PRNG draw is consumed and default campaigns
+are unchanged. Expectation-relative **registration is not implemented** and waits
+on D182's expectation state; relief is flat.
 
-### D189 ❓ What fills the square of a retired identity in the campaign path?
-**Open — raised 2026-08-29 by ADR 0072, not wired.** `mergeCampaignRoster`
-rebuilds the standard lineup every match and keys carried state by starting
-square, so a permanently retired identity leaves a square whose occupant is never
-coming back — a fresh identity, a levy on the season path's terms, or an
-unfilled square are all unresolved. Adjacent to but distinct from **D180**, which
-asks what a *returned* piece owes the replacement that took its square; D189
-concerns a square whose previous occupant has no return.
+### D188 ❓ What is the grace rate and magnitude?
+**Open — raised 2026-08-29 by ADR 0072; knobs wired inert at `0`.** No rate or
+relief size is chosen. The original gate — *a cruel style must not out-perform a
+kind one on retention or outcome through grace* — is **withdrawn** on the owner's
+ruling ("we need to acknowledge that evil pays — in the mid run"): abusive
+leadership attains the rewards it seeks, and tuning grace until kindness won
+would have made mercy a wage paid to the kind commander, which D187 forbids. The
+replacement gate is a trajectory rather than a verdict: (a) the structural
+constraint stands and is enforced by construction, not by a magnitude; (b) styles
+are compared at several campaign lengths, a cruel style leading at 10 or 20
+matches is a **pass**, and what must hold is that its advantage does not *widen*
+with length while its cost accrues in the permanent quantities (retirements,
+career turnover per seat, surviving veterans, affinity edges among them); (c)
+raising rate or relief must not reduce the cruel style's accumulated permanent
+cost to the kind style's level at any horizon. The farming hazard is unreachable
+until D182 lands, because there is no registration term to farm; flat
+registration remains the fallback. See ADR 0072's 2026-08-30 amendment.
+
+### D189 ✅ What fills the square of a retired identity in the campaign path? (ADR 0072)
+**Answered 2026-08-30 by the ADR 0072 amendment — wired.** The square is a
+**seat** and what ends is a **career**. `PieceId`s are square-derived and
+`mergeCampaignRoster` rebuilds the standard lineup keyed by that id every match,
+so an omitted identity is re-fielded with reset state — which is exactly how the
+amnesia defect of PR #161 behaved, and why "leave the square empty" was never
+available. The campaign therefore carries a per-seat generation counter
+(`sim/campaign.ts:91`, `careerIdFor`): retirement closes career
+`${seatId}#${generation}`, increments the seat, and the next match fields a fresh
+career on it with no memory of its predecessor. Retired career ids persist in the
+checkpoint (version 3) for audit, and match metrics report careers rather than
+seats, so "identities ever surviving a match" means what it says. This is D189's
+fresh-identity branch; the honest reading is that the harness always did it, and
+what changes is that the previous career now *ends* instead of continuing with
+its wounds erased. Adjacent to but distinct from **D180**, which asks what a
+*returned* piece owes the replacement that took its square.
+
+### D190 ❓ Does the campaign boundary need its own event stream?
+**Open — raised 2026-08-30 by the ADR 0072 amendment, not wired.** Grace and
+retirement happen after `runMatch` has returned and its event log is closed, and
+the harness has no boundary event stream to append to, so both are represented as
+derived campaign match metrics (`sim/metrics.ts`) plus checkpoint state. That does
+not violate the source-of-truth rule for *match* truth, but two career-ending and
+career-relieving facts now live outside the log that audits fold over. Either the
+campaign boundary gets a log of its own, or ADR 0062's journal is where these
+belong when it lands; inventing a parallel event type without an append seam was
+rejected.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

@@ -141,3 +141,91 @@ wrong and flat registration is the fallback, whatever it costs in poetry.
 - No magnitude, rate, threshold, or knob is chosen. `RETIREMENT_TRAUMA_THRESHOLD`
   keeps its `100`, and the grace rate and relief are **D188**, open. Nothing in
   this ADR is wired.
+## Amendment (2026-08-29) — wired, and the gate was wrong
+
+Both rulings are now in tree, D189 turned out to be answered by construction, and
+the D188 acceptance gate stated above is **withdrawn**. Each in turn.
+
+### What shipped
+
+- **Retirement is live on the campaign path.** A non-King career whose `B_i`
+  reaches `ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD` at a match boundary is not
+  carried into the next match. The threshold is now a single number consumed by
+  both paths — `SQUAD_CONFIG.RETIREMENT_TRAUMA_THRESHOLD` references the engine
+  config value — so the season pool and the campaign harness cannot drift apart.
+- **Grace is wired and inert.** `applyGrace` is a pure reducer that writes only
+  `B_i`; `GRACE_RATE_PERMILLE` and `GRACE_RELIEF` both default to `0`, and the
+  draw loop is skipped entirely at the default rate, so no PRNG draw is consumed
+  and a default campaign is byte-identical to one without the mechanism apart
+  from retirement. The magnitudes remain **D188**.
+- **Registration is not implemented.** Relief is flat in `B_i`, full stop. The
+  expectation-relative *registration* the ruling describes waits on D182's
+  expectation state, which is not in tree; nothing about grace currently touches
+  morale or outlook.
+
+### D189 — the square is a seat, and a career is a seat plus a generation
+
+D189 asked what fills a retired identity's square. Reading the identity scheme
+answers it and removes the choice: `PieceId`s are square-derived
+(`startingSquarePieceId`, e.g. `w:P:g2`), and `mergeCampaignRoster` rebuilds the
+standard lineup keyed by that id every match. So a retired identity *cannot* be
+left out — omitting it from the carried roster is precisely how the amnesia
+defect of PR #161 behaved, and the next merge would re-field the same id with
+reset state.
+
+The square is therefore a **seat**, and what ends is a **career**: the campaign
+carries a per-seat generation counter, retirement closes career
+`${seatId}#${generation}` and increments the seat, and the next match fields a
+new career on that seat with no memory of its predecessor. The retired career id
+is retained for audit; the metrics report careers rather than seats, so roster
+turnover and "distinct identities ever surviving a match" now mean what they say.
+
+This is the "fresh identity" branch of D189, and the honest reading is that the
+harness had always been doing it — what changes is that the previous career now
+*ends* instead of silently continuing with its wounds erased.
+
+### D188 — the gate is a trajectory, not a verdict
+
+The gate stated above — *a cruel style must not out-perform a kind one on
+retention or outcome through grace* — is withdrawn on the owner's ruling:
+
+> **"we need to acknowledge that evil pays — in the mid run."**
+
+It was the wrong invariant, and wrong in a way that would have made the
+simulation dishonest. Abusive leadership attains the rewards it seeks; that is
+why it persists, and a model in which kindness dominates at every horizon teaches
+nothing a participant would recognise. Worse, tuning grace until the inequality
+held would have made mercy into a corrective that pays the kind commander back —
+which is a wage, and D187 forbids it.
+
+The replacement gate is shaped by horizon rather than by sign:
+
+1. **Structural (unchanged, and the only hard one).** No leader-controlled input
+   may appear in the grace term, and grace credits no commander. This is
+   enforced by construction — `applyGrace` takes a piece and a relief — and by
+   the no-purchase probe, not by a magnitude.
+2. **Trajectory, not verdict.** Cruel and kind styles are compared at several
+   campaign lengths, and a cruel style leading at 10 or 20 matches is a **pass**,
+   not a failure. What must hold is that its advantage does not *widen* with
+   campaign length, and that its cost accrues in the permanent quantities at
+   every horizon: retirements, career turnover per seat, surviving veterans, and
+   affinity edges among them.
+3. **Grace may not flatten the bill.** Raising the grace rate or relief must not
+   reduce the cruel style's accumulated permanent cost to the kind style's level
+   at any horizon. Grace returns some of the wound; it does not settle the
+   account.
+
+Flat registration remains the fallback for the farming hazard, and the hazard
+itself is now unreachable until D182 lands, because there is no registration term
+to farm.
+
+### The boundary has no event log (D190)
+
+Grace and retirement happen at the campaign boundary, after `runMatch` has
+returned and its event log is closed, and the harness has no boundary event
+stream to append to. They are therefore represented as derived campaign match
+metrics — which does not violate the source-of-truth rule for match truth, but it
+does mean two career-ending and career-relieving facts live outside the log that
+audits fold over. Recorded as **D190**: whether the campaign boundary needs its
+own event stream, or whether ADR 0062's journal is where these belong when it
+lands.
