@@ -1969,12 +1969,21 @@ raising rate or relief must not reduce the cruel style's accumulated permanent
 cost to the kind style's level at any horizon. The farming hazard is unreachable
 until D182 lands, because there is no registration term to farm; flat
 registration remains the fallback. See ADR 0072's 2026-08-30 amendment.
-**Blocked on D191:** the first measurement of the replacement gate could not
-evaluate it, because the kind arm's outcome is dominated by the forced-move
-fallback rather than by conduct — the cruel style leads at every horizon and the
-kind roster is hemorrhaging (415 desertions at 40 matches against 71). Fix the
-pricing question first; a grace magnitude chosen against a collapsing kind arm
-would be tuned against a harness path, not a sociology.
+**No longer blocked on D191, and the first honest reading fails in the opposite
+direction.** The blocking measurement used `redeemer` as the kind arm, which is a
+style switch rather than a style; with pure `supportive` as the kind arm on the
+post-D192 carry, the forced-move fallback never fires and the gate can be read.
+It is not met: the cruel style **never leads**, at any horizon — `supportive`
+wins 80.00 / 72.50 / 82.50 at 10 / 20 / 40 matches against `tyrannical`'s
+40.00 / 52.50 / 53.75, with 1 desertion against 72. The owner's requirement that
+abusive leadership attain the rewards it seeks in the mid run therefore has no
+mid run to attain them in. Two unmeasured candidates: cruelty now degrades its
+own instrument (the tyrant's ability ceiling falls under D192's carry), and the
+kind room complies grudgingly rather than refusing (quiet-quit 0.209 against
+0.033) in a way win score does not price. One seed and one opponent, so this is a
+flag for a seeded sweep rather than a verdict; grace was inert
+(`GRACE_RATE_PERMILLE = 0`) throughout, so no grace magnitude is implicated.
+Evidence: `docs/calibration/2026-08-30-the-forced-move-and-the-convert.md`.
 
 ### D189 ✅ What fills the square of a retired identity in the campaign path? (ADR 0072)
 **Answered 2026-08-30 by the ADR 0072 amendment — wired.** The square is a
@@ -2026,6 +2035,23 @@ fallback rather than by conduct. The measurement behind this entry was taken
 before D192, on a roster whose experience reset every match; the forced-move
 causal chain is unchanged by that fix, but its magnitudes must be re-taken before
 any closer is priced.
+
+**Re-taken 2026-08-30 after D192 — the premise is withdrawn and the case is
+narrower.** Pure `supportive`, run as a style from match 1 rather than as the
+`redeemer`'s plot, takes **zero overrides of any kind** over 40 matches (refusal
+0.063, 1 desertion, win score 82.50), so warmth does not reach the fallback and
+pays nothing for it. The saturation belongs to the convert: `sim/leaders.ts` runs
+`redeemer` cold for nine matches and warm from match 10, and after the switch
+**100% of its overrides are forced** (463 of 463, then 641 of 641), because a
+warm policy never chooses to insist — the only override it can generate is the
+one ADR 0014 makes for it. The cause is a roster holding neither channel (mean
+ability 9, `τ_benev` at the floor) meeting a commander who has stopped
+insisting, which is a sociology result worth keeping. What remains of D191 is
+the ledger: 1 135 moves nobody chose, recorded as `OVERRIDE` at 13.3 target
+benevolence each, indistinguishable in the log and in a debrief from insistence.
+The closers are unchanged; the population they matter to is converts and
+collapsed rooms rather than kind commanders generally. Evidence:
+`docs/calibration/2026-08-30-the-forced-move-and-the-convert.md`.
 
 ### D192 ✅ Does earned experience survive the campaign boundary?
 **Answered 2026-08-30 — wired.** Yes. `mergeCampaignRoster` carries the whole of
