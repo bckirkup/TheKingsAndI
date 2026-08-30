@@ -118,12 +118,49 @@ describeHeavy('simulation harness determinism', () => {
       expect(resumed.metrics).toEqual(straight.metrics);
       expect(resumed.finalRoster).toEqual(straight.finalRoster);
       expect(resumed.summary).toEqual(straight.summary);
+      expect(resumed.checkpoint.leaderObservation).toEqual(
+        straight.checkpoint.leaderObservation,
+      );
+      expect(resumed.checkpoint.opponentObservation).toEqual(
+        straight.checkpoint.opponentObservation,
+      );
     }
+  });
+
+  it('migrates a legacy checkpoint to the adaptive prior', async () => {
+    const current = (
+      await runCampaign({
+        matches: 1,
+        leader: 'supportive',
+        seed: 12,
+        engineKind: 'fake',
+      })
+    ).checkpoint;
+    const legacy = JSON.parse(JSON.stringify(current)) as Record<
+      string,
+      unknown
+    >;
+    delete legacy.checkpointVersion;
+    delete legacy.leaderObservation;
+    delete legacy.opponentObservation;
+    const migrated = parseCampaignCheckpoint({
+      ...legacy,
+      checkpointVersion: 3,
+    });
+    expect(migrated.checkpointVersion).toBe(4);
+    expect(migrated.leaderObservation).toEqual({
+      matchesObserved: 0,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
+    });
+    expect(migrated.opponentObservation).toEqual(migrated.leaderObservation);
   });
 
   it('preserves the last checkpoint when a sibling write is truncated', async () => {
     const checkpoint: CampaignCheckpoint = {
-      checkpointVersion: 3,
+      checkpointVersion: 4,
       schemaVersion: 1,
       psychConfigVersion: 'psychology-v1',
       determinismId: 'sim-fake/depth-fixed',
@@ -140,6 +177,20 @@ describeHeavy('simulation harness determinism', () => {
       enemyGenerations: {},
       retiredCareerIds: [],
       enemyRetiredCareerIds: [],
+      leaderObservation: {
+        matchesObserved: 0,
+        refusalPermille: 0,
+        desertions: 0,
+        survivors: 16,
+        winScore: 50,
+      },
+      opponentObservation: {
+        matchesObserved: 0,
+        refusalPermille: 0,
+        desertions: 0,
+        survivors: 16,
+        winScore: 50,
+      },
       completedMetrics: [],
     };
     const path = `${process.cwd()}/.tmp-checkpoint-${process.pid}.json`;

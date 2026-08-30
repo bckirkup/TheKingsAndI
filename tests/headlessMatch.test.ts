@@ -139,10 +139,10 @@ describe('headless adaptive opponent wiring', () => {
         const policy = leaderPolicy('escalator');
         const observation = {
           matchesObserved: 1,
-          refusalPermilleLast: 800,
-          desertionsLast: 0,
-          survivorsLast: 16,
-          winScoreLast: 50,
+          refusalPermille: 800,
+          desertions: 0,
+          survivors: 16,
+          winScore: 50,
         };
         const context = {
           matchIndex: 1,

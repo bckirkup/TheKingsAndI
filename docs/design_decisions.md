@@ -2113,11 +2113,11 @@ read the arithmetic would be optimizing a channel the participant cannot see
 (ADR 0018), and the same policies must remain playable by a human.
 
 Granularity is the **match boundary**, not the ply: a pseudo-player reads the
-room between matches (`sim/campaign.ts`, `observationFromPreviousMatch`), which
+room between matches (`sim/campaign.ts`, `observableFromMatch`), which
 keeps the policy constant within a match and the campaign trivially replayable
 and forkable. A standalone match and the first campaign match both receive the
-zeroed record, so every adaptive style reduces to `steady` before it has
-observed anything. The enemy commander may take an adaptive style too, through
+D194 prior, whose defaults describe a compliant room, so every adaptive style
+still reduces to `steady` before it has observed anything. The enemy commander may take an adaptive style too, through
 an injected chooser at the orchestration seam
 (`src/orchestration/enemyTurn.ts`); its archetype falls back to `random` because
 these styles have no `OpponentArchetype` counterpart, and its insistence comes
@@ -2132,24 +2132,35 @@ magnitude here is calibrated** — the gains were chosen only to separate the
 styles visibly from `steady`, and the tier's purpose is to break things (the
 D181–D185 economy in particular) rather than to model a student well.
 
-### D194 ❓ How much does an adaptive pseudo-player remember?
-**Open — raised 2026-08-30, not wired.** Today the window is exactly one match
-at full strength: `LeaderObservation` carries last match's numbers and
-everything earlier is gone (`sim/campaign.ts`,
-`observationFromPreviousMatch`), which is amnesia with a default temperament
-rather than memory. The owner's framing is that updating should be
-*approximately Bayesian*, so the candidate shape is a retained belief per
-observable that moves toward each new match —
-`belief += (observed − belief) × weight / 1000`, integer permille — with the
-weight set by **precision**, `1000 / (n + 1)` in matches observed, so a
-first-time commander swings hard on one bad night and a veteran barely moves.
-Capping `n` is then the forgetting knob (old evidence fades geometrically, with
-a half-life near `0.7 × (cap + 1)` matches), and the **prior** stops being a
-fallback and becomes content: what a commander expects of a room he has not met
-is the owner's "assuming leadership for the first time in a good or bad
-culture". Nothing is chosen — not the cap, not the prior, not whether precision
-weighting is the right form — and no smoothing machinery exists in tree to
-reuse.
+### D194 ✅ How much does an adaptive pseudo-player remember?
+**Answered 2026-08-30 — wired, magnitudes unmeasured.** The window was exactly
+one match at full strength, which is amnesia with a default temperament rather
+than memory. An adaptive leader now carries a **retained belief** per observable
+across the campaign (`LeaderObservation`, `updateLeaderObservation`,
+`sim/leaders.ts`), updated once per match boundary from that match's observables
+(`observableFromMatch`, `sim/campaign.ts`) and persisted in the campaign
+checkpoint at version `4`, so a resumed campaign resumes its beliefs and a
+version-`3` checkpoint restarts them at the prior.
+
+The update is integer-only and precision-weighted:
+`step = trunc((observed − belief) × trunc(1000 / (n + 1)) / 1000)` in matches
+observed `n`, so a first-time commander swings the whole way on one bad night
+and a veteran barely moves. Two details are decisions rather than arithmetic.
+`n` is **capped** by `memoryCapMatches` (default `5`), which is the forgetting
+knob — old evidence then fades geometrically instead of falling off a cliff, and
+a large cap is a commander who never forgets a slight. And a step that truncates
+to zero while the delta is non-zero advances by one, because integer
+truncation must not let a belief stall short of what the room keeps showing it.
+
+The **prior** is content, not a fallback: `priorRefusalPermille`,
+`priorDesertions`, `priorSurvivors` and `priorWinScore` are what a commander
+expects of a room he has not met — the owner's "assuming leadership for the
+first time in a good or bad culture". The shipped defaults describe a compliant
+room (`0`/`0`/`16`/`50`), which is exactly the behaviour the zeroed record used
+to produce, so a default campaign is byte-identical to the pre-memory harness
+and the culture knob starts inert. `priorWinScore` is the one exception to the
+wiring rule and is marked as such in its probe: the `winScore` belief is
+retained but read by no policy yet.
 
 **Ruled within this entry: the update is symmetric.** Whether bad news should
 update faster than good was raised and answered *no, for now*: the model
@@ -2157,8 +2168,11 @@ already carries three despair mechanisms (curved outcome-trust loss, the
 `B_i` ratchet with no relief transition, ADR 0007's no-decay rule) against one
 hope mechanism (ADR 0053) and no courage mechanism at all, so an asymmetric
 belief update would be the fourth thing pulling every long campaign
-pessimistic. The asymmetry may be added later as its own knob, defaulting to
-symmetric, and only with a measurement of what it does over a campaign.
+pessimistic. The asymmetry ships as its own knob,
+`badNewsWeightPermille`, at `1000` — symmetric — and a worse-than-belief
+observation is defined per field (higher refusal, higher desertions, lower
+survivors, lower win score). Raising it above `1000` is a measurement, not a
+default, and no campaign evidence for it exists yet.
 
 ### D195 ✅ What is hope, and how does it differ from the absence of despair? (ADR 0073)
 **Answered 2026-08-30 (owner) — not wired.** Hope is a **forecast attached to a

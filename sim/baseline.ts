@@ -2,7 +2,12 @@ import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
 import { scoreMatchOutcome } from '../src/orchestration/outcomeScore';
 
-import { legalScoredMoves, leaderPolicy, type LeaderContext } from './leaders';
+import {
+  createPriorLeaderObservation,
+  legalScoredMoves,
+  leaderPolicy,
+  type LeaderContext,
+} from './leaders';
 import { matchSeedForCampaign } from './campaign';
 import type { Leader } from './cli';
 import type { ControlHorizon } from './metrics';
@@ -21,13 +26,7 @@ export function runPlainChessMatch(options: {
     matchIndex: 1,
     campaignMatch: 1,
     redeemerSwitchMatch: 10,
-    observation: {
-      matchesObserved: 0,
-      refusalPermilleLast: 0,
-      desertionsLast: 0,
-      survivorsLast: 0,
-      winScoreLast: 0,
-    },
+    observation: createPriorLeaderObservation(),
   };
   const white = leaderPolicy(options.whiteLeader);
   const black = leaderPolicy(options.blackLeader);

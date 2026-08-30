@@ -13,6 +13,7 @@ import type { PieceState } from '../src/psychology';
 
 import type { Leader } from './cli';
 import {
+  createPriorLeaderObservation,
   leaderPolicy,
   legalScoredMoves,
   type LeaderContext,
@@ -28,14 +29,6 @@ import {
 
 const MAX_PLIES = 200;
 const REDEEMER_SWITCH_MATCH = 10;
-
-const ZERO_LEADER_OBSERVATION = {
-  matchesObserved: 0,
-  refusalPermilleLast: 0,
-  desertionsLast: 0,
-  survivorsLast: 0,
-  winScoreLast: 0,
-} as const;
 
 function leaderPort(
   style: Leader,
@@ -95,11 +88,11 @@ export async function runMatch(
   };
   const playerContextBase = {
     ...contextBase,
-    observation: options.leaderObservation ?? ZERO_LEADER_OBSERVATION,
+    observation: options.leaderObservation ?? createPriorLeaderObservation(),
   };
   const opponentContextBase = {
     ...contextBase,
-    observation: options.opponentObservation ?? ZERO_LEADER_OBSERVATION,
+    observation: options.opponentObservation ?? createPriorLeaderObservation(),
   };
   const opponent = options.opponent ?? 'random';
   const rawOpponentPort = leaderPort(opponent, opponentContextBase);
