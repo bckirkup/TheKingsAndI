@@ -15,7 +15,7 @@ export interface LeaderContext {
   readonly ply: number;
   readonly redeemerSwitchMatch: number;
   /**
-   * Behavioral observations from the previous completed match only. This
+   * Retained behavioral belief updated at campaign boundaries. This
    * deliberately excludes piece psychology and engine truth.
    */
   readonly observation: LeaderObservation;
@@ -23,10 +23,148 @@ export interface LeaderContext {
 
 export interface LeaderObservation {
   readonly matchesObserved: number;
-  readonly refusalPermilleLast: number;
-  readonly desertionsLast: number;
-  readonly survivorsLast: number;
-  readonly winScoreLast: number;
+  readonly refusalPermille: number;
+  readonly desertions: number;
+  readonly survivors: number;
+  readonly winScore: number;
+}
+
+export interface AdaptiveMemoryConfig {
+  /** Maximum number of matches used to reduce the next observation's weight. */
+  readonly memoryCapMatches: number;
+  /** Relative weight for worse news, where 1000 is symmetric. */
+  readonly badNewsWeightPermille: number;
+  /** Prior refusal rate in integer permille. */
+  readonly priorRefusalPermille: number;
+  /** Prior desertion count. */
+  readonly priorDesertions: number;
+  /** Prior surviving roster size. */
+  readonly priorSurvivors: number;
+  /** Prior win score in the 0..100 range. */
+  readonly priorWinScore: number;
+}
+
+export const ADAPTIVE_MEMORY_CONFIG: AdaptiveMemoryConfig = {
+  memoryCapMatches: 5,
+  badNewsWeightPermille: 1_000,
+  priorRefusalPermille: 0,
+  priorDesertions: 0,
+  priorSurvivors: 16,
+  priorWinScore: 50,
+} as const;
+
+function clampObservationValue(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number {
+  return Math.max(minimum, Math.min(maximum, Math.trunc(value)));
+}
+
+export function createPriorLeaderObservation(): LeaderObservation {
+  return {
+    matchesObserved: 0,
+    refusalPermille: clampObservationValue(
+      ADAPTIVE_MEMORY_CONFIG.priorRefusalPermille,
+      0,
+      1_000,
+    ),
+    desertions: Math.max(0, Math.trunc(ADAPTIVE_MEMORY_CONFIG.priorDesertions)),
+    survivors: clampObservationValue(
+      ADAPTIVE_MEMORY_CONFIG.priorSurvivors,
+      0,
+      16,
+    ),
+    winScore: clampObservationValue(
+      ADAPTIVE_MEMORY_CONFIG.priorWinScore,
+      0,
+      100,
+    ),
+  };
+}
+
+function updateObservationField(
+  belief: number,
+  observed: number,
+  matchesObserved: number,
+  minimum: number,
+  maximum: number,
+  worseNews: boolean,
+): number {
+  const cappedMatches = Math.min(
+    Math.max(0, Math.trunc(matchesObserved)),
+    Math.max(0, Math.trunc(ADAPTIVE_MEMORY_CONFIG.memoryCapMatches)),
+  );
+  const baseWeight = Math.trunc(1_000 / (cappedMatches + 1));
+  const weight = worseNews
+    ? Math.min(
+        1_000,
+        Math.trunc(
+          (baseWeight * ADAPTIVE_MEMORY_CONFIG.badNewsWeightPermille) / 1_000,
+        ),
+      )
+    : baseWeight;
+  const delta = observed - belief;
+  let step = Math.trunc((delta * weight) / 1_000);
+  if (step === 0 && delta !== 0) step = delta > 0 ? 1 : -1;
+  return clampObservationValue(belief + step, minimum, maximum);
+}
+
+export function updateLeaderObservation(
+  belief: LeaderObservation,
+  observation: LeaderObservation,
+): LeaderObservation {
+  const refusalPermille = clampObservationValue(
+    belief.refusalPermille,
+    0,
+    1_000,
+  );
+  const observedRefusalPermille = clampObservationValue(
+    observation.refusalPermille,
+    0,
+    1_000,
+  );
+  const desertions = Math.max(0, Math.trunc(belief.desertions));
+  const observedDesertions = Math.max(0, Math.trunc(observation.desertions));
+  const survivors = clampObservationValue(belief.survivors, 0, 16);
+  const observedSurvivors = clampObservationValue(observation.survivors, 0, 16);
+  const winScore = clampObservationValue(belief.winScore, 0, 100);
+  const observedWinScore = clampObservationValue(observation.winScore, 0, 100);
+  return {
+    matchesObserved: Math.max(0, Math.trunc(belief.matchesObserved)) + 1,
+    refusalPermille: updateObservationField(
+      refusalPermille,
+      observedRefusalPermille,
+      belief.matchesObserved,
+      0,
+      1_000,
+      observedRefusalPermille > refusalPermille,
+    ),
+    desertions: updateObservationField(
+      desertions,
+      observedDesertions,
+      belief.matchesObserved,
+      0,
+      Number.MAX_SAFE_INTEGER,
+      observedDesertions > desertions,
+    ),
+    survivors: updateObservationField(
+      survivors,
+      observedSurvivors,
+      belief.matchesObserved,
+      0,
+      16,
+      observedSurvivors < survivors,
+    ),
+    winScore: updateObservationField(
+      winScore,
+      observedWinScore,
+      belief.matchesObserved,
+      0,
+      100,
+      observedWinScore < winScore,
+    ),
+  };
 }
 
 export interface LeaderChoice {
@@ -185,14 +323,6 @@ function tacticalScore(feature: MoveFeatures, riskWeight: number): number {
 
 function clampInteger(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, Math.trunc(value)));
-}
-
-function adaptiveObservation(
-  context: LeaderContext,
-): LeaderObservation | undefined {
-  return context.observation.matchesObserved === 0
-    ? undefined
-    : context.observation;
 }
 
 function createPolicy(style: Leader): LeaderPolicy {
@@ -394,16 +524,12 @@ function createPolicy(style: Leader): LeaderPolicy {
       return {
         style,
         chooseMove: (board, moves, random, context) => {
-          const observation = adaptiveObservation(context);
-          const riskWeight =
-            observation === undefined
-              ? ADAPTIVE_POLICY_CONFIG.baseRisk
-              : Math.min(
-                  ADAPTIVE_POLICY_CONFIG.chastenedRiskCeiling,
-                  ADAPTIVE_POLICY_CONFIG.baseRisk +
-                    observation.desertionsLast *
-                      ADAPTIVE_POLICY_CONFIG.chastenedRiskGain,
-                );
+          const riskWeight = Math.min(
+            ADAPTIVE_POLICY_CONFIG.chastenedRiskCeiling,
+            ADAPTIVE_POLICY_CONFIG.baseRisk +
+              context.observation.desertions *
+                ADAPTIVE_POLICY_CONFIG.chastenedRiskGain,
+          );
           const chosen = pickByScore(board, moves, random, (feature) =>
             tacticalScore(feature, riskWeight),
           );
@@ -415,20 +541,16 @@ function createPolicy(style: Leader): LeaderPolicy {
           };
         },
         shouldOverride: (random, context) => {
-          const observation = adaptiveObservation(context);
-          const chance =
-            observation === undefined
-              ? ADAPTIVE_POLICY_CONFIG.baseInsistence
-              : clampInteger(
-                  ADAPTIVE_POLICY_CONFIG.baseInsistence -
-                    Math.trunc(
-                      (observation.refusalPermilleLast *
-                        ADAPTIVE_POLICY_CONFIG.chastenedGain) /
-                        1000,
-                    ),
-                  0,
-                  100,
-                );
+          const chance = clampInteger(
+            ADAPTIVE_POLICY_CONFIG.baseInsistence -
+              Math.trunc(
+                (context.observation.refusalPermille *
+                  ADAPTIVE_POLICY_CONFIG.chastenedGain) /
+                  1_000,
+              ),
+            0,
+            100,
+          );
           return random.nextInt(100) < chance;
         },
       };
@@ -447,20 +569,16 @@ function createPolicy(style: Leader): LeaderPolicy {
           };
         },
         shouldOverride: (random, context) => {
-          const observation = adaptiveObservation(context);
-          const chance =
-            observation === undefined
-              ? ADAPTIVE_POLICY_CONFIG.baseInsistence
-              : clampInteger(
-                  ADAPTIVE_POLICY_CONFIG.baseInsistence +
-                    Math.trunc(
-                      (observation.refusalPermilleLast *
-                        ADAPTIVE_POLICY_CONFIG.escalatorGain) /
-                        1000,
-                    ),
-                  0,
-                  ADAPTIVE_POLICY_CONFIG.escalatorCeiling,
-                );
+          const chance = clampInteger(
+            ADAPTIVE_POLICY_CONFIG.baseInsistence +
+              Math.trunc(
+                (context.observation.refusalPermille *
+                  ADAPTIVE_POLICY_CONFIG.escalatorGain) /
+                  1_000,
+              ),
+            0,
+            ADAPTIVE_POLICY_CONFIG.escalatorCeiling,
+          );
           return random.nextInt(100) < chance;
         },
       };
@@ -468,11 +586,7 @@ function createPolicy(style: Leader): LeaderPolicy {
       return {
         style,
         chooseMove: (board, moves, random, context) => {
-          const observation = adaptiveObservation(context);
-          const missing =
-            observation === undefined
-              ? 0
-              : 16 - Math.min(16, observation.survivorsLast);
+          const missing = 16 - Math.min(16, context.observation.survivors);
           const riskWeight =
             ADAPTIVE_POLICY_CONFIG.baseRisk +
             missing * ADAPTIVE_POLICY_CONFIG.scarcityGain;
@@ -487,10 +601,8 @@ function createPolicy(style: Leader): LeaderPolicy {
           };
         },
         shouldOverride: (random, context) => {
-          const observation = adaptiveObservation(context);
           const chance =
-            observation !== undefined &&
-            observation.survivorsLast < ADAPTIVE_POLICY_CONFIG.thinRoster
+            context.observation.survivors < ADAPTIVE_POLICY_CONFIG.thinRoster
               ? 10
               : ADAPTIVE_POLICY_CONFIG.baseInsistence;
           return random.nextInt(100) < chance;

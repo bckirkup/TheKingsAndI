@@ -312,7 +312,7 @@ describe('campaign retirement and grace', () => {
     const parsed = parseCampaignCheckpoint(
       JSON.parse(JSON.stringify(result.checkpoint)) as unknown,
     );
-    expect(parsed.checkpointVersion).toBe(3);
+    expect(parsed.checkpointVersion).toBe(4);
     expect(parsed.generations).toEqual(result.checkpoint.generations);
     expect(parsed.retiredCareerIds).toEqual(result.checkpoint.retiredCareerIds);
   });
