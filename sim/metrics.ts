@@ -772,7 +772,7 @@ export function metricsFromMatch(
   const unjustifiedTrauma = foldUnjustifiedTrauma(
     result.events,
     fieldedPieceIds,
-    result.roster.length,
+    fieldedPieceIds.length,
   );
   const leadershipIndex = calculateSingleMatchLeadershipIndex(
     meanTrustEnd,
