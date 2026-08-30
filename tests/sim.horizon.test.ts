@@ -64,6 +64,8 @@ function metric(
     enemyDesertedPieceIds: [],
     enemyRefusalRate: 0,
     winScore: match * 10,
+    unjustifiedTrauma: 0,
+    leadershipIndex: match * 5,
     rout: match % 2 === 0,
     archetype: 'caretaker',
     ...values,

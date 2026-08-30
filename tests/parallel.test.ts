@@ -67,6 +67,8 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     enemyDesertedPieceIds: [],
     enemyRefusalRate: 0,
     winScore: 0,
+    unjustifiedTrauma: 0,
+    leadershipIndex: 0,
     rout: match <= Math.ceil(length / 4),
     archetype: 'mixed',
   };

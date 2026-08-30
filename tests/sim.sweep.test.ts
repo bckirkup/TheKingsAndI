@@ -192,6 +192,10 @@ describe('coefficient sweep', () => {
     if (point === undefined || campaignSummary === undefined) return;
     expect(point.knob).toBe('OUTCOME_TRUST_LOSS_SCALE');
     expect(point.meanPlies).toBe(campaignSummary.meanPlies);
+    expect(point.meanUnjustifiedTrauma).toBe(
+      campaignSummary.meanUnjustifiedTrauma,
+    );
+    expect(point.meanLeadershipIndex).toBe(campaignSummary.meanLeadershipIndex);
     expect(point.winCount).toBe(campaignSummary.winCount);
     expect(point.drawCount).toBe(campaignSummary.drawCount);
     expect(point.lossCount).toBe(campaignSummary.lossCount);

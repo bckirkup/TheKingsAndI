@@ -73,6 +73,8 @@ function makeMetric(): MatchMetrics {
     enemyDesertedPieceIds: [],
     enemyRefusalRate: 0,
     winScore: 0,
+    unjustifiedTrauma: 0,
+    leadershipIndex: 0,
     rout: false,
     archetype: 'mixed',
   };

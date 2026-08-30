@@ -51,6 +51,8 @@ function handCheckMetric(match: number): MatchMetrics {
     enemyDesertedPieceIds: [],
     enemyRefusalRate: 0,
     winScore: 50,
+    unjustifiedTrauma: 0,
+    leadershipIndex: 25,
     rout: match % 2 === 1,
     archetype: 'caretaker',
   };
