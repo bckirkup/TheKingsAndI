@@ -80,10 +80,9 @@ export interface CampaignResult {
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
 
-export function observationFromPreviousMatch(
+export function observableFromMatch(
   metric: MatchMetrics | undefined,
   enemy: boolean,
-  matchesObserved = metric === undefined ? 0 : 1,
 ): LeaderObservation {
   if (metric === undefined) return createPriorLeaderObservation();
   const refusalRate = enemy ? metric.enemyRefusalRate : metric.refusalRate;
@@ -93,7 +92,7 @@ export function observationFromPreviousMatch(
     : metric.survivingRosterSize;
   const winScore = enemy ? 100 - metric.winScore : metric.winScore;
   return {
-    matchesObserved,
+    matchesObserved: 1,
     refusalPermille: Math.max(
       0,
       Math.min(1_000, Math.trunc(refusalRate * 1_000)),
@@ -524,11 +523,11 @@ export async function runCampaign(
     );
     leaderObservation = updateLeaderObservation(
       leaderObservation,
-      observationFromPreviousMatch(metric, false),
+      observableFromMatch(metric, false),
     );
     opponentObservation = updateLeaderObservation(
       opponentObservation,
-      observationFromPreviousMatch(metric, true),
+      observableFromMatch(metric, true),
     );
     roster = carryMatchRoster(result.roster, result.departedRoster);
     enemyRoster = carryMatchRoster(

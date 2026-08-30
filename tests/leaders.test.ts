@@ -46,6 +46,20 @@ function withAdaptiveConfig<T>(
   }
 }
 
+function withAdaptiveMemoryConfig<T>(
+  changes: Partial<typeof ADAPTIVE_MEMORY_CONFIG>,
+  action: () => T,
+): T {
+  const config = ADAPTIVE_MEMORY_CONFIG as unknown as Record<string, number>;
+  const original = { ...config };
+  Object.assign(config, changes);
+  try {
+    return action();
+  } finally {
+    Object.assign(config, original);
+  }
+}
+
 function overrideCount(
   style: Parameters<typeof leaderPolicy>[0],
   context: ReturnType<typeof contextWithObservation>,
@@ -378,19 +392,11 @@ describe('scripted leader move shaping', () => {
   });
 
   it.each([
-    ['memoryCapMatches', { matchesObserved: 10 }, { matchesObserved: 1 }],
-    [
-      'badNewsWeightPermille',
-      { matchesObserved: 4, refusalPermille: 100 },
-      { matchesObserved: 1, refusalPermille: 900 },
-    ],
-    ['priorRefusalPermille', undefined, undefined],
-    ['priorDesertions', undefined, undefined],
-    ['priorSurvivors', undefined, undefined],
-    ['priorWinScore', undefined, undefined],
+    ['memoryCapMatches', { matchesObserved: 10 }],
+    ['badNewsWeightPermille', { matchesObserved: 4, refusalPermille: 100 }],
   ] as const)(
     'wires adaptive memory knob %s into a quantitative belief output',
-    (knob, beliefChanges, observedChanges) => {
+    (knob, beliefChanges) => {
       const baseline = createPriorLeaderObservation();
       const belief = {
         ...baseline,
@@ -402,38 +408,66 @@ describe('scripted leader move shaping', () => {
         desertions: 5,
         survivors: 8,
         winScore: 30,
-        ...(observedChanges ?? {}),
       };
-      const config = ADAPTIVE_MEMORY_CONFIG as unknown as Record<
-        string,
-        number
-      >;
-      const original = ADAPTIVE_MEMORY_CONFIG[knob];
       const low = knob === 'badNewsWeightPermille' ? 1_000 : 0;
-      const high =
-        knob === 'memoryCapMatches'
-          ? 20
-          : knob === 'badNewsWeightPermille'
-            ? 2_000
-            : knob === 'priorSurvivors'
-              ? 16
-              : knob === 'priorWinScore'
-                ? 100
-                : knob === 'priorRefusalPermille'
-                  ? 500
-                  : 10;
-      config[knob] = low;
-      const lowOutput = knob.startsWith('prior')
-        ? createPriorLeaderObservation()
-        : updateLeaderObservation(belief, observed);
-      config[knob] = high;
-      const highOutput = knob.startsWith('prior')
-        ? createPriorLeaderObservation()
-        : updateLeaderObservation(belief, observed);
-      config[knob] = original;
+      const high = knob === 'memoryCapMatches' ? 20 : 2_000;
+      const lowOutput = withAdaptiveMemoryConfig({ [knob]: low }, () =>
+        updateLeaderObservation(belief, observed),
+      );
+      const highOutput = withAdaptiveMemoryConfig({ [knob]: high }, () =>
+        updateLeaderObservation(belief, observed),
+      );
       expect(highOutput).not.toEqual(lowOutput);
     },
   );
+
+  it('wires prior refusal into first-match override behavior', () => {
+    const count = (
+      style: 'chastened' | 'escalator',
+      priorRefusalPermille: number,
+    ) =>
+      withAdaptiveMemoryConfig({ priorRefusalPermille }, () =>
+        overrideCount(
+          style,
+          contextWithObservation(createPriorLeaderObservation()),
+        ),
+      );
+    expect(count('chastened', 0)).not.toBe(count('chastened', 800));
+    expect(count('escalator', 0)).not.toBe(count('escalator', 800));
+  });
+
+  it('wires prior desertions into first-match chastened move behavior', () => {
+    const moves = (priorDesertions: number) =>
+      withAdaptiveMemoryConfig({ priorDesertions }, () =>
+        chosenMoves(
+          'chastened',
+          contextWithObservation(createPriorLeaderObservation()),
+        ),
+      );
+    expect(moves(0)).not.toEqual(moves(10));
+  });
+
+  it('wires prior survivors into first-match roster-first move behavior', () => {
+    const moves = (priorSurvivors: number) =>
+      withAdaptiveMemoryConfig({ priorSurvivors }, () =>
+        chosenMoves(
+          'roster_first',
+          contextWithObservation(createPriorLeaderObservation()),
+        ),
+      );
+    expect(moves(16)).not.toEqual(moves(4));
+  });
+
+  it('retains prior win score without claiming a policy wiring', () => {
+    // winScore is retained in the belief record but read by no policy yet.
+    const prior = (priorWinScore: number) =>
+      withAdaptiveMemoryConfig(
+        { priorWinScore },
+        () => createPriorLeaderObservation().winScore,
+      );
+    expect(prior(0)).toBe(0);
+    expect(prior(100)).toBe(100);
+  });
 
   it('moves chastened and escalator insistence in opposite directions', () => {
     const context = contextWithObservation({
