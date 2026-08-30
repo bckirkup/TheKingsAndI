@@ -2260,7 +2260,15 @@ grudging room it was introduced for. The honest sequence is to measure at the
 spec's values first and rule on the scale with the surface in hand — choosing δ
 to make the reading come out is the circularity ADR 0074 §1 forbids. The
 component columns exist so this can be answered by arithmetic over committed
-sweeps.
+sweeps. **Measured 2026-08-30** (`docs/calibration/2026-08-30-the-index-and-the-scale.md`,
+3 styles × 10 campaigns × 20 matches, fake engine, `--opponent=tyrannical`):
+the term contributes ≤2 points against a ~90-point style separation, and it
+charges the *kind* room most (quiet-quit rate 0.197 supportive against 0.039
+tyrannical) because the cruel room's disengaged pieces desert or churn out of
+their careers instead of accumulating quiet-quit turns. Raising δ therefore
+penalises kindness; if the intent is to price disengagement *caused by
+cruelty*, the term needs a different carrier (desertions, ended careers),
+which is a design ruling still owed here.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
