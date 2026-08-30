@@ -1969,6 +1969,12 @@ raising rate or relief must not reduce the cruel style's accumulated permanent
 cost to the kind style's level at any horizon. The farming hazard is unreachable
 until D182 lands, because there is no registration term to farm; flat
 registration remains the fallback. See ADR 0072's 2026-08-30 amendment.
+**Blocked on D191:** the first measurement of the replacement gate could not
+evaluate it, because the kind arm's outcome is dominated by the forced-move
+fallback rather than by conduct — the cruel style leads at every horizon and the
+kind roster is hemorrhaging (415 desertions at 40 matches against 71). Fix the
+pricing question first; a grace magnitude chosen against a collapsing kind arm
+would be tuned against a harness path, not a sociology.
 
 ### D189 ✅ What fills the square of a retired identity in the campaign path? (ADR 0072)
 **Answered 2026-08-30 by the ADR 0072 amendment — wired.** The square is a
@@ -1997,6 +2003,26 @@ career-relieving facts now live outside the log that audits fold over. Either th
 campaign boundary gets a log of its own, or ADR 0062's journal is where these
 belong when it lands; inventing a parallel event type without an append seam was
 rejected.
+
+### D191 ❓ May a forced move cost what a chosen override costs?
+**Open — raised 2026-08-30 by the kind-condition measurement in
+`docs/calibration/2026-08-30-the-career-that-ends.md`, not wired.** ADR 0014
+guarantees no position is unplayable, so when *every* candidate has been refused
+the harness forces the first refused move
+(`src/orchestration/headlessMatch.ts:838`, tagged `implicit: true`) and prices it
+through `applyPlayerOverride` exactly as it prices an override the commander chose.
+Measured over 40 matches at seed 7, that path *is* the kind leader's experience:
+the redeemer's roster refuses 0.77 of plies, **80% of its overrides are forced**
+(33.6 of 41.9 per match) against the tyrant's 0.1%, and because a kind roster holds
+more benevolence to lose (D166's enlarged fall), each forced move costs it 644 in
+target benevolence against the tyrant's 297 — ending in 415 desertions against 71,
+5.92 of them per match from *winning* positions. So today the model charges a
+commander for the room's unanimous refusal, and charges the warmest commander the
+most. Candidate closers, none chosen: price a forced move below a chosen one; price
+it to the refusers rather than to the commander; treat unanimous refusal as its own
+event (a roster in revolt) rather than as insistence. **Upstream of D188** — no
+grace magnitude may be selected while the kind arm's outcome is dominated by this
+fallback rather than by conduct.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

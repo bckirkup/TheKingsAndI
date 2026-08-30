@@ -52,12 +52,63 @@ attachment to the roster it joins, and a roster of strangers is the condition th
 desertion model exits from. Retirement does not relieve the campaign; it changes
 what the campaign loses.
 
+## The kind condition, on the same horizons (redeemer, seed 7)
+
+| | matches | win score | mean survivors | desertions | retirements | distinct careers | careers per seat |
+|---|---|---|---|---|---|---|---|
+| before | 10 | 35.00 | 1.80 | 60 | 0 | 16 | 1.00 |
+| after | 10 | 25.00 | 1.60 | 47 | 6 | 22 | 1.375 |
+| before | 20 | 35.00 | 1.75 | 195 | 0 | 16 | 1.00 |
+| after | 20 | 17.50 | 1.45 | 161 | 10 | 25 | 1.562 |
+| before | 40 | 40.00 | 1.90 | 459 | 0 | 16 | 1.00 |
+| after | 40 | 30.00 | 1.73 | 415 | 11 | 27 | 1.688 |
+
+The cruel style leads the kind one at **every** horizon (after: 40.00 vs 25.00 at
+10, 50.00 vs 17.50 at 20, 53.75 vs 30.00 at 40) — so the D188 trajectory gate
+cannot be evaluated on this evidence, because the kind condition is not merely
+behind, it is collapsing, and it was collapsing before retirement existed (459
+desertions at 40 matches on `main`).
+
+**Retirement barely fires for the kind leader (11 careers over 40 matches, against
+the tyrant's 45), because desertion out-races it.** Its pieces leave before trauma
+can reach the ceiling: 415 exits against 71. Kindness therefore produces the *least*
+permanent record of harm while suffering the most attrition, which is the opposite
+of what the permanent-cost ledger is supposed to show.
+
+## The mechanism, and why it is not grace's fault (D191 raised)
+
+Per-match means over the 40-match campaigns tell a consistent story:
+
+| | refusal rate | overrides | **implicit** overrides | benev loss (target) | benev loss (witness) | cascade length | desertions from winning positions |
+|---|---|---|---|---|---|---|---|
+| redeemer | 0.77 | 41.9 | **33.6** | 644 | 639 | 2.60 | 5.92 |
+| tyrannical | 0.14 | 51.5 | **0.05** | 297 | 529 | 1.32 | 0.40 |
+
+An implicit override is not a leadership act. It is the ADR 0014 fallback in
+`headlessMatch.ts` — when *every* candidate move has been refused, the harness
+forces the first refused move so no position is unplayable — and it is priced
+identically to an override the commander chose. The redeemer's roster refuses 77%
+of plies, so the unanimous-refusal state arrives on roughly a quarter of its plies,
+and **80% of its overrides are forced ones** (33.6 of 41.9) against the tyrant's
+0.1%.
+
+Each of those forced moves then costs a kind roster *more* than the same act costs
+a cruel one — 644 versus 297 in target benevolence — which is the grid-sweep
+finding from `2026-08-29-the-response-surface-under-the-curdle.md` (regard enlarges
+the fall rather than cushioning it) arriving at campaign scale. Longer cascades
+(2.60 versus 1.32) and 5.92 desertions per match from *winning* positions follow.
+
+So the causal chain is: kindness raises refusal → refusal exhausts the candidate
+list → the harness forces a move → the forced move is billed as insistence → a
+kind roster pays double for it → cascade. **D191** is raised on the pricing step:
+whether a forced move, taken because the room refused unanimously and the game had
+to continue, may cost what a chosen override costs. This is upstream of D188; no
+grace magnitude can be chosen while the kind condition is dominated by a fallback
+path rather than by conduct.
+
 ## What this does not settle (D188)
 
-The trajectory gate needs a *kind* condition measured on the same horizons before
-any grace magnitude can be chosen, and it needs the comparison at a longer horizon
-than 40 to see whether a cruel style's advantage widens. What is established here
-is the instrument: retirements, careers per seat, and distinct careers are now
-measurable per horizon, and win score is already known to be nearly insensitive to
-them over 40 matches — so the gate will have to read the permanent quantities,
-because the outcome column will not show it.
+The gate itself is still un-evaluated. What is established is the instrument —
+retirements, careers per seat, and distinct careers are measurable per horizon, and
+win score is nearly insensitive to them over 40 matches, so the gate must read the
+permanent quantities — plus the reason the kind arm cannot yet be compared.
