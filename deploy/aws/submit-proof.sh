@@ -15,6 +15,9 @@ set -eu
 : "${IMAGE_DIGEST:?IMAGE_DIGEST is required}"
 : "${S3_BUCKET:?S3_BUCKET is required}"
 
+engine="${ENGINE:-lozza}"
+opponent="${OPPONENT:-random}"
+
 jq -n \
   --arg run_id "$RUN_ID" \
   --arg campaign_length "$CAMPAIGN_LENGTH" \
@@ -26,6 +29,8 @@ jq -n \
   --arg git_commit "$GIT_COMMIT_SHA" \
   --arg image_digest "$IMAGE_DIGEST" \
   --arg s3_bucket "$S3_BUCKET" \
+  --arg engine "$engine" \
+  --arg opponent "$opponent" \
   --arg aws_region "$AWS_REGION" \
   '{
     environment: [
@@ -39,6 +44,8 @@ jq -n \
       {name: "GIT_COMMIT_SHA", value: $git_commit},
       {name: "IMAGE_DIGEST", value: $image_digest},
       {name: "S3_BUCKET", value: $s3_bucket},
+      {name: "ENGINE", value: $engine},
+      {name: "OPPONENT", value: $opponent},
       {name: "AWS_REGION", value: $aws_region}
     ]
   }' >/tmp/kingsandi-container-overrides.json
