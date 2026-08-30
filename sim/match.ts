@@ -1,20 +1,34 @@
 import { LivingBoard } from '../src/chess';
-import { createSeededRandom } from '../src/core/random';
+import { createSeededRandom, type SeededRandom } from '../src/core/random';
 import type { EnginePort } from '../src/engine/types';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import {
   runHeadlessMatch,
   type HeadlessLeaderPort,
   type HeadlessMatchResult,
 } from '../src/orchestration';
+import type { EnemyMoveChooser } from '../src/orchestration/enemyTurn';
 import type { PieceState } from '../src/psychology';
 
 import type { Leader } from './cli';
-import { leaderPolicy, legalScoredMoves, type LeaderContext } from './leaders';
+import {
+  leaderPolicy,
+  legalScoredMoves,
+  type LeaderContext,
+  type LeaderObservation,
+} from './leaders';
 import { createStartingRoster } from './roster';
-import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 const MAX_PLIES = 200;
 const REDEEMER_SWITCH_MATCH = 10;
+
+const ZERO_LEADER_OBSERVATION = {
+  matchesObserved: 0,
+  refusalPermilleLast: 0,
+  desertionsLast: 0,
+  survivorsLast: 0,
+  winScoreLast: 0,
+} as const;
 
 function leaderPort(
   style: Leader,
@@ -54,7 +68,9 @@ export interface RunMatchOptions {
   readonly initialLineup?: readonly PieceState[];
   readonly enemyRoster?: readonly PieceState[];
   readonly initialEnemyLineup?: readonly PieceState[];
-  readonly opponent?: OpponentArchetype;
+  readonly opponent?: Leader;
+  readonly leaderObservation?: LeaderObservation;
+  readonly opponentObservation?: LeaderObservation;
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
 }
@@ -68,18 +84,47 @@ export async function runMatch(
     campaignMatch: options.campaignMatch,
     redeemerSwitchMatch: REDEEMER_SWITCH_MATCH,
   };
+  const playerContextBase = {
+    ...contextBase,
+    observation: options.leaderObservation ?? ZERO_LEADER_OBSERVATION,
+  };
+  const opponentContextBase = {
+    ...contextBase,
+    observation: options.opponentObservation ?? ZERO_LEADER_OBSERVATION,
+  };
+  const opponent = options.opponent ?? 'random';
+  const opponentPort = leaderPort(opponent, opponentContextBase);
+  const adaptiveOpponent =
+    opponent === 'chastened' ||
+    opponent === 'escalator' ||
+    opponent === 'roster_first';
+  const opponentArchetype: OpponentArchetype = adaptiveOpponent
+    ? 'random'
+    : (opponent as OpponentArchetype);
+  const opponentMoveChooser: EnemyMoveChooser | undefined = adaptiveOpponent
+    ? async (board, side, random, ply, refusedSans) =>
+        (await opponentPort.chooseMove(board, side, random, ply, refusedSans))
+          ?.san
+    : undefined;
   return runHeadlessMatch({
     random,
     maxPlies: MAX_PLIES,
     playerSide: 'w',
-    leader: leaderPort(options.leader, contextBase),
-    opponent: leaderPort(options.opponent ?? 'random', contextBase),
+    leader: leaderPort(options.leader, playerContextBase),
+    opponent: opponentPort,
     initialRoster: options.roster,
     ...(options.initialLineup === undefined
       ? {}
       : { initialLineup: options.initialLineup }),
     engine: options.engine,
-    opponentArchetype: options.opponent ?? 'random',
+    opponentArchetype,
+    ...(opponentMoveChooser === undefined ? {} : { opponentMoveChooser }),
+    ...(adaptiveOpponent
+      ? {
+          opponentOverrideChooser: (random: SeededRandom, ply: number) =>
+            opponentPort.shouldOverride(random, ply),
+        }
+      : {}),
     ...(options.enemyRoster === undefined
       ? {}
       : { initialEnemyRoster: options.enemyRoster }),

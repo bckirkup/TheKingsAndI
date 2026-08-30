@@ -8,8 +8,6 @@ import type { EnginePort } from '../src/engine/types';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
 import { applyGrace, ENGINE_CONFIG, type PieceState } from '../src/psychology';
 import type { PieceId } from '../src/core/ids';
-import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
-
 import type { Leader } from './cli';
 import { capEngineDepth, createSimEngine, type SimEngineKind } from './engine';
 import { runMatch } from './match';
@@ -21,11 +19,12 @@ import {
 } from './metrics';
 import { createStartingRoster, mergeCampaignRoster } from './roster';
 import { CostTracker, instrumentEngine, type CampaignCost } from './cost';
+import type { LeaderObservation } from './leaders';
 
 export interface CampaignOptions {
   readonly matches: number;
   readonly leader: Leader;
-  readonly opponent?: OpponentArchetype;
+  readonly opponent?: Leader;
   readonly enemyTrackedIdentities?: number;
   readonly seed: number;
   readonly initialTrust?: number;
@@ -47,7 +46,7 @@ export interface CampaignCheckpoint {
   readonly determinismId: string;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly enemyTrackedIdentities: number;
   readonly initialTrust: number;
   readonly nextMatch: number;
@@ -74,6 +73,38 @@ export interface CampaignResult {
 }
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
+
+const ZERO_LEADER_OBSERVATION: LeaderObservation = {
+  matchesObserved: 0,
+  refusalPermilleLast: 0,
+  desertionsLast: 0,
+  survivorsLast: 0,
+  winScoreLast: 0,
+};
+
+export function observationFromPreviousMatch(
+  metric: MatchMetrics | undefined,
+  enemy: boolean,
+  matchesObserved = metric === undefined ? 0 : 1,
+): LeaderObservation {
+  if (metric === undefined) return ZERO_LEADER_OBSERVATION;
+  const refusalRate = enemy ? metric.enemyRefusalRate : metric.refusalRate;
+  const desertions = enemy ? metric.enemyDesertions : metric.desertions;
+  const survivors = enemy
+    ? metric.enemySurvivingRosterSize
+    : metric.survivingRosterSize;
+  const winScore = enemy ? 100 - metric.winScore : metric.winScore;
+  return {
+    matchesObserved,
+    refusalPermilleLast: Math.max(
+      0,
+      Math.min(1_000, Math.trunc(refusalRate * 1_000)),
+    ),
+    desertionsLast: Math.max(0, Math.trunc(desertions)),
+    survivorsLast: Math.max(0, Math.trunc(survivors)),
+    winScoreLast: Math.max(0, Math.min(100, Math.trunc(winScore))),
+  };
+}
 
 function carryMatchRoster(
   survivingRoster: readonly PieceState[],
@@ -296,6 +327,9 @@ export function leaderTrustBias(leader: Leader): number {
       return -10;
     case 'volatile':
     case 'steady':
+    case 'chastened':
+    case 'escalator':
+    case 'roster_first':
       return 10;
     case 'redeemer':
       return 0;
@@ -309,7 +343,7 @@ function createCampaignCheckpoint(options: {
   readonly determinismId: string;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly enemyTrackedIdentities: number;
   readonly initialTrust: number;
   readonly nextMatch: number;
@@ -410,6 +444,7 @@ export async function runCampaign(
   for (let match = firstMatch; match <= options.matches; match += 1) {
     costTracker.startMatch();
     const matchSeed = matchSeedForCampaign(options.seed, match);
+    const previousMetric = metrics[metrics.length - 1];
     roster = mergeCampaignRoster(
       board,
       'w',
@@ -435,6 +470,16 @@ export async function runCampaign(
       roster,
       enemyRoster,
       opponent,
+      leaderObservation: observationFromPreviousMatch(
+        previousMetric,
+        false,
+        metrics.length,
+      ),
+      opponentObservation: observationFromPreviousMatch(
+        previousMetric,
+        true,
+        metrics.length,
+      ),
       enemyTrackedIdentities,
       engine,
     });

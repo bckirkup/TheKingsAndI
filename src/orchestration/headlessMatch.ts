@@ -28,7 +28,11 @@ import {
 } from '../psychology';
 import { lineupPieceIdFactory } from './lineup';
 
-import { applyEnemyTurn, trackEnemyIdentities } from './enemyTurn';
+import {
+  applyEnemyTurn,
+  trackEnemyIdentities,
+  type EnemyMoveChooser,
+} from './enemyTurn';
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
 import { engineAuditEntry, heroismNomination } from './heroism';
 import {
@@ -130,6 +134,11 @@ export interface HeadlessMatchConfig {
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
   readonly opponentArchetype?: OpponentArchetype;
+  readonly opponentMoveChooser?: EnemyMoveChooser;
+  readonly opponentOverrideChooser?: (
+    random: SeededRandom,
+    ply: number,
+  ) => boolean;
 }
 
 export interface HeadlessMatchResult {
@@ -482,6 +491,12 @@ export async function runHeadlessMatch(
         overrideRefusals: opponentArchetype === 'tyrannical',
         dreadExposureByPiece: enemyDreadExposureByPiece,
         regardStreakByPiece: enemyRegardStreakByPiece,
+        ...(config.opponentMoveChooser === undefined
+          ? {}
+          : { chooseMove: config.opponentMoveChooser }),
+        ...(config.opponentOverrideChooser === undefined
+          ? {}
+          : { shouldOverride: config.opponentOverrideChooser }),
       });
       enemyRoster = enemyTurn.enemyRoster;
       engineAudit.push(...(enemyTurn.engineAudit ?? []));

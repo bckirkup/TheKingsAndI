@@ -21,6 +21,13 @@ export function runPlainChessMatch(options: {
     matchIndex: 1,
     campaignMatch: 1,
     redeemerSwitchMatch: 10,
+    observation: {
+      matchesObserved: 0,
+      refusalPermilleLast: 0,
+      desertionsLast: 0,
+      survivorsLast: 0,
+      winScoreLast: 0,
+    },
   };
   const white = leaderPolicy(options.whiteLeader);
   const black = leaderPolicy(options.blackLeader);

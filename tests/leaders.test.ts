@@ -3,12 +3,78 @@ import { describe, expect, it } from 'vitest';
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
 import {
+  ADAPTIVE_POLICY_CONFIG,
   LEADER_POLICY_CONFIG,
   legalScoredMoves,
   leaderPolicy,
   pickByScore,
   scoreLeaderMove,
+  type LeaderObservation,
 } from '../sim/leaders';
+
+const ZERO_OBSERVATION = {
+  matchesObserved: 0,
+  refusalPermilleLast: 0,
+  desertionsLast: 0,
+  survivorsLast: 0,
+  winScoreLast: 0,
+} as const;
+
+const OFF_DIAGONAL_FEN =
+  'Nrb5/ppp3n1/n4kr1/1q5p/1b1pPPQ1/1P1PR3/P3B1P1/RKB3N1 b - - 5 24';
+
+function contextWithObservation(
+  observation: LeaderObservation = ZERO_OBSERVATION,
+) {
+  return {
+    matchIndex: 1,
+    campaignMatch: 1,
+    ply: 47,
+    redeemerSwitchMatch: 10,
+    observation,
+  };
+}
+
+function withAdaptiveConfig<T>(
+  changes: Partial<typeof ADAPTIVE_POLICY_CONFIG>,
+  action: () => T,
+): T {
+  const config = ADAPTIVE_POLICY_CONFIG as unknown as Record<string, number>;
+  const original = { ...config };
+  Object.assign(config, changes);
+  try {
+    return action();
+  } finally {
+    Object.assign(config, original);
+  }
+}
+
+function overrideCount(
+  style: Parameters<typeof leaderPolicy>[0],
+  context: ReturnType<typeof contextWithObservation>,
+): number {
+  const policy = leaderPolicy(style);
+  return Array.from({ length: 1_000 }, (_, index) =>
+    policy.shouldOverride(createSeededRandom(index + 1), context),
+  ).filter(Boolean).length;
+}
+
+function chosenMoves(
+  style: Parameters<typeof leaderPolicy>[0],
+  context: ReturnType<typeof contextWithObservation>,
+): string[] {
+  const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+  const moves = legalScoredMoves(board);
+  return Array.from({ length: 100 }, (_, index) => {
+    const choice = leaderPolicy(style).chooseMove(
+      board,
+      moves,
+      createSeededRandom(index + 1),
+      context,
+    );
+    return choice?.features.san ?? 'none';
+  });
+}
 
 describe('scripted leader move shaping', () => {
   it('penalizes a move that recreates a previously seen position', () => {
@@ -120,6 +186,13 @@ describe('scripted leader move shaping', () => {
       campaignMatch: 1,
       ply: 47,
       redeemerSwitchMatch: 10,
+      observation: {
+        matchesObserved: 0,
+        refusalPermilleLast: 0,
+        desertionsLast: 0,
+        survivorsLast: 0,
+        winScoreLast: 0,
+      },
     };
     const exacting = leaderPolicy('exacting').chooseMove(
       board,
@@ -182,6 +255,13 @@ describe('scripted leader move shaping', () => {
       campaignMatch: 1,
       ply: 1,
       redeemerSwitchMatch: 10,
+      observation: {
+        matchesObserved: 0,
+        refusalPermilleLast: 0,
+        desertionsLast: 0,
+        survivorsLast: 0,
+        winScoreLast: 0,
+      },
     };
     const counts = (style: Parameters<typeof leaderPolicy>[0]): number => {
       const policy = leaderPolicy(style);
@@ -197,4 +277,165 @@ describe('scripted leader move shaping', () => {
     expect(steady - absentee).toBeGreaterThan(200);
     expect(exacting - steady).toBeGreaterThan(200);
   });
+
+  it('falls back to steady behavior before any observation', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const context = contextWithObservation();
+    for (const style of ['chastened', 'escalator', 'roster_first'] as const) {
+      const adaptive = leaderPolicy(style);
+      const steady = leaderPolicy('steady');
+      expect(adaptive.shouldOverride(createSeededRandom(7), context)).toBe(
+        steady.shouldOverride(createSeededRandom(7), context),
+      );
+      expect(
+        adaptive.chooseMove(board, moves, createSeededRandom(7), context),
+      ).toEqual(
+        steady.chooseMove(board, moves, createSeededRandom(7), context),
+      );
+    }
+  });
+
+  it('moves chastened and escalator insistence in opposite directions', () => {
+    const context = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermilleLast: 800,
+      desertionsLast: 0,
+      survivorsLast: 16,
+      winScoreLast: 50,
+    });
+    const chastened = overrideCount('chastened', context);
+    const steady = overrideCount('steady', context);
+    const escalator = overrideCount('escalator', context);
+    expect(chastened).toBeLessThan(steady);
+    expect(escalator).toBeGreaterThan(steady);
+  });
+
+  it('is deterministic for each adaptive style and observation', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const context = contextWithObservation({
+      matchesObserved: 2,
+      refusalPermilleLast: 650,
+      desertionsLast: 4,
+      survivorsLast: 9,
+      winScoreLast: 40,
+    });
+    for (const style of ['chastened', 'escalator', 'roster_first'] as const) {
+      const policy = leaderPolicy(style);
+      const first = policy.chooseMove(
+        board,
+        moves,
+        createSeededRandom(7),
+        context,
+      );
+      const second = policy.chooseMove(
+        board,
+        moves,
+        createSeededRandom(7),
+        context,
+      );
+      expect(second).toEqual(first);
+      expect(policy.shouldOverride(createSeededRandom(7), context)).toBe(
+        policy.shouldOverride(createSeededRandom(7), context),
+      );
+    }
+  });
+
+  it.each([
+    ['baseInsistence', 'chastened', ZERO_OBSERVATION, 0, 100],
+    [
+      'chastenedGain',
+      'chastened',
+      {
+        matchesObserved: 1,
+        refusalPermilleLast: 800,
+        desertionsLast: 0,
+        survivorsLast: 16,
+        winScoreLast: 50,
+      },
+      0,
+      1_000,
+    ],
+    [
+      'escalatorGain',
+      'escalator',
+      {
+        matchesObserved: 1,
+        refusalPermilleLast: 800,
+        desertionsLast: 0,
+        survivorsLast: 16,
+        winScoreLast: 50,
+      },
+      0,
+      1_000,
+    ],
+    [
+      'escalatorCeiling',
+      'escalator',
+      {
+        matchesObserved: 1,
+        refusalPermilleLast: 1_000,
+        desertionsLast: 0,
+        survivorsLast: 16,
+        winScoreLast: 50,
+      },
+      0,
+      100,
+    ],
+    [
+      'thinRoster',
+      'roster_first',
+      {
+        matchesObserved: 1,
+        refusalPermilleLast: 0,
+        desertionsLast: 0,
+        survivorsLast: 10,
+        winScoreLast: 50,
+      },
+      0,
+      20,
+    ],
+  ] as const)(
+    'wires %s into a quantitative override output',
+    (knob, style, observation, low, high) => {
+      const context = contextWithObservation(observation);
+      const lowCount = withAdaptiveConfig(
+        { [knob]: low } as Partial<typeof ADAPTIVE_POLICY_CONFIG>,
+        () => overrideCount(style, context),
+      );
+      const highCount = withAdaptiveConfig(
+        { [knob]: high } as Partial<typeof ADAPTIVE_POLICY_CONFIG>,
+        () => overrideCount(style, context),
+      );
+      expect(lowCount).not.toBe(highCount);
+    },
+  );
+
+  it.each([
+    ['baseRisk', 'escalator', 'baseRisk', 0, 100],
+    ['chastenedRiskGain', 'chastened', 'chastenedRiskGain', 0, 40],
+    ['chastenedRiskCeiling', 'chastened', 'chastenedRiskCeiling', 8, 100],
+    ['scarcityGain', 'roster_first', 'scarcityGain', 0, 40],
+  ] as const)(
+    'wires %s into a quantitative move output',
+    (_label, style, knob, low, high) => {
+      const context = contextWithObservation({
+        matchesObserved: 1,
+        refusalPermilleLast: 0,
+        desertionsLast: 8,
+        survivorsLast: 4,
+        winScoreLast: 50,
+      });
+      const lowMoves = withAdaptiveConfig(
+        { [knob]: low } as Partial<typeof ADAPTIVE_POLICY_CONFIG>,
+        () => chosenMoves(style, context),
+      );
+      const highMoves = withAdaptiveConfig(
+        { [knob]: high } as Partial<typeof ADAPTIVE_POLICY_CONFIG>,
+        () => chosenMoves(style, context),
+      );
+      expect(highMoves).not.toEqual(lowMoves);
+    },
+  );
 });

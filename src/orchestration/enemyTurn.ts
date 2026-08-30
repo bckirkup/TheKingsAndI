@@ -85,6 +85,14 @@ export interface EnemyTurnResult {
   readonly engineAudit?: readonly EngineAuditEntry[];
 }
 
+export type EnemyMoveChooser = (
+  board: LivingBoard,
+  side: Side,
+  random: SeededRandom,
+  ply: number,
+  refusedSans: ReadonlySet<string>,
+) => string | undefined | Promise<string | undefined>;
+
 function resolveIntent(
   board: LivingBoard,
   san: string,
@@ -638,6 +646,8 @@ export async function applyEnemyTurn(input: {
   readonly overrideRefusals?: boolean;
   readonly dreadExposureByPiece?: DreadExposureByPiece;
   readonly regardStreakByPiece?: Readonly<Record<string, number>>;
+  readonly chooseMove?: EnemyMoveChooser;
+  readonly shouldOverride?: (random: SeededRandom, ply: number) => boolean;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
   const enemyRoster = syncSideRoster(
@@ -667,12 +677,21 @@ export async function applyEnemyTurn(input: {
   let currentEnemyRoster = enemyRoster;
   const maxCandidates = input.board.legalMoves().length;
   for (let attempt = 0; attempt < maxCandidates; attempt += 1) {
-    const san = chooseOpponentMove(
-      input.board,
-      input.random,
-      input.archetype,
-      refusedSans,
-    );
+    const san =
+      input.chooseMove === undefined
+        ? chooseOpponentMove(
+            input.board,
+            input.random,
+            input.archetype,
+            refusedSans,
+          )
+        : await input.chooseMove(
+            input.board,
+            input.enemySide,
+            input.random,
+            input.ply,
+            refusedSans,
+          );
     if (san === undefined) break;
 
     const intent = resolveIntent(input.board, san);
@@ -757,7 +776,9 @@ export async function applyEnemyTurn(input: {
       },
       ply: input.ply,
       overrideRefusals:
-        (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
+        (input.overrideRefusals ??
+          input.shouldOverride?.(input.random, input.ply) ??
+          input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,
       objectivelyGood,

@@ -26,7 +26,6 @@ import {
 } from './metrics';
 import { type Leader } from './cli';
 import type { EnginePort } from '../src/engine/types';
-import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import {
   createSimEngine,
   disposeSimEngine,
@@ -128,7 +127,7 @@ export function resolveRunPlan(values: RunFlagValues): CampaignRunPlan {
 export interface ShardOptions {
   readonly plan: CampaignRunPlan;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly masterSeed: number;
   readonly engineKind: SimEngineKind;
   readonly coldSearch?: boolean | undefined;
@@ -154,7 +153,7 @@ export interface ShardManifest {
   readonly campaignCount: number;
   readonly campaignLength: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly shardIndex: number;
   readonly shardCount: number;
   readonly campaignIndices: readonly number[];

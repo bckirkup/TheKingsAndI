@@ -16,8 +16,8 @@ import {
   writeShardArtifact,
 } from './parallel';
 import { plainChessMeanWinScore } from './baseline';
-import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 import { canonicalJson } from '../src/core/canonicalJson';
+import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 export async function writeAtomicCheckpoint(
   path: string,
@@ -46,6 +46,9 @@ export const LEADERS = [
   'exacting',
   'absentee',
   'steady',
+  'chastened',
+  'escalator',
+  'roster_first',
 ] as const;
 
 export const OPPONENT_ARCHETYPES = [
@@ -54,7 +57,11 @@ export const OPPONENT_ARCHETYPES = [
   'volatile',
   'servant',
   'random',
+  'chastened',
+  'escalator',
+  'roster_first',
 ] as const;
+type OpponentStyle = (typeof OPPONENT_ARCHETYPES)[number];
 
 export type Leader = (typeof LEADERS)[number];
 
@@ -73,6 +80,9 @@ export function opponentArchetypeForLeader(leader: Leader): OpponentArchetype {
     case 'exacting':
     case 'absentee':
     case 'steady':
+    case 'chastened':
+    case 'escalator':
+    case 'roster_first':
       throw new Error(
         `Leader "${leader}" has no opposing commander archetype.`,
       );
@@ -88,7 +98,7 @@ export const ENGINES = ['fake', 'lozza', 'stockfish'] as const;
 export interface SimulationOptions {
   readonly matches: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly seed: number;
   readonly campaign: number;
   readonly campaigns: number;
@@ -193,12 +203,12 @@ function parseArguments(
     throw new Error(`--leader must be one of: ${LEADERS.join(', ')}.`);
   }
   const opponentValue = values.get('opponent') ?? 'random';
-  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentArchetype)) {
+  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentStyle)) {
     throw new Error(
       `--opponent must be one of: ${OPPONENT_ARCHETYPES.join(', ')}.`,
     );
   }
-  const opponent = opponentArchetypeForLeader(opponentValue as Leader);
+  const opponent = opponentValue as Leader;
   const seed = Number(values.get('seed') ?? 0);
   if (!Number.isSafeInteger(seed)) {
     throw new TypeError('--seed must be an integer.');
