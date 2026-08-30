@@ -104,10 +104,6 @@ export async function runMatch(
   const opponent = options.opponent ?? 'random';
   const rawOpponentPort = leaderPort(opponent, opponentContextBase);
   const rawLeaderPort = leaderPort(options.leader, playerContextBase);
-  const sideAgent = (agent: JournalAgent, id: string): JournalAgent => ({
-    ...agent,
-    identity: { ...agent.identity, id },
-  });
   const journalConfig =
     options.journalEntries === undefined
       ? undefined
@@ -117,10 +113,7 @@ export async function runMatch(
       ? rawOpponentPort
       : createJournallingLeader(rawOpponentPort, {
           ...journalConfig,
-          agent: sideAgent(
-            options.journalAgent ?? scriptedAgent(),
-            'scripted:opponent',
-          ),
+          agent: options.journalAgent ?? scriptedAgent('scripted:opponent'),
           match: options.matchIndex,
         });
   const playerPort =
@@ -128,10 +121,7 @@ export async function runMatch(
       ? rawLeaderPort
       : createJournallingLeader(rawLeaderPort, {
           ...journalConfig,
-          agent: sideAgent(
-            options.journalAgent ?? scriptedAgent(),
-            'scripted:leader',
-          ),
+          agent: options.journalAgent ?? scriptedAgent('scripted:leader'),
           match: options.matchIndex,
         });
   const adaptiveOpponent =

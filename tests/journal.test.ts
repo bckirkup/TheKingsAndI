@@ -129,22 +129,14 @@ describe('decision journal observations', () => {
     const entries: JournalEntry[] = [];
     const leader = createJournallingLeader(simpleLeader(), {
       agent: {
-        ...scriptedAgent(),
-        identity: {
-          ...scriptedAgent().identity,
-          id: 'scripted:leader',
-        },
+        ...scriptedAgent('scripted:leader'),
       },
       entries,
       match: 1,
     });
     const opponent = createJournallingLeader(simpleLeader(), {
       agent: {
-        ...scriptedAgent(),
-        identity: {
-          ...scriptedAgent().identity,
-          id: 'scripted:opponent',
-        },
+        ...scriptedAgent('scripted:opponent'),
       },
       entries,
       match: 1,
@@ -184,6 +176,29 @@ describe('decision journal observations', () => {
     );
     expect(new Set(entries.map((entry) => entry.agent.id))).toEqual(
       new Set(['scripted:leader', 'scripted:opponent']),
+    );
+  });
+
+  it('preserves a supplied agent identity on both commander sides', async () => {
+    const board = LivingBoard.standard();
+    const entries: JournalEntry[] = [];
+    await runMatch({
+      seed: 13,
+      leader: 'random',
+      opponent: 'escalator',
+      matchIndex: 1,
+      campaignMatch: 1,
+      roster: createStartingRoster(board, 'w', 20, 0.5),
+      enemyRoster: createStartingRoster(board, 'b', 20, 0.5),
+      engine: createFakeEnginePort(),
+      journalEntries: entries,
+      journalAgent: recordedAgent({}, 'model:replay'),
+    });
+    expect(new Set(entries.map((entry) => entry.agent.id))).toEqual(
+      new Set(['model:replay']),
+    );
+    expect(new Set(entries.map((entry) => entry.at.side))).toEqual(
+      new Set(['w', 'b']),
     );
   });
 

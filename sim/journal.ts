@@ -93,11 +93,11 @@ function selectedIndex(
   );
 }
 
-export function scriptedAgent(): JournalAgent {
+export function scriptedAgent(id = 'scripted'): JournalAgent {
   return {
     scripted: true,
     identity: {
-      id: 'scripted',
+      id,
       promptVersion: 'none',
       optionSetVersion: 'v1',
     },
