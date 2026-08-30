@@ -1168,6 +1168,8 @@ function handCheckMetric(match: number): MatchMetrics {
     enemyDesertedPieceIds: [],
     enemyRefusalRate: 0,
     winScore: 50,
+    unjustifiedTrauma: 0,
+    leadershipIndex: 25,
     rout: false,
     archetype: 'caretaker',
   };

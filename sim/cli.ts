@@ -434,7 +434,7 @@ async function main(): Promise<void> {
     `mean_plies=${result.summary.meanPlies.toFixed(1)} wdl=${result.summary.winCount}/${result.summary.drawCount}/${result.summary.lossCount} refusal=${result.summary.meanRefusalRate.toFixed(3)} refusals_per_ply=${result.summary.meanRefusalsPerPly.toFixed(3)} quiet_quit=${result.summary.meanQuietQuitRate.toFixed(3)} desertion_match=${result.summary.desertionMatchRate.toFixed(3)} desertion_attrition=${result.summary.desertionAttrition.toFixed(3)} winning_position_desertion=${result.summary.winningPositionDesertionRate.toFixed(3)} rout_campaign=${result.summary.routCampaignRate.toFixed(3)} promotions_per_match=${result.summary.meanPromotionsPerMatch.toFixed(3)} promotion_match=${result.summary.promotionMatchRate.toFixed(3)} promotion_to=${JSON.stringify(result.summary.promotionToRoleCounts)}`,
   );
   console.log(
-    `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
+    `refused_good=${result.summary.meanRefusedGoodMoveRate.toFixed(3)} override=${result.summary.meanOverrideRate.toFixed(3)} win=${result.summary.meanWinScore.toFixed(1)} unjustified_trauma=${result.summary.meanUnjustifiedTrauma.toFixed(2)} leadership_index=${result.summary.meanLeadershipIndex.toFixed(2)} trust_delta=${result.summary.meanTrustDelta.toFixed(2)}`,
   );
   if (result.cost !== undefined) {
     console.log(

@@ -13,6 +13,7 @@ set -eu
 
 shard_index="${AWS_BATCH_JOB_ARRAY_INDEX:-0}"
 engine="${ENGINE:-lozza}"
+opponent="${OPPONENT:-random}"
 output_root="${OUTPUT_DIR:-/work/output}"
 
 case "$shard_index" in
@@ -115,6 +116,7 @@ set -- pnpm sim \
   "--leader=$LEADER" \
   "--seed=$SEED" \
   "--engine=$engine" \
+  "--opponent=$opponent" \
   "--depth-cap=$DEPTH_CAP" \
   "--shard-index=$shard_index" \
   "--shard-count=$SHARD_COUNT" \
@@ -186,6 +188,7 @@ const manifest = {
   masterSeed: Number(process.env.SEED),
   depthCap: Number(process.env.DEPTH_CAP),
   engine: process.env.ENGINE || 'lozza',
+  opponent: process.env.OPPONENT || 'random',
   shardCount: Number(process.env.SHARD_COUNT),
   determinismId: process.env.DETERMINISM_ID,
   gitCommitSha: process.env.GIT_COMMIT_SHA,

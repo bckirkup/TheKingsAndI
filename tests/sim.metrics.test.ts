@@ -3,9 +3,122 @@ import { describe, expect, it } from 'vitest';
 import { LivingBoard } from '../src/chess';
 import { createStartingRoster } from '../src/orchestration/roster';
 import type { HeadlessMatchResult } from '../src/orchestration/headlessMatch';
-import { metricsFromMatch } from '../sim/metrics';
+import type { MatchEvent } from '../src/psychology';
+import {
+  foldUnjustifiedTrauma,
+  metricsFromMatch,
+  renderCsv,
+} from '../sim/metrics';
+
+describe('unjustified trauma metrics', () => {
+  const pieceId = 'w:P:a2' as const;
+  const override = (
+    ply: number,
+    vindicated?: boolean,
+  ): Extract<MatchEvent, { t: 'OVERRIDE' }> => ({
+    t: 'OVERRIDE',
+    ply,
+    pieceId,
+    san: 'Nf3',
+    pieceTrustDelta: -10,
+    ...(vindicated === undefined ? {} : { vindicated }),
+  });
+  const trauma = (
+    ply: number,
+    delta: number,
+  ): Extract<MatchEvent, { t: 'PSYCH_DELTA' }> => ({
+    t: 'PSYCH_DELTA',
+    ply,
+    pieceId,
+    field: 'B_i',
+    delta,
+  });
+
+  it('excludes vindicated overrides, negative deltas, and out-of-window trauma', () => {
+    expect(
+      foldUnjustifiedTrauma(
+        [
+          override(1, true),
+          trauma(2, 10),
+          override(4, false),
+          trauma(5, -20),
+          trauma(6, 8),
+          trauma(7, 99),
+        ],
+        [pieceId],
+        2,
+      ),
+    ).toBe(4);
+  });
+
+  it('counts trauma once when override windows overlap', () => {
+    expect(
+      foldUnjustifiedTrauma(
+        [override(1), override(2), trauma(3, 10)],
+        [pieceId],
+        1,
+      ),
+    ).toBe(10);
+  });
+
+  it('averages over the supplied roster and clamps to the score bounds', () => {
+    expect(
+      foldUnjustifiedTrauma([override(1), trauma(3, 10)], [pieceId], 4),
+    ).toBe(2.5);
+    expect(
+      foldUnjustifiedTrauma([override(1), trauma(3, 1_000)], [pieceId], 4),
+    ).toBe(100);
+  });
+});
 
 describe('promotion harness metrics', () => {
+  it('reports leadership index components in metrics and CSV', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const actor = roster[0];
+    if (actor === undefined) throw new Error('Expected a starting piece.');
+    const result: HeadlessMatchResult = {
+      events: [
+        {
+          t: 'OVERRIDE',
+          ply: 1,
+          pieceId: actor.id,
+          san: 'Nf3',
+          pieceTrustDelta: -10,
+        },
+        {
+          t: 'PSYCH_DELTA',
+          ply: 3,
+          pieceId: actor.id,
+          field: 'B_i',
+          delta: 4,
+        },
+      ],
+      roster,
+      departedRoster: [],
+      enemyRoster,
+      departedEnemyRoster: [],
+      enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+      plies: 3,
+      winScore: 50,
+      rout: false,
+      enemyRout: false,
+      refusedGoodMoves: 0,
+      winningPositionDesertions: 0,
+      justifiedRefusalObviousness: [],
+      justifiedRefusalPrivateViewLosses: [],
+      determinismId: 'metrics-leadership-test',
+      enemyObservableBehaviours: [],
+    };
+    const metric = metricsFromMatch(1, 1, 'supportive', roster, result, 0);
+    expect(metric.unjustifiedTrauma).toBe(0.25);
+    expect(metric.leadershipIndex).toBeCloseTo(34.95);
+    const [header, row] = renderCsv([metric]).split('\n');
+    expect(header).toMatch(/,unjustified_trauma,leadership_index$/);
+    expect(row).toMatch(/,0\.25,34\.95$/);
+  });
+
   it('folds commander promotions from events and excludes enemy promotions', () => {
     const board = LivingBoard.standard();
     const roster = createStartingRoster(board, 'w', 50, 0.5);

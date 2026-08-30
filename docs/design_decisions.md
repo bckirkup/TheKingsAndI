@@ -2225,6 +2225,43 @@ unchosen: per-order margin, per-match aggregate against the risk the leader
 took, or a rate over opportunities. Courage may not be reported in any debrief
 until this is settled.
 
+### D200 ✅ What does the harness price, and does the index replace the win score? (ADR 0074)
+**Answered 2026-08-30 (owner) — wired.** The harness reports the spec §9
+leadership index (`LI = α·T_final + β·WinScore − γ·UnjustifiedTrauma −
+δ·QuietQuitTurns`, weights 0.4/0.3/0.2/0.1,
+`calculateSingleMatchLeadershipIndex`) per match and pooled per campaign,
+**beside** the win score — the owner's ruling is that the D188 trajectory gate
+stays on the win score, because the chess result is the reward a cruel
+commander is actually seeking; the index is the second reading that says what
+the lead cost. Three binding properties: every component ships in the CSV so
+re-weighting is post-hoc arithmetic, α–δ are not tuning knobs and may not be
+moved to make a style lead or close a gate, and the index is audit-only — no
+piece, verdict, leader policy, or adaptive-player observation may read it.
+ADR 0008 is reaffirmed: quiet-quitting degrades only the piece's private view,
+never the played move, so disengagement can only ever be priced
+instrument-side. Making a disengaged piece play worse chess is rejected.
+
+### D201 ✅ What is unjustified trauma? (ADR 0074)
+**Answered 2026-08-30 — wired.** The trauma the commander's unvindicated
+insistence produced: positive `B_i` deltas taken by a piece within
+`UNJUSTIFIED_TRAUMA_WINDOW_PLIES` (default `2`) of an `OVERRIDE` of that piece
+that the audit did not vindicate, summed, meaned over the fielded roster, and
+clamped to `0..100`. Derived from the event log alone — no new state, and a
+fork replays it identically. A vindicated override contributes nothing (the
+trust cost is already charged), and a forced move (D191) is charged like any
+other insistence until D191 rules; the term deliberately does not read the
+`implicit` flag. The window size is a calibration knob, not a ruling.
+
+### D202 ❓ Is the index's quiet-quit term on a scale that can move the reading?
+**Open — raised 2026-08-30 by ADR 0074.** At the spec's weights,
+`δ·QuietQuitTurns` over a 20-match campaign is a handful of points against an
+`α·T_final` term spanning ±40, so the index may still fail to price the
+grudging room it was introduced for. The honest sequence is to measure at the
+spec's values first and rule on the scale with the surface in hand — choosing δ
+to make the reading come out is the circularity ADR 0074 §1 forbids. The
+component columns exist so this can be answered by arithmetic over committed
+sweeps.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news

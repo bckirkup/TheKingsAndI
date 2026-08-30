@@ -35,6 +35,8 @@ export interface SweepPoint {
   readonly meanBenevLossWitness: number;
   readonly meanFreeInsistencePlyFraction: number;
   readonly meanWinScore: number;
+  readonly meanUnjustifiedTrauma: number;
+  readonly meanLeadershipIndex: number;
   readonly meanTrustDelta: number;
   readonly meanPlies: number;
   readonly winCount: number;
@@ -193,6 +195,8 @@ function sweepMetrics(
     meanFreeInsistencePlyFraction:
       campaign.summary.meanFreeInsistencePlyFraction,
     meanWinScore: campaign.summary.meanWinScore,
+    meanUnjustifiedTrauma: campaign.summary.meanUnjustifiedTrauma,
+    meanLeadershipIndex: campaign.summary.meanLeadershipIndex,
     meanTrustDelta: campaign.summary.meanTrustDelta,
     meanPlies: campaign.summary.meanPlies,
     winCount: campaign.summary.winCount,
@@ -411,7 +415,7 @@ interface SweepCliOptions {
 }
 
 const SWEEP_METRIC_HEADER =
-  'refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count';
+  'refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count,unjustified_trauma,leadership_index';
 
 function sweepMetricFields(
   point: Omit<SweepPoint, 'knob' | 'value'>,
@@ -451,6 +455,8 @@ function sweepMetricFields(
     point.abilityMax.toFixed(2),
     point.meanAbility.toFixed(2),
     point.abilityMovedCount.toFixed(2),
+    point.meanUnjustifiedTrauma.toFixed(2),
+    point.meanLeadershipIndex.toFixed(2),
   ];
 }
 

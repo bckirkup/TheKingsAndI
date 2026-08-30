@@ -1,6 +1,7 @@
 import type { PieceId } from '../src/chess';
 import {
   counselOpinionValue,
+  calculateSingleMatchLeadershipIndex,
   ENGINE_CONFIG,
   type CounselOpinion,
   type MatchEvent,
@@ -89,6 +90,8 @@ export interface MatchMetrics {
   readonly enemyGraceCareerIds?: readonly string[];
   readonly enemyRefusalRate: number;
   readonly winScore: number;
+  readonly unjustifiedTrauma: number;
+  readonly leadershipIndex: number;
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
   readonly passedOverDistribution?: Readonly<Record<string, number>>;
@@ -289,6 +292,8 @@ export interface CampaignMetrics {
   readonly promotionMatchRate: number;
   readonly promotionToRoleCounts: Readonly<Record<string, number>>;
   readonly meanWinScore: number;
+  readonly meanUnjustifiedTrauma: number;
+  readonly meanLeadershipIndex: number;
   readonly meanDesertions: number;
   readonly meanRetirements: number;
   readonly meanGraceEvents: number;
@@ -325,7 +330,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,unjustified_trauma,leadership_index';
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -491,6 +496,50 @@ function countEvents(
     adjudicationLossTotal,
     desertedPieceIds,
   };
+}
+
+/**
+ * Fold trauma attributable to unvindicated overrides from the match event log.
+ * Each trauma event is charged at most once when override windows overlap.
+ */
+export function foldUnjustifiedTrauma(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+  fieldedRosterSize: number,
+): number {
+  const fieldedIds = new Set(fieldedPieceIds);
+  const overrides = events.filter(
+    (event): event is Extract<MatchEvent, { t: 'OVERRIDE' }> =>
+      event.t === 'OVERRIDE' &&
+      event.vindicated !== true &&
+      fieldedIds.has(event.pieceId),
+  );
+  const windowPlies = Math.max(
+    0,
+    Math.trunc(ENGINE_CONFIG.UNJUSTIFIED_TRAUMA_WINDOW_PLIES),
+  );
+  let attributedTotal = 0;
+  for (const event of events) {
+    if (
+      event.t !== 'PSYCH_DELTA' ||
+      event.field !== 'B_i' ||
+      event.delta <= 0 ||
+      !fieldedIds.has(event.pieceId)
+    ) {
+      continue;
+    }
+    const attributed = overrides.some(
+      (override) =>
+        override.pieceId === event.pieceId &&
+        event.ply > override.ply &&
+        event.ply <= override.ply + windowPlies,
+    );
+    if (attributed) attributedTotal += event.delta;
+  }
+  return Math.max(
+    0,
+    Math.min(100, attributedTotal / Math.max(1, fieldedRosterSize)),
+  );
 }
 
 function countSideEvents(
@@ -720,6 +769,17 @@ export function metricsFromMatch(
   const meanTauBenevEnd = meanTauBenev(result.roster);
   const classContemptStart = meanClassContempt(rosterStart);
   const classContemptEnd = meanClassContempt(result.roster);
+  const unjustifiedTrauma = foldUnjustifiedTrauma(
+    result.events,
+    fieldedPieceIds,
+    fieldedPieceIds.length,
+  );
+  const leadershipIndex = calculateSingleMatchLeadershipIndex(
+    meanTrustEnd,
+    result.winScore,
+    unjustifiedTrauma,
+    counts.quietQuitMoves,
+  );
   return {
     match,
     seed,
@@ -804,6 +864,8 @@ export function metricsFromMatch(
     enemyGraceEvents: 0,
     enemyRefusalRate,
     winScore: result.winScore,
+    unjustifiedTrauma,
+    leadershipIndex,
     rout: result.rout,
     archetype: classifyArchetype(
       leader,
@@ -990,6 +1052,8 @@ function aggregateCampaignCore(
       ]),
     ),
     meanWinScore: mean((metric) => metric.winScore),
+    meanUnjustifiedTrauma: mean((metric) => metric.unjustifiedTrauma),
+    meanLeadershipIndex: mean((metric) => metric.leadershipIndex),
     meanDesertions: mean((metric) => metric.desertions),
     meanRetirements: mean((metric) => metric.retirements ?? 0),
     meanGraceEvents: mean((metric) => metric.graceEvents ?? 0),
@@ -1181,6 +1245,8 @@ export function renderCsv(
       (metric.benevLossTarget ?? 0).toFixed(2),
       (metric.benevLossWitness ?? 0).toFixed(2),
       (metric.freeInsistencePlyFraction ?? 0).toFixed(4),
+      metric.unjustifiedTrauma.toFixed(2),
+      metric.leadershipIndex.toFixed(2),
     ]
       .map(csvField)
       .join(','),
