@@ -123,7 +123,7 @@ describeHeavy('simulation harness determinism', () => {
 
   it('preserves the last checkpoint when a sibling write is truncated', async () => {
     const checkpoint: CampaignCheckpoint = {
-      checkpointVersion: 2,
+      checkpointVersion: 3,
       schemaVersion: 1,
       psychConfigVersion: 'psychology-v1',
       determinismId: 'sim-fake/depth-fixed',
@@ -136,6 +136,10 @@ describeHeavy('simulation harness determinism', () => {
       randomState: { s0: 1, s1: 2, s2: 3, s3: 4 },
       roster: [],
       enemyRoster: [],
+      generations: {},
+      enemyGenerations: {},
+      retiredCareerIds: [],
+      enemyRetiredCareerIds: [],
       completedMetrics: [],
     };
     const path = `${process.cwd()}/.tmp-checkpoint-${process.pid}.json`;

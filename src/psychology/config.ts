@@ -85,6 +85,12 @@ export const ENGINE_CONFIG = {
   DREAD_TRAUMA_GAIN: 5,
   /** Consecutive private-risk observations required for dread injury (ADR 0049). */
   DREAD_REQUIRED_PLIES: 2,
+  /** Canonical trauma ceiling at which a non-King career retires. */
+  RETIREMENT_TRAUMA_THRESHOLD: 100,
+  /** Chance of grace per eligible career at a campaign boundary, permille. */
+  GRACE_RATE_PERMILLE: 0,
+  /** Flat trauma relief granted by a successful grace event. */
+  GRACE_RELIEF: 0,
   /** Ability-channel authority loss when a justified refusal is accepted. */
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
   /** Ability-channel credit for executed-order vindication. */

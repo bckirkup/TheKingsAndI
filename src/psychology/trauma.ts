@@ -14,6 +14,14 @@ export function applyCaptureInjury(piece: PieceState): PieceState {
   };
 }
 
+export function applyGrace(piece: PieceState, relief: number): PieceState {
+  const safeRelief = Math.max(0, Math.trunc(relief));
+  return {
+    ...piece,
+    B_i: clampTrauma(piece.B_i - safeRelief),
+  };
+}
+
 export function applySustainedDread(
   piece: PieceState,
   previous: DreadExposure | undefined,

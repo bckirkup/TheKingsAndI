@@ -6,7 +6,8 @@ import {
 } from '../src/core/random';
 import type { EnginePort } from '../src/engine/types';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
-import type { PieceState } from '../src/psychology';
+import { applyGrace, ENGINE_CONFIG, type PieceState } from '../src/psychology';
+import type { PieceId } from '../src/core/ids';
 import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 import type { Leader } from './cli';
@@ -53,6 +54,10 @@ export interface CampaignCheckpoint {
   readonly randomState: RandomState;
   readonly roster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
+  readonly generations: Readonly<Record<PieceId, number>>;
+  readonly enemyGenerations: Readonly<Record<PieceId, number>>;
+  readonly retiredCareerIds: readonly string[];
+  readonly enemyRetiredCareerIds: readonly string[];
   readonly completedMetrics: readonly MatchMetrics[];
 }
 
@@ -81,6 +86,83 @@ function carryMatchRoster(
     carriedById.set(piece.id, piece);
   }
   return [...carriedById.values()];
+}
+
+export function careerIdFor(seatId: PieceId, generation: number): string {
+  return `${seatId}#${generation}`;
+}
+
+function generationsForRoster(
+  roster: readonly PieceState[],
+): Record<PieceId, number> {
+  return Object.fromEntries(roster.map((piece) => [piece.id, 1]));
+}
+
+export interface CampaignBoundaryFold {
+  readonly roster: readonly PieceState[];
+  readonly generations: Readonly<Record<PieceId, number>>;
+  readonly retiredCareerIds: readonly string[];
+  readonly graceCareerIds: readonly string[];
+  readonly retirements: number;
+  readonly graceEvents: number;
+}
+
+/**
+ * Apply campaign-only grace and retirement after match state has been carried.
+ *
+ * This boundary has no match event-log seam: grace and retirement are derived
+ * campaign metrics, while the match event log remains the source of match
+ * truth.
+ */
+export function applyCampaignBoundary(
+  carriedRoster: readonly PieceState[],
+  generations: Readonly<Record<PieceId, number>>,
+  retiredCareerIds: readonly string[],
+  random: { nextInt(maxExclusive: number): number },
+): CampaignBoundaryFold {
+  const currentGenerations: Record<PieceId, number> = { ...generations };
+  let roster = [...carriedRoster];
+  const graceCareerIds: string[] = [];
+  const rate = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(ENGINE_CONFIG.GRACE_RATE_PERMILLE)),
+  );
+  if (rate > 0) {
+    roster = [...roster]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((piece) => {
+        if (piece.role === 'King' || piece.B_i <= 0) return piece;
+        const generation = currentGenerations[piece.id] ?? 1;
+        if (random.nextInt(1_000) >= rate) return piece;
+        graceCareerIds.push(careerIdFor(piece.id, generation));
+        return applyGrace(piece, ENGINE_CONFIG.GRACE_RELIEF);
+      });
+  }
+
+  const retiredIds = new Set(retiredCareerIds);
+  const nextRoster: PieceState[] = [];
+  let retirements = 0;
+  for (const piece of roster) {
+    if (
+      piece.role !== 'King' &&
+      piece.B_i >= ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD
+    ) {
+      const generation = currentGenerations[piece.id] ?? 1;
+      retiredIds.add(careerIdFor(piece.id, generation));
+      currentGenerations[piece.id] = generation + 1;
+      retirements += 1;
+      continue;
+    }
+    nextRoster.push(piece);
+  }
+  return {
+    roster: nextRoster,
+    generations: currentGenerations,
+    retiredCareerIds: [...retiredIds],
+    graceCareerIds,
+    retirements,
+    graceEvents: graceCareerIds.length,
+  };
 }
 
 export function matchSeedForCampaign(
@@ -123,6 +205,10 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
     'nextMatch',
     'roster',
     'enemyRoster',
+    'generations',
+    'enemyGenerations',
+    'retiredCareerIds',
+    'enemyRetiredCareerIds',
     'completedMetrics',
   ] as const;
   for (const key of requiredKeys) {
@@ -138,11 +224,46 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
   if (
     !Array.isArray(value.roster) ||
     !Array.isArray(value.enemyRoster) ||
+    !isPlainRecord(value.generations) ||
+    !isPlainRecord(value.enemyGenerations) ||
+    !Array.isArray(value.retiredCareerIds) ||
+    !Array.isArray(value.enemyRetiredCareerIds) ||
     !Array.isArray(value.completedMetrics)
   ) {
     throw new TypeError(
       'Campaign checkpoint roster and completedMetrics must be arrays.',
     );
+  }
+  for (const [generationName, generationMap] of [
+    ['generations', value.generations],
+    ['enemyGenerations', value.enemyGenerations],
+  ] as const) {
+    for (const [pieceId, generation] of Object.entries(generationMap)) {
+      if (
+        typeof pieceId !== 'string' ||
+        typeof generation !== 'number' ||
+        !Number.isSafeInteger(generation) ||
+        generation < 1
+      ) {
+        throw new Error(
+          `Campaign checkpoint ${generationName}.${pieceId} must be a positive integer.`,
+        );
+      }
+    }
+  }
+  for (const [careerName, careerIds] of [
+    ['retiredCareerIds', value.retiredCareerIds],
+    ['enemyRetiredCareerIds', value.enemyRetiredCareerIds],
+  ] as const) {
+    if (
+      !careerIds.every(
+        (careerId): careerId is string => typeof careerId === 'string',
+      )
+    ) {
+      throw new Error(
+        `Campaign checkpoint ${careerName} must contain strings.`,
+      );
+    }
   }
   for (const [rosterName, roster] of [
     ['roster', value.roster],
@@ -195,10 +316,14 @@ function createCampaignCheckpoint(options: {
   readonly randomState: RandomState;
   readonly roster: readonly PieceState[];
   readonly enemyRoster: readonly PieceState[];
+  readonly generations: Readonly<Record<PieceId, number>>;
+  readonly enemyGenerations: Readonly<Record<PieceId, number>>;
+  readonly retiredCareerIds: readonly string[];
+  readonly enemyRetiredCareerIds: readonly string[];
   readonly completedMetrics: readonly MatchMetrics[];
 }): CampaignCheckpoint {
   return {
-    checkpointVersion: 2,
+    checkpointVersion: 3,
     schemaVersion: SCHEMA_VERSION,
     psychConfigVersion: PSYCH_CONFIG_VERSION,
     determinismId: options.determinismId,
@@ -211,6 +336,10 @@ function createCampaignCheckpoint(options: {
     randomState: options.randomState,
     roster: [...options.roster],
     enemyRoster: [...options.enemyRoster],
+    generations: { ...options.generations },
+    enemyGenerations: { ...options.enemyGenerations },
+    retiredCareerIds: [...options.retiredCareerIds],
+    enemyRetiredCareerIds: [...options.enemyRetiredCareerIds],
     completedMetrics: [...options.completedMetrics],
   };
 }
@@ -260,6 +389,18 @@ export async function runCampaign(
           random.nextInt(10_000) / 10_000,
         )
       : [...checkpoint.enemyRoster];
+  let generations =
+    checkpoint === undefined
+      ? generationsForRoster(roster)
+      : { ...checkpoint.generations };
+  let enemyGenerations =
+    checkpoint === undefined
+      ? generationsForRoster(enemyRoster)
+      : { ...checkpoint.enemyGenerations };
+  let retiredCareerIds =
+    checkpoint === undefined ? [] : [...checkpoint.retiredCareerIds];
+  let enemyRetiredCareerIds =
+    checkpoint === undefined ? [] : [...checkpoint.enemyRetiredCareerIds];
   const metrics: MatchMetrics[] =
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
   const justifiedRefusalObviousness: number[] = [];
@@ -284,6 +425,8 @@ export async function runCampaign(
       random.nextInt(10_000) / 10_000,
     );
     const rosterStart = roster;
+    const playerGenerationsAtMatchStart = generations;
+    const enemyGenerationsAtMatchStart = enemyGenerations;
     const result = await runMatch({
       seed: matchSeed,
       leader: options.leader,
@@ -304,12 +447,54 @@ export async function runCampaign(
       result,
       result.refusedGoodMoves,
     );
-    metrics.push(metric);
     roster = carryMatchRoster(result.roster, result.departedRoster);
     enemyRoster = carryMatchRoster(
       result.enemyRoster,
       result.departedEnemyRoster,
     );
+    const playerRetiredCareerCountBefore = retiredCareerIds.length;
+    const enemyRetiredCareerCountBefore = enemyRetiredCareerIds.length;
+    const playerBoundary = applyCampaignBoundary(
+      roster,
+      generations,
+      retiredCareerIds,
+      random,
+    );
+    const enemyBoundary = applyCampaignBoundary(
+      enemyRoster,
+      enemyGenerations,
+      enemyRetiredCareerIds,
+      random,
+    );
+    roster = [...playerBoundary.roster];
+    generations = playerBoundary.generations;
+    retiredCareerIds = [...playerBoundary.retiredCareerIds];
+    enemyRoster = [...enemyBoundary.roster];
+    enemyGenerations = enemyBoundary.generations;
+    enemyRetiredCareerIds = [...enemyBoundary.retiredCareerIds];
+    metrics.push({
+      ...metric,
+      fieldedCareerIds: rosterStart.map((piece) =>
+        careerIdFor(piece.id, playerGenerationsAtMatchStart[piece.id] ?? 1),
+      ),
+      enemyFieldedCareerIds: result.enemyFieldedPieceIds.map((pieceId) =>
+        careerIdFor(pieceId, enemyGenerationsAtMatchStart[pieceId] ?? 1),
+      ),
+      retiredCareerIds: [
+        ...playerBoundary.retiredCareerIds.slice(
+          playerRetiredCareerCountBefore,
+        ),
+      ],
+      enemyRetiredCareerIds: [
+        ...enemyBoundary.retiredCareerIds.slice(enemyRetiredCareerCountBefore),
+      ],
+      graceCareerIds: playerBoundary.graceCareerIds,
+      enemyGraceCareerIds: enemyBoundary.graceCareerIds,
+      retirements: playerBoundary.retirements,
+      enemyRetirements: enemyBoundary.retirements,
+      graceEvents: playerBoundary.graceEvents,
+      enemyGraceEvents: enemyBoundary.graceEvents,
+    });
     justifiedRefusalObviousness.push(...result.justifiedRefusalObviousness);
     justifiedRefusalPrivateViewLosses.push(
       ...result.justifiedRefusalPrivateViewLosses,
@@ -325,6 +510,10 @@ export async function runCampaign(
       randomState: random.snapshot(),
       roster,
       enemyRoster,
+      generations,
+      enemyGenerations,
+      retiredCareerIds,
+      enemyRetiredCareerIds,
       completedMetrics: metrics,
     });
     await options.onCheckpoint?.(checkpointAtBoundary);
@@ -341,6 +530,10 @@ export async function runCampaign(
     randomState: random.snapshot(),
     roster,
     enemyRoster,
+    generations,
+    enemyGenerations,
+    retiredCareerIds,
+    enemyRetiredCareerIds,
     completedMetrics: metrics,
   });
   return {
@@ -364,9 +557,9 @@ function validateCheckpoint(
   determinismId: string,
   initialTrust: number,
 ): void {
-  if (checkpoint.checkpointVersion !== 2) {
+  if (checkpoint.checkpointVersion !== 3) {
     throw new Error(
-      `Checkpoint checkpointVersion mismatch: checkpoint=${checkpoint.checkpointVersion}, run=2.`,
+      `Checkpoint checkpointVersion mismatch: checkpoint=${checkpoint.checkpointVersion}, run=3.`,
     );
   }
   if (checkpoint.schemaVersion !== SCHEMA_VERSION) {
