@@ -53,7 +53,10 @@ describe('world pairing layer', () => {
     );
     const fresh = restored[2];
     expect(fresh).toBeDefined();
-    if (fresh === undefined) return;
+    if (fresh === undefined) throw new Error('Expected an uncarried seat.');
+    expect(fresh.traits).toEqual(
+      createStartingRoster(board, 'w', 40, 0.9)[2]?.traits,
+    );
     expect(fresh.E_i).toBe(startingAbilityForRole(fresh.role));
   });
 

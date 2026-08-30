@@ -130,8 +130,8 @@ describe('campaign retirement and grace', () => {
       0.5,
     ).find((candidate) => candidate.id === target.id);
     expect(refielded).toBeDefined();
-    if (refielded === undefined) return;
-    expect(refielded?.B_i).toBe(0);
+    if (refielded === undefined) throw new Error('Expected the reused seat.');
+    expect(refielded.B_i).toBe(0);
     expect(refielded.E_i).toBe(startingAbilityForRole(refielded.role));
   });
 
