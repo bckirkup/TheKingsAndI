@@ -488,7 +488,9 @@ export async function runHeadlessMatch(
         ply,
         engine: config.engine,
         insight,
-        overrideRefusals: opponentArchetype === 'tyrannical',
+        ...(config.opponentOverrideChooser === undefined
+          ? { overrideRefusals: opponentArchetype === 'tyrannical' }
+          : {}),
         dreadExposureByPiece: enemyDreadExposureByPiece,
         regardStreakByPiece: enemyRegardStreakByPiece,
         ...(config.opponentMoveChooser === undefined

@@ -9,6 +9,11 @@ import {
   type HeadlessLeaderPort,
 } from '../src/orchestration';
 import type { CandidateMoveEvaluation } from '../src/psychology';
+import {
+  ADAPTIVE_POLICY_CONFIG,
+  legalScoredMoves,
+  leaderPolicy,
+} from '../sim/leaders';
 import { createStartingRoster } from '../sim/roster';
 
 describe('headless player refusal replanning', () => {
@@ -115,6 +120,79 @@ describe('headless player refusal replanning', () => {
       observableEvents(result.events),
     );
     expect(repeated.winScore).toBe(result.winScore);
+  });
+});
+
+describe('headless adaptive opponent wiring', () => {
+  it('changes enemy refusal rate when escalator gain changes', async () => {
+    const runWithGain = async (escalatorGain: number): Promise<number> => {
+      const config = ADAPTIVE_POLICY_CONFIG as unknown as Record<
+        string,
+        number
+      >;
+      const originalGain = ADAPTIVE_POLICY_CONFIG.escalatorGain;
+      const originalBaseInsistence = ADAPTIVE_POLICY_CONFIG.baseInsistence;
+      config.escalatorGain = escalatorGain;
+      config.baseInsistence = 0;
+      try {
+        const board = LivingBoard.fromFen('r3k3/8/8/8/8/8/4R3/4K3 b - - 0 1');
+        const policy = leaderPolicy('escalator');
+        const observation = {
+          matchesObserved: 1,
+          refusalPermilleLast: 800,
+          desertionsLast: 0,
+          survivorsLast: 16,
+          winScoreLast: 50,
+        };
+        const context = {
+          matchIndex: 1,
+          campaignMatch: 1,
+          ply: 1,
+          redeemerSwitchMatch: 10,
+          observation,
+        };
+        const idleLeader: HeadlessLeaderPort = {
+          chooseMove: () => undefined,
+          shouldOverride: () => false,
+        };
+        const result = await runHeadlessMatch({
+          random: createSeededRandom(5),
+          maxPlies: 1,
+          playerSide: 'w',
+          leader: idleLeader,
+          opponent: idleLeader,
+          initialBoard: board,
+          initialRoster: createStartingRoster(board, 'w', 100, 0.5),
+          initialEnemyRoster: createStartingRoster(board, 'b', -100, 0.5),
+          opponentArchetype: 'random',
+          opponentMoveChooser(currentBoard, _side, random, _ply, refusedSans) {
+            const moves = legalScoredMoves(currentBoard).filter(
+              (move) => refusedSans.has(move.features.san) !== true,
+            );
+            return policy.chooseMove(currentBoard, moves, random, context)
+              ?.features.san;
+          },
+          opponentOverrideChooser: (random) =>
+            policy.shouldOverride(random, context),
+          engine: createFakeEnginePort(),
+        });
+        const refusals = result.events.filter(
+          (event) => event.t === 'REFUSAL',
+        ).length;
+        const enemyMoves = result.events.filter(
+          (event) =>
+            event.t === 'MOVE' && event.ply === 1 && event.san !== undefined,
+        ).length;
+        return refusals / (refusals + enemyMoves);
+      } finally {
+        config.escalatorGain = originalGain;
+        config.baseInsistence = originalBaseInsistence;
+      }
+    };
+
+    const lowGainRefusals = await runWithGain(0);
+    const highGainRefusals = await runWithGain(1_000);
+    expect(lowGainRefusals).toBeGreaterThan(highGainRefusals);
   });
 });
 
