@@ -1917,9 +1917,9 @@ permanently retired, and the campaign path may not be exempt. The machinery
 exists on one path only — `RETIREMENT_TRAUMA_THRESHOLD = 100` is checked by
 `statusForConscript` at `src/orchestration/squadFielding.ts:329-334`, while
 `retirementCause: 'trauma'` is recorded by the season fold at
-`src/orchestration/squadFielding.ts:505-512`, folded by the season pool — while
-the campaign path has no pool, so `B_i` saturates at the `clampTrauma` ceiling
-and no career ever ends. The King's exemption stands (ADR 0021). Retirement is
+`src/orchestration/squadFielding.ts:505-512`. Both are reachable only through
+the season pool, and the campaign path has no pool, so `B_i` saturates at the
+`clampTrauma` ceiling and no career ever ends. The King's exemption stands (ADR 0021). Retirement is
 the accumulated cost of every commander who spent the piece (ADR 0026), not a
 penalty on the piece. The threshold keeps its `100`; nothing here re-opens
 D130's calibration.
