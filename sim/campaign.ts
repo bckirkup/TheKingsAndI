@@ -19,7 +19,11 @@ import {
 } from './metrics';
 import { createStartingRoster, mergeCampaignRoster } from './roster';
 import { CostTracker, instrumentEngine, type CampaignCost } from './cost';
-import type { LeaderObservation } from './leaders';
+import {
+  createPriorLeaderObservation,
+  updateLeaderObservation,
+  type LeaderObservation,
+} from './leaders';
 
 export interface CampaignOptions {
   readonly matches: number;
@@ -57,6 +61,8 @@ export interface CampaignCheckpoint {
   readonly enemyGenerations: Readonly<Record<PieceId, number>>;
   readonly retiredCareerIds: readonly string[];
   readonly enemyRetiredCareerIds: readonly string[];
+  readonly leaderObservation: LeaderObservation;
+  readonly opponentObservation: LeaderObservation;
   readonly completedMetrics: readonly MatchMetrics[];
 }
 
@@ -74,20 +80,12 @@ export interface CampaignResult {
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
 
-const ZERO_LEADER_OBSERVATION: LeaderObservation = {
-  matchesObserved: 0,
-  refusalPermilleLast: 0,
-  desertionsLast: 0,
-  survivorsLast: 0,
-  winScoreLast: 0,
-};
-
 export function observationFromPreviousMatch(
   metric: MatchMetrics | undefined,
   enemy: boolean,
   matchesObserved = metric === undefined ? 0 : 1,
 ): LeaderObservation {
-  if (metric === undefined) return ZERO_LEADER_OBSERVATION;
+  if (metric === undefined) return createPriorLeaderObservation();
   const refusalRate = enemy ? metric.enemyRefusalRate : metric.refusalRate;
   const desertions = enemy ? metric.enemyDesertions : metric.desertions;
   const survivors = enemy
@@ -96,13 +94,13 @@ export function observationFromPreviousMatch(
   const winScore = enemy ? 100 - metric.winScore : metric.winScore;
   return {
     matchesObserved,
-    refusalPermilleLast: Math.max(
+    refusalPermille: Math.max(
       0,
       Math.min(1_000, Math.trunc(refusalRate * 1_000)),
     ),
-    desertionsLast: Math.max(0, Math.trunc(desertions)),
-    survivorsLast: Math.max(0, Math.trunc(survivors)),
-    winScoreLast: Math.max(0, Math.min(100, Math.trunc(winScore))),
+    desertions: Math.max(0, Math.trunc(desertions)),
+    survivors: Math.max(0, Math.trunc(survivors)),
+    winScore: Math.max(0, Math.min(100, Math.trunc(winScore))),
   };
 }
 
@@ -312,6 +310,39 @@ export function parseCampaignCheckpoint(value: unknown): CampaignCheckpoint {
       }
     });
   }
+  if (value.checkpointVersion === 3) {
+    return {
+      ...(value as unknown as Omit<
+        CampaignCheckpoint,
+        'checkpointVersion' | 'leaderObservation' | 'opponentObservation'
+      >),
+      checkpointVersion: 4,
+      leaderObservation: createPriorLeaderObservation(),
+      opponentObservation: createPriorLeaderObservation(),
+    };
+  }
+  if (value.checkpointVersion !== 4) {
+    throw new Error(
+      `Campaign checkpoint checkpointVersion mismatch: checkpoint=${String(value.checkpointVersion)}, run=4.`,
+    );
+  }
+  for (const [observationName, observation] of [
+    ['leaderObservation', value.leaderObservation],
+    ['opponentObservation', value.opponentObservation],
+  ] as const) {
+    if (
+      !isPlainRecord(observation) ||
+      typeof observation.matchesObserved !== 'number' ||
+      typeof observation.refusalPermille !== 'number' ||
+      typeof observation.desertions !== 'number' ||
+      typeof observation.survivors !== 'number' ||
+      typeof observation.winScore !== 'number'
+    ) {
+      throw new Error(
+        `Campaign checkpoint ${observationName} must be a complete observation.`,
+      );
+    }
+  }
   return value as unknown as CampaignCheckpoint;
 }
 
@@ -354,10 +385,12 @@ function createCampaignCheckpoint(options: {
   readonly enemyGenerations: Readonly<Record<PieceId, number>>;
   readonly retiredCareerIds: readonly string[];
   readonly enemyRetiredCareerIds: readonly string[];
+  readonly leaderObservation: LeaderObservation;
+  readonly opponentObservation: LeaderObservation;
   readonly completedMetrics: readonly MatchMetrics[];
 }): CampaignCheckpoint {
   return {
-    checkpointVersion: 3,
+    checkpointVersion: 4,
     schemaVersion: SCHEMA_VERSION,
     psychConfigVersion: PSYCH_CONFIG_VERSION,
     determinismId: options.determinismId,
@@ -374,6 +407,8 @@ function createCampaignCheckpoint(options: {
     enemyGenerations: { ...options.enemyGenerations },
     retiredCareerIds: [...options.retiredCareerIds],
     enemyRetiredCareerIds: [...options.enemyRetiredCareerIds],
+    leaderObservation: options.leaderObservation,
+    opponentObservation: options.opponentObservation,
     completedMetrics: [...options.completedMetrics],
   };
 }
@@ -435,6 +470,10 @@ export async function runCampaign(
     checkpoint === undefined ? [] : [...checkpoint.retiredCareerIds];
   let enemyRetiredCareerIds =
     checkpoint === undefined ? [] : [...checkpoint.enemyRetiredCareerIds];
+  let leaderObservation =
+    checkpoint?.leaderObservation ?? createPriorLeaderObservation();
+  let opponentObservation =
+    checkpoint?.opponentObservation ?? createPriorLeaderObservation();
   const metrics: MatchMetrics[] =
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
   const justifiedRefusalObviousness: number[] = [];
@@ -444,7 +483,6 @@ export async function runCampaign(
   for (let match = firstMatch; match <= options.matches; match += 1) {
     costTracker.startMatch();
     const matchSeed = matchSeedForCampaign(options.seed, match);
-    const previousMetric = metrics[metrics.length - 1];
     roster = mergeCampaignRoster(
       board,
       'w',
@@ -470,16 +508,8 @@ export async function runCampaign(
       roster,
       enemyRoster,
       opponent,
-      leaderObservation: observationFromPreviousMatch(
-        previousMetric,
-        false,
-        metrics.length,
-      ),
-      opponentObservation: observationFromPreviousMatch(
-        previousMetric,
-        true,
-        metrics.length,
-      ),
+      leaderObservation,
+      opponentObservation,
       enemyTrackedIdentities,
       engine,
     });
@@ -491,6 +521,14 @@ export async function runCampaign(
       rosterStart,
       result,
       result.refusedGoodMoves,
+    );
+    leaderObservation = updateLeaderObservation(
+      leaderObservation,
+      observationFromPreviousMatch(metric, false),
+    );
+    opponentObservation = updateLeaderObservation(
+      opponentObservation,
+      observationFromPreviousMatch(metric, true),
     );
     roster = carryMatchRoster(result.roster, result.departedRoster);
     enemyRoster = carryMatchRoster(
@@ -559,6 +597,8 @@ export async function runCampaign(
       enemyGenerations,
       retiredCareerIds,
       enemyRetiredCareerIds,
+      leaderObservation,
+      opponentObservation,
       completedMetrics: metrics,
     });
     await options.onCheckpoint?.(checkpointAtBoundary);
@@ -579,6 +619,8 @@ export async function runCampaign(
     enemyGenerations,
     retiredCareerIds,
     enemyRetiredCareerIds,
+    leaderObservation,
+    opponentObservation,
     completedMetrics: metrics,
   });
   return {
@@ -602,9 +644,9 @@ function validateCheckpoint(
   determinismId: string,
   initialTrust: number,
 ): void {
-  if (checkpoint.checkpointVersion !== 3) {
+  if (checkpoint.checkpointVersion !== 4) {
     throw new Error(
-      `Checkpoint checkpointVersion mismatch: checkpoint=${checkpoint.checkpointVersion}, run=3.`,
+      `Checkpoint checkpointVersion mismatch: checkpoint=${checkpoint.checkpointVersion}, run=4.`,
     );
   }
   if (checkpoint.schemaVersion !== SCHEMA_VERSION) {

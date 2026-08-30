@@ -3,22 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
 import {
+  ADAPTIVE_MEMORY_CONFIG,
   ADAPTIVE_POLICY_CONFIG,
   LEADER_POLICY_CONFIG,
+  createPriorLeaderObservation,
   legalScoredMoves,
   leaderPolicy,
   pickByScore,
   scoreLeaderMove,
   type LeaderObservation,
+  updateLeaderObservation,
 } from '../sim/leaders';
 
-const ZERO_OBSERVATION = {
-  matchesObserved: 0,
-  refusalPermilleLast: 0,
-  desertionsLast: 0,
-  survivorsLast: 0,
-  winScoreLast: 0,
-} as const;
+const ZERO_OBSERVATION = createPriorLeaderObservation();
 
 const OFF_DIAGONAL_FEN =
   'Nrb5/ppp3n1/n4kr1/1q5p/1b1pPPQ1/1P1PR3/P3B1P1/RKB3N1 b - - 5 24';
@@ -188,10 +185,10 @@ describe('scripted leader move shaping', () => {
       redeemerSwitchMatch: 10,
       observation: {
         matchesObserved: 0,
-        refusalPermilleLast: 0,
-        desertionsLast: 0,
-        survivorsLast: 0,
-        winScoreLast: 0,
+        refusalPermille: 0,
+        desertions: 0,
+        survivors: 0,
+        winScore: 0,
       },
     };
     const exacting = leaderPolicy('exacting').chooseMove(
@@ -257,10 +254,10 @@ describe('scripted leader move shaping', () => {
       redeemerSwitchMatch: 10,
       observation: {
         matchesObserved: 0,
-        refusalPermilleLast: 0,
-        desertionsLast: 0,
-        survivorsLast: 0,
-        winScoreLast: 0,
+        refusalPermille: 0,
+        desertions: 0,
+        survivors: 0,
+        winScore: 0,
       },
     };
     const counts = (style: Parameters<typeof leaderPolicy>[0]): number => {
@@ -278,7 +275,7 @@ describe('scripted leader move shaping', () => {
     expect(exacting - steady).toBeGreaterThan(200);
   });
 
-  it('falls back to steady behavior before any observation', () => {
+  it('uses the compliant prior for the first observation', () => {
     const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
     const moves = legalScoredMoves(board);
     const context = contextWithObservation();
@@ -296,13 +293,155 @@ describe('scripted leader move shaping', () => {
     }
   });
 
+  it('moves a first observation fully to the observed values', () => {
+    const observed: LeaderObservation = {
+      matchesObserved: 1,
+      refusalPermille: 800,
+      desertions: 4,
+      survivors: 9,
+      winScore: 40,
+    };
+    expect(updateLeaderObservation(ZERO_OBSERVATION, observed)).toEqual({
+      ...observed,
+      matchesObserved: 1,
+    });
+  });
+
+  it('moves a veteran belief by only the capped fraction', () => {
+    const belief: LeaderObservation = {
+      matchesObserved: ADAPTIVE_MEMORY_CONFIG.memoryCapMatches,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
+    };
+    expect(
+      updateLeaderObservation(belief, {
+        matchesObserved: 1,
+        refusalPermille: 1_000,
+        desertions: 10,
+        survivors: 0,
+        winScore: 0,
+      }),
+    ).toEqual({
+      matchesObserved: ADAPTIVE_MEMORY_CONFIG.memoryCapMatches + 1,
+      refusalPermille: 166,
+      desertions: 1,
+      survivors: 14,
+      winScore: 42,
+    });
+  });
+
+  it('advances by one when integer truncation would otherwise stall', () => {
+    const belief: LeaderObservation = {
+      matchesObserved: 20,
+      refusalPermille: 10,
+      desertions: 2,
+      survivors: 10,
+      winScore: 50,
+    };
+    expect(
+      updateLeaderObservation(belief, {
+        matchesObserved: 1,
+        refusalPermille: 11,
+        desertions: 3,
+        survivors: 9,
+        winScore: 49,
+      }),
+    ).toEqual({
+      matchesObserved: 21,
+      refusalPermille: 11,
+      desertions: 3,
+      survivors: 9,
+      winScore: 49,
+    });
+  });
+
+  it('is deterministic for identical beliefs and observations', () => {
+    const belief: LeaderObservation = {
+      matchesObserved: 3,
+      refusalPermille: 300,
+      desertions: 2,
+      survivors: 12,
+      winScore: 60,
+    };
+    const observed: LeaderObservation = {
+      matchesObserved: 1,
+      refusalPermille: 700,
+      desertions: 6,
+      survivors: 8,
+      winScore: 30,
+    };
+    expect(updateLeaderObservation(belief, observed)).toEqual(
+      updateLeaderObservation(belief, observed),
+    );
+  });
+
+  it.each([
+    ['memoryCapMatches', { matchesObserved: 10 }, { matchesObserved: 1 }],
+    [
+      'badNewsWeightPermille',
+      { matchesObserved: 4, refusalPermille: 100 },
+      { matchesObserved: 1, refusalPermille: 900 },
+    ],
+    ['priorRefusalPermille', undefined, undefined],
+    ['priorDesertions', undefined, undefined],
+    ['priorSurvivors', undefined, undefined],
+    ['priorWinScore', undefined, undefined],
+  ] as const)(
+    'wires adaptive memory knob %s into a quantitative belief output',
+    (knob, beliefChanges, observedChanges) => {
+      const baseline = createPriorLeaderObservation();
+      const belief = {
+        ...baseline,
+        ...(beliefChanges ?? {}),
+      };
+      const observed: LeaderObservation = {
+        matchesObserved: 1,
+        refusalPermille: 800,
+        desertions: 5,
+        survivors: 8,
+        winScore: 30,
+        ...(observedChanges ?? {}),
+      };
+      const config = ADAPTIVE_MEMORY_CONFIG as unknown as Record<
+        string,
+        number
+      >;
+      const original = ADAPTIVE_MEMORY_CONFIG[knob];
+      const low = knob === 'badNewsWeightPermille' ? 1_000 : 0;
+      const high =
+        knob === 'memoryCapMatches'
+          ? 20
+          : knob === 'badNewsWeightPermille'
+            ? 2_000
+            : knob === 'priorSurvivors'
+              ? 16
+              : knob === 'priorWinScore'
+                ? 100
+                : knob === 'priorRefusalPermille'
+                  ? 500
+                  : 10;
+      config[knob] = low;
+      const lowOutput = knob.startsWith('prior')
+        ? createPriorLeaderObservation()
+        : updateLeaderObservation(belief, observed);
+      config[knob] = high;
+      const highOutput = knob.startsWith('prior')
+        ? createPriorLeaderObservation()
+        : updateLeaderObservation(belief, observed);
+      config[knob] = original;
+      expect(highOutput).not.toEqual(lowOutput);
+    },
+  );
+
   it('moves chastened and escalator insistence in opposite directions', () => {
     const context = contextWithObservation({
       matchesObserved: 1,
-      refusalPermilleLast: 800,
-      desertionsLast: 0,
-      survivorsLast: 16,
-      winScoreLast: 50,
+      refusalPermille: 800,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
     });
     const chastened = overrideCount('chastened', context);
     const steady = overrideCount('steady', context);
@@ -316,10 +455,10 @@ describe('scripted leader move shaping', () => {
     const moves = legalScoredMoves(board);
     const context = contextWithObservation({
       matchesObserved: 2,
-      refusalPermilleLast: 650,
-      desertionsLast: 4,
-      survivorsLast: 9,
-      winScoreLast: 40,
+      refusalPermille: 650,
+      desertions: 4,
+      survivors: 9,
+      winScore: 40,
     });
     for (const style of ['chastened', 'escalator', 'roster_first'] as const) {
       const policy = leaderPolicy(style);
@@ -349,10 +488,10 @@ describe('scripted leader move shaping', () => {
       'chastened',
       {
         matchesObserved: 1,
-        refusalPermilleLast: 800,
-        desertionsLast: 0,
-        survivorsLast: 16,
-        winScoreLast: 50,
+        refusalPermille: 800,
+        desertions: 0,
+        survivors: 16,
+        winScore: 50,
       },
       0,
       1_000,
@@ -362,10 +501,10 @@ describe('scripted leader move shaping', () => {
       'escalator',
       {
         matchesObserved: 1,
-        refusalPermilleLast: 800,
-        desertionsLast: 0,
-        survivorsLast: 16,
-        winScoreLast: 50,
+        refusalPermille: 800,
+        desertions: 0,
+        survivors: 16,
+        winScore: 50,
       },
       0,
       1_000,
@@ -375,10 +514,10 @@ describe('scripted leader move shaping', () => {
       'escalator',
       {
         matchesObserved: 1,
-        refusalPermilleLast: 1_000,
-        desertionsLast: 0,
-        survivorsLast: 16,
-        winScoreLast: 50,
+        refusalPermille: 1_000,
+        desertions: 0,
+        survivors: 16,
+        winScore: 50,
       },
       0,
       100,
@@ -388,10 +527,10 @@ describe('scripted leader move shaping', () => {
       'roster_first',
       {
         matchesObserved: 1,
-        refusalPermilleLast: 0,
-        desertionsLast: 0,
-        survivorsLast: 10,
-        winScoreLast: 50,
+        refusalPermille: 0,
+        desertions: 0,
+        survivors: 10,
+        winScore: 50,
       },
       0,
       20,
@@ -422,10 +561,10 @@ describe('scripted leader move shaping', () => {
     (_label, style, knob, low, high) => {
       const context = contextWithObservation({
         matchesObserved: 1,
-        refusalPermilleLast: 0,
-        desertionsLast: 8,
-        survivorsLast: 4,
-        winScoreLast: 50,
+        refusalPermille: 0,
+        desertions: 8,
+        survivors: 4,
+        winScore: 50,
       });
       const lowMoves = withAdaptiveConfig(
         { [knob]: low } as Partial<typeof ADAPTIVE_POLICY_CONFIG>,
