@@ -196,7 +196,7 @@ describe('campaign retirement and grace', () => {
     expect(rates.map((result) => result.graceEvents)).toEqual([0, 1, 2]);
     expect(rates.map((result) => result.retirements)).toEqual([1, 0, 0]);
     expect(rates[0]?.roster.map((candidate) => candidate.B_i)).toEqual([
-      100, 50,
+      50, 100,
     ]);
 
     const reliefs = [0, 10, 30].map((relief) => {
@@ -262,8 +262,8 @@ describe('campaign retirement and grace', () => {
     const previousRate = config.GRACE_RATE_PERMILLE ?? 0;
     config.GRACE_RATE_PERMILLE = 0;
     try {
-      applyCampaignBoundary(
-        [piece('w:P:a1', 'Pawn', 40)],
+      const result = applyCampaignBoundary(
+        [piece('w:R:a2', 'Rook', 40), piece('w:P:a1', 'Pawn', 20)],
         { 'w:P:a1': 1 },
         [],
         {
@@ -273,6 +273,10 @@ describe('campaign retirement and grace', () => {
           },
         },
       );
+      expect(result.roster.map((candidate) => candidate.id)).toEqual([
+        'w:R:a2',
+        'w:P:a1',
+      ]);
     } finally {
       config.GRACE_RATE_PERMILLE = previousRate;
     }
@@ -308,6 +312,9 @@ describe('campaign retirement and grace', () => {
   it('keeps trauma injury folds bounded', () => {
     const baseline = piece('w:P:a1', 'Pawn', 100);
     expect(applyGrace(baseline, 20).B_i).toBe(80);
+    expect(applyGrace(baseline, -20).B_i).toBe(100);
+    expect(applyGrace(baseline, -20.5).B_i).toBe(100);
+    expect(applyGrace(piece('w:P:a1', 'Pawn', 40), 15.75).B_i).toBe(25);
     expect(applyCaptureInjury(baseline).B_i).toBe(100);
     const dread = applySustainedDread(baseline, undefined, 1);
     expect(dread.piece.B_i).toBe(100);

@@ -121,22 +121,22 @@ export function applyCampaignBoundary(
   random: { nextInt(maxExclusive: number): number },
 ): CampaignBoundaryFold {
   const currentGenerations: Record<PieceId, number> = { ...generations };
-  let roster = [...carriedRoster].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  );
+  let roster = [...carriedRoster];
   const graceCareerIds: string[] = [];
   const rate = Math.max(
     0,
     Math.min(1_000, Math.trunc(ENGINE_CONFIG.GRACE_RATE_PERMILLE)),
   );
   if (rate > 0) {
-    roster = roster.map((piece) => {
-      if (piece.role === 'King' || piece.B_i <= 0) return piece;
-      const generation = currentGenerations[piece.id] ?? 1;
-      if (random.nextInt(1_000) >= rate) return piece;
-      graceCareerIds.push(careerIdFor(piece.id, generation));
-      return applyGrace(piece, ENGINE_CONFIG.GRACE_RELIEF);
-    });
+    roster = [...roster]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((piece) => {
+        if (piece.role === 'King' || piece.B_i <= 0) return piece;
+        const generation = currentGenerations[piece.id] ?? 1;
+        if (random.nextInt(1_000) >= rate) return piece;
+        graceCareerIds.push(careerIdFor(piece.id, generation));
+        return applyGrace(piece, ENGINE_CONFIG.GRACE_RELIEF);
+      });
   }
 
   const retiredIds = new Set(retiredCareerIds);
@@ -452,6 +452,8 @@ export async function runCampaign(
       result.enemyRoster,
       result.departedEnemyRoster,
     );
+    const playerRetiredCareerCountBefore = retiredCareerIds.length;
+    const enemyRetiredCareerCountBefore = enemyRetiredCareerIds.length;
     const playerBoundary = applyCampaignBoundary(
       roster,
       generations,
@@ -480,13 +482,11 @@ export async function runCampaign(
       ),
       retiredCareerIds: [
         ...playerBoundary.retiredCareerIds.slice(
-          retiredCareerIds.length - playerBoundary.retirements,
+          playerRetiredCareerCountBefore,
         ),
       ],
       enemyRetiredCareerIds: [
-        ...enemyBoundary.retiredCareerIds.slice(
-          enemyRetiredCareerIds.length - enemyBoundary.retirements,
-        ),
+        ...enemyBoundary.retiredCareerIds.slice(enemyRetiredCareerCountBefore),
       ],
       graceCareerIds: playerBoundary.graceCareerIds,
       enemyGraceCareerIds: enemyBoundary.graceCareerIds,
