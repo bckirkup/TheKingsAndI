@@ -1985,6 +1985,20 @@ flag for a seeded sweep rather than a verdict; grace was inert
 (`GRACE_RATE_PERMILLE = 0`) throughout, so no grace magnitude is implicated.
 Evidence: `docs/calibration/2026-08-30-the-forced-move-and-the-convert.md`.
 
+**The seeded sweep confirms it (2026-08-30).** Three styles × three seeds (7,
+11, 13), 20 matches, fake engine, `tyrannical` opponent, grace inert: the worst
+`supportive` seed (72.50) beats the best `tyrannical` seed (52.50), so the gap
+exceeds the seed spread and the cruel style never leads on any seed. The
+trajectory is inverted rather than merely flat — pooled win score over matches
+1–5 against 16–20 is 10.00 → 60.00 for `tyrannical` and 76.67 → 86.67 for
+`supportive`, so cruelty gains *late* while never catching kindness. Two
+candidates, neither measured: retirement selection (the tyrant ends 64 careers
+and re-fields green recruits, while D192's carry no longer resets the kind
+leader's roster for him), and the unpriced quiet-quit (0.206 against 0.037 —
+a fifth of the kind room's moves cost the win score nothing). The gate stays
+open and the next step is a **pricing** question, not a grace magnitude.
+Evidence: `docs/calibration/2026-08-30-does-cruelty-ever-lead.md`.
+
 ### D189 ✅ What fills the square of a retired identity in the campaign path? (ADR 0072)
 **Answered 2026-08-30 by the ADR 0072 amendment — wired.** The square is a
 **seat** and what ends is a **career**. `PieceId`s are square-derived and
@@ -2111,6 +2125,85 @@ prices its risk by scarcity rather than by the board.
 magnitude here is calibrated** — the gains were chosen only to separate the
 styles visibly from `steady`, and the tier's purpose is to break things (the
 D181–D185 economy in particular) rather than to model a student well.
+
+### D194 ❓ How much does an adaptive pseudo-player remember?
+**Open — raised 2026-08-30, not wired.** Today the window is exactly one match
+at full strength: `LeaderObservation` carries last match's numbers and
+everything earlier is gone (`sim/campaign.ts`,
+`observationFromPreviousMatch`), which is amnesia with a default temperament
+rather than memory. The owner's framing is that updating should be
+*approximately Bayesian*, so the candidate shape is a retained belief per
+observable that moves toward each new match —
+`belief += (observed − belief) × weight / 1000`, integer permille — with the
+weight set by **precision**, `1000 / (n + 1)` in matches observed, so a
+first-time commander swings hard on one bad night and a veteran barely moves.
+Capping `n` is then the forgetting knob (old evidence fades geometrically, with
+a half-life near `0.7 × (cap + 1)` matches), and the **prior** stops being a
+fallback and becomes content: what a commander expects of a room he has not met
+is the owner's "assuming leadership for the first time in a good or bad
+culture". Nothing is chosen — not the cap, not the prior, not whether precision
+weighting is the right form — and no smoothing machinery exists in tree to
+reuse.
+
+**Ruled within this entry: the update is symmetric.** Whether bad news should
+update faster than good was raised and answered *no, for now*: the model
+already carries three despair mechanisms (curved outcome-trust loss, the
+`B_i` ratchet with no relief transition, ADR 0007's no-decay rule) against one
+hope mechanism (ADR 0053) and no courage mechanism at all, so an asymmetric
+belief update would be the fourth thing pulling every long campaign
+pessimistic. The asymmetry may be added later as its own knob, defaulting to
+symmetric, and only with a measurement of what it does over a campaign.
+
+### D195 ✅ What is hope, and how does it differ from the absence of despair? (ADR 0073)
+**Answered 2026-08-30 (owner) — not wired.** Hope is a **forecast attached to a
+reachable object**, not a mood and not low despair: an object (a specific
+future state the piece counts as good), a prospect (how reachable it looks from
+the piece's own `D_i` view, never engine truth), and a credence (whether whoever
+must deliver it is believed able to). ADR 0053's pawn hope is the worked
+example already in tree and the template for the rest. Hope is extinguished by
+unreachability rather than by elapsed time, which keeps ADR 0007 intact; a hope
+that cannot be named in one clause is a mood and does not qualify. ADR 0071's
+exchange supplies the second hope object — "someone will come for me" — and its
+destruction is a leader's omission rather than an accident of the board.
+
+### D196 ✅ What is courage in this model? (ADR 0073)
+**Answered 2026-08-30 (owner) — not wired.** Courage is **action against the
+actor's own expected cost**: taking the option its own arithmetic scored below
+the one it declined — obeying an order utility said refuse, staying when the
+exit comparison said leave, offering counsel whose expected standing cost is
+negative. It is a predicate over comparisons the model already makes every ply,
+so it needs no new psychology term, and the overcome margin *is* the measure —
+a piece with nothing to lose that obeys scores zero. It is the first quantity
+in the design by which a piece can be admirable rather than merely compliant.
+
+### D197 ✅ Who may see hope and courage, and when? (ADR 0073)
+**Answered 2026-08-30 (owner) — not wired.** Computed always, exposed to no one
+in play, shown once in the **closing debrief** as named incidents with the
+position and the piece attached. No live gauge, status board, stated reason,
+facilitator console, or adaptive-player observation (D193) may carry either:
+anything the room can watch, the room optimises, and farmed courage is not
+courage. Both live in the hidden audit stream (ADR 0013), which keeps the
+player's in-play information exactly what a real leader's is, and they join the
+unheard rewards as things that were real and that nobody in the room ever
+learned.
+
+### D198 ❓ What does destroying a hope object cost, and is the destruction an event?
+**Open — raised 2026-08-30 by ADR 0073, not wired.** If hope ends by
+unreachability, something must notice: a pawn whose promotion file closes and a
+captive whose exchange window passes have both lost something, and the model
+currently records neither. Whether that emits an event (and therefore reaches
+the roster through the witness channel) or is merely a state transition
+readable at the debrief is unchosen, as is whether it feeds `B_i`. No candidate
+magnitude is proposed.
+
+### D199 ❓ How is courage normalised against what was asked?
+**Open — raised 2026-08-30 by ADR 0073, not wired.** Counted naively, a
+commander maximises courage by maximising danger, so the measure would reward
+endangerment — the same farming hazard ADR 0072 disarmed for grace. Courage
+must therefore be **offered relative to what was asked**, and the normaliser is
+unchosen: per-order margin, per-match aggregate against the risk the leader
+took, or a rate over opportunities. Courage may not be reported in any debrief
+until this is settled.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
