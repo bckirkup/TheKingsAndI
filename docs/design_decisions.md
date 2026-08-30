@@ -2022,7 +2022,37 @@ most. Candidate closers, none chosen: price a forced move below a chosen one; pr
 it to the refusers rather than to the commander; treat unanimous refusal as its own
 event (a roster in revolt) rather than as insistence. **Upstream of D188** — no
 grace magnitude may be selected while the kind arm's outcome is dominated by this
-fallback rather than by conduct.
+fallback rather than by conduct. The measurement behind this entry was taken
+before D192, on a roster whose experience reset every match; the forced-move
+causal chain is unchanged by that fix, but its magnitudes must be re-taken before
+any closer is priced.
+
+### D192 ✅ Does earned experience survive the campaign boundary?
+**Answered 2026-08-30 — wired.** Yes. `mergeCampaignRoster` carries the whole of
+a survivor's psychology across a match boundary and silently dropped `E_i`
+(`sim/roster.ts:141`), so every veteran was re-fielded at
+`startingAbilityForRole` (Pawn 20, officer 55, King 80) and D149's earned ability
+expired with the match that produced it. That was residue of the PR #161 amnesia
+fix rather than a decision: nothing in D149 or ADR 0026 asks experience to reset,
+and the season/pool path never did. Because `E_i` sets search depth, the reset
+restored a roster's *competence* at every boundary while leaving its trust,
+trauma, and grudges intact — the one thing a survivor owns was the one thing
+cleared.
+
+**A new career still starts new** (owner's ruling, consistent with D189):
+retirement drops the identity from the carried roster, so the seat's next
+generation is created fresh at the role default and inherits nothing from its
+predecessor — asserted at `tests/campaign.retirement-grace.test.ts`.
+
+The measured effect is on the competence *trajectory*, not on outcome: over 20
+matches at seed 7 the supportive arm's ceiling climbs monotonically (80 → 92, all
+one identity — the King who survives every match) while the tyrant's falls to
+58–66 and his mean ability drops from the mid-sixties to the mid-forties, since
+`ABIL_EARNED_CURVATURE` makes a mid-ability loss larger than a gain and no
+boundary restores the textbook value. Before the fix both arms returned to role
+defaults. No behavioural metric moved beyond seed noise at one campaign per
+condition; evidence and its limits in
+`docs/calibration/2026-08-30-the-veteran-that-remembers.md`.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
