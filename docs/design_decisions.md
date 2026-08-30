@@ -2268,7 +2268,28 @@ tyrannical) because the cruel room's disengaged pieces desert or churn out of
 their careers instead of accumulating quiet-quit turns. Raising δ therefore
 penalises kindness; if the intent is to price disengagement *caused by
 cruelty*, the term needs a different carrier (desertions, ended careers),
-which is a design ruling still owed here.
+which is a design ruling still owed here. **Constrained 2026-08-30 by D203:**
+whatever carrier is eventually chosen prices into the closing-debrief reading
+only — no mid-run penalty carrier may be introduced.
+
+### D203 ✅ Where may the Leadership Index surface? (ADR 0074 addendum)
+**Answered 2026-08-30 (owner) — ruling only; no player surface exists yet.**
+The index is a **closing-debrief reading and nothing else**: it reaches no
+player-facing surface during play or between matches — no gauge, scoreboard,
+status panel, stated reason, facilitator console, or adaptive-player
+observation (D193) — the same quarantine D197 gives hope and courage. A player
+should be free to play their own personality through the week or the semester
+without hitting an inevitable wall of failures, and be surprised at the
+conclusion to be rewarded for things they thought unobserved. Cruelty's price
+is counterfactual and terminal — crowns never imagined, read at the final
+Judgement Seat — while in the mid run its ambitions justify themselves on the
+win score, which D188 permits. Binding consequences: no term of the index may
+be tuned to make a style fail mid-run (the D188 gate is a calibration
+constraint, not a play surface); any future D202 carrier prices into the same
+terminal reading only; and the harness CSV/CLI are developer instrumentation
+(ADR 0013 hidden truth), untouched by this ruling. When the ADR 0073 closing
+debrief is built, the index joins hope and courage as its third quantity —
+computed always, shown once.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
