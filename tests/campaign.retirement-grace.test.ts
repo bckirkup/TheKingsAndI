@@ -9,6 +9,7 @@ import {
   defaultRumor,
   ENGINE_CONFIG,
   normalizePieceState,
+  startingAbilityForRole,
   type PieceState,
 } from '../src/psychology';
 import { SQUAD_CONFIG } from '../src/orchestration/squadFielding';
@@ -89,7 +90,11 @@ describe('campaign retirement and grace', () => {
       ...baseline.checkpoint,
       roster: baseline.checkpoint.roster.map((candidate) =>
         candidate.id === target.id
-          ? { ...candidate, B_i: ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD }
+          ? {
+              ...candidate,
+              B_i: ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD,
+              E_i: 99,
+            }
           : candidate,
       ),
     };
@@ -124,7 +129,10 @@ describe('campaign retirement and grace', () => {
       40,
       0.5,
     ).find((candidate) => candidate.id === target.id);
+    expect(refielded).toBeDefined();
+    if (refielded === undefined) return;
     expect(refielded?.B_i).toBe(0);
+    expect(refielded.E_i).toBe(startingAbilityForRole(refielded.role));
   });
 
   it('never retires a King at the trauma ceiling', async () => {

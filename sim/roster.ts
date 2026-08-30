@@ -138,6 +138,7 @@ export function mergeCampaignRoster(
         T_i: previous.T_i,
         M_i: previous.M_i,
         B_i: previous.B_i,
+        E_i: previous.E_i,
         dyadicAffinity: { ...previous.dyadicAffinity },
         classPrestige: { ...previous.classPrestige },
         engagementFactor: previous.engagementFactor,
