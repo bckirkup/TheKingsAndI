@@ -72,6 +72,7 @@ export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';
 export {
   applyCaptureInjury,
+  applyGrace,
   applySustainedDread,
   type DreadExposure,
 } from './trauma';

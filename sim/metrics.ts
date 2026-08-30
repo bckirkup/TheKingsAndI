@@ -57,6 +57,7 @@ export interface MatchMetrics {
   readonly meanAdjudicationLoss?: number;
   readonly finalTauAbilByRole?: Readonly<Record<string, number>>;
   readonly fieldedPieceIds: readonly PieceId[];
+  readonly fieldedCareerIds?: readonly string[];
   readonly desertedPieceIds: readonly PieceId[];
   readonly refusalRate: number;
   readonly refusalsPerPly: number;
@@ -74,9 +75,18 @@ export interface MatchMetrics {
   readonly survivingRosterSize: number;
   readonly enemyAttrition: number;
   readonly enemyFieldedPieceIds: readonly PieceId[];
+  readonly enemyFieldedCareerIds?: readonly string[];
   readonly enemySurvivingRosterSize: number;
   readonly enemyDesertions: number;
   readonly enemyDesertedPieceIds: readonly PieceId[];
+  readonly retirements?: number;
+  readonly retiredCareerIds?: readonly string[];
+  readonly graceEvents?: number;
+  readonly graceCareerIds?: readonly string[];
+  readonly enemyRetirements?: number;
+  readonly enemyRetiredCareerIds?: readonly string[];
+  readonly enemyGraceEvents?: number;
+  readonly enemyGraceCareerIds?: readonly string[];
   readonly enemyRefusalRate: number;
   readonly winScore: number;
   readonly rout: boolean;
@@ -280,10 +290,14 @@ export interface CampaignMetrics {
   readonly promotionToRoleCounts: Readonly<Record<string, number>>;
   readonly meanWinScore: number;
   readonly meanDesertions: number;
+  readonly meanRetirements: number;
+  readonly meanGraceEvents: number;
   readonly meanSurvivingRosterSize: number;
   readonly enemyDesertionAttrition: number;
   readonly meanEnemySurvivingRosterSize: number;
   readonly meanEnemyDesertions: number;
+  readonly meanEnemyRetirements: number;
+  readonly meanEnemyGraceEvents: number;
   readonly meanEnemyRefusalRate: number;
   readonly meanAttritionDifferential: number;
   readonly meanSurvivingRosterDifferential: number;
@@ -311,7 +325,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction';
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -784,6 +798,10 @@ export function metricsFromMatch(
     enemySurvivingRosterSize: result.enemyRoster.length,
     enemyDesertions: enemyCounts.desertions,
     enemyDesertedPieceIds: [...enemyCounts.desertedPieceIds],
+    retirements: 0,
+    graceEvents: 0,
+    enemyRetirements: 0,
+    enemyGraceEvents: 0,
     enemyRefusalRate,
     winScore: result.winScore,
     rout: result.rout,
@@ -973,12 +991,16 @@ function aggregateCampaignCore(
     ),
     meanWinScore: mean((metric) => metric.winScore),
     meanDesertions: mean((metric) => metric.desertions),
+    meanRetirements: mean((metric) => metric.retirements ?? 0),
+    meanGraceEvents: mean((metric) => metric.graceEvents ?? 0),
     meanSurvivingRosterSize: mean((metric) => metric.survivingRosterSize),
     enemyDesertionAttrition: enemyAttritionForMetrics(matchMetrics),
     meanEnemySurvivingRosterSize: mean(
       (metric) => metric.enemySurvivingRosterSize,
     ),
     meanEnemyDesertions: mean((metric) => metric.enemyDesertions),
+    meanEnemyRetirements: mean((metric) => metric.enemyRetirements ?? 0),
+    meanEnemyGraceEvents: mean((metric) => metric.enemyGraceEvents ?? 0),
     meanEnemyRefusalRate: mean((metric) => metric.enemyRefusalRate),
     meanAttritionDifferential: mean(
       (metric) => attritionForMetrics([metric]) - metric.enemyAttrition,
@@ -1147,6 +1169,10 @@ export function renderCsv(
       metric.enemySurvivingRosterSize,
       metric.enemyDesertions,
       metric.enemyRefusalRate.toFixed(4),
+      metric.retirements ?? 0,
+      metric.graceEvents ?? 0,
+      metric.enemyRetirements ?? 0,
+      metric.enemyGraceEvents ?? 0,
       metric.dripEvents ?? 0,
       (metric.dripGainTotal ?? 0).toFixed(2),
       metric.regardEvents ?? 0,

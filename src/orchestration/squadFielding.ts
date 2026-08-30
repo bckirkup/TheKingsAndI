@@ -5,6 +5,7 @@ import type { PieceRole, PieceState } from '../psychology';
 import {
   clampCredence,
   clampTrust,
+  ENGINE_CONFIG,
   sharedBondScalar,
   startingAbilityForRole,
 } from '../psychology';
@@ -42,7 +43,7 @@ export const SQUAD_CONFIG: SquadConfig = {
   LEVY_INHERITED_CREDENCE_PERMILLE: 1000,
   LEVY_STANDING_COST: 0,
   DESERTION_ABSENCE_MATCHES: 2,
-  RETIREMENT_TRAUMA_THRESHOLD: 100,
+  RETIREMENT_TRAUMA_THRESHOLD: ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD,
   NON_SELECTION_TRUST_THRESHOLD: 2,
   NON_SELECTION_SELF_TRUST_PENALTY: -10,
   NON_SELECTION_PEER_TRUST_PENALTY: -2,
