@@ -18,6 +18,7 @@ import {
 import { plainChessMeanWinScore } from './baseline';
 import { canonicalJson } from '../src/core/canonicalJson';
 import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
+import { journalMetrics } from './journal';
 
 export async function writeAtomicCheckpoint(
   path: string,
@@ -112,6 +113,7 @@ export interface SimulationOptions {
   readonly shardIndex: number;
   readonly shardCount: number;
   readonly enforceCalibration: boolean;
+  readonly journal: string | undefined;
 }
 
 export function shouldRunSmokeBounds(executedMatches: number): boolean {
@@ -157,6 +159,7 @@ function parseArguments(
     'shard-index',
     'shard-count',
     'enforce-calibration',
+    'journal',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -218,6 +221,9 @@ function parseArguments(
   }
   if (values.has('checkpoint-out') && values.get('checkpoint-out') === '') {
     throw new Error('--checkpoint-out must not be empty.');
+  }
+  if (values.has('journal') && values.get('journal') === '') {
+    throw new Error('--journal must not be empty.');
   }
   if (values.has('resume') && values.get('resume') === '') {
     throw new Error('--resume must not be empty.');
@@ -288,6 +294,7 @@ function parseArguments(
     shardIndex,
     shardCount,
     enforceCalibration: enforceCalibrationValue === 'true',
+    journal: values.get('journal'),
   };
 }
 
@@ -359,11 +366,23 @@ async function main(): Promise<void> {
     depthCap: options.depthCap,
     shardIndex: options.shardIndex,
     shardCount: options.shardCount,
+    ...(options.journal === undefined ? {} : { journalEntries: [] }),
     ...(checkpointCallback === undefined
       ? {}
       : { onCheckpoint: checkpointCallback }),
     ...(checkpoint === undefined ? {} : { checkpoint }),
   });
+  if (options.journal !== undefined) {
+    const journal = result.campaigns.flatMap(
+      (campaign) => campaign.result.journal ?? [],
+    );
+    await mkdir(dirname(options.journal), { recursive: true });
+    await writeFile(options.journal, `${canonicalJson(journal)}\n`, 'utf8');
+    const metrics = journalMetrics(journal);
+    console.log(
+      `journal decisions=${metrics.decisionCount} abstention=${metrics.abstentionRate.toFixed(3)} disengage=${metrics.disengageSelectionRate.toFixed(3)} override=${metrics.overrideRate.toFixed(3)}`,
+    );
+  }
   const csv = renderCsv(
     result.campaigns.flatMap((campaign) => campaign.result.metrics),
     result.trajectoryBands,
