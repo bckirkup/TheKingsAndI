@@ -9,6 +9,7 @@ import {
 } from '../sim/world';
 import { opponentArchetypeForLeader } from '../sim/cli';
 import { LivingBoard } from '../src/chess';
+import { startingAbilityForRole } from '../src/psychology';
 import { createStartingRoster, mergeCampaignRoster } from '../sim/roster';
 
 describe('world pairing layer', () => {
@@ -38,13 +39,25 @@ describe('world pairing layer', () => {
   it('preserves carried traits while restoring fresh traits for new identities', () => {
     const board = LivingBoard.standard();
     const original = createStartingRoster(board, 'w', 40, 0.1);
-    const carried = original.slice(0, 1);
+    const carried = original.slice(0, 2).map((piece, index) => ({
+      ...piece,
+      E_i: index === 0 ? 90 : 7,
+    }));
     const restored = mergeCampaignRoster(board, 'w', carried, 40, 0.9);
     expect(restored[0]?.traits).toEqual(original[0]?.traits);
-    expect(restored[1]?.traits).toEqual(
+    expect(restored[0]?.E_i).toBe(90);
+    expect(restored[1]?.E_i).toBe(7);
+    expect(restored[1]?.traits).toEqual(original[1]?.traits);
+    expect(restored[1]?.traits).not.toEqual(
       createStartingRoster(board, 'w', 40, 0.9)[1]?.traits,
     );
-    expect(restored[1]?.traits).not.toEqual(original[1]?.traits);
+    const fresh = restored[2];
+    expect(fresh).toBeDefined();
+    if (fresh === undefined) throw new Error('Expected an uncarried seat.');
+    expect(fresh.traits).toEqual(
+      createStartingRoster(board, 'w', 40, 0.9)[2]?.traits,
+    );
+    expect(fresh.E_i).toBe(startingAbilityForRole(fresh.role));
   });
 
   it('keeps fixed-side commander rosters owned by their identities', () => {
