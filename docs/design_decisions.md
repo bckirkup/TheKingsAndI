@@ -1910,6 +1910,56 @@ making the commander pay the room for the spend like an override; or a
 standing claim on the next draft, where the veteran expects money spent on
 their cohort.
 
+### D186 ✅ Can accumulated trauma end a career on every path? (ADR 0072)
+**Answered 2026-08-29 (owner: "we need both retirement and amazing grace") —
+not wired.** Yes: a non-King identity whose trauma reaches the threshold is
+permanently retired, and the campaign path may not be exempt. The machinery
+exists on one path only — `RETIREMENT_TRAUMA_THRESHOLD = 100` is checked by
+`statusForConscript` at `src/orchestration/squadFielding.ts:329-334`, while
+`retirementCause: 'trauma'` is recorded by the season fold at
+`src/orchestration/squadFielding.ts:505-512`, folded by the season pool — while
+the campaign path has no pool, so `B_i` saturates at the `clampTrauma` ceiling
+and no career ever ends. The King's exemption stands (ADR 0021). Retirement is
+the accumulated cost of every commander who spent the piece (ADR 0026), not a
+penalty on the piece. The threshold keeps its `100`; nothing here re-opens
+D130's calibration.
+
+### D187 ✅ Does trauma ever recover, and on what terms? (ADR 0072)
+**Answered 2026-08-29 (owner: "Amazing grace is when you expect nothing";
+"Nobody can buy grace") — not wired.** Trauma can be relieved, and the relief is
+unearned. The ruling is a set of constraints on the eventual term rather than a
+mechanism: (a) **no leader-controlled input may appear in it** — not standing,
+purse, `τ_abil`, `τ_benev`, style, match result, override count, or *whether the
+commander ransomed the piece*; (b) **the leader receives no credit**, because a
+piece cannot attribute what it cannot trace, so grace writes no credence and no
+affinity toward a commander; (c) it is drawn from the **seeded PRNG at a match
+boundary**, exactly reproducible in replay and wholly unpredictable in-world;
+(d) **no piece may anticipate it** — a hope-of-grace term in the desertion
+utility is an ADR 0011 morale floor under another name; (e) it falls on **both
+armies** (ADR 0025). Relief in `B_i` is flat; what varies with expectation is how
+the same relief *registers* (D182). This is explicitly not time-based decay, so
+ADR 0007 is untouched: nothing drifts toward a baseline, an event happens.
+
+### D188 ❓ What is the grace rate and magnitude?
+**Open — raised 2026-08-29 by ADR 0072, not wired.** No rate, relief size, or
+registration coefficient is chosen. The acceptance gate is stated before any
+sweep because the hazard is structural rather than numeric: if relief registers
+more strongly against low expectation, a commander can farm grace by grinding
+his roster into hopelessness. **A cruel style must not out-perform a kind one on
+retention or outcome through grace.** Rarity (grace cannot be relied upon) and
+scope (registration moves morale and outlook, never `B_i` itself, so cruelty
+still accrues the permanent quantity) are the intended defences, and both must be
+measured. Flat registration is the fallback if the surface shows farming works.
+
+### D189 ❓ What fills the square of a retired identity in the campaign path?
+**Open — raised 2026-08-29 by ADR 0072, not wired.** `mergeCampaignRoster`
+rebuilds the standard lineup every match and keys carried state by starting
+square, so a permanently retired identity leaves a square whose occupant is never
+coming back — a fresh identity, a levy on the season path's terms, or an
+unfilled square are all unresolved. Adjacent to but distinct from **D180**, which
+asks what a *returned* piece owes the replacement that took its square; D189
+concerns a square whose previous occupant has no return.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
