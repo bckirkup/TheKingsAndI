@@ -6,6 +6,7 @@ import {
   runHeadlessMatch,
   type HeadlessLeaderPort,
   type HeadlessMatchResult,
+  type OverrideAskContext,
 } from '../src/orchestration';
 import type { EnemyMoveChooser } from '../src/orchestration/enemyTurn';
 import type { PieceState } from '../src/psychology';
@@ -19,6 +20,12 @@ import {
   type LeaderObservation,
 } from './leaders';
 import { createStartingRoster } from './roster';
+import {
+  createJournallingLeader,
+  scriptedAgent,
+  type JournalAgent,
+  type JournalEntry,
+} from './journal';
 
 const MAX_PLIES = 200;
 const REDEEMER_SWITCH_MATCH = 10;
@@ -66,6 +73,8 @@ export interface RunMatchOptions {
   readonly opponentObservation?: LeaderObservation;
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
+  readonly journalEntries?: JournalEntry[];
+  readonly journalAgent?: JournalAgent;
 }
 
 export async function runMatch(
@@ -86,7 +95,28 @@ export async function runMatch(
     observation: options.opponentObservation ?? createPriorLeaderObservation(),
   };
   const opponent = options.opponent ?? 'random';
-  const opponentPort = leaderPort(opponent, opponentContextBase);
+  const rawOpponentPort = leaderPort(opponent, opponentContextBase);
+  const rawLeaderPort = leaderPort(options.leader, playerContextBase);
+  const journalConfig =
+    options.journalEntries === undefined
+      ? undefined
+      : { entries: options.journalEntries };
+  const opponentPort =
+    journalConfig === undefined
+      ? rawOpponentPort
+      : createJournallingLeader(rawOpponentPort, {
+          ...journalConfig,
+          agent: options.journalAgent ?? scriptedAgent('scripted:opponent'),
+          match: options.matchIndex,
+        });
+  const playerPort =
+    journalConfig === undefined
+      ? rawLeaderPort
+      : createJournallingLeader(rawLeaderPort, {
+          ...journalConfig,
+          agent: options.journalAgent ?? scriptedAgent('scripted:leader'),
+          match: options.matchIndex,
+        });
   const adaptiveOpponent =
     opponent === 'chastened' ||
     opponent === 'escalator' ||
@@ -95,15 +125,23 @@ export async function runMatch(
     ? 'random'
     : (opponent as OpponentArchetype);
   const opponentMoveChooser: EnemyMoveChooser | undefined = adaptiveOpponent
-    ? async (board, side, random, ply, refusedSans) =>
-        (await opponentPort.chooseMove(board, side, random, ply, refusedSans))
-          ?.san
+    ? async (board, side, random, ply, refusedSans, context) =>
+        (
+          await opponentPort.chooseMove(
+            board,
+            side,
+            random,
+            ply,
+            refusedSans,
+            context,
+          )
+        )?.san
     : undefined;
   return runHeadlessMatch({
     random,
     maxPlies: MAX_PLIES,
     playerSide: 'w',
-    leader: leaderPort(options.leader, playerContextBase),
+    leader: playerPort,
     opponent: opponentPort,
     initialRoster: options.roster,
     ...(options.initialLineup === undefined
@@ -114,8 +152,11 @@ export async function runMatch(
     ...(opponentMoveChooser === undefined ? {} : { opponentMoveChooser }),
     ...(adaptiveOpponent
       ? {
-          opponentOverrideChooser: (random: SeededRandom, ply: number) =>
-            opponentPort.shouldOverride(random, ply),
+          opponentOverrideChooser: (
+            random: SeededRandom,
+            ply: number,
+            context?: OverrideAskContext,
+          ) => opponentPort.shouldOverride(random, ply, context),
         }
       : {}),
     ...(options.enemyRoster === undefined

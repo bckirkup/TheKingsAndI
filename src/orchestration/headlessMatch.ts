@@ -7,8 +7,10 @@ import {
   type Side,
 } from '../chess';
 import type { SeededRandom } from '../core/random';
+import type { ObjectionStrengthWord } from '../core/qualitativeBands';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
+import { objectionStrengthWord } from '../core/qualitativeBands';
 import {
   applyFatalisticComplianceCosts,
   applyMatchOutcomeTrust,
@@ -100,6 +102,21 @@ export interface HeadlessMoveChoice {
   readonly leaderImpliedBias?: number;
 }
 
+export interface MoveAskContext {
+  readonly roster: readonly PieceState[];
+  readonly ply: number;
+  readonly side: Side;
+}
+
+export interface OverrideAskContext {
+  readonly pieceId: string;
+  readonly san: string;
+  readonly objectionStrength: ObjectionStrengthWord;
+  readonly board: LivingBoard;
+  readonly roster: readonly PieceState[];
+  readonly side: Side;
+}
+
 export interface HeadlessLeaderPort {
   chooseMove(
     board: LivingBoard,
@@ -107,8 +124,13 @@ export interface HeadlessLeaderPort {
     random: SeededRandom,
     ply: number,
     refusedSans?: ReadonlySet<string>,
+    context?: MoveAskContext,
   ): HeadlessMoveChoice | undefined | Promise<HeadlessMoveChoice | undefined>;
-  shouldOverride(random: SeededRandom, ply: number): boolean;
+  shouldOverride(
+    random: SeededRandom,
+    ply: number,
+    context?: OverrideAskContext,
+  ): boolean;
   onMatchEnd?(roster: readonly PieceState[], winScore: number): PieceState[];
 }
 
@@ -138,6 +160,7 @@ export interface HeadlessMatchConfig {
   readonly opponentOverrideChooser?: (
     random: SeededRandom,
     ply: number,
+    context?: OverrideAskContext,
   ) => boolean;
 }
 
@@ -572,6 +595,7 @@ export async function runHeadlessMatch(
         config.random,
         ply,
         refusedSans,
+        { roster, ply, side },
       );
       if (choice === undefined) break;
 
@@ -651,7 +675,18 @@ export async function runHeadlessMatch(
       );
 
       if (outcome.verdict === 'MORAL_REFUSAL') {
-        if (leader.shouldOverride(config.random, ply)) {
+        if (
+          leader.shouldOverride(config.random, ply, {
+            pieceId: actor.id,
+            san: choice.san,
+            objectionStrength: objectionStrengthWord(
+              outcome.refusalThreshold - outcome.utilityScore,
+            ),
+            board,
+            roster,
+            side,
+          })
+        ) {
           actorChallenged = true;
           const override = applyPlayerOverride(
             roster,

@@ -32,6 +32,7 @@ import {
   type SimEngineKind,
 } from './engine';
 import { shardCost, type ShardCost } from './cost';
+import type { JournalEntry } from './journal';
 
 export const PARALLEL_MANIFEST_VERSION = 1;
 const CAMPAIGN_SEED_SALT = 0xa5f1523d;
@@ -138,6 +139,7 @@ export interface ShardOptions {
   readonly onCheckpoint?: CampaignOptions['onCheckpoint'];
   readonly campaignRunner?: CampaignRunner;
   readonly campaignRunnerDeterminismId?: string;
+  readonly journalEntries?: JournalEntry[];
 }
 
 export type CampaignRunner = (
@@ -291,6 +293,9 @@ export async function runShard(options: ShardOptions): Promise<ShardResult> {
         ...(options.onCheckpoint === undefined || campaignIndex !== indices[0]
           ? {}
           : { onCheckpoint: options.onCheckpoint }),
+        ...(options.journalEntries === undefined
+          ? {}
+          : { journalEntries: options.journalEntries }),
       });
       campaigns.push({
         campaignIndex,

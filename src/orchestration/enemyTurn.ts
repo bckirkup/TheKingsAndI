@@ -8,6 +8,7 @@ import type { SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EnginePort } from '../engine/types';
 import type { EngineAuditEntry } from '../engine';
+import type { MoveAskContext, OverrideAskContext } from './headlessMatch';
 import {
   applyFatalisticComplianceCosts,
   isRegardEligible,
@@ -41,6 +42,7 @@ import {
   expectedVindicationDelta,
   desertionContextFor,
 } from './psychologyHooks';
+import { objectionStrengthWord } from '../core/qualitativeBands';
 import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { kingExposureAfterWithdrawals } from './kingExposure';
 import { applyPromotion } from './promotion';
@@ -91,6 +93,7 @@ export type EnemyMoveChooser = (
   random: SeededRandom,
   ply: number,
   refusedSans: ReadonlySet<string>,
+  context?: MoveAskContext,
 ) => string | undefined | Promise<string | undefined>;
 
 function resolveIntent(
@@ -647,7 +650,11 @@ export async function applyEnemyTurn(input: {
   readonly dreadExposureByPiece?: DreadExposureByPiece;
   readonly regardStreakByPiece?: Readonly<Record<string, number>>;
   readonly chooseMove?: EnemyMoveChooser;
-  readonly shouldOverride?: (random: SeededRandom, ply: number) => boolean;
+  readonly shouldOverride?: (
+    random: SeededRandom,
+    ply: number,
+    context?: OverrideAskContext,
+  ) => boolean;
 }): Promise<EnemyTurnResult> {
   const insight = input.insight ?? createInsightRoundHandle();
   const enemyRoster = syncSideRoster(
@@ -691,6 +698,11 @@ export async function applyEnemyTurn(input: {
             input.random,
             input.ply,
             refusedSans,
+            {
+              roster: currentEnemyRoster,
+              ply: input.ply,
+              side: input.enemySide,
+            },
           );
     if (san === undefined) break;
 
@@ -763,6 +775,27 @@ export async function applyEnemyTurn(input: {
       bestAuditScore,
       expectedVindicationDelta(actor, moveEval),
     );
+    let overrideContext: OverrideAskContext | undefined;
+    if (input.shouldOverride !== undefined) {
+      const candidateOutcome = evaluateMoveResponse(
+        actor,
+        moveEval,
+        currentEnemyRoster,
+        desertionContextFor(actor, moveEval, currentEnemyRoster),
+      );
+      if (candidateOutcome.verdict === 'MORAL_REFUSAL') {
+        overrideContext = {
+          pieceId: actor.id,
+          san,
+          objectionStrength: objectionStrengthWord(
+            candidateOutcome.refusalThreshold - candidateOutcome.utilityScore,
+          ),
+          board: input.board,
+          roster: currentEnemyRoster,
+          side: input.enemySide,
+        };
+      }
+    }
     const result = applyTrackedEnemyDecision({
       board: input.board,
       enemyRoster: currentEnemyRoster,
@@ -777,7 +810,8 @@ export async function applyEnemyTurn(input: {
       ply: input.ply,
       overrideRefusals:
         (input.overrideRefusals ??
-          input.shouldOverride?.(input.random, input.ply) ??
+          // Keep this call unconditional per candidate to preserve the seeded stream.
+          input.shouldOverride?.(input.random, input.ply, overrideContext) ??
           input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,

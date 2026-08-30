@@ -24,6 +24,7 @@ import {
   updateLeaderObservation,
   type LeaderObservation,
 } from './leaders';
+import type { JournalEntry } from './journal';
 
 export interface CampaignOptions {
   readonly matches: number;
@@ -41,6 +42,7 @@ export interface CampaignOptions {
   readonly onCheckpoint?: (
     checkpoint: CampaignCheckpoint,
   ) => void | Promise<void>;
+  readonly journalEntries?: JournalEntry[];
 }
 
 export interface CampaignCheckpoint {
@@ -76,6 +78,7 @@ export interface CampaignResult {
   readonly justifiedRefusalObviousness: readonly number[];
   readonly justifiedRefusalPrivateViewLosses: readonly number[];
   readonly cost?: CampaignCost;
+  readonly journal?: readonly JournalEntry[];
 }
 
 const MATCH_SEED_MULTIPLIER = 1_000_003;
@@ -477,6 +480,7 @@ export async function runCampaign(
     checkpoint === undefined ? [] : [...checkpoint.completedMetrics];
   const justifiedRefusalObviousness: number[] = [];
   const justifiedRefusalPrivateViewLosses: number[] = [];
+  const journalEntries = options.journalEntries;
   const firstMatch = checkpoint?.nextMatch ?? 1;
 
   for (let match = firstMatch; match <= options.matches; match += 1) {
@@ -511,6 +515,7 @@ export async function runCampaign(
       opponentObservation,
       enemyTrackedIdentities,
       engine,
+      ...(journalEntries === undefined ? {} : { journalEntries }),
     });
     costTracker.endMatch(match, result.plies);
     const metric = metricsFromMatch(
@@ -634,6 +639,9 @@ export async function runCampaign(
       justifiedRefusalPrivateViewLosses,
     ),
     cost: costTracker.finish(),
+    ...(journalEntries === undefined
+      ? {}
+      : { journal: Object.freeze(journalEntries) }),
   };
 }
 

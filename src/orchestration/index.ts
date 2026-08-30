@@ -1,4 +1,14 @@
 export { runHeadlessMatch } from './headlessMatch';
+export {
+  projectMoveObservation,
+  projectOverrideObservation,
+} from './observation';
+export type {
+  MoveObservation,
+  Observation,
+  ObservationPiece,
+  OverrideObservation,
+} from './observation';
 export { classifyMatchResult } from './terminalState';
 export { kingExposureAfterWithdrawals } from './kingExposure';
 export { endpointFor } from './privateEvaluation';
@@ -104,4 +114,6 @@ export type {
   HeadlessMatchConfig,
   HeadlessMatchResult,
   HeadlessMoveChoice,
+  MoveAskContext,
+  OverrideAskContext,
 } from './headlessMatch';
