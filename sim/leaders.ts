@@ -14,6 +14,19 @@ export interface LeaderContext {
   readonly campaignMatch: number;
   readonly ply: number;
   readonly redeemerSwitchMatch: number;
+  /**
+   * Behavioral observations from the previous completed match only. This
+   * deliberately excludes piece psychology and engine truth.
+   */
+  readonly observation: LeaderObservation;
+}
+
+export interface LeaderObservation {
+  readonly matchesObserved: number;
+  readonly refusalPermilleLast: number;
+  readonly desertionsLast: number;
+  readonly survivorsLast: number;
+  readonly winScoreLast: number;
 }
 
 export interface LeaderChoice {
@@ -37,6 +50,48 @@ export const LEADER_POLICY_CONFIG: LeaderPolicyConfig = {
   repetitionPenalty: -1_000,
   /** Small reward per permille of friendly promotion prospect gained. */
   pawnAdvanceWeight: 0.02,
+} as const;
+
+export interface AdaptivePolicyConfig {
+  /** Base override probability shared by the adaptive styles. */
+  readonly baseInsistence: number;
+  /** Base tactical sacrifice penalty shared by the adaptive styles. */
+  readonly baseRisk: number;
+  /** Chastened override reduction per refusal-rate permille. */
+  readonly chastenedGain: number;
+  /** Chastened sacrifice penalty increase per desertion. */
+  readonly chastenedRiskGain: number;
+  /** Upper bound on chastened sacrifice penalty. */
+  readonly chastenedRiskCeiling: number;
+  /** Escalator override increase per refusal-rate permille. */
+  readonly escalatorGain: number;
+  /** Upper bound on escalator override probability. */
+  readonly escalatorCeiling: number;
+  /** Roster scarcity threshold below which insistence falls. */
+  readonly thinRoster: number;
+  /** Sacrifice penalty increase per missing survivor. */
+  readonly scarcityGain: number;
+}
+
+export const ADAPTIVE_POLICY_CONFIG: AdaptivePolicyConfig = {
+  /** Base override probability shared by the adaptive styles. */
+  baseInsistence: 40,
+  /** Base tactical sacrifice penalty shared by the adaptive styles. */
+  baseRisk: 8,
+  /** Chastened override reduction per refusal-rate permille. */
+  chastenedGain: 500,
+  /** Chastened sacrifice penalty increase per desertion. */
+  chastenedRiskGain: 8,
+  /** Upper bound on chastened sacrifice penalty. */
+  chastenedRiskCeiling: 72,
+  /** Escalator override increase per refusal-rate permille. */
+  escalatorGain: 55,
+  /** Upper bound on escalator override probability. */
+  escalatorCeiling: 95,
+  /** Roster scarcity threshold below which insistence falls. */
+  thinRoster: 12,
+  /** Sacrifice penalty increase per missing survivor. */
+  scarcityGain: 4,
 } as const;
 
 function prospectTotal(prospect: Readonly<Record<string, number>>): number {
@@ -126,6 +181,18 @@ function tacticalScore(feature: MoveFeatures, riskWeight: number): number {
     feature.kingSafetyDelta * 2 -
     feature.pCaptured * riskWeight
   );
+}
+
+function clampInteger(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, Math.trunc(value)));
+}
+
+function adaptiveObservation(
+  context: LeaderContext,
+): LeaderObservation | undefined {
+  return context.observation.matchesObserved === 0
+    ? undefined
+    : context.observation;
 }
 
 function createPolicy(style: Leader): LeaderPolicy {
@@ -323,6 +390,112 @@ function createPolicy(style: Leader): LeaderPolicy {
         },
         shouldOverride: (random) => random.nextInt(100) < 40,
       };
+    case 'chastened':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const observation = adaptiveObservation(context);
+          const riskWeight =
+            observation === undefined
+              ? ADAPTIVE_POLICY_CONFIG.baseRisk
+              : Math.min(
+                  ADAPTIVE_POLICY_CONFIG.chastenedRiskCeiling,
+                  ADAPTIVE_POLICY_CONFIG.baseRisk +
+                    observation.desertionsLast *
+                      ADAPTIVE_POLICY_CONFIG.chastenedRiskGain,
+                );
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, riskWeight),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const observation = adaptiveObservation(context);
+          const chance =
+            observation === undefined
+              ? ADAPTIVE_POLICY_CONFIG.baseInsistence
+              : clampInteger(
+                  ADAPTIVE_POLICY_CONFIG.baseInsistence -
+                    Math.trunc(
+                      (observation.refusalPermilleLast *
+                        ADAPTIVE_POLICY_CONFIG.chastenedGain) /
+                        1000,
+                    ),
+                  0,
+                  100,
+                );
+          return random.nextInt(100) < chance;
+        },
+      };
+    case 'escalator':
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, ADAPTIVE_POLICY_CONFIG.baseRisk),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const observation = adaptiveObservation(context);
+          const chance =
+            observation === undefined
+              ? ADAPTIVE_POLICY_CONFIG.baseInsistence
+              : clampInteger(
+                  ADAPTIVE_POLICY_CONFIG.baseInsistence +
+                    Math.trunc(
+                      (observation.refusalPermilleLast *
+                        ADAPTIVE_POLICY_CONFIG.escalatorGain) /
+                        1000,
+                    ),
+                  0,
+                  ADAPTIVE_POLICY_CONFIG.escalatorCeiling,
+                );
+          return random.nextInt(100) < chance;
+        },
+      };
+    case 'roster_first':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const observation = adaptiveObservation(context);
+          const missing =
+            observation === undefined
+              ? 0
+              : 16 - Math.min(16, observation.survivorsLast);
+          const riskWeight =
+            ADAPTIVE_POLICY_CONFIG.baseRisk +
+            missing * ADAPTIVE_POLICY_CONFIG.scarcityGain;
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, riskWeight),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const observation = adaptiveObservation(context);
+          const chance =
+            observation !== undefined &&
+            observation.survivorsLast < ADAPTIVE_POLICY_CONFIG.thinRoster
+              ? 10
+              : ADAPTIVE_POLICY_CONFIG.baseInsistence;
+          return random.nextInt(100) < chance;
+        },
+      };
     case 'random':
     default:
       return {
@@ -355,6 +528,9 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   exacting: createPolicy('exacting'),
   absentee: createPolicy('absentee'),
   steady: createPolicy('steady'),
+  chastened: createPolicy('chastened'),
+  escalator: createPolicy('escalator'),
+  roster_first: createPolicy('roster_first'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {

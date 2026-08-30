@@ -16,16 +16,10 @@
 import { ENGINE_CONFIG } from '../src/psychology/config';
 
 import { runCampaign } from './campaign';
-import {
-  ENGINES,
-  OPPONENT_ARCHETYPES,
-  opponentArchetypeForLeader,
-  type Leader,
-} from './cli';
+import { ENGINES, OPPONENT_ARCHETYPES, type Leader } from './cli';
 import { plainChessMeanWinScore } from './baseline';
 import { disposeSimEngine, type SimEngineKind } from './engine';
 import { csvField } from './metrics';
-import type { OpponentArchetype } from '../src/orchestration/leaderPolicy';
 
 export interface SweepPoint {
   readonly knob: string;
@@ -236,7 +230,7 @@ async function runSweepCampaign(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly engineKind: SimEngineKind;
   readonly depthCap: number | undefined;
   readonly plainWin: number;
@@ -273,7 +267,7 @@ export async function runCoefficientSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly engineKind?: SimEngineKind;
   readonly depthCap?: number | undefined;
 }): Promise<readonly SweepPoint[]> {
@@ -333,7 +327,7 @@ export async function runGridSweep(options: {
   readonly matches: number;
   readonly seed: number;
   readonly leader: Leader;
-  readonly opponent: OpponentArchetype;
+  readonly opponent: Leader;
   readonly engineKind?: SimEngineKind;
   readonly depthCap?: number | undefined;
   readonly skip?: number;
@@ -407,7 +401,7 @@ interface SweepCliOptions {
   matches: number;
   seed: number;
   leader: Leader;
-  opponent: OpponentArchetype;
+  opponent: Leader;
   engine: SimEngineKind;
   depthCap: number | undefined;
   fixed: Readonly<Record<string, number>>;
@@ -498,12 +492,16 @@ export function parseSweepArgs(argv: readonly string[]): SweepCliOptions {
     throw new Error(`--engine must be one of: ${ENGINES.join(', ')}.`);
   }
   const opponentValue = map.get('opponent') ?? 'random';
-  if (!OPPONENT_ARCHETYPES.includes(opponentValue as OpponentArchetype)) {
+  if (
+    !OPPONENT_ARCHETYPES.includes(
+      opponentValue as (typeof OPPONENT_ARCHETYPES)[number],
+    )
+  ) {
     throw new Error(
       `--opponent must be one of: ${OPPONENT_ARCHETYPES.join(', ')}.`,
     );
   }
-  const opponent = opponentArchetypeForLeader(opponentValue as Leader);
+  const opponent = opponentValue as Leader;
   let depthCapValue: number | undefined;
   if (map.get('depth-cap') === undefined) {
     depthCapValue = engine === 'lozza' ? 4 : undefined;

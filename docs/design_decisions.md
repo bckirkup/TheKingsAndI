@@ -2080,6 +2080,38 @@ defaults. No behavioural metric moved beyond seed noise at one campaign per
 condition; evidence and its limits in
 `docs/calibration/2026-08-30-the-veteran-that-remembers.md`.
 
+### D193 ✅ What may an adaptive pseudo-player see, and when?
+**Answered 2026-08-30 — wired, magnitudes unmeasured.** Every NPC style until now
+was stateless: it played the same way whether the roster obeyed it or had been
+refusing for ten matches, which makes it useless for stressing the social model
+that ADR 0063 says the NPCs owe coverage of. The adaptive tier
+(`chastened`, `escalator`, `roster_first` in `sim/leaders.ts`) reads a
+`LeaderObservation` — previous-match refusal rate in permille, desertions,
+surviving roster size, win score — and nothing else. **Behavioural observables
+only:** no `τ`, `B_i`, or `E_i`, no engine truth, because a commander who could
+read the arithmetic would be optimizing a channel the participant cannot see
+(ADR 0018), and the same policies must remain playable by a human.
+
+Granularity is the **match boundary**, not the ply: a pseudo-player reads the
+room between matches (`sim/campaign.ts`, `observationFromPreviousMatch`), which
+keeps the policy constant within a match and the campaign trivially replayable
+and forkable. A standalone match and the first campaign match both receive the
+zeroed record, so every adaptive style reduces to `steady` before it has
+observed anything. The enemy commander may take an adaptive style too, through
+an injected chooser at the orchestration seam
+(`src/orchestration/enemyTurn.ts`); its archetype falls back to `random` because
+these styles have no `OpponentArchetype` counterpart, and its insistence comes
+from the policy rather than from the archetype.
+
+The three styles are deliberately a feedback triad on the same observation:
+`chastened` lowers insistence as refusal rises (and protects pieces as
+desertions rise), `escalator` raises it on the same input, and `roster_first`
+prices its risk by scarcity rather than by the board.
+`ADAPTIVE_POLICY_CONFIG` holds the gains, each with a wiring probe. **No
+magnitude here is calibrated** — the gains were chosen only to separate the
+styles visibly from `steady`, and the tier's purpose is to break things (the
+D181–D185 economy in particular) rather than to model a student well.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
