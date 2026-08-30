@@ -775,24 +775,27 @@ export async function applyEnemyTurn(input: {
       bestAuditScore,
       expectedVindicationDelta(actor, moveEval),
     );
-    const candidateOutcome = evaluateMoveResponse(
-      actor,
-      moveEval,
-      currentEnemyRoster,
-      desertionContextFor(actor, moveEval, currentEnemyRoster),
-    );
-    const overrideChoice =
-      candidateOutcome.verdict === 'MORAL_REFUSAL'
-        ? input.shouldOverride?.(input.random, input.ply, {
-            pieceId: actor.id,
-            san,
-            objectionStrength: objectionStrengthWord(
-              candidateOutcome.refusalThreshold - candidateOutcome.utilityScore,
-            ),
-            board: input.board,
-            roster: currentEnemyRoster,
-          })
-        : undefined;
+    let overrideContext: OverrideAskContext | undefined;
+    if (input.shouldOverride !== undefined) {
+      const candidateOutcome = evaluateMoveResponse(
+        actor,
+        moveEval,
+        currentEnemyRoster,
+        desertionContextFor(actor, moveEval, currentEnemyRoster),
+      );
+      if (candidateOutcome.verdict === 'MORAL_REFUSAL') {
+        overrideContext = {
+          pieceId: actor.id,
+          san,
+          objectionStrength: objectionStrengthWord(
+            candidateOutcome.refusalThreshold - candidateOutcome.utilityScore,
+          ),
+          board: input.board,
+          roster: currentEnemyRoster,
+          side: input.enemySide,
+        };
+      }
+    }
     const result = applyTrackedEnemyDecision({
       board: input.board,
       enemyRoster: currentEnemyRoster,
@@ -807,7 +810,8 @@ export async function applyEnemyTurn(input: {
       ply: input.ply,
       overrideRefusals:
         (input.overrideRefusals ??
-          overrideChoice ??
+          // Keep this call unconditional per candidate to preserve the seeded stream.
+          input.shouldOverride?.(input.random, input.ply, overrideContext) ??
           input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       orderQualityCp,

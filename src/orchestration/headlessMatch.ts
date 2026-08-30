@@ -7,6 +7,7 @@ import {
   type Side,
 } from '../chess';
 import type { SeededRandom } from '../core/random';
+import type { ObjectionStrengthWord } from '../core/qualitativeBands';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import { objectionStrengthWord } from '../core/qualitativeBands';
@@ -110,9 +111,10 @@ export interface MoveAskContext {
 export interface OverrideAskContext {
   readonly pieceId: string;
   readonly san: string;
-  readonly objectionStrength: import('../core/qualitativeBands').ObjectionStrengthWord;
+  readonly objectionStrength: ObjectionStrengthWord;
   readonly board: LivingBoard;
   readonly roster: readonly PieceState[];
+  readonly side: Side;
 }
 
 export interface HeadlessLeaderPort {
@@ -158,6 +160,7 @@ export interface HeadlessMatchConfig {
   readonly opponentOverrideChooser?: (
     random: SeededRandom,
     ply: number,
+    context?: OverrideAskContext,
   ) => boolean;
 }
 
@@ -681,6 +684,7 @@ export async function runHeadlessMatch(
             ),
             board,
             roster,
+            side,
           })
         ) {
           actorChallenged = true;

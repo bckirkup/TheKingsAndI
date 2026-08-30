@@ -1,4 +1,5 @@
 import type { LivingBoard, Side } from '../chess';
+import { compareCodeUnits } from '../core/canonicalJson';
 import type {
   ObjectionStrengthWord,
   MoraleBandWord,
@@ -11,12 +12,6 @@ import {
   trustBandWord,
 } from '../core/qualitativeBands';
 import type { PieceState } from '../psychology';
-
-function compareCanonicalStrings(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
 
 export interface ObservationPiece {
   readonly id: string;
@@ -62,7 +57,7 @@ function projectRoster(
       morale: moraleBandWord(piece.M_i),
       trauma: traumaBandWord(piece.B_i),
     }))
-    .sort((left, right) => compareCanonicalStrings(left.id, right.id));
+    .sort((left, right) => compareCodeUnits(left.id, right.id));
 }
 
 export function projectMoveObservation(input: {

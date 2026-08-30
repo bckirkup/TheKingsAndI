@@ -11,12 +11,15 @@ import {
 } from '../src/orchestration';
 import { createSeededRandom } from '../src/core/random';
 import { createStartingRoster } from '../sim/roster';
+import { runMatch } from '../sim/match';
 import {
   createJournallingLeader,
   journalMetrics,
+  recordedAgent,
   replayJournal,
   scriptedAgent,
   type JournalEntry,
+  type Option,
 } from '../sim/journal';
 
 function simpleLeader(): HeadlessLeaderPort {
@@ -89,7 +92,7 @@ describe('decision journal observations', () => {
     const entries: JournalEntry[] = [];
     const inner = simpleLeader();
     const journalled = createJournallingLeader(inner, {
-      agent: scriptedAgent(inner),
+      agent: scriptedAgent(),
       entries,
       match: 1,
     });
@@ -119,6 +122,69 @@ describe('decision journal observations', () => {
     expect(digest(repeated.events)).toBe(digest(base.events));
     expect(entries.length).toBeGreaterThan(0);
     expect(journalMetrics(entries).abstentionRate).toBeLessThan(1);
+  });
+
+  it('separates leader and opponent journal identities and sides', async () => {
+    const board = LivingBoard.standard();
+    const entries: JournalEntry[] = [];
+    const leader = createJournallingLeader(simpleLeader(), {
+      agent: {
+        ...scriptedAgent(),
+        identity: {
+          ...scriptedAgent().identity,
+          id: 'scripted:leader',
+        },
+      },
+      entries,
+      match: 1,
+    });
+    const opponent = createJournallingLeader(simpleLeader(), {
+      agent: {
+        ...scriptedAgent(),
+        identity: {
+          ...scriptedAgent().identity,
+          id: 'scripted:opponent',
+        },
+      },
+      entries,
+      match: 1,
+    });
+    await runHeadlessMatch({
+      random: createSeededRandom(12),
+      maxPlies: 2,
+      playerSide: 'w',
+      leader,
+      opponent,
+      initialRoster: createStartingRoster(board, 'w', 20, 0.5),
+      initialEnemyRoster: createStartingRoster(board, 'b', 20, 0.5),
+      engine: createFakeEnginePort(),
+      opponentMoveChooser: async (
+        currentBoard,
+        side,
+        random,
+        ply,
+        refusedSans,
+        context,
+      ) =>
+        (
+          await opponent.chooseMove(
+            currentBoard,
+            side,
+            random,
+            ply,
+            refusedSans,
+            context,
+          )
+        )?.san,
+      opponentOverrideChooser: (random, ply, context) =>
+        opponent.shouldOverride(random, ply, context),
+    });
+    expect(new Set(entries.map((entry) => entry.at.side))).toEqual(
+      new Set(['w', 'b']),
+    );
+    expect(new Set(entries.map((entry) => entry.agent.id))).toEqual(
+      new Set(['scripted:leader', 'scripted:opponent']),
+    );
   });
 
   it('records abstention as fallback rather than disengagement', async () => {
@@ -157,10 +223,7 @@ describe('decision journal observations', () => {
   it('orders move options canonically and appends disengagement', async () => {
     let captured:
       | {
-          readonly options: readonly {
-            readonly kind: 'move' | 'override' | 'disengage';
-            readonly san?: string;
-          }[];
+          readonly options: readonly Option[];
         }
       | undefined;
     const inner = simpleLeader();
@@ -196,10 +259,7 @@ describe('decision journal observations', () => {
   it('uses the canonical override options with disengagement appended', () => {
     let captured:
       | {
-          readonly options: readonly {
-            readonly kind: 'move' | 'override' | 'disengage';
-            readonly san?: string;
-          }[];
+          readonly options: readonly Option[];
         }
       | undefined;
     const inner = simpleLeader();
@@ -225,11 +285,121 @@ describe('decision journal observations', () => {
       objectionStrength: 'clearly beyond the limit',
       board,
       roster: createStartingRoster(board, 'w', 20, 0.5),
+      side: 'w',
     });
     expect(captured?.options).toEqual([
       { kind: 'override' },
+      { kind: 'stand' },
       { kind: 'disengage' },
     ]);
+  });
+
+  it('separates insist, stand, disengage, and abstain override decisions', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 20, 0.5);
+    const context = {
+      pieceId: 'w:P:a2',
+      san: 'a3',
+      objectionStrength: 'clearly beyond the limit' as const,
+      board,
+      roster,
+      side: 'w' as const,
+    };
+    const run = (
+      decide: (request: {
+        readonly options: readonly Option[];
+      }) => number | undefined,
+      innerOverride: boolean,
+    ) => {
+      const entries: JournalEntry[] = [];
+      const leader = createJournallingLeader(
+        {
+          ...simpleLeader(),
+          shouldOverride: () => innerOverride,
+        },
+        {
+          agent: {
+            identity: {
+              id: 'case',
+              promptVersion: 'v1',
+              optionSetVersion: 'v1',
+            },
+            decide,
+          },
+          entries,
+          match: 1,
+        },
+      );
+      const result = leader.shouldOverride(createSeededRandom(3), 1, context);
+      return { entries, result };
+    };
+    const insist = run(() => 0, false);
+    expect(insist.result).toBe(true);
+    expect(insist.entries[0]?.chosen).toBe(0);
+    const stand = run(() => 1, true);
+    expect(stand.result).toBe(false);
+    expect(stand.entries[0]?.chosen).toBe(1);
+    const disengageObservation = projectOverrideObservation({
+      board,
+      side: 'w',
+      ply: 1,
+      roster,
+      refusingPieceId: context.pieceId,
+      candidateSan: context.san,
+      objectionStrength: context.objectionStrength,
+    });
+    const recordedEntries: JournalEntry[] = [];
+    const recorded = createJournallingLeader(
+      {
+        ...simpleLeader(),
+        shouldOverride: () => true,
+      },
+      {
+        agent: recordedAgent(
+          { [`${digest(disengageObservation)}+recorded`]: 2 },
+          'recorded',
+        ),
+        entries: recordedEntries,
+        match: 1,
+      },
+    );
+    const recordedResult = recorded.shouldOverride(
+      createSeededRandom(3),
+      1,
+      context,
+    );
+    const disengage = {
+      entries: recordedEntries,
+      result: recordedResult,
+    };
+    expect(disengage.result).toBe(false);
+    expect(disengage.entries[0]?.chosen).toBe(2);
+    expect(journalMetrics(disengage.entries).disengageSelectionRate).toBe(1);
+    const abstain = run(() => undefined, true);
+    expect(abstain.result).toBe(true);
+    expect(abstain.entries[0]?.chosen).toBe(-1);
+    expect(abstain.entries[0]?.resolvedBy).toBe('fallback');
+    expect(journalMetrics(abstain.entries).disengageSelectionRate).toBe(0);
+    const scripted = (innerOverride: boolean) => {
+      const entries: JournalEntry[] = [];
+      const leader = createJournallingLeader(
+        {
+          ...simpleLeader(),
+          shouldOverride: () => innerOverride,
+        },
+        {
+          agent: scriptedAgent(),
+          entries,
+          match: 1,
+        },
+      );
+      const result = leader.shouldOverride(createSeededRandom(3), 1, context);
+      return { entries, result };
+    };
+    expect(scripted(true).result).toBe(true);
+    expect(scripted(true).entries[0]?.chosen).toBe(0);
+    expect(scripted(false).result).toBe(false);
+    expect(scripted(false).entries[0]?.chosen).toBe(1);
   });
 
   it('keeps rationale outside the observation digest', async () => {
@@ -258,6 +428,59 @@ describe('decision journal observations', () => {
       return entries[0]?.observationDigest;
     };
     await expect(run('first')).resolves.toBe(await run('second'));
+  });
+
+  it('preserves scripted bias only when the agent selects the scripted SAN', async () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 20, 0.5);
+    const inner: HeadlessLeaderPort = {
+      ...simpleLeader(),
+      chooseMove: (currentBoard, side) => {
+        const choice = simpleLeader().chooseMove(
+          currentBoard,
+          side,
+          createSeededRandom(0),
+          0,
+        );
+        if (choice === undefined || choice instanceof Promise) return choice;
+        return { ...choice, leaderImpliedBias: 7 };
+      },
+    };
+    const run = (
+      choose: (request: {
+        readonly scriptedChoice?: number;
+        readonly options: readonly Option[];
+      }) => number | undefined,
+    ) => {
+      const entries: JournalEntry[] = [];
+      const leader = createJournallingLeader(inner, {
+        agent: {
+          identity: { id: 'bias', promptVersion: 'v1', optionSetVersion: 'v1' },
+          decide: choose,
+        },
+        entries,
+        match: 1,
+      });
+      return leader.chooseMove(
+        board,
+        'w',
+        createSeededRandom(41),
+        0,
+        new Set(),
+        {
+          roster,
+          ply: 0,
+          side: 'w',
+        },
+      );
+    };
+    await expect(
+      run((request) => request.scriptedChoice),
+    ).resolves.toMatchObject({ leaderImpliedBias: 7 });
+    const modelChoice = await run((request) =>
+      request.options.length > 1 ? 1 : undefined,
+    );
+    expect(modelChoice).not.toHaveProperty('leaderImpliedBias');
   });
 
   it('treats an out-of-range response as fallback without changing the line', async () => {
@@ -305,7 +528,7 @@ describe('decision journal observations', () => {
     const inner = simpleLeader();
     const entries: JournalEntry[] = [];
     const journalled = createJournallingLeader(inner, {
-      agent: scriptedAgent(inner),
+      agent: scriptedAgent(),
       entries,
       match: 1,
     });
@@ -320,17 +543,16 @@ describe('decision journal observations', () => {
         initialEnemyRoster: createStartingRoster(board, 'b', 20, 0.5),
         engine: createFakeEnginePort(),
       });
-    await run(journalled);
-    await expect(
-      replayJournal(entries, async (agent) => {
-        const replayLeader = createJournallingLeader(inner, {
-          agent,
-          entries: [],
-          match: 1,
-        });
-        return run(replayLeader);
-      }),
-    ).resolves.toBeDefined();
+    const recordedResult = await run(journalled);
+    const replayedResult = await replayJournal(entries, async (agent) => {
+      const replayLeader = createJournallingLeader(inner, {
+        agent,
+        entries: [],
+        match: 1,
+      });
+      return run(replayLeader);
+    });
+    expect(digest(replayedResult.events)).toBe(digest(recordedResult.events));
     const corrupted = entries.map((entry, index) =>
       index === 0
         ? { ...entry, observationDigest: `${entry.observationDigest}corrupt` }
@@ -353,7 +575,7 @@ describe('decision journal observations', () => {
     const entries: JournalEntry[] = [];
     const inner = simpleLeader();
     const journalled = createJournallingLeader(inner, {
-      agent: scriptedAgent(inner),
+      agent: scriptedAgent(),
       entries,
       match: 1,
     });
@@ -386,8 +608,34 @@ describe('decision journal observations', () => {
     }
     for (const entry of entries) {
       for (const leaf of leaves(entry.observation)) {
-        if (typeof leaf === 'number' && Math.abs(leaf) > 10) {
+        if (typeof leaf === 'number' && Math.abs(leaf) > 10)
           expect(forbidden.has(leaf)).toBe(false);
+      }
+    }
+  });
+
+  it('restricts every observation numeric leaf to ply', async () => {
+    const board = LivingBoard.standard();
+    const entries: JournalEntry[] = [];
+    await runMatch({
+      seed: 37,
+      leader: 'chastened',
+      opponent: 'escalator',
+      matchIndex: 1,
+      campaignMatch: 1,
+      roster: createStartingRoster(board, 'w', -37, 0.5),
+      enemyRoster: createStartingRoster(board, 'b', 23, 0.5),
+      engine: createFakeEnginePort(),
+      journalEntries: entries,
+    });
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.some((entry) => entry.at.kind === 'override')).toBe(true);
+    for (const entry of entries) {
+      for (const leaf of leaves(entry.observation)) {
+        if (typeof leaf === 'number') {
+          expect(leaf).toBe(entry.observation.ply);
+        } else {
+          expect(typeof leaf).toBe('string');
         }
       }
     }

@@ -1,4 +1,5 @@
 import { digest } from '../src/core/digest';
+import { compareCodeUnits } from '../src/core/canonicalJson';
 import {
   extractMoveFeatures,
   type LivingBoard,
@@ -16,7 +17,7 @@ import type { HeadlessMoveChoice } from '../src/orchestration/headlessMatch';
 export type DecisionKind = 'move' | 'override';
 
 export interface Option {
-  readonly kind: 'move' | 'override' | 'disengage';
+  readonly kind: 'move' | 'override' | 'stand' | 'disengage';
   readonly san?: string;
 }
 
@@ -32,6 +33,7 @@ export interface JournalEntry {
     readonly match: number;
     readonly ply?: number;
     readonly kind: DecisionKind;
+    readonly side: Side;
   };
   readonly observation: Observation;
   readonly observationDigest: string;
@@ -67,12 +69,6 @@ export interface JournalOptions {
 
 const DISENGAGE: Option = { kind: 'disengage' };
 
-function compareCanonicalStrings(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
-
 function optionsForMove(board: LivingBoard, side: Side): Option[] {
   return [
     ...board
@@ -82,9 +78,7 @@ function optionsForMove(board: LivingBoard, side: Side): Option[] {
         const features = extractMoveFeatures(board, intent);
         return { kind: 'move' as const, san: features.san };
       })
-      .sort((left, right) =>
-        compareCanonicalStrings(left.san ?? '', right.san ?? ''),
-      ),
+      .sort((left, right) => compareCodeUnits(left.san ?? '', right.san ?? '')),
     DISENGAGE,
   ];
 }
@@ -99,8 +93,7 @@ function selectedIndex(
   );
 }
 
-export function scriptedAgent(inner: HeadlessLeaderPort): JournalAgent {
-  void inner;
+export function scriptedAgent(): JournalAgent {
   return {
     scripted: true,
     identity: {
@@ -145,7 +138,7 @@ export function recordedAgent(
     identity: { id, promptVersion: 'recorded', optionSetVersion: 'v1' },
     scripted: false,
     decide(request) {
-      const response = responses[`${request.observationDigest}${id}`];
+      const response = responses[`${request.observationDigest}+${id}`];
       if (response === undefined && strict) {
         throw new Error(
           `Missing recorded response decisionIndex=${request.decisionIndex ?? 'unknown'}.`,
@@ -170,12 +163,12 @@ export function createJournallingLeader(
   const scripted = options.agent.scripted === true;
   const record = (
     observation: Observation,
+    observationDigest: string,
     optionSet: readonly Option[],
     choice: number | undefined,
     fallbackChoice: number | undefined,
     at: JournalEntry['at'],
   ): number => {
-    const observationDigest = digest(observation);
     const resolved = validChoice(choice, optionSet) ? choice : fallbackChoice;
     const chosen = validChoice(choice, optionSet) ? choice : -1;
     const nextDecisionIndex = options.entries.length;
@@ -201,12 +194,16 @@ export function createJournallingLeader(
   };
   return {
     async chooseMove(board, side, random, ply, refusedSans, context) {
-      const askContext = context ?? { roster: [], ply, side };
+      if (context === undefined) {
+        throw new Error(
+          'Journalling leader requires MoveAskContext with the live own-side roster.',
+        );
+      }
       const observation = projectMoveObservation({
         board,
         side,
         ply,
-        roster: askContext.roster,
+        roster: context.roster,
       });
       const optionSet = optionsForMove(board, side).filter(
         (option) =>
@@ -216,9 +213,10 @@ export function createJournallingLeader(
         ? await inner.chooseMove(board, side, random, ply, refusedSans, context)
         : undefined;
       const scriptedChoice = selectedIndex(optionSet, scriptedMove);
+      const observationDigest = digest(observation);
       const agentChoice = options.agent.decide({
         observation,
-        observationDigest: digest(observation),
+        observationDigest,
         options: optionSet,
         agent: options.agent.identity,
         decisionIndex: options.entries.length,
@@ -237,15 +235,17 @@ export function createJournallingLeader(
       }
       const chosen = record(
         observation,
+        observationDigest,
         optionSet,
         agentChoice,
         selectedIndex(optionSet, fallback),
-        { match: options.match, ply, kind: 'move' },
+        { match: options.match, ply, kind: 'move', side },
       );
       if (chosen < 0) return fallback;
       const selected = optionSet[chosen];
       if (selected?.kind !== 'move' || selected.san === undefined)
         return undefined;
+      // A model-selected SAN has no NPC policy bias; only the scripted SAN reuses it.
       return fallback?.san === selected.san
         ? fallback
         : choiceForSan(board, side, selected.san);
@@ -254,22 +254,27 @@ export function createJournallingLeader(
       if (context === undefined) return inner.shouldOverride(random, ply);
       const observation = projectOverrideObservation({
         board: context.board,
-        side: context.board.turn(),
+        side: context.side,
         ply,
         roster: context.roster,
         refusingPieceId: context.pieceId,
         candidateSan: context.san,
         objectionStrength: context.objectionStrength,
       });
-      const optionSet: Option[] = [{ kind: 'override' }, DISENGAGE];
+      const optionSet: Option[] = [
+        { kind: 'override' },
+        { kind: 'stand' },
+        DISENGAGE,
+      ];
       const scriptedOverride = scripted
         ? inner.shouldOverride(random, ply, context)
         : undefined;
       const scriptedChoice =
         scriptedOverride === undefined ? undefined : scriptedOverride ? 0 : 1;
+      const observationDigest = digest(observation);
       const agentChoice = options.agent.decide({
         observation,
-        observationDigest: digest(observation),
+        observationDigest,
         options: optionSet,
         agent: options.agent.identity,
         decisionIndex: options.entries.length,
@@ -281,11 +286,13 @@ export function createJournallingLeader(
           : scriptedOverride;
       const chosen = record(
         observation,
+        observationDigest,
         optionSet,
         agentChoice,
         fallback ? 0 : 1,
-        { match: options.match, ply, kind: 'override' },
+        { match: options.match, ply, kind: 'override', side: context.side },
       );
+      // Walk-away consequences are not modelled at the override ask yet.
       return chosen === 0;
     },
   };
@@ -323,39 +330,12 @@ export function journalMetrics(
   };
 }
 
-function isJournalList(
-  value:
-    | readonly JournalEntry[]
-    | (import('./match').RunMatchOptions & {
-        readonly journal: readonly JournalEntry[];
-      }),
-): value is readonly JournalEntry[] {
-  return Array.isArray(value);
-}
-
-export function replayJournal<T>(
+export function createReplayAgent(
   journal: readonly JournalEntry[],
-  replay: (agent: JournalAgent) => Promise<T>,
-): Promise<T>;
-export function replayJournal(
-  options: import('./match').RunMatchOptions & {
-    readonly journal: readonly JournalEntry[];
-  },
-): Promise<import('../src/orchestration').HeadlessMatchResult>;
-export async function replayJournal<T>(
-  journalOrOptions:
-    | readonly JournalEntry[]
-    | (import('./match').RunMatchOptions & {
-        readonly journal: readonly JournalEntry[];
-      }),
-  replay?: (agent: JournalAgent) => Promise<T>,
-): Promise<T | import('../src/orchestration').HeadlessMatchResult> {
-  const legacyReplay = isJournalList(journalOrOptions);
-  const journal: readonly JournalEntry[] = legacyReplay
-    ? journalOrOptions
-    : journalOrOptions.journal;
+): JournalAgent & { readonly consumed: () => number } {
   let cursor = 0;
-  const agent: JournalAgent = {
+  const agent: JournalAgent & { readonly consumed: () => number } = {
+    consumed: () => cursor,
     identity: journal[0]?.agent ?? {
       id: 'replay',
       promptVersion: 'replay',
@@ -376,25 +356,19 @@ export async function replayJournal<T>(
       return entry.chosen;
     },
   };
-  if (legacyReplay) {
-    if (replay === undefined) {
-      throw new Error('Replay callback is required.');
-    }
-    const result = await replay(agent);
-    if (cursor !== journal.length) {
-      throw new Error(`Replay did not consume decisionIndex=${cursor}.`);
-    }
-    return result;
-  }
-  const replayEntries: JournalEntry[] = [];
-  const { runMatch } = await import('./match');
-  const result = await runMatch({
-    ...(journalOrOptions as import('./match').RunMatchOptions),
-    journalEntries: replayEntries,
-    journalAgent: agent,
-  });
-  if (cursor !== journal.length) {
-    throw new Error(`Replay did not consume decisionIndex=${cursor}.`);
+  return agent;
+}
+
+export async function replayJournal<T>(
+  journal: readonly JournalEntry[],
+  replay: (agent: JournalAgent) => Promise<T>,
+): Promise<T> {
+  const agent = createReplayAgent(journal);
+  const result = await replay(agent);
+  if (agent.consumed() !== journal.length) {
+    throw new Error(
+      `Replay did not consume decisionIndex=${agent.consumed()}.`,
+    );
   }
   return result;
 }

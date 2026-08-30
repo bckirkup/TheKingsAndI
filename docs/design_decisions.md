@@ -1380,18 +1380,24 @@ committed balance number may depend on a model checkpoint. All model calls live
 in `sim/`; `src/` gains only the widened commander port and the observation
 projection.
 
-**Answered 2026-08-26 by ADR 0063 — not wired.** **D159**: the first journal
-carries `move` (one entry per `chooseMove` attempt, so re-plans are visible),
-`override` (only where `shouldOverride` is asked on a `MORAL_REFUSAL`), and
-`disengage` (an option on both sets, not a third ask); `crisis_option` waits on
+**Answered 2026-08-26 by ADR 0063 — partly wired.** **D159**: the first journal
+is implemented in `sim/journal.ts:createJournallingLeader` and carries `move`
+(one entry per `chooseMove` attempt, so re-plans are visible), `override` (only
+where `shouldOverride` is asked on a `MORAL_REFUSAL`), and `disengage` (an option
+on both sets, not a third ask); the override `stand` option is also enumerated,
+but its walk-away consequence is not modelled. There is no model player, no
+engine-free fold, and no fork/counterfactual replay. `crisis_option` waits on
 ADR 0040 being implemented at all, fielding/dismissal are slice 2, bid/counsel
-slice 3. **D160**: observations carry only the qualitative band words the player
-already sees (`src/ui/qualitativeLabels.ts`), never a raw scalar; the event log
-is not an observation, since `REFUSAL` carries `utility`/`threshold`/
-`perceivedValue` (`src/orchestration/headlessMatch.ts:629-641`); enforced by a
-leak test rather than a whitelist test. **D161**: a declined or out-of-range
-answer is a recorded `abstain` resolved by the named scripted policy, never read
-as disengagement and never retried. **D162**: the bid ladder is derived from the
+slice 3. **D160**: observations are projected field-by-field by
+`src/orchestration/observation.ts:45-97` and carry only the qualitative band
+words the player already sees (`src/core/qualitativeBands.ts:1-85`), never a raw
+scalar; the event log is not an observation, since `REFUSAL` carries
+`utility`/`threshold`/`perceivedValue` (`src/orchestration/headlessMatch.ts:704-718`);
+this is enforced by structural and targeted leak tests in
+`tests/journal.test.ts:573-638`. **D161**: a declined or out-of-range answer is
+a recorded `abstain` resolved by the named scripted policy, never read as
+disengagement and never retried (`sim/journal.ts:159-297`). The disengage option
+is enumerated but its walk-away consequence is not modelled yet. **D162**: the bid ladder is derived from the
 existing integer economy (`pass`, lot/global minimum, the three
 `BID_MULTIPLIER_*` rungs, remaining purse), so `optionSetVersion` includes a
 draft-economy config digest. **D163**: a finding requires recurrence across at
