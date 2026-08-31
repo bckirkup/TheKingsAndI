@@ -12,7 +12,7 @@ export const SCHEMA_VERSION = 4;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
-export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v1';
+export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v2';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -163,6 +163,8 @@ export interface CampaignDebrief {
       readonly winScore: number | null;
       readonly unjustifiedTrauma: number;
       readonly quietQuitTurns: number;
+      readonly emptiedChairs: number;
+      readonly emptiedChairsScore: number;
       readonly leadershipIndex: number | null;
       readonly computable: boolean;
     }[];
@@ -170,6 +172,8 @@ export interface CampaignDebrief {
     readonly meanWinScore: number | null;
     readonly meanUnjustifiedTrauma: number | null;
     readonly meanQuietQuitTurns: number | null;
+    readonly meanEmptiedChairs: number | null;
+    readonly meanEmptiedChairsScore: number | null;
     readonly meanLeadershipIndex: number | null;
     readonly computedMatchCount: number;
     readonly totalMatchCount: number;

@@ -108,7 +108,8 @@ export const ENGINE_CONFIG = {
     alpha: 0.4, // Final Trust weight
     beta: 0.3,  // Win Score weight
     gamma: 0.2, // Unjustified Trauma weight
-    delta: 0.1  // Quiet Quit Turns weight
+    delta: 0.1, // Quiet Quit Turns weight
+    epsilon: 0  // Emptied Chairs weight (D202: inert until measured)
   }
 };
 
@@ -359,20 +360,26 @@ export function calculateBenchingTrustPenalties(
 
 /**
  * Section 4.7: Single-Match Leadership Audit Index
- * Equation: Leadership Index = alpha * T_final + beta * WinScore - gamma * UnjustifiedTrauma - delta * QuietQuitTurns
+ * Equation: Leadership Index = alpha * T_final + beta * WinScore - gamma * UnjustifiedTrauma - delta * QuietQuitTurns - epsilon * EmptiedChairs
+ * T_final is meaned over the fielded roster; a departed piece contributes the
+ * trust it left with (D202: no witness leaves the reading).
+ * EmptiedChairs = clamp(100 * (desertions + trauma-ended careers among the
+ * fielded) / fielded roster size, 0, 100).
  */
 export function calculateSingleMatchLeadershipIndex(
-  finalAverageTrust: number, // T_final (-100 to +100)
+  finalAverageTrust: number, // T_final (-100 to +100), fielded population
   winScore: number, // 0 to 100
   unjustifiedTraumaScore: number, // 0 to 100
   quietQuitTurnCount: number,
+  emptiedChairsScore = 0, // 0 to 100
   weights = ENGINE_CONFIG.LEADERSHIP_WEIGHTS
 ): number {
   return (
     weights.alpha * finalAverageTrust +
     weights.beta * winScore -
     weights.gamma * unjustifiedTraumaScore -
-    weights.delta * quietQuitTurnCount
+    weights.delta * quietQuitTurnCount -
+    weights.epsilon * emptiedChairsScore
   );
 }
 

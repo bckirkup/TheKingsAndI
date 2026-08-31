@@ -6,13 +6,19 @@ import {
 } from '../src/core/random';
 import type { EnginePort } from '../src/engine/types';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
-import { applyGrace, ENGINE_CONFIG, type PieceState } from '../src/psychology';
+import {
+  applyGrace,
+  calculateSingleMatchLeadershipIndex,
+  ENGINE_CONFIG,
+  type PieceState,
+} from '../src/psychology';
 import type { PieceId } from '../src/core/ids';
 import type { Leader } from './cli';
 import { capEngineDepth, createSimEngine, type SimEngineKind } from './engine';
 import { runMatch } from './match';
 import {
   aggregateCampaign,
+  calculateEmptiedChairsScore,
   metricsFromMatch,
   type CampaignMetrics,
   type MatchMetrics,
@@ -578,6 +584,21 @@ export async function runCampaign(
       graceCareerIds: playerBoundary.graceCareerIds,
       enemyGraceCareerIds: enemyBoundary.graceCareerIds,
       retirements: playerBoundary.retirements,
+      emptiedChairs: metric.emptiedChairs + playerBoundary.retirements,
+      emptiedChairsScore: calculateEmptiedChairsScore(
+        metric.emptiedChairs + playerBoundary.retirements,
+        metric.fieldedPieceIds.length,
+      ),
+      leadershipIndex: calculateSingleMatchLeadershipIndex(
+        metric.meanTrustFinal,
+        metric.winScore,
+        metric.unjustifiedTrauma,
+        metric.quietQuitMoves,
+        calculateEmptiedChairsScore(
+          metric.emptiedChairs + playerBoundary.retirements,
+          metric.fieldedPieceIds.length,
+        ),
+      ),
       enemyRetirements: enemyBoundary.retirements,
       graceEvents: playerBoundary.graceEvents,
       enemyGraceEvents: enemyBoundary.graceEvents,

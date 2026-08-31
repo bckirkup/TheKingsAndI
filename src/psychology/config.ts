@@ -25,6 +25,7 @@ export const ENGINE_CONFIG = {
     beta: 0.3,
     gamma: 0.2,
     delta: 0.1,
+    epsilon: 0,
   },
   /** Attribution window for unvindicated override trauma, in plies. */
   UNJUSTIFIED_TRAUMA_WINDOW_PLIES: 2,

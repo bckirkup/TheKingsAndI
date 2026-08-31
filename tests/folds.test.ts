@@ -9,6 +9,7 @@ import {
 import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
+  JUDGEMENT_SEAT_FOLD_VERSION,
   foldCampaignCultureDrift,
   foldJudgementSeat,
   foldMatchAudit,
@@ -364,6 +365,72 @@ describe('foldJudgementSeat', () => {
     ]);
 
     expect(folded.matches[0]?.unjustifiedTrauma).toBe(10);
+  });
+
+  it('restricts trust and emptied chairs to fielded careers', () => {
+    const deserter = makeStoredPiece('w:P:a2', 20);
+    const retired = makeStoredPiece('w:N:b1', 30);
+    const benched = makeStoredPiece('w:P:a3', 100, 'BENCHED');
+    const events: MatchEvent[] = [
+      {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: deserter.id,
+        decision: 'fielded',
+        originRole: 'Pawn',
+        provenance: 'original',
+      },
+      {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: retired.id,
+        decision: 'fielded',
+        originRole: 'Knight',
+        provenance: 'original',
+      },
+      {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: benched.id,
+        decision: 'passed_over',
+        originRole: 'Pawn',
+        provenance: 'original',
+      },
+      {
+        t: 'DESERTION',
+        ply: 2,
+        pieceId: deserter.id,
+        refusedMove: 'a2a3',
+        uStay: 0,
+        uDesert: 1,
+        departureKind: 'first',
+      },
+    ];
+    const folded = foldJudgementSeat([
+      makeMatchRecord(
+        events,
+        {},
+        {
+          result: 'WIN',
+          rosterSnapshot: [deserter, retired, benched],
+          rosterEnd: [
+            makeStoredPiece(deserter.id, 10, 'DESERTED'),
+            makeStoredPiece(retired.id, 30, 'RETIRED'),
+            benched,
+          ],
+        },
+      ),
+    ]);
+
+    expect(folded.foldVersion).toBe(JUDGEMENT_SEAT_FOLD_VERSION);
+    expect(folded.matches[0]?.finalTrust).toBe(20);
+    expect(folded.matches[0]?.emptiedChairs).toBe(2);
+    expect(folded.matches[0]?.emptiedChairsScore).toBe(100);
+    expect(folded.meanEmptiedChairs).toBe(2);
+    expect(folded.meanEmptiedChairsScore).toBe(100);
   });
 
   it('falls back to ACTIVE roster pieces for legacy records', () => {

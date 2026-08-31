@@ -6,6 +6,7 @@ import type { HeadlessMatchResult } from '../src/orchestration/headlessMatch';
 import type { MatchEvent } from '../src/psychology';
 import {
   foldUnjustifiedTrauma,
+  calculateEmptiedChairsScore,
   metricsFromMatch,
   renderCsv,
 } from '../sim/metrics';
@@ -72,6 +73,11 @@ describe('unjustified trauma metrics', () => {
 });
 
 describe('promotion harness metrics', () => {
+  it('clamps emptied chairs scores to the declared bounds', () => {
+    expect(calculateEmptiedChairsScore(-1, 10)).toBe(0);
+    expect(calculateEmptiedChairsScore(3, 2)).toBe(100);
+  });
+
   it('reports leadership index components in metrics and CSV', () => {
     const board = LivingBoard.standard();
     const roster = createStartingRoster(board, 'w', 50, 0.5);
@@ -115,8 +121,44 @@ describe('promotion harness metrics', () => {
     expect(metric.unjustifiedTrauma).toBe(0.25);
     expect(metric.leadershipIndex).toBeCloseTo(34.95);
     const [header, row] = renderCsv([metric]).split('\n');
-    expect(header).toMatch(/,unjustified_trauma,leadership_index$/);
-    expect(row).toMatch(/,0\.25,34\.95$/);
+    expect(metric.meanTrustFinal).toBe(metric.meanTrustEnd);
+    expect(metric.emptiedChairs).toBe(0);
+    expect(metric.emptiedChairsScore).toBe(0);
+    expect(header).toMatch(
+      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score$/,
+    );
+    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00$/);
+  });
+
+  it('uses departed exit trust in mean_trust_final but preserves survivor mean_trust_end', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const departed = roster[0];
+    if (departed === undefined) throw new Error('Expected a starting piece.');
+    const result: HeadlessMatchResult = {
+      events: [],
+      roster: roster.slice(1),
+      departedRoster: [{ ...departed, T_i: 10 }],
+      enemyRoster,
+      departedEnemyRoster: [],
+      enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+      plies: 0,
+      winScore: 50,
+      rout: false,
+      enemyRout: false,
+      refusedGoodMoves: 0,
+      winningPositionDesertions: 0,
+      justifiedRefusalObviousness: [],
+      justifiedRefusalPrivateViewLosses: [],
+      determinismId: 'metrics-trust-final-test',
+      enemyObservableBehaviours: [],
+    };
+    const metric = metricsFromMatch(1, 1, 'supportive', roster, result, 0);
+
+    expect(metric.meanTrustEnd).toBe(50);
+    expect(metric.meanTrustFinal).toBeLessThan(metric.meanTrustEnd);
+    expect(metric.leadershipIndex).toBeCloseTo(34, 8);
   });
 
   it('folds commander promotions from events and excludes enemy promotions', () => {

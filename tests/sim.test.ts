@@ -1154,6 +1154,7 @@ function handCheckMetric(match: number): MatchMetrics {
     overrideRate: 0,
     meanTrustStart: 10,
     meanTrustEnd: 10,
+    meanTrustFinal: 10,
     meanTauAbilStart: 10,
     meanTauAbilEnd: 11,
     meanTauBenevStart: 20,
@@ -1170,6 +1171,8 @@ function handCheckMetric(match: number): MatchMetrics {
     winScore: 50,
     unjustifiedTrauma: 0,
     leadershipIndex: 25,
+    emptiedChairs: 0,
+    emptiedChairsScore: 0,
     rout: false,
     archetype: 'caretaker',
   };

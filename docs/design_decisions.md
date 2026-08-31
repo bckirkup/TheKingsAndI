@@ -2252,8 +2252,30 @@ trust cost is already charged), and a forced move (D191) is charged like any
 other insistence until D191 rules; the term deliberately does not read the
 `implicit` flag. The window size is a calibration knob, not a ruling.
 
-### D202 ❓ Is the index's quiet-quit term on a scale that can move the reading?
-**Open — raised 2026-08-30 by ADR 0074.** At the spec's weights,
+### D202 ✅ Is the index's quiet-quit term on a scale that can move the reading? (ADR 0074 addendum)
+**Answered 2026-08-30 (owner) — wired inert.** No: δ stays where it is, because
+the measured carrier points the wrong way (below), and cruelty-caused
+disengagement is priced through a **fifth term instead: the emptied chairs**.
+`LI = α·T_final + β·WinScore − γ·UT − δ·QQ − ε·EmptiedChairs`, where
+`EmptiedChairs = 100·(desertions + trauma-ended careers among the fielded) /
+fielded roster size`, clamped `0..100`, per match. `ε` defaults to `0` — the
+component ships in the CSV and the Judgement Seat fold so candidate magnitudes
+are post-hoc arithmetic over committed sweeps; ruling a non-zero ε waits on
+that measurement, per the ADR 0074 §1 discipline. Two companion rulings:
+(a) **no witness leaves the reading** — `T_final` is meaned over the *fielded*
+roster, with a piece that deserted, was captured, or retired contributing the
+trust it left with, so a cruel room can no longer shed its angriest witnesses
+out of its own trust term (the harness's previous `mean_trust_end` read
+survivors only); (b) the term and the population fix price into the terminal
+Judgement Seat reading only, per D203 — no mid-run surface, no play change.
+The exits term and the trust term do not double-charge: trust reads the state
+of the room including who it lost; the emptied chair prices the ended service
+itself. Attribution (charging only exits traceable to unvindicated insistence,
+D201's shape) stays open as a refinement if the unattributed count ever
+charges a kind room — the sweep says it will not (0.03 desertions/match
+supportive against 1.97 tyrannical).
+
+The original question, kept for the record — raised 2026-08-30 by ADR 0074. At the spec's weights,
 `δ·QuietQuitTurns` over a 20-match campaign is a handful of points against an
 `α·T_final` term spanning ±40, so the index may still fail to price the
 grudging room it was introduced for. The honest sequence is to measure at the

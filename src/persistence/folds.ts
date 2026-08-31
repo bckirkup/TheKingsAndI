@@ -172,12 +172,25 @@ function fieldedIdsForJudgementSeat(match: MatchRecord): readonly string[] {
     .map((piece) => piece.id);
 }
 
+function emptiedChairsScore(
+  emptiedChairs: number,
+  fieldedRosterSize: number,
+): number {
+  return Math.max(
+    0,
+    Math.min(100, (100 * emptiedChairs) / Math.max(1, fieldedRosterSize)),
+  );
+}
+
 export function foldJudgementSeat(
   matches: readonly MatchRecord[],
 ): CampaignDebrief['judgementSeat'] {
   const foldedMatches = matches.map((match) => {
     const fieldedPieceIds = fieldedIdsForJudgementSeat(match);
-    const trustFinal = meanTrust(match.rosterEnd);
+    const fieldedIds = new Set(fieldedPieceIds);
+    const trustFinal = meanTrust(
+      match.rosterEnd.filter((piece) => fieldedIds.has(piece.id)),
+    );
     const winScore = judgementSeatWinScore(match);
     const unjustifiedTrauma = foldUnjustifiedTrauma(
       match.events,
@@ -185,6 +198,32 @@ export function foldJudgementSeat(
       fieldedPieceIds.length,
     );
     const quietQuitTurns = match.audit.quietQuitCount;
+    const desertions = new Set(
+      match.events
+        .filter(
+          (event): event is Extract<MatchEvent, { t: 'DESERTION' }> =>
+            event.t === 'DESERTION' && fieldedIds.has(event.pieceId),
+        )
+        .map((event) => event.pieceId),
+    );
+    const snapshotById = new Map(
+      match.rosterSnapshot.map((piece) => [piece.id, piece]),
+    );
+    const traumaEndedCareers = new Set(
+      match.rosterEnd
+        .filter(
+          (piece) =>
+            fieldedIds.has(piece.id) &&
+            piece.status === 'RETIRED' &&
+            snapshotById.get(piece.id)?.status !== 'RETIRED',
+        )
+        .map((piece) => piece.id),
+    );
+    const emptiedChairs = new Set([...desertions, ...traumaEndedCareers]).size;
+    const emptiedChairsScoreValue = emptiedChairsScore(
+      emptiedChairs,
+      fieldedPieceIds.length,
+    );
     return {
       matchId: match.id,
       matchIndex: match.matchIndex,
@@ -192,6 +231,8 @@ export function foldJudgementSeat(
       winScore,
       unjustifiedTrauma,
       quietQuitTurns,
+      emptiedChairs,
+      emptiedChairsScore: emptiedChairsScoreValue,
       leadershipIndex:
         winScore === null
           ? null
@@ -200,6 +241,7 @@ export function foldJudgementSeat(
               winScore,
               unjustifiedTrauma,
               quietQuitTurns,
+              emptiedChairsScoreValue,
             ),
       computable: winScore !== null,
     };
@@ -216,6 +258,8 @@ export function foldJudgementSeat(
     meanWinScore: pooledMean((match) => match.winScore ?? 0),
     meanUnjustifiedTrauma: pooledMean((match) => match.unjustifiedTrauma),
     meanQuietQuitTurns: pooledMean((match) => match.quietQuitTurns),
+    meanEmptiedChairs: pooledMean((match) => match.emptiedChairs),
+    meanEmptiedChairsScore: pooledMean((match) => match.emptiedChairsScore),
     meanLeadershipIndex: pooledMean((match) => match.leadershipIndex ?? 0),
     computedMatchCount: computable.length,
     totalMatchCount: matches.length,
