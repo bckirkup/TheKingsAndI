@@ -1,3 +1,4 @@
+import type { PieceId } from '../chess';
 import { ENGINE_CONFIG } from './config';
 import type {
   CampaignCultureDriftVector,
@@ -93,6 +94,50 @@ export function calculateSingleMatchLeadershipIndex(
     weights.beta * winScore -
     weights.gamma * unjustifiedTraumaScore -
     weights.delta * quietQuitTurnCount
+  );
+}
+
+/**
+ * Fold trauma attributable to unvindicated overrides from the match event log.
+ * Each trauma event is charged at most once when override windows overlap.
+ */
+export function foldUnjustifiedTrauma(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+  fieldedRosterSize: number,
+): number {
+  const fieldedIds = new Set(fieldedPieceIds);
+  const overrides = events.filter(
+    (event): event is Extract<MatchEvent, { t: 'OVERRIDE' }> =>
+      event.t === 'OVERRIDE' &&
+      event.vindicated !== true &&
+      fieldedIds.has(event.pieceId),
+  );
+  const windowPlies = Math.max(
+    0,
+    Math.trunc(ENGINE_CONFIG.UNJUSTIFIED_TRAUMA_WINDOW_PLIES),
+  );
+  let attributedTotal = 0;
+  for (const event of events) {
+    if (
+      event.t !== 'PSYCH_DELTA' ||
+      event.field !== 'B_i' ||
+      event.delta <= 0 ||
+      !fieldedIds.has(event.pieceId)
+    ) {
+      continue;
+    }
+    const attributed = overrides.some(
+      (override) =>
+        override.pieceId === event.pieceId &&
+        event.ply > override.ply &&
+        event.ply <= override.ply + windowPlies,
+    );
+    if (attributed) attributedTotal += event.delta;
+  }
+  return Math.max(
+    0,
+    Math.min(100, attributedTotal / Math.max(1, fieldedRosterSize)),
   );
 }
 

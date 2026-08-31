@@ -120,6 +120,7 @@ describe('persistence repository', () => {
           bestScoreDepth: 16,
         },
       ],
+      winScore: 50,
       result: 'DRAW',
     });
 
@@ -127,6 +128,7 @@ describe('persistence repository', () => {
     expect(loaded?.matchCount).toBe(1);
     const stored = await getDatabase().matches.toArray();
     expect(stored[0]?.engineAudit).toHaveLength(1);
+    expect(stored[0]?.winScore).toBe(50);
 
     const debrief = await repo.buildDebrief(created.campaign.id);
     expect(debrief.matches).toHaveLength(1);

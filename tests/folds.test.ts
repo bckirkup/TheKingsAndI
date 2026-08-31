@@ -10,6 +10,7 @@ import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   foldCampaignCultureDrift,
+  foldJudgementSeat,
   foldMatchAudit,
   buildCampaignDebrief,
   type MatchRecord,
@@ -59,6 +60,12 @@ function makeStoredPiece(
 function makeMatchRecord(
   events: MatchEvent[],
   auditOverrides: Partial<MatchRecord['audit']> = {},
+  options: {
+    readonly result?: MatchRecord['result'];
+    readonly winScore?: number;
+    readonly rosterSnapshot?: MatchRecord['rosterSnapshot'];
+    readonly rosterEnd?: MatchRecord['rosterEnd'];
+  } = {},
 ): MatchRecord {
   return {
     id: 'match-1',
@@ -66,10 +73,11 @@ function makeMatchRecord(
     actId: 'act-1',
     matchIndex: 1,
     seed: 1,
-    rosterSnapshot: [],
-    rosterEnd: [],
+    rosterSnapshot: options.rosterSnapshot ?? [],
+    rosterEnd: options.rosterEnd ?? [],
     events,
-    result: 'DRAW',
+    ...(options.winScore === undefined ? {} : { winScore: options.winScore }),
+    result: options.result ?? 'DRAW',
     audit: {
       boardQuality: 70,
       executionFidelity: 0.8,
@@ -250,5 +258,189 @@ describe('buildCampaignDebrief', () => {
     expect(debrief.meanBoardQuality).toBe(70);
     expect(debrief.meanExecutionFidelity).toBeCloseTo(0.75, 5);
     expect(debrief.foldVersion).toBe(CULTURE_DRIFT_FOLD_VERSION);
+  });
+});
+
+describe('foldJudgementSeat', () => {
+  it('maps legacy outcomes and excludes dismissed matches without a stored score', () => {
+    const roster = [makeStoredPiece('w:P:a2', 40)];
+    const folded = foldJudgementSeat([
+      makeMatchRecord([], {}, { result: 'WIN', rosterEnd: roster }),
+      makeMatchRecord([], {}, { result: 'DRAW', rosterEnd: roster }),
+      makeMatchRecord([], {}, { result: 'DISMISSED', rosterEnd: roster }),
+    ]);
+
+    expect(folded.matches.map((match) => match.winScore)).toEqual([
+      100,
+      50,
+      null,
+    ]);
+    expect(folded.matches[2]?.leadershipIndex).toBeNull();
+    expect(folded.computedMatchCount).toBe(2);
+    expect(folded.totalMatchCount).toBe(3);
+    expect(folded.meanWinScore).toBe(75);
+  });
+
+  it('prefers stored chess scores, including the dismissed king result', () => {
+    const roster = [makeStoredPiece('w:P:a2', 40)];
+    const folded = foldJudgementSeat([
+      makeMatchRecord(
+        [],
+        {},
+        {
+          result: 'DISMISSED',
+          winScore: 100,
+          rosterEnd: roster,
+        },
+      ),
+    ]);
+
+    expect(folded.matches[0]?.winScore).toBe(100);
+    expect(folded.matches[0]?.leadershipIndex).not.toBeNull();
+    expect(folded.computedMatchCount).toBe(1);
+  });
+
+  it('uses fielding decisions over roster status when folding trauma', () => {
+    const fielded = makeStoredPiece('w:P:a2', 40);
+    const passedOver = makeStoredPiece('w:N:b1', 40);
+    const events: MatchEvent[] = [
+      {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: fielded.id,
+        decision: 'fielded',
+        originRole: 'Pawn',
+        provenance: 'original',
+      },
+      {
+        t: 'SQUAD_FIELDING',
+        match: 1,
+        side: 'w',
+        pieceId: passedOver.id,
+        decision: 'passed_over',
+        originRole: 'Knight',
+        provenance: 'original',
+      },
+      {
+        t: 'OVERRIDE',
+        ply: 1,
+        pieceId: fielded.id,
+        san: 'e4',
+        pieceTrustDelta: -10,
+      },
+      {
+        t: 'PSYCH_DELTA',
+        ply: 3,
+        pieceId: fielded.id,
+        field: 'B_i',
+        delta: 10,
+      },
+      {
+        t: 'OVERRIDE',
+        ply: 1,
+        pieceId: passedOver.id,
+        san: 'Nf3',
+        pieceTrustDelta: -10,
+      },
+      {
+        t: 'PSYCH_DELTA',
+        ply: 3,
+        pieceId: passedOver.id,
+        field: 'B_i',
+        delta: 100,
+      },
+    ];
+    const folded = foldJudgementSeat([
+      makeMatchRecord(
+        events,
+        {},
+        {
+          result: 'WIN',
+          rosterSnapshot: [fielded, passedOver],
+          rosterEnd: [fielded],
+        },
+      ),
+    ]);
+
+    expect(folded.matches[0]?.unjustifiedTrauma).toBe(10);
+  });
+
+  it('falls back to ACTIVE roster pieces for legacy records', () => {
+    const active = makeStoredPiece('w:P:a2', 40);
+    const benched = makeStoredPiece('w:P:a3', 40, 'BENCHED');
+    const folded = foldJudgementSeat([
+      makeMatchRecord(
+        [
+          {
+            t: 'OVERRIDE',
+            ply: 1,
+            pieceId: active.id,
+            san: 'e4',
+            pieceTrustDelta: -10,
+          },
+          {
+            t: 'PSYCH_DELTA',
+            ply: 3,
+            pieceId: active.id,
+            field: 'B_i',
+            delta: 10,
+          },
+          {
+            t: 'OVERRIDE',
+            ply: 1,
+            pieceId: benched.id,
+            san: 'e5',
+            pieceTrustDelta: -10,
+          },
+          {
+            t: 'PSYCH_DELTA',
+            ply: 3,
+            pieceId: benched.id,
+            field: 'B_i',
+            delta: 100,
+          },
+        ],
+        {},
+        {
+          result: 'WIN',
+          rosterSnapshot: [active, benched],
+          rosterEnd: [active],
+        },
+      ),
+    ]);
+
+    expect(folded.matches[0]?.unjustifiedTrauma).toBe(10);
+  });
+
+  it('pools only computable matches and is deterministic', () => {
+    const roster = [makeStoredPiece('w:P:a2', 40)];
+    const records = [
+      makeMatchRecord(
+        [],
+        {},
+        {
+          result: 'WIN',
+          winScore: 80,
+          rosterSnapshot: roster,
+          rosterEnd: roster,
+        },
+      ),
+      makeMatchRecord(
+        [],
+        {},
+        {
+          result: 'ABANDONED',
+          rosterSnapshot: roster,
+          rosterEnd: roster,
+        },
+      ),
+    ];
+    const first = foldJudgementSeat(records);
+    const second = foldJudgementSeat(records);
+
+    expect(first).toEqual(second);
+    expect(first.computedMatchCount).toBe(1);
+    expect(first.meanLeadershipIndex).toBe(first.matches[0]?.leadershipIndex);
   });
 });

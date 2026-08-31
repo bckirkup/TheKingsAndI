@@ -61,6 +61,59 @@ export function DebriefScreen({
       <h1>Campaign debrief</h1>
       <p>{EPILOGUE_BY_TERMINAL[debrief.actTerminalState]}</p>
 
+      <section className="debrief-screen__judgement-seat">
+        <h2>The Judgement Seat</h2>
+        <dl className="debrief-screen__folds">
+          <div>
+            <dt>Loyalty earned unobserved (0.4·T_final)</dt>
+            <dd>
+              {debrief.judgementSeat.meanFinalTrust === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanFinalTrust.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>The crown&apos;s reward (0.3·win score)</dt>
+            <dd>
+              {debrief.judgementSeat.meanWinScore === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanWinScore.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Unjustified trauma charged (−0.2·UT)</dt>
+            <dd>
+              {debrief.judgementSeat.meanUnjustifiedTrauma === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanUnjustifiedTrauma.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Quiet-quit turns charged (−0.1·QQ)</dt>
+            <dd>
+              {debrief.judgementSeat.meanQuietQuitTurns === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanQuietQuitTurns.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Leadership Index</dt>
+            <dd>
+              {debrief.judgementSeat.meanLeadershipIndex === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanLeadershipIndex.toFixed(1)}
+            </dd>
+          </div>
+        </dl>
+        {debrief.judgementSeat.computedMatchCount <
+        debrief.judgementSeat.totalMatchCount ? (
+          <p className="debrief-screen__judgement-seat-note">
+            computed over {debrief.judgementSeat.computedMatchCount} of{' '}
+            {debrief.judgementSeat.totalMatchCount} matches
+          </p>
+        ) : null}
+      </section>
+
       <div className="narration-audit">
         <h2 className="narration-audit__headline">{prose.headline}</h2>
         {prose.paragraphs.map((paragraph) => (

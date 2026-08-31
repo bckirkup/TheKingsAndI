@@ -1,14 +1,20 @@
-import { compileCampaignCultureDrift } from '../psychology/events';
+import {
+  calculateSingleMatchLeadershipIndex,
+  compileCampaignCultureDrift,
+  foldUnjustifiedTrauma,
+} from '../psychology/events';
 import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
 import { foldPlayerCommendations } from './commendations';
 import { foldCampaignTranscript } from './transcript';
 import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
+  JUDGEMENT_SEAT_FOLD_VERSION,
   type ActTerminalState,
   type CampaignDebrief,
   type MatchAudit,
   type MatchRecord,
+  type MatchResult,
   type StoredPieceState,
 } from './types';
 
@@ -130,6 +136,92 @@ function reassignedCount(
   return initialRoster.filter((piece) => !finalActive.has(piece.id)).length;
 }
 
+function legacyWinScore(result: MatchResult): number | null {
+  switch (result) {
+    case 'WIN':
+      return 100;
+    case 'DRAW':
+      return 50;
+    case 'LOSS':
+    case 'ROUT':
+      return 0;
+    case 'DISMISSED':
+    case 'ABANDONED':
+      return null;
+  }
+}
+
+function judgementSeatWinScore(match: MatchRecord): number | null {
+  return match.winScore === undefined
+    ? legacyWinScore(match.result)
+    : match.winScore;
+}
+
+function fieldedIdsForJudgementSeat(match: MatchRecord): readonly string[] {
+  const fieldingDecisions = match.events.filter(
+    (event): event is Extract<MatchEvent, { t: 'SQUAD_FIELDING' }> =>
+      event.t === 'SQUAD_FIELDING' && event.side === 'w',
+  );
+  if (fieldingDecisions.length > 0) {
+    return fieldingDecisions
+      .filter((event) => event.decision === 'fielded')
+      .map((event) => event.pieceId);
+  }
+  return match.rosterSnapshot
+    .filter((piece) => piece.status === 'ACTIVE')
+    .map((piece) => piece.id);
+}
+
+export function foldJudgementSeat(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['judgementSeat'] {
+  const foldedMatches = matches.map((match) => {
+    const fieldedPieceIds = fieldedIdsForJudgementSeat(match);
+    const trustFinal = meanTrust(match.rosterEnd);
+    const winScore = judgementSeatWinScore(match);
+    const unjustifiedTrauma = foldUnjustifiedTrauma(
+      match.events,
+      fieldedPieceIds,
+      fieldedPieceIds.length,
+    );
+    const quietQuitTurns = match.audit.quietQuitCount;
+    return {
+      matchId: match.id,
+      matchIndex: match.matchIndex,
+      finalTrust: trustFinal,
+      winScore,
+      unjustifiedTrauma,
+      quietQuitTurns,
+      leadershipIndex:
+        winScore === null
+          ? null
+          : calculateSingleMatchLeadershipIndex(
+              trustFinal,
+              winScore,
+              unjustifiedTrauma,
+              quietQuitTurns,
+            ),
+      computable: winScore !== null,
+    };
+  });
+  const computable = foldedMatches.filter((match) => match.computable);
+  const pooledMean = (
+    selector: (match: (typeof computable)[number]) => number,
+  ): number | null =>
+    computable.length === 0 ? null : mean(computable.map(selector));
+  return {
+    foldVersion: JUDGEMENT_SEAT_FOLD_VERSION,
+    matches: foldedMatches,
+    meanFinalTrust: pooledMean((match) => match.finalTrust),
+    meanWinScore: pooledMean((match) => match.winScore ?? 0),
+    meanUnjustifiedTrauma: pooledMean((match) => match.unjustifiedTrauma),
+    meanQuietQuitTurns: pooledMean((match) => match.quietQuitTurns),
+    meanLeadershipIndex: pooledMean((match) => match.leadershipIndex ?? 0),
+    computedMatchCount: computable.length,
+    totalMatchCount: matches.length,
+  };
+}
+
 export function foldCampaignCultureDrift(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
@@ -167,6 +259,7 @@ export function buildCampaignDebrief(
   const meanRealizedQuality = mean(
     matches.map((match) => match.audit.realizedQuality),
   );
+  const judgementSeat = foldJudgementSeat(matches);
   return {
     campaignId,
     matches,
@@ -174,6 +267,7 @@ export function buildCampaignDebrief(
     meanBoardQuality,
     meanExecutionFidelity,
     meanRealizedQuality,
+    judgementSeat,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

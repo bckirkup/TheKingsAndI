@@ -33,6 +33,7 @@ export {
 export {
   buildCampaignDebrief,
   foldCampaignCultureDrift,
+  foldJudgementSeat,
   foldMatchAudit,
 } from './folds';
 export {
@@ -106,6 +107,7 @@ export {
   COMMENDATION_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   DETERMINISM_ID,
+  JUDGEMENT_SEAT_FOLD_VERSION,
   LEARNING_DELTA_FOLD_VERSION,
   PASSPORT_VERSION,
   PSYCH_CONFIG_VERSION,
