@@ -5,6 +5,7 @@ import { CareerRepository } from '../persistence';
 import type { CampaignDebrief, MatchResult } from '../persistence';
 import { certificateToJson } from '../persistence/certificate';
 import { EPILOGUE_BY_TERMINAL } from '../orchestration/terminalState';
+import { ENGINE_CONFIG } from '../psychology';
 import { DebriefBarChart } from '../ui/panels/DebriefChart';
 
 const OUTCOME_BY_RESULT: Readonly<Record<MatchResult, NarratedOutcome>> = {
@@ -55,6 +56,23 @@ export function DebriefScreen({
     attrition: transcript.attrition,
     traumaGini: transcript.traumaGini,
   });
+  const weights = ENGINE_CONFIG.LEADERSHIP_WEIGHTS;
+  const loyaltyContribution =
+    debrief.judgementSeat.meanFinalTrust === null
+      ? null
+      : weights.alpha * debrief.judgementSeat.meanFinalTrust;
+  const crownContribution =
+    debrief.judgementSeat.meanWinScore === null
+      ? null
+      : weights.beta * debrief.judgementSeat.meanWinScore;
+  const traumaContribution =
+    debrief.judgementSeat.meanUnjustifiedTrauma === null
+      ? null
+      : -weights.gamma * debrief.judgementSeat.meanUnjustifiedTrauma;
+  const quietQuitContribution =
+    debrief.judgementSeat.meanQuietQuitTurns === null
+      ? null
+      : -weights.delta * debrief.judgementSeat.meanQuietQuitTurns;
 
   return (
     <section className="debrief-screen">
@@ -67,33 +85,33 @@ export function DebriefScreen({
           <div>
             <dt>Loyalty earned unobserved (0.4·T_final)</dt>
             <dd>
-              {debrief.judgementSeat.meanFinalTrust === null
+              {loyaltyContribution === null
                 ? 'Not computable'
-                : debrief.judgementSeat.meanFinalTrust.toFixed(1)}
+                : loyaltyContribution.toFixed(1)}
             </dd>
           </div>
           <div>
             <dt>The crown&apos;s reward (0.3·win score)</dt>
             <dd>
-              {debrief.judgementSeat.meanWinScore === null
+              {crownContribution === null
                 ? 'Not computable'
-                : debrief.judgementSeat.meanWinScore.toFixed(1)}
+                : crownContribution.toFixed(1)}
             </dd>
           </div>
           <div>
             <dt>Unjustified trauma charged (−0.2·UT)</dt>
             <dd>
-              {debrief.judgementSeat.meanUnjustifiedTrauma === null
+              {traumaContribution === null
                 ? 'Not computable'
-                : debrief.judgementSeat.meanUnjustifiedTrauma.toFixed(1)}
+                : traumaContribution.toFixed(1)}
             </dd>
           </div>
           <div>
             <dt>Quiet-quit turns charged (−0.1·QQ)</dt>
             <dd>
-              {debrief.judgementSeat.meanQuietQuitTurns === null
+              {quietQuitContribution === null
                 ? 'Not computable'
-                : debrief.judgementSeat.meanQuietQuitTurns.toFixed(1)}
+                : quietQuitContribution.toFixed(1)}
             </dd>
           </div>
           <div>
