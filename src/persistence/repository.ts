@@ -210,6 +210,7 @@ export class CareerRepository {
     readonly identities?: readonly PieceIdentityRecord[];
     readonly events: MatchRecord['events'];
     readonly engineAudit?: MatchRecord['engineAudit'];
+    readonly winScore?: MatchRecord['winScore'];
     readonly result: MatchRecord['result'];
   }): Promise<MatchRecord> {
     const record = assembleMatchRecord(input);

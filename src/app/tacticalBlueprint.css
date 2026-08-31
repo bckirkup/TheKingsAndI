@@ -374,6 +374,18 @@
   font-size: 1.1rem;
 }
 
+.debrief-screen__judgement-seat {
+  border-top: 1px solid var(--grid-line);
+  margin: 1.5rem 0;
+  padding-top: 1rem;
+}
+
+.debrief-screen__judgement-seat-note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
 .debrief-chart {
   margin: 1rem 0;
 }

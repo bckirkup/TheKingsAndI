@@ -164,6 +164,7 @@ export function App(): JSX.Element {
                 identities: result.identities,
                 events,
                 engineAudit: result.engineAudit,
+                winScore: result.winScore,
                 result: result.result,
               });
               const matches = await repo.listMatches(screen.campaign.id);

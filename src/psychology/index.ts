@@ -67,6 +67,7 @@ export {
   calculateBenchingTrustPenalties,
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
+  foldUnjustifiedTrauma,
 } from './events';
 export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';

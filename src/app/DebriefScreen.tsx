@@ -5,6 +5,7 @@ import { CareerRepository } from '../persistence';
 import type { CampaignDebrief, MatchResult } from '../persistence';
 import { certificateToJson } from '../persistence/certificate';
 import { EPILOGUE_BY_TERMINAL } from '../orchestration/terminalState';
+import { ENGINE_CONFIG } from '../psychology';
 import { DebriefBarChart } from '../ui/panels/DebriefChart';
 
 const OUTCOME_BY_RESULT: Readonly<Record<MatchResult, NarratedOutcome>> = {
@@ -55,11 +56,81 @@ export function DebriefScreen({
     attrition: transcript.attrition,
     traumaGini: transcript.traumaGini,
   });
+  const weights = ENGINE_CONFIG.LEADERSHIP_WEIGHTS;
+  const loyaltyContribution =
+    debrief.judgementSeat.meanFinalTrust === null
+      ? null
+      : weights.alpha * debrief.judgementSeat.meanFinalTrust;
+  const crownContribution =
+    debrief.judgementSeat.meanWinScore === null
+      ? null
+      : weights.beta * debrief.judgementSeat.meanWinScore;
+  const traumaContribution =
+    debrief.judgementSeat.meanUnjustifiedTrauma === null
+      ? null
+      : -weights.gamma * debrief.judgementSeat.meanUnjustifiedTrauma;
+  const quietQuitContribution =
+    debrief.judgementSeat.meanQuietQuitTurns === null
+      ? null
+      : -weights.delta * debrief.judgementSeat.meanQuietQuitTurns;
 
   return (
     <section className="debrief-screen">
       <h1>Campaign debrief</h1>
       <p>{EPILOGUE_BY_TERMINAL[debrief.actTerminalState]}</p>
+
+      <section className="debrief-screen__judgement-seat">
+        <h2>The Judgement Seat</h2>
+        <dl className="debrief-screen__folds">
+          <div>
+            <dt>Loyalty earned unobserved (0.4·T_final)</dt>
+            <dd>
+              {loyaltyContribution === null
+                ? 'Not computable'
+                : loyaltyContribution.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>The crown&apos;s reward (0.3·win score)</dt>
+            <dd>
+              {crownContribution === null
+                ? 'Not computable'
+                : crownContribution.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Unjustified trauma charged (−0.2·UT)</dt>
+            <dd>
+              {traumaContribution === null
+                ? 'Not computable'
+                : traumaContribution.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Quiet-quit turns charged (−0.1·QQ)</dt>
+            <dd>
+              {quietQuitContribution === null
+                ? 'Not computable'
+                : quietQuitContribution.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>Leadership Index</dt>
+            <dd>
+              {debrief.judgementSeat.meanLeadershipIndex === null
+                ? 'Not computable'
+                : debrief.judgementSeat.meanLeadershipIndex.toFixed(1)}
+            </dd>
+          </div>
+        </dl>
+        {debrief.judgementSeat.computedMatchCount <
+        debrief.judgementSeat.totalMatchCount ? (
+          <p className="debrief-screen__judgement-seat-note">
+            computed over {debrief.judgementSeat.computedMatchCount} of{' '}
+            {debrief.judgementSeat.totalMatchCount} matches
+          </p>
+        ) : null}
+      </section>
 
       <div className="narration-audit">
         <h2 className="narration-audit__headline">{prose.headline}</h2>

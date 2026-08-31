@@ -12,6 +12,7 @@ export const SCHEMA_VERSION = 4;
 export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
+export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -137,6 +138,8 @@ export interface MatchRecord {
   readonly events: readonly MatchEvent[];
   /** True engine evaluations, separate from psychology state (ADR 0036). */
   readonly engineAudit?: readonly EngineAuditEntry[];
+  /** Persisted chess result for the closing Judgement Seat (D203). */
+  readonly winScore?: number;
   readonly result: MatchResult;
   readonly audit: MatchAudit;
   readonly determinismId: string;
@@ -151,6 +154,26 @@ export interface CampaignDebrief {
   readonly meanBoardQuality: number;
   readonly meanExecutionFidelity: number;
   readonly meanRealizedQuality: number;
+  readonly judgementSeat: {
+    readonly foldVersion: string;
+    readonly matches: readonly {
+      readonly matchId: string;
+      readonly matchIndex: number;
+      readonly finalTrust: number;
+      readonly winScore: number | null;
+      readonly unjustifiedTrauma: number;
+      readonly quietQuitTurns: number;
+      readonly leadershipIndex: number | null;
+      readonly computable: boolean;
+    }[];
+    readonly meanFinalTrust: number | null;
+    readonly meanWinScore: number | null;
+    readonly meanUnjustifiedTrauma: number | null;
+    readonly meanQuietQuitTurns: number | null;
+    readonly meanLeadershipIndex: number | null;
+    readonly computedMatchCount: number;
+    readonly totalMatchCount: number;
+  };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
   readonly transcript: CampaignTranscript;
