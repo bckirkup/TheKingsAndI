@@ -90,9 +90,8 @@ the win-score spread between tyrannical and steady, larger than γ and δ ever
 managed) while charging the kind room under 1. Larger values start letting a
 normalized-count term rival the trust term in unsaturated regimes (at ε = 1 a
 fully emptied roster is −100, symmetric with trust itself), which D200's
-discipline argues against until a non-saturated opponent is measured. This is
-a proposal for the owner's ruling, not a change: ε remains 0 in
-`ENGINE_CONFIG.LEADERSHIP_WEIGHTS` until ruled.
+discipline argues against until a non-saturated opponent is measured. **Ruling
+(2026-08-30): the owner rules ε = 0.2 on this evidence.**
 
 ## What this does not show
 
