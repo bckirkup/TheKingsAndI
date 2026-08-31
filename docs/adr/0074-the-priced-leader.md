@@ -239,3 +239,10 @@ cascades — stays open as a refinement, to be taken up only if the unattributed
 count ever charges a kind room for tactical desertions. The committed sweep
 says it will not (0.03 desertions per match supportive against 1.97
 tyrannical). ABANDONED matches remain outside the fold as before.
+
+**Ruling (2026-08-30).** On the measurement sweep evidence
+(`docs/calibration/2026-08-30-the-emptied-chairs-measured.md`), the owner rules
+`ε = 0.2`, the same weight as `γ`. The carrier charges cruel rooms ~4:1 over
+the kind one with no per-campaign overlap, and every candidate `ε` preserved
+the style ordering, so `0.2` sets legibility at the Judgement Seat without
+letting a normalized-count term rival trust.

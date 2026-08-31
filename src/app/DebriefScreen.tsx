@@ -119,7 +119,7 @@ export function DebriefScreen({
             </dd>
           </div>
           <div>
-            <dt>The emptied chairs (−ε·EC, ε=0)</dt>
+            <dt>The emptied chairs (−ε·EC)</dt>
             <dd>
               {emptiedChairsContribution === null
                 ? 'Not computable'

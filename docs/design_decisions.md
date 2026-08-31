@@ -2253,15 +2253,15 @@ other insistence until D191 rules; the term deliberately does not read the
 `implicit` flag. The window size is a calibration knob, not a ruling.
 
 ### D202 ✅ Is the index's quiet-quit term on a scale that can move the reading? (ADR 0074 addendum)
-**Answered 2026-08-30 (owner) — wired inert.** No: δ stays where it is, because
+**Answered 2026-08-30 (owner) — ε = 0.2, wired.** No: δ stays where it is, because
 the measured carrier points the wrong way (below), and cruelty-caused
 disengagement is priced through a **fifth term instead: the emptied chairs**.
 `LI = α·T_final + β·WinScore − γ·UT − δ·QQ − ε·EmptiedChairs`, where
 `EmptiedChairs = 100·(desertions + trauma-ended careers among the fielded) /
-fielded roster size`, clamped `0..100`, per match. `ε` defaults to `0` — the
-component ships in the CSV and the Judgement Seat fold so candidate magnitudes
-are post-hoc arithmetic over committed sweeps; ruling a non-zero ε waits on
-that measurement, per the ADR 0074 §1 discipline. Two companion rulings:
+fielded roster size`, clamped `0..100`, per match. `ε = 0.2`, the same weight
+as `γ`, is ruled on the measurement sweep evidence: the carrier charges cruel
+rooms ~4:1 over the kind one with no per-campaign overlap, and every candidate
+ε preserved the style ordering. Two companion rulings:
 (a) **no witness leaves the reading** — `T_final` is meaned over the *fielded*
 roster, with a piece that deserted, was captured, or retired contributing the
 trust it left with, so a cruel room can no longer shed its angriest witnesses
