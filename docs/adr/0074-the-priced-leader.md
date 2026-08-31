@@ -1,10 +1,11 @@
 # ADR 0074 — The priced leader: what the win score does not charge for
 
 - **Status:** accepted (owner ruling, 2026-08-30); instrument **wired**, gate
-  unchanged
+  unchanged; **surface ruled** in the dated addendum
 - **Resolves:** **D200** (the harness reports a priced leadership index beside
   the win score; the win score remains the D188 gate), **D201** (what
-  unjustified trauma is, and how it is derived from the log)
+  unjustified trauma is, and how it is derived from the log), **D203** (the
+  index is a closing-debrief reading only — the addendum below)
 - **Opens:** **D202** (whether the index's quiet-quit term is on a scale that
   can move the reading at all)
 - **Refines:** ADR 0008 (insight is advice only — upheld, and it is the reason
@@ -138,3 +139,50 @@ Choosing δ first, to make the reading come out, is exactly the circularity
 - No calibration number in `docs/calibration/` carries an index yet. The first
   pass that does must state it, because an index quoted beside pre-ADR evidence
   is a comparison of two different instruments.
+
+## Addendum (2026-08-30) — The Judgement Seat: where the index may be read (D203)
+
+Owner ruling, given with the first measured sweep in hand
+(`docs/calibration/2026-08-30-the-index-and-the-scale.md`). The instrument
+above says what leadership costs; this ruling says when anyone is allowed to
+find out.
+
+**The index is a closing-debrief reading and nothing else.** A player should be
+free to play their own personality through the week or the semester without
+hitting an inevitable wall of failures, and should — at best — be surprised at
+the conclusion to be rewarded for things they thought unobserved. So the
+leadership index and its components reach no player-facing surface during play
+or between matches: no gauge, scoreboard, status panel, stated reason,
+facilitator console, or adaptive-player observation (D193) — the same
+quarantine D197 gives hope and courage, for the same two reasons. Anything the
+room can watch, the room optimises; and a mid-run reading would convert the
+price of a style into a wall in front of it.
+
+**Cruelty's price is counterfactual, and it is read at the end.** In the mid
+run the cruel commander's ambitions justify themselves — the win score is the
+only reward the room shows, and D188 already rules that evil may pay there.
+What the index reads at the final Judgement Seat is the campaign the leader
+never saw: the crowns a room that trusted its commander would have reached for
+and this one never imagined. The sweep's arithmetic is exactly this shape —
+the tyrant *wins* (55.25 pooled) and still reads −23.94, almost entirely
+through the trust term, which is the loyalty a kind leader earned while nobody
+was scoring it. The debrief reveals reward for the unobserved before it reveals
+verdict on the observed.
+
+Three consequences are binding:
+
+- **No term of the index may be tuned to make a style fail mid-run.** The D188
+  win-score trajectory gate is a calibration constraint on the model, not a
+  play surface, and it is unchanged. §1's α–δ freeze gains this second reason.
+- **D202 is constrained, not answered.** If cruelty-caused disengagement is
+  ever priced through a different carrier (desertions, ended careers — where
+  the sweep shows it actually lands), that carrier prices into the same
+  terminal reading only. No mid-run penalty carrier may be introduced under
+  this ADR.
+- **The harness is not a player surface.** The CSV columns, CLI summary, and
+  sweep artifacts are developer instrumentation under ADR 0013's hidden-truth
+  side of the line; nothing in this ruling touches them.
+
+Nothing is wired by this addendum: no debrief surface renders the index today,
+and when the closing debrief (ADR 0073) is built, the index joins hope and
+courage as its third quantity — computed always, shown once.
