@@ -109,7 +109,7 @@ export const ENGINE_CONFIG = {
     beta: 0.3,  // Win Score weight
     gamma: 0.2, // Unjustified Trauma weight
     delta: 0.1, // Quiet Quit Turns weight
-    epsilon: 0  // Emptied Chairs weight (D202: inert until measured)
+    epsilon: 0.2, // Emptied Chairs weight (D202: ruled 0.2, 2026-08-30)
   }
 };
 
