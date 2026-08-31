@@ -87,13 +87,15 @@ export function calculateSingleMatchLeadershipIndex(
   winScore: number,
   unjustifiedTraumaScore: number,
   quietQuitTurnCount: number,
+  emptiedChairsScore = 0,
   weights = ENGINE_CONFIG.LEADERSHIP_WEIGHTS,
 ): number {
   return (
     weights.alpha * finalAverageTrust +
     weights.beta * winScore -
     weights.gamma * unjustifiedTraumaScore -
-    weights.delta * quietQuitTurnCount
+    weights.delta * quietQuitTurnCount -
+    weights.epsilon * emptiedChairsScore
   );
 }
 

@@ -70,6 +70,7 @@ export interface MatchMetrics {
   readonly overrideRate: number;
   readonly meanTrustStart: number;
   readonly meanTrustEnd: number;
+  readonly meanTrustFinal: number;
   readonly meanTauAbilStart: number;
   readonly meanTauAbilEnd: number;
   readonly meanTauBenevStart: number;
@@ -94,6 +95,8 @@ export interface MatchMetrics {
   readonly enemyRefusalRate: number;
   readonly winScore: number;
   readonly unjustifiedTrauma: number;
+  readonly emptiedChairs: number;
+  readonly emptiedChairsScore: number;
   readonly leadershipIndex: number;
   readonly rout: boolean;
   readonly archetype: LeadershipArchetype;
@@ -296,7 +299,10 @@ export interface CampaignMetrics {
   readonly promotionToRoleCounts: Readonly<Record<string, number>>;
   readonly meanWinScore: number;
   readonly meanUnjustifiedTrauma: number;
+  readonly meanEmptiedChairs: number;
+  readonly meanEmptiedChairsScore: number;
   readonly meanLeadershipIndex: number;
+  readonly meanTrustFinal: number;
   readonly meanDesertions: number;
   readonly meanRetirements: number;
   readonly meanGraceEvents: number;
@@ -333,7 +339,17 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,unjustified_trauma,leadership_index';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score';
+
+export function calculateEmptiedChairsScore(
+  emptiedChairs: number,
+  fieldedRosterSize: number,
+): number {
+  return Math.max(
+    0,
+    Math.min(100, (100 * emptiedChairs) / Math.max(1, fieldedRosterSize)),
+  );
+}
 
 /** RFC 4180 quoting: a field containing a comma, quote, or newline is quoted. */
 export function csvField(value: string | number): string {
@@ -722,6 +738,19 @@ export function metricsFromMatch(
   const adjudicationVindicationRate = vindicationRate;
   const meanTrustStart = meanTrust(rosterStart);
   const meanTrustEnd = meanTrust(result.roster);
+  const rosterById = new Map(result.roster.map((piece) => [piece.id, piece]));
+  const departedById = new Map(
+    result.departedRoster.map((piece) => [piece.id, piece]),
+  );
+  const startById = new Map(rosterStart.map((piece) => [piece.id, piece]));
+  const finalFieldedRoster = fieldedPieceIds.flatMap((pieceId) => {
+    const piece =
+      rosterById.get(pieceId) ??
+      departedById.get(pieceId) ??
+      startById.get(pieceId);
+    return piece === undefined ? [] : [piece];
+  });
+  const meanTrustFinal = meanTrust(finalFieldedRoster);
   const meanTauAbilStart = meanTauAbil(rosterStart);
   const meanTauAbilEnd = meanTauAbil(result.roster);
   const meanTauBenevStart = meanTauBenev(rosterStart);
@@ -733,11 +762,17 @@ export function metricsFromMatch(
     fieldedPieceIds,
     fieldedPieceIds.length,
   );
+  const emptiedChairs = counts.desertions;
+  const emptiedChairsScore = calculateEmptiedChairsScore(
+    emptiedChairs,
+    fieldedPieceIds.length,
+  );
   const leadershipIndex = calculateSingleMatchLeadershipIndex(
-    meanTrustEnd,
+    meanTrustFinal,
     result.winScore,
     unjustifiedTrauma,
     counts.quietQuitMoves,
+    emptiedChairsScore,
   );
   return {
     match,
@@ -805,6 +840,7 @@ export function metricsFromMatch(
     overrideRate,
     meanTrustStart,
     meanTrustEnd,
+    meanTrustFinal,
     meanTauAbilStart,
     meanTauAbilEnd,
     meanTauBenevStart,
@@ -824,6 +860,8 @@ export function metricsFromMatch(
     enemyRefusalRate,
     winScore: result.winScore,
     unjustifiedTrauma,
+    emptiedChairs,
+    emptiedChairsScore,
     leadershipIndex,
     rout: result.rout,
     archetype: classifyArchetype(
@@ -1012,7 +1050,10 @@ function aggregateCampaignCore(
     ),
     meanWinScore: mean((metric) => metric.winScore),
     meanUnjustifiedTrauma: mean((metric) => metric.unjustifiedTrauma),
+    meanEmptiedChairs: mean((metric) => metric.emptiedChairs),
+    meanEmptiedChairsScore: mean((metric) => metric.emptiedChairsScore),
     meanLeadershipIndex: mean((metric) => metric.leadershipIndex),
+    meanTrustFinal: mean((metric) => metric.meanTrustFinal),
     meanDesertions: mean((metric) => metric.desertions),
     meanRetirements: mean((metric) => metric.retirements ?? 0),
     meanGraceEvents: mean((metric) => metric.graceEvents ?? 0),
@@ -1206,6 +1247,9 @@ export function renderCsv(
       (metric.freeInsistencePlyFraction ?? 0).toFixed(4),
       metric.unjustifiedTrauma.toFixed(2),
       metric.leadershipIndex.toFixed(2),
+      metric.meanTrustFinal.toFixed(2),
+      metric.emptiedChairs,
+      metric.emptiedChairsScore.toFixed(2),
     ]
       .map(csvField)
       .join(','),

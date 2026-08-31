@@ -221,13 +221,26 @@ describe('wiring — benching & leadership', () => {
 
   it('wiring: LEADERSHIP_WEIGHTS change the index', () => {
     const baseline = calculateSingleMatchLeadershipIndex(50, 100, 10, 5);
-    const tuned = calculateSingleMatchLeadershipIndex(50, 100, 10, 5, {
+    const tuned = calculateSingleMatchLeadershipIndex(50, 100, 10, 5, 0, {
       alpha: 0.1,
       beta: 0.1,
       gamma: 0.1,
       delta: 0.1,
+      epsilon: 0,
     } as unknown as typeof ENGINE_CONFIG.LEADERSHIP_WEIGHTS);
     expect(tuned).not.toBe(baseline);
+  });
+
+  it('wiring: epsilon prices emptied chairs when explicitly nonzero', () => {
+    const unpriced = calculateSingleMatchLeadershipIndex(50, 100, 10, 5);
+    const priced = calculateSingleMatchLeadershipIndex(50, 100, 10, 5, 20, {
+      alpha: 0.4,
+      beta: 0.3,
+      gamma: 0.2,
+      delta: 0.1,
+      epsilon: 0.5,
+    } as unknown as typeof ENGINE_CONFIG.LEADERSHIP_WEIGHTS);
+    expect(priced).toBe(unpriced - 10);
   });
 });
 

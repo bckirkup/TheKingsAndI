@@ -73,6 +73,10 @@ export function DebriefScreen({
     debrief.judgementSeat.meanQuietQuitTurns === null
       ? null
       : -weights.delta * debrief.judgementSeat.meanQuietQuitTurns;
+  const emptiedChairsContribution =
+    debrief.judgementSeat.meanEmptiedChairsScore === null
+      ? null
+      : -weights.epsilon * debrief.judgementSeat.meanEmptiedChairsScore;
 
   return (
     <section className="debrief-screen">
@@ -112,6 +116,14 @@ export function DebriefScreen({
               {quietQuitContribution === null
                 ? 'Not computable'
                 : quietQuitContribution.toFixed(1)}
+            </dd>
+          </div>
+          <div>
+            <dt>The emptied chairs (−ε·EC, ε=0)</dt>
+            <dd>
+              {emptiedChairsContribution === null
+                ? 'Not computable'
+                : emptiedChairsContribution.toFixed(1)}
             </dd>
           </div>
           <div>

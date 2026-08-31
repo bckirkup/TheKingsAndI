@@ -53,6 +53,7 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     overrideRate: 0,
     meanTrustStart: 0,
     meanTrustEnd: tauAbil,
+    meanTrustFinal: tauAbil,
     meanTauAbilStart: 0,
     meanTauAbilEnd: tauAbil,
     meanTauBenevStart: 0,
@@ -69,6 +70,8 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     winScore: 0,
     unjustifiedTrauma: 0,
     leadershipIndex: 0,
+    emptiedChairs: 0,
+    emptiedChairsScore: 0,
     rout: match <= Math.ceil(length / 4),
     archetype: 'mixed',
   };

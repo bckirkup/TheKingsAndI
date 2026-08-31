@@ -186,3 +186,56 @@ Three consequences are binding:
 Nothing is wired by this addendum: no debrief surface renders the index today,
 and when the closing debrief (ADR 0073) is built, the index joins hope and
 courage as its third quantity — computed always, shown once.
+
+## Addendum (2026-08-30) — The emptied chairs: pricing disengagement where it lands (D202)
+
+Owner ruling. The measured answer to D202 is that the quiet-quit term cannot
+carry cruelty-caused disengagement: the kind room quiet-quits five times more
+than the cruel one, because the cruel room's disengaged pieces desert or are
+churned out of their careers before they can accumulate quiet-quit turns
+(`docs/calibration/2026-08-30-the-index-and-the-scale.md`). Raising δ would
+penalise kindness. So δ stays, and the index gains a fifth term that reads the
+place disengagement actually lands — the chairs that emptied:
+
+```
+LI = α·T_final + β·WinScore − γ·UnjustifiedTrauma − δ·QuietQuitTurns − ε·EmptiedChairs
+EmptiedChairs = clamp(100 · (desertions + trauma-ended careers among the fielded)
+                      / fielded roster size, 0, 100)
+```
+
+**ε defaults to 0.** The term is wired inert: the component ships in the
+harness CSV and the Judgement Seat fold so that candidate magnitudes are
+post-hoc arithmetic over committed sweeps, exactly the §1 discipline — the
+weight is ruled after the measurement, never to make a style's reading come
+out. Desertions are the match's `DESERTION` events among the fielded roster;
+trauma-ended careers are the fielded careers the retirement threshold closed
+at that match's boundary (D190: derived, not evented — the campaign layer
+supplies them; a path with no boundary model counts desertions alone).
+
+**The companion fix: no witness leaves the reading.** The harness's
+`mean_trust_end` was meaned over the *surviving* roster — deserted and
+captured pieces were withdrawn before the reading — so a cruel room shed its
+angriest witnesses out of its own trust term by the act that should have
+condemned it. `T_final` is now meaned over the full fielded roster, each
+departed piece contributing the trust it left with. The old column keeps its
+name and semantics for comparability; the index reads a new `mean_trust_final`
+column. Production's Judgement Seat fold restricts its trust population to
+the fielded roster the same way (the persisted `rosterEnd` already holds every
+departed piece's exit state) and bumps its fold version.
+
+**No double charge.** Trust reads the state of the room, including who it
+lost; the emptied chair prices the ended service itself — the crowns that
+career would have reached for and never will. Trauma (D201) charges the
+insistence that caused the injury; the chair charges the career it ended.
+Three terms, three distinct facts about the same cruelty.
+
+**D203 binds.** The term and the population fix reach the terminal Judgement
+Seat reading only. Nothing on any live surface, nothing in adaptive-player
+observation, no play change, and no term tuned to make a style fail mid-run.
+
+**Left open.** Attribution — charging only exits causally traceable to
+unvindicated insistence, D201's window shape extended through desertion
+cascades — stays open as a refinement, to be taken up only if the unattributed
+count ever charges a kind room for tactical desertions. The committed sweep
+says it will not (0.03 desertions per match supportive against 1.97
+tyrannical). ABANDONED matches remain outside the fold as before.
