@@ -232,6 +232,36 @@ export const ADAPTIVE_POLICY_CONFIG: AdaptivePolicyConfig = {
   scarcityGain: 4,
 } as const;
 
+export interface ExploitPolicyConfig {
+  /** Win-maxer override probability while the room complies. */
+  readonly winMaxerInsistence: number;
+  /** Refusal-permille ceiling above which the win-maxer stops overriding. */
+  readonly winMaxerCompliancePermille: number;
+  /** Generation cycler override probability while desertions are below the ceiling. */
+  readonly cyclerInsistence: number;
+  /** Observed-desertion ceiling at which the cycler enters its lull. */
+  readonly cyclerDesertionCeiling: number;
+  /** Cycler override probability during the lull. */
+  readonly cyclerLullInsistence: number;
+  /** Cycler tactical risk weight while aggressive. */
+  readonly cyclerRisk: number;
+  /** Cascade dodger override probability while the roster is healthy. */
+  readonly dodgerInsistence: number;
+  /** Observed-survivor floor below which the dodger goes passive. */
+  readonly dodgerSurvivorFloor: number;
+}
+
+export const EXPLOIT_POLICY_CONFIG: ExploitPolicyConfig = {
+  winMaxerInsistence: 90,
+  winMaxerCompliancePermille: 150,
+  cyclerInsistence: 90,
+  cyclerDesertionCeiling: 1,
+  cyclerLullInsistence: 5,
+  cyclerRisk: 0,
+  dodgerInsistence: 90,
+  dodgerSurvivorFloor: 12,
+} as const;
+
 function prospectTotal(prospect: Readonly<Record<string, number>>): number {
   return Object.values(prospect).reduce((total, value) => total + value, 0);
 }
@@ -608,6 +638,89 @@ function createPolicy(style: Leader): LeaderPolicy {
           return random.nextInt(100) < chance;
         },
       };
+    case 'win_maxer':
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, 0),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const chance =
+            context.observation.refusalPermille <=
+            EXPLOIT_POLICY_CONFIG.winMaxerCompliancePermille
+              ? EXPLOIT_POLICY_CONFIG.winMaxerInsistence
+              : 0;
+          return random.nextInt(100) < chance;
+        },
+      };
+    case 'generation_cycler':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const aggressive =
+            context.observation.desertions <
+            EXPLOIT_POLICY_CONFIG.cyclerDesertionCeiling;
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(
+              feature,
+              aggressive
+                ? EXPLOIT_POLICY_CONFIG.cyclerRisk
+                : ADAPTIVE_POLICY_CONFIG.baseRisk,
+            ),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const aggressive =
+            context.observation.desertions <
+            EXPLOIT_POLICY_CONFIG.cyclerDesertionCeiling;
+          const chance = aggressive
+            ? EXPLOIT_POLICY_CONFIG.cyclerInsistence
+            : EXPLOIT_POLICY_CONFIG.cyclerLullInsistence;
+          return random.nextInt(100) < chance;
+        },
+      };
+    case 'cascade_dodger':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const healthy =
+            context.observation.survivors >=
+            EXPLOIT_POLICY_CONFIG.dodgerSurvivorFloor;
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(
+              feature,
+              healthy ? 0 : ADAPTIVE_POLICY_CONFIG.baseRisk,
+            ),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const healthy =
+            context.observation.survivors >=
+            EXPLOIT_POLICY_CONFIG.dodgerSurvivorFloor;
+          const chance = healthy ? EXPLOIT_POLICY_CONFIG.dodgerInsistence : 0;
+          return random.nextInt(100) < chance;
+        },
+      };
     case 'random':
     default:
       return {
@@ -643,6 +756,9 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   chastened: createPolicy('chastened'),
   escalator: createPolicy('escalator'),
   roster_first: createPolicy('roster_first'),
+  win_maxer: createPolicy('win_maxer'),
+  generation_cycler: createPolicy('generation_cycler'),
+  cascade_dodger: createPolicy('cascade_dodger'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {

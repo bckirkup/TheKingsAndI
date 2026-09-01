@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
+import { LEADERS } from '../sim/cli';
 import {
   ADAPTIVE_MEMORY_CONFIG,
   ADAPTIVE_POLICY_CONFIG,
+  EXPLOIT_POLICY_CONFIG,
   LEADER_POLICY_CONFIG,
   createPriorLeaderObservation,
   legalScoredMoves,
@@ -482,6 +484,143 @@ describe('scripted leader move shaping', () => {
     const escalator = overrideCount('escalator', context);
     expect(chastened).toBeLessThan(steady);
     expect(escalator).toBeGreaterThan(steady);
+  });
+
+  it('registers the D204 exploit leaders as player-only styles', () => {
+    expect(LEADERS).toEqual(
+      expect.arrayContaining([
+        'win_maxer',
+        'generation_cycler',
+        'cascade_dodger',
+      ]),
+    );
+  });
+
+  it('makes win-maxer insist while the room complies', () => {
+    const compliant = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
+    });
+    const hostile = contextWithObservation({
+      ...compliant.observation,
+      refusalPermille: EXPLOIT_POLICY_CONFIG.winMaxerCompliancePermille + 50,
+    });
+    const compliantCount = overrideCount('win_maxer', compliant);
+    const hostileCount = overrideCount('win_maxer', hostile);
+    expect(compliantCount).toBeGreaterThan(800);
+    expect(hostileCount).toBe(0);
+  });
+
+  it('cycles from sharp insistence into a low-insistence lull', () => {
+    const aggressive = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
+    });
+    const lull = contextWithObservation({
+      ...aggressive.observation,
+      desertions: EXPLOIT_POLICY_CONFIG.cyclerDesertionCeiling,
+    });
+    const aggressiveCount = overrideCount('generation_cycler', aggressive);
+    const lullCount = overrideCount('generation_cycler', lull);
+    expect(aggressiveCount).toBeGreaterThan(800);
+    expect(lullCount).toBeGreaterThan(0);
+    expect(lullCount).toBeLessThan(100);
+
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const aggressiveChoice = leaderPolicy('generation_cycler').chooseMove(
+      board,
+      moves,
+      createSeededRandom(7),
+      aggressive,
+    );
+    const lullChoice = leaderPolicy('generation_cycler').chooseMove(
+      board,
+      moves,
+      createSeededRandom(7),
+      lull,
+    );
+    expect(aggressiveChoice).toBeDefined();
+    expect(lullChoice).toBeDefined();
+    if (aggressiveChoice === undefined || lullChoice === undefined) return;
+    expect(aggressiveChoice.features.pCaptured).toBeGreaterThanOrEqual(
+      lullChoice.features.pCaptured,
+    );
+  });
+
+  it('makes cascade-dodger passive below the survivor floor', () => {
+    const healthy = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: EXPLOIT_POLICY_CONFIG.dodgerSurvivorFloor + 4,
+      winScore: 50,
+    });
+    const thin = contextWithObservation({
+      ...healthy.observation,
+      survivors: EXPLOIT_POLICY_CONFIG.dodgerSurvivorFloor - 1,
+    });
+    expect(overrideCount('cascade_dodger', healthy)).toBeGreaterThan(800);
+    expect(overrideCount('cascade_dodger', thin)).toBe(0);
+  });
+
+  it('gives each exploit leader a defined choice with neutral bias', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const context = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermille: 0,
+      desertions: 0,
+      survivors: 16,
+      winScore: 50,
+    });
+    for (const style of [
+      'win_maxer',
+      'generation_cycler',
+      'cascade_dodger',
+    ] as const) {
+      const choice = leaderPolicy(style).chooseMove(
+        board,
+        moves,
+        createSeededRandom(7),
+        context,
+      );
+      expect(choice).toBeDefined();
+      expect(choice?.leaderImpliedBias).toBe(0.5);
+    }
+  });
+
+  it('is deterministic for each exploit style and observation', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const context = contextWithObservation({
+      matchesObserved: 2,
+      refusalPermille: 650,
+      desertions: 1,
+      survivors: 11,
+      winScore: 40,
+    });
+    for (const style of [
+      'win_maxer',
+      'generation_cycler',
+      'cascade_dodger',
+    ] as const) {
+      const policy = leaderPolicy(style);
+      expect(
+        policy.chooseMove(board, moves, createSeededRandom(7), context),
+      ).toEqual(
+        policy.chooseMove(board, moves, createSeededRandom(7), context),
+      );
+      expect(policy.shouldOverride(createSeededRandom(7), context)).toBe(
+        policy.shouldOverride(createSeededRandom(7), context),
+      );
+    }
   });
 
   it('is deterministic for each adaptive style and observation', () => {

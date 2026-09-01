@@ -369,6 +369,9 @@ export function leaderTrustBias(leader: Leader): number {
     case 'chastened':
     case 'escalator':
     case 'roster_first':
+    case 'win_maxer':
+    case 'generation_cycler':
+    case 'cascade_dodger':
       return 10;
     case 'redeemer':
       return 0;
