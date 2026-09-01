@@ -1,7 +1,7 @@
 # ADR 0075: The Gamers and the Priced Index
 
 Date: 2026-08-30
-Status: Accepted (D204 ruled; exploit tier wired, sweep pending)
+Status: Accepted (D204 ruled; exploit tier wired, gaming sweep passed)
 
 ## Context
 
@@ -83,8 +83,10 @@ commander archetype.
   (dead wiring is invisible).
 - The gaming sweep (exploiters beside `supportive`/`steady`/`tyrannical`,
   10 campaigns × 20 matches, fake engine, AWS Batch) is the measurement;
-  its evidence lands in `docs/calibration/` with the exploit-lift reading
-  computed per the pass criterion.
+  its evidence is committed in
+  `docs/calibration/2026-08-30-the-gamers-at-the-judgement-seat.md` — the
+  pass criterion holds for all three exploiters, and no pricing gap
+  surfaced.
 - The initial-trust presentation of an exploiter is unremarkable
   (`leaderTrustBias` 10, the adaptive tier's value): its cruelty is
   behavioral, discovered by the room, not announced by a prior.

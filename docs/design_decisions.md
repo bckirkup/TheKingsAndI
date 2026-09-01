@@ -2314,7 +2314,7 @@ debrief is built, the index joins hope and courage as its third quantity —
 computed always, shown once.
 
 ### D204 ✅ What is the exploit tier, and what must it fail to do? (ADR 0075)
-**Answered 2026-08-30 (owner) — tier wired; gaming sweep pending.** A third
+**Answered 2026-08-30 (owner) — tier wired; gaming sweep passed.** A third
 pseudo-player tier joins the scripted styles and the D193 adaptive triad:
 **exploiters** — deterministic policies that optimize the visible scoreboard
 while treating the room as instrumentally as the D193 observation lets them.
@@ -2334,7 +2334,12 @@ exploiter must not out-read an honest leader of comparable win score
 ruling, never a silent weight tweak. Extending the observation for an
 exploiter's benefit is itself a D ruling. No gameplay change may be made to
 move an exploiter's number (ADR 0008, ADR 0011); the tier is harness-only
-and the D203 quarantine is untouched.
+and the D203 quarantine is untouched. **Measured 2026-08-30**
+(`docs/calibration/2026-08-30-the-gamers-at-the-judgement-seat.md`): the
+criterion holds — every exploiter reads at or below the honest styles at
+comparable win score, because the boundary observation lags the intra-match
+cascade and the ε-term prices exactly the churn the exploits run on. No
+pricing gap surfaced; no new ruling is owed by that pass.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
