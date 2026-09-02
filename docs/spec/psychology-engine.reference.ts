@@ -110,12 +110,43 @@ export const ENGINE_CONFIG = {
     gamma: 0.2, // Unjustified Trauma weight
     delta: 0.1, // Quiet Quit Turns weight
     epsilon: 0.2, // Emptied Chairs weight (D202: ruled 0.2, 2026-08-30)
-  }
+  },
+  /** Fraction of the gap to the dawn baseline restored at each match boundary, permille (D207). */
+  MORNING_LIFT_PERMILLE: 0,
+  /** Trust baseline the morning lift reaches toward; earned trust above it is never dampened (D207). */
+  MORNING_LIFT_TRUST_BASELINE: 0,
 };
 
 // ============================================================================
 // 3. CORE MATHEMATICAL FORMULAS
 // ============================================================================
+
+/**
+ * D207: apply a deterministic, lift-only trust movement toward the dawn
+ * baseline at a match boundary. Only T_i changes; no leader input or PRNG draw
+ * is involved.
+ */
+export function applyMorningLift(piece: PieceState): PieceState {
+  const permille = Math.max(
+    0,
+    Math.min(1_000, Math.trunc(ENGINE_CONFIG.MORNING_LIFT_PERMILLE)),
+  );
+  const baseline = Math.max(
+    -100,
+    Math.min(100, Math.trunc(ENGINE_CONFIG.MORNING_LIFT_TRUST_BASELINE)),
+  );
+  if (permille === 0 || piece.T_i >= baseline) return piece;
+  return {
+    ...piece,
+    T_i: Math.max(
+      -100,
+      Math.min(
+        100,
+        piece.T_i + Math.trunc(((baseline - piece.T_i) * permille) / 1000),
+      ),
+    ),
+  };
+}
 
 /**
  * Section 4.2: Search Engine & Insight Allocation Formula

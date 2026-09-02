@@ -6,6 +6,7 @@ import {
   clampCredence,
   clampTrust,
   ENGINE_CONFIG,
+  applyMorningLift,
   sharedBondScalar,
   startingAbilityForRole,
 } from '../psychology';
@@ -418,7 +419,14 @@ export function fieldSquad(
       member.service.matchesPlayed > 0 &&
       !selectedIds.has(member.state.id),
   ).length;
-  return { lineup, conscriptsFielded, veteransRested };
+  return {
+    lineup: lineup.map((member) => ({
+      ...member,
+      state: applyMorningLift(member.state),
+    })),
+    conscriptsFielded,
+    veteransRested,
+  };
 }
 
 function updateMember(
