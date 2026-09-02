@@ -1,7 +1,8 @@
 # ADR 0076: The Fisher and the Seminar Seat
 
 Date: 2026-08-30
-Status: Accepted (D205 and D206 ruled; wiring in progress)
+Status: Accepted (D205 wired and measured — see the 2026-08-31 addendum;
+D206 wiring in progress)
 
 ## Context
 
@@ -58,6 +59,21 @@ The pass criterion is D204's, unchanged: at the Judgement Seat the fisher
 must not out-read an honest leader of comparable win score; if it does,
 that is a pricing gap that returns to the owner as a D ruling, never a
 weight tweak.
+
+**Measured 2026-08-31**
+(`docs/calibration/2026-08-31-the-fisher-at-the-judgement-seat.md`): the
+criterion holds. At identical pooled win score (67.00) the fisher reads
+`LI(0.2)` 3.29 against honest steady's 3.62 (per-campaign ranges overlap)
+and far under supportive's 61.86 — courting dismissal buys nothing over
+honest coldness, because every dismissed style banks the same King's-play
+win term and `mean_trust_final` keeps the curdle that caused the firing.
+The fisher is even slower to the terminal than honest tyranny (first-match
+dismissal at plies 10–20 against 5–11). No pricing gap; no new ruling owed.
+The larger reading — every cruel-style match ends `dismissed_by_room` and
+trust carry makes matches 2..N dismiss at ply 1, so the cruel semester's
+chess belongs to the King and no pre-D205 committed number is comparable —
+is recorded in the evidence doc, with the trust-carry question left open
+for the owner beside D206.
 
 ## D206: The seminar gets a Judgement Seat, and the remaining gamers sit at it
 
