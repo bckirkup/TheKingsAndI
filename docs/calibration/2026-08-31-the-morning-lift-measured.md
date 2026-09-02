@@ -120,3 +120,68 @@ trust_final holds at ~95 at every magnitude.
 
 Caveats: fake engine, one opponent (tyrannical), 20-match horizon, baseline 0
 only. Relative comparisons only, per the fake-engine evidence rule.
+
+## Addendum (2026-09-02): the fine grid, 200–700 by 100s
+
+On the owner's request the grid was densified: five further candidates
+(`MORNING_LIFT_PERMILLE ∈ {200, 300, 400, 600, 700}`, baseline 0), same
+method, same parameters, same seed. Provenance:
+
+| permille | branch | commit | job definition | image digest (`kingsandi-campaign@`) |
+|---|---|---|---|---|
+| 200 | `candidate/morning-lift-200` | `853368612d360972fa2ae73d1c9837df1a963199` | `kingsandi-campaign-spot:14` | `sha256:3087f2f817d362759726e45416c6e24bfdf9470c8fbf21250ce752680f82ab15` |
+| 300 | `candidate/morning-lift-300` | `32341dcb42b3ca6a6eaa8d004cde466f43baba3e` | `kingsandi-campaign-spot:15` | `sha256:81d9ab3a123a6d4dbaae642e2b6899a79e10c664c40eeb681a464e376f045b46` |
+| 400 | `candidate/morning-lift-400` | `d9c66d5410bacb9598853344f611b45b6329f0b6` | `kingsandi-campaign-spot:16` | `sha256:61b293b94acb55065730293d952e94c966444b422d1ca61b551eaf5c787a42d8` |
+| 600 | `candidate/morning-lift-600` | `7e7ae328588d72cec3c1212f188f0ba276b93877` | `kingsandi-campaign-spot:17` | `sha256:2d9eb9b08809354b7d88211a2770ee9779241e38c3a511c72a55de2d569616a9` |
+| 700 | `candidate/morning-lift-700` | `07c6223719952efaa08bcb1f3a5ab567e9f2f0a3` | `kingsandi-campaign-spot:18` | `sha256:a31f9ff5fa2ce492eccfabda1a719681517c769f20b2aa6dbc76fdfbdb24b75c` |
+
+Runs: `mlift-{200,300,400,600,700}-<style>` (20 array jobs × 10 shards, all
+shards succeeded). Supportive stays invariant at every new magnitude
+(0 dismissals, trust ~95, LI 59.8–61.1) and is omitted below.
+
+### The conveyor across the full grid (ply-≤2 dismissals, matches 2..20, /190)
+
+| permille | steady | tyrannical | dismissal_fisher |
+|---|---|---|---|
+| 0 | 150 | 181 | 158 |
+| 200 | 65 | 98 | 80 |
+| 250 | 46 | 68 | 64 |
+| 300 | 38 | 43 | 41 |
+| 400 | 11 | 23 | 25 |
+| 500 | 3 | 12 | 5 |
+| 600 | 0 | 1 | 0 |
+| 700 | 0 | 0 | 0 |
+| 1000 | 0 | 0 | 0 |
+
+### Dismissal ply (min / median) and LI across the fine grid
+
+| permille | steady ply | steady LI | tyrannical ply | tyrannical LI | fisher ply | fisher LI |
+|---|---|---|---|---|---|---|
+| 200 | 1 / 3 | 4.60 | 1 / 3 | 4.64 | 1 / 3 | 4.18 |
+| 300 | 1 / 5 | 4.68 | 1 / 3 | 4.18 | 1 / 3 | 3.91 |
+| 400 | 1 / 7 | 4.72 | 1 / 3 | 5.13 | 1 / 3 | 4.47 |
+| 500 | 1 / 7 | 4.44 | 1 / 5 | 5.00 | 1 / 5 | 3.18 |
+| 600 | 3 / 9 | 4.23 | 1 / 7 | 3.82 | 3 / 7 | 3.33 |
+| 700 | 3 / 11 | 4.91 | 3 / 7 | 4.73 | 3 / 7 | 3.33 |
+
+### Readings from the fine grid
+
+1. **The dose–response is smooth and monotone** — no cliff, no plateau
+   between 200 and 700; every 100 permille roughly halves the conveyor.
+2. **500 is the knee.** It is the largest magnitude at which ply-1 dismissal
+   remains possible for every cruel style (minimum ply 1 across the board)
+   while the conveyor is nearly gone (3–12/190). At 600 the ply-1 firing of
+   steady and the fisher disappears (minimum ply 3) and at 700 it is gone for
+   all styles — the room can no longer act on last night's memory at dawn.
+3. **Every cruel match still ends dismissed at every magnitude** (200/200
+   throughout the fine grid); the lift moves timing, never verdict.
+4. **No gaming seam opens anywhere on the grid.** The fisher never out-reads
+   honest steady at any magnitude, and its win score falls as the lift grows
+   (67.00 at zero → 59.75 at 700).
+5. **Kind/cruel separation holds everywhere** (supportive ~60–61 vs cruel
+   3.2–5.1, no per-campaign overlap).
+
+The fine grid confirms the original proposal: **500** is the boundary value —
+the most morning the room can be given while the option of firing an
+unrepentant tyrant at ply 1 survives. 600 is the first magnitude that removes
+that option for any style; 400 keeps a residual conveyor (11–25/190).
