@@ -8,6 +8,7 @@ import type { EnginePort } from '../src/engine/types';
 import { PSYCH_CONFIG_VERSION, SCHEMA_VERSION } from '../src/persistence/types';
 import {
   applyGrace,
+  applyMorningLift,
   calculateSingleMatchLeadershipIndex,
   ENGINE_CONFIG,
   type PieceState,
@@ -158,7 +159,7 @@ export function applyCampaignBoundary(
   random: { nextInt(maxExclusive: number): number },
 ): CampaignBoundaryFold {
   const currentGenerations: Record<PieceId, number> = { ...generations };
-  let roster = [...carriedRoster];
+  let roster = carriedRoster.map(applyMorningLift);
   const graceCareerIds: string[] = [];
   const rate = Math.max(
     0,

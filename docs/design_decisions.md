@@ -2392,6 +2392,20 @@ out-reads an honest commander of comparable standing is a pricing gap owed a
 D ruling. Gaming standings, draft position, or commendation count remains
 permitted and priced.
 
+### D207 ✅ Does the room wake with hope? (ADR 0077)
+**Answered 2026-08-30 (owner) — wired inert; magnitude open pending
+measurement.** At every match boundary, each fielded piece in both armies
+receives a deterministic, unearned lift toward a modest dawn trust baseline:
+`T_i' = clamp(T_i + trunc((baseline - T_i) * permille / 1000))` when
+`T_i < baseline`, otherwise `T_i' = T_i`. The lift is certain, consumes no
+PRNG draw, accepts no leader input, and changes only `T_i`; `tauBenev`,
+rupture debt, trauma, and memory remain untouched. It is applied to fielded
+lineups only, including each King, while bench and pool members remain
+unchanged. The Judgement Seat remains unchanged and reads whatever trust the
+room becomes. The mechanism is shipped at `MORNING_LIFT_PERMILLE = 0` and
+`MORNING_LIFT_TRUST_BASELINE = 0`; the magnitudes await the AWS measurement
+sweep.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news

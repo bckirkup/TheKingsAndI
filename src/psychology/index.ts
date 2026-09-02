@@ -77,6 +77,7 @@ export {
   applySustainedDread,
   type DreadExposure,
 } from './trauma';
+export { applyMorningLift } from './morningLift';
 export {
   defaultCredence,
   defaultRumor,
