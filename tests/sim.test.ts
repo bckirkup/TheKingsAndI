@@ -553,12 +553,19 @@ describe('degeneracy detectors', () => {
     expect(DEGENERACY_CONFIG.toothlessRefusalRateThreshold).toBe(0.05);
     expect(DEGENERACY_CONFIG.overrideInertRefusalRateThreshold).toBe(0.05);
 
-    const metrics = await runSimulation({
-      matches: 1,
-      leader: 'tyrannical',
-      seed: 7,
-      engineKind: 'fake',
-    });
+    const metrics = (
+      await runSimulation({
+        matches: 1,
+        leader: 'tyrannical',
+        seed: 7,
+        engineKind: 'fake',
+      })
+    ).map((metric) => ({
+      ...metric,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
+    }));
     const summary = aggregateCampaign('tyrannical', 7, metrics);
     const noRoutSummary = { ...summary, desertionAttrition: 0 };
     expect(
@@ -628,6 +635,19 @@ describe('degeneracy detectors', () => {
       detectDegeneracy('tyrannical', metrics, refusalSummary, {
         refusalDeadRateThreshold: 0.0001,
       }).some((finding) => finding.code === 'refusal-dead'),
+    ).toBe(false);
+    const dismissedMetrics = metrics.map((metric) => ({
+      ...metric,
+      dismissed: true,
+      dismissalCause: 'dismissed_by_room' as const,
+      dismissalPly: 1,
+    }));
+    expect(
+      detectDegeneracy(
+        'tyrannical',
+        dismissedMetrics,
+        aggregateCampaign('tyrannical', 7, dismissedMetrics),
+      ).some((finding) => finding.code === 'refusal-dead'),
     ).toBe(false);
 
     const toothlessSummary = {
