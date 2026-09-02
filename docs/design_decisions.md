@@ -2358,7 +2358,16 @@ standing D203-era ruling. The result and harness CSV gain
 writes nothing back. The **`dismissal_fisher`** joins the exploit tier: risk-0
 asks, high insistence, **no compliance brake** — it courts the room-path
 dismissal and banks the King's obeyed play for its win term. D204's pass
-criterion applies unchanged.
+criterion applies unchanged. **Measured 2026-08-31**
+(`docs/calibration/2026-08-31-the-fisher-at-the-judgement-seat.md`): the
+criterion holds — at identical pooled win score (67.00) the fisher reads
+3.29 against honest steady's 3.62, inside each other's per-campaign ranges,
+because every dismissed style banks the same King's-play win term and
+`mean_trust_final` keeps the curdle that caused the firing. No pricing gap.
+The larger reading: under the terminal, every cruel-style match ends
+`dismissed_by_room` (600/600; supportive 0/200) and trust carry makes
+matches 2..N dismiss at ply 1 — the cruel semester belongs to the King, and
+no pre-D205 committed number is comparable to post-D205 evidence.
 
 ### D206 ✅ Does the seminar get a Judgement Seat, and who sits at it? (ADR 0076)
 **Answered 2026-08-30 (owner).** Three instrumentation pieces and two
