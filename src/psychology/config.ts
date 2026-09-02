@@ -95,7 +95,7 @@ export const ENGINE_CONFIG = {
   /** Flat trauma relief granted by a successful grace event. */
   GRACE_RELIEF: 0,
   /** Fraction of the gap to the dawn baseline restored at each match boundary, permille (D207). */
-  MORNING_LIFT_PERMILLE: 0,
+  MORNING_LIFT_PERMILLE: 600,
   /** Trust baseline the morning lift reaches toward; earned trust above it is never dampened (D207). */
   MORNING_LIFT_TRUST_BASELINE: 0,
   /** Ability-channel authority loss when a justified refusal is accepted. */
