@@ -73,6 +73,9 @@ function makeMetric(match: number, tauAbil: number, length = 4): MatchMetrics {
     emptiedChairs: 0,
     emptiedChairsScore: 0,
     rout: match <= Math.ceil(length / 4),
+    dismissed: false,
+    dismissalCause: null,
+    dismissalPly: null,
     archetype: 'mixed',
   };
 }

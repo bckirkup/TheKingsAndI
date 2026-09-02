@@ -10,15 +10,16 @@ describe('campaign roster state carry', () => {
       seed: 7,
       matches: 2,
       leader: 'tyrannical',
-      opponent: 'tyrannical',
+      opponent: 'supportive',
       engineKind: 'fake',
+      initialTrust: 100,
       onCheckpoint: (checkpoint) => {
         checkpoints.push(checkpoint);
       },
     });
 
     expect(checkpoints).toHaveLength(2);
-    expect(result.metrics[0]?.survivingRosterSize).toBe(4);
+    expect(result.metrics[0]?.survivingRosterSize).toBe(2);
 
     const firstMatchState = checkpoints[0]?.roster.find(
       (piece) => piece.id === 'w:P:g2',

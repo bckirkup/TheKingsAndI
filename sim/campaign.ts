@@ -372,6 +372,7 @@ export function leaderTrustBias(leader: Leader): number {
     case 'win_maxer':
     case 'generation_cycler':
     case 'cascade_dodger':
+    case 'dismissal_fisher':
       return 10;
     case 'redeemer':
       return 0;

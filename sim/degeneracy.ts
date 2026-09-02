@@ -843,9 +843,12 @@ export function detectDegeneracy(
       message: `Supportive leader desertion attrition above ${config.supportiveRoutAttritionThreshold * 100}%.`,
     });
   }
+  const allMatchesDismissed =
+    metrics.length > 0 && metrics.every((metric) => metric.dismissed);
   if (
     summary.meanRefusalRate < config.refusalDeadRateThreshold &&
-    leader !== 'supportive'
+    leader !== 'supportive' &&
+    !allMatchesDismissed
   ) {
     findings.push({
       code: 'refusal-dead',

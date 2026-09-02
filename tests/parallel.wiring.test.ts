@@ -79,6 +79,9 @@ function makeMetric(): MatchMetrics {
     emptiedChairs: 0,
     emptiedChairsScore: 0,
     rout: false,
+    dismissed: false,
+    dismissalCause: null,
+    dismissalPly: null,
     archetype: 'mixed',
   };
 }

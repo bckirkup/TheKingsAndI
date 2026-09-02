@@ -57,6 +57,9 @@ function handCheckMetric(match: number): MatchMetrics {
     emptiedChairs: 0,
     emptiedChairsScore: 0,
     rout: match % 2 === 1,
+    dismissed: false,
+    dismissalCause: null,
+    dismissalPly: null,
     archetype: 'caretaker',
   };
 }

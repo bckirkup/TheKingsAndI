@@ -2341,6 +2341,48 @@ comparable win score, because the boundary observation lags the intra-match
 cascade and the ε-term prices exactly the churn the exploits run on. No
 pricing gap surfaced; no new ruling is owed by that pass.
 
+### D205 ✅ Does the harness get a dismissal terminal, and who fishes for it? (ADR 0076)
+**Answered 2026-08-30 (owner).** `runHeadlessMatch` gains the production
+dismissal terminal: the shared `evaluateDismissal` is checked at the same
+checkpoints `MatchSession` uses (after the player's resolved ply and after
+the enemy turn), with the King results channel at its production default
+(`kingTauAbil = 50`, never updated — faithful to production, where nothing
+writes it), so the live path is the room's: mean roster trust at or below
+`DISMISSAL_MEAN_TRUST` (−25) ends the commander's match. On dismissal the
+match fast-forwards deterministically under the shared
+`chooseKingCommandMove` on the match's own seeded PRNG, and the win score is
+`scoreMatchOutcome` of the board the King actually reached — the dismissed
+commander's index reads the army's real result under the King, per the
+standing D203-era ruling. The result and harness CSV gain
+`dismissed`/`dismissalCause`/dismissal-ply. Dismissal reads the roster and
+writes nothing back. The **`dismissal_fisher`** joins the exploit tier: risk-0
+asks, high insistence, **no compliance brake** — it courts the room-path
+dismissal and banks the King's obeyed play for its win term. D204's pass
+criterion applies unchanged.
+
+### D206 ✅ Does the seminar get a Judgement Seat, and who sits at it? (ADR 0076)
+**Answered 2026-08-30 (owner).** Three instrumentation pieces and two
+commanders. (1) At semester end each commander's Leadership Index is folded
+from their persisted `MatchRecord`s — the ruled five-term instrument,
+terminal-only per D203; no weekly surface, no standing bonus, no draft input
+reads it. (2) Seminar matches carry the D193 boundary observation between a
+commander's matches, as the campaign harness already does — an asymmetry
+correction, not a new surface. (3) **Seminar commanders only** may observe
+the public league table (own standing rank and week index) — the one
+deliberate observation extension, ruled here per D204's constraint, because
+the fiction publishes it; hidden components stay invisible. The **`tanker`**
+(throws early weeks for draft priority and purse, then plays to win on the
+drafted roster; the long-dormant `tanking-dominance` detector becomes its
+measurement) and the **`commendation_farmer`** (plays to the published
+commendation thresholds behaviorally; D93 keeps awards debrief-only, so it
+targets criteria, never readings) join as seminar exploit commanders, and
+`classifySeminarSideResult` stops hardcoding `dismissed: false` once D205's
+terminal exists in the shared loop. **Pass criterion:** D204's, read per
+commander at the seminar Judgement Seat; any exploiting commander that
+out-reads an honest commander of comparable standing is a pricing gap owed a
+D ruling. Gaming standings, draft position, or commendation count remains
+permitted and priced.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news

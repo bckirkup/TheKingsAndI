@@ -123,6 +123,73 @@ describe('headless player refusal replanning', () => {
   });
 });
 
+describe('headless dismissal terminal', () => {
+  const moveLeader: HeadlessLeaderPort = {
+    chooseMove(currentBoard, side, _random, _ply, refusedSans = new Set()) {
+      const intent = currentBoard.legalMoves().find((candidate) => {
+        const features = extractMoveFeatures(currentBoard, candidate);
+        const mover = currentBoard.pieceAt(candidate.from);
+        return mover?.side === side && refusedSans.has(features.san) === false;
+      });
+      if (intent === undefined) return undefined;
+      const mover = currentBoard.pieceAt(intent.from);
+      if (mover === undefined) return undefined;
+      const features = extractMoveFeatures(currentBoard, intent);
+      return {
+        moverId: mover.id,
+        intent,
+        san: features.san,
+        moveEval: featuresToEvaluation(features),
+        objectivelyGood: true,
+      };
+    },
+    shouldOverride: () => false,
+  };
+
+  function run(initialTrust: number) {
+    const board = LivingBoard.standard();
+    return runHeadlessMatch({
+      random: createSeededRandom(31),
+      maxPlies: 4,
+      playerSide: 'w',
+      leader: moveLeader,
+      opponent: moveLeader,
+      initialBoard: board,
+      initialRoster: createStartingRoster(board, 'w', initialTrust, 0.5),
+      initialEnemyRoster: createStartingRoster(board, 'b', 100, 0.5),
+      engine: createFakeEnginePort(),
+    });
+  }
+
+  it('dismisses a room at the first resolved player ply and completes under the King', async () => {
+    const result = await run(-100);
+    expect(result.dismissed).toBe(true);
+    expect(result.dismissalCause).toBe('dismissed_by_room');
+    expect(result.dismissalPly).toBe(1);
+    if (result.dismissalPly === null || result.dismissalPly === undefined) {
+      throw new Error('Expected a dismissal ply.');
+    }
+    expect(result.plies).toBeGreaterThan(result.dismissalPly);
+    expect(result.winScore).toEqual(expect.any(Number));
+  });
+
+  it('leaves a healthy room undismissed', async () => {
+    const result = await run(100);
+    expect(result.dismissed).toBe(false);
+    expect(result.dismissalCause).toBeNull();
+    expect(result.dismissalPly).toBeNull();
+  });
+
+  it('is deterministic across repeated dismissed matches', async () => {
+    const first = await run(-100);
+    const second = await run(-100);
+    expect(second.dismissed).toBe(first.dismissed);
+    expect(second.dismissalCause).toBe(first.dismissalCause);
+    expect(second.dismissalPly).toBe(first.dismissalPly);
+    expect(second.winScore).toBe(first.winScore);
+  });
+});
+
 describe('headless adaptive opponent wiring', () => {
   it('changes enemy refusal rate when escalator gain changes', async () => {
     const runWithGain = async (escalatorGain: number): Promise<number> => {
