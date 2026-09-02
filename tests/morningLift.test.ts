@@ -178,7 +178,7 @@ describe('D207 morning lift', () => {
     expect(fingerprints[1]).not.toBe(fingerprints[2]);
   });
 
-  it('keeps default campaign output identical to the explicit inert configuration', async () => {
+  it('current-default change detector matches explicit 400-permille configuration', async () => {
     const implicit = await runCampaign({
       matches: 1,
       leader: 'supportive',
@@ -186,7 +186,7 @@ describe('D207 morning lift', () => {
       seed: 19,
       engineKind: 'fake',
     });
-    const explicit = await withMorningLiftAsync(0, 0, () =>
+    const explicit = await withMorningLiftAsync(400, 0, () =>
       runCampaign({
         matches: 1,
         leader: 'supportive',
