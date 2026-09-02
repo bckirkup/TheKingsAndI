@@ -642,6 +642,17 @@ describe('degeneracy detectors', () => {
       dismissalCause: 'dismissed_by_room' as const,
       dismissalPly: 1,
     }));
+    const dismissedNoRoutSummary = {
+      ...aggregateCampaign('tyrannical', 7, dismissedMetrics),
+      desertionAttrition: 0,
+    };
+    expect(
+      detectDegeneracy(
+        'tyrannical',
+        dismissedMetrics,
+        dismissedNoRoutSummary,
+      ).some((finding) => finding.code === 'no-rout'),
+    ).toBe(false);
     expect(
       detectDegeneracy(
         'tyrannical',
@@ -683,13 +694,8 @@ describe('degeneracy detectors', () => {
     ).toBe(false);
   });
 
-  it('flags tyrannical campaigns with no desertions', async () => {
-    const metrics = await runSimulation({
-      matches: 1,
-      leader: 'tyrannical',
-      seed: 7,
-      engineKind: 'fake',
-    });
+  it('flags undismissed tyrannical campaigns with no desertions', () => {
+    const metrics = [handCheckMetric(1)];
     const summary = aggregateCampaign('tyrannical', 7, metrics);
     const findings = detectDegeneracy('tyrannical', metrics, {
       ...summary,
