@@ -71,6 +71,8 @@ import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
 import { kingExposureAfterWithdrawals } from './kingExposure';
 import { applyPromotion } from './promotion';
+import { chooseKingCommandMove } from './kingCommand';
+import { evaluateDismissal, type DismissalCause } from './campaignPolicy';
 
 function applyCapturedPieceInjury(
   roster: PieceState[],
@@ -162,6 +164,7 @@ export interface HeadlessMatchConfig {
     ply: number,
     context?: OverrideAskContext,
   ) => boolean;
+  readonly kingTauAbil?: number;
 }
 
 export interface HeadlessMatchResult {
@@ -176,6 +179,9 @@ export interface HeadlessMatchResult {
   readonly winScore: number;
   readonly rout: boolean;
   readonly enemyRout: boolean;
+  readonly dismissed: boolean;
+  readonly dismissalCause: DismissalCause | null;
+  readonly dismissalPly: number | null;
   readonly refusedGoodMoves: number;
   /** Initial desertions whose true post-move audit score was materially winning. */
   readonly winningPositionDesertions: number;
@@ -461,6 +467,9 @@ export async function runHeadlessMatch(
   let ply = 1;
   let rout = false;
   let enemyRout = false;
+  let dismissed = false;
+  let dismissalCause: DismissalCause | null = null;
+  let dismissalPly: number | null = null;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
@@ -475,6 +484,57 @@ export async function runHeadlessMatch(
   let enemyDreadExposureByPiece: DreadExposureByPiece = {};
   let enemyRegardStreakByPiece: Readonly<Record<string, number>> = {};
   const opponentArchetype = config.opponentArchetype ?? 'random';
+  const kingTauAbil = config.kingTauAbil ?? 50;
+
+  const evaluateDismissalAtCheckpoint = (): void => {
+    if (dismissed || rout || enemyRout || board.isGameOver()) return;
+    const activeIds = new Set(activePlayerPieceIds(board, config.playerSide));
+    departedRoster = appendDeparted(
+      departedRoster,
+      roster.filter((piece) => !activeIds.has(piece.id)),
+    );
+    roster = roster.filter((piece) => activeIds.has(piece.id));
+    const decision = evaluateDismissal(roster, kingTauAbil);
+    if (!decision.dismiss) return;
+    dismissed = true;
+    dismissalCause = decision.cause;
+    dismissalPly = Math.max(1, ply - 1);
+  };
+
+  const applyKingCommandPly = (): boolean => {
+    const san = chooseKingCommandMove(board, config.random);
+    if (san === undefined) return false;
+    const applied = board.applySan(san);
+    events.push({
+      t: 'MOVE',
+      ply,
+      san,
+      pieceId: applied.moverId,
+      verdict: 'COMPLIANT_EXECUTION',
+      orderQualityCp: 40,
+    });
+    if (applied.capture !== undefined) {
+      events.push({
+        t: 'CAPTURE',
+        ply,
+        victim: applied.capture.pieceId,
+        by: applied.moverId,
+      });
+    }
+    if (applied.promotion !== undefined) {
+      const promotion = applyPromotion(roster, applied.promotion, ply);
+      roster = promotion.roster;
+      events.push(promotion.event);
+    }
+    const activeIds = new Set(activePlayerPieceIds(board, config.playerSide));
+    departedRoster = appendDeparted(
+      departedRoster,
+      roster.filter((piece) => !activeIds.has(piece.id)),
+    );
+    roster = roster.filter((piece) => activeIds.has(piece.id));
+    ply += 1;
+    return true;
+  };
 
   while (ply <= config.maxPlies) {
     if (board.isGameOver()) break;
@@ -495,9 +555,14 @@ export async function runHeadlessMatch(
     );
     enemyRoster = enemyRoster.filter((piece) => enemyActiveIds.has(piece.id));
 
-    if (playerActiveIds.length <= 1) {
+    if (!dismissed && playerActiveIds.length <= 1) {
       rout = true;
       break;
+    }
+
+    if (dismissed && side === config.playerSide) {
+      if (!applyKingCommandPly()) break;
+      continue;
     }
 
     if (side !== config.playerSide) {
@@ -566,6 +631,7 @@ export async function runHeadlessMatch(
           break;
         }
       }
+      evaluateDismissalAtCheckpoint();
       continue;
     }
 
@@ -933,9 +999,11 @@ export async function runHeadlessMatch(
       regardStreakByPiece = committed.regardStreakByPiece;
       dreadExposureByPiece = committed.dreadExposureByPiece;
       ply = committed.ply;
+      evaluateDismissalAtCheckpoint();
       continue;
     }
     if (!turnCompleted) break;
+    evaluateDismissalAtCheckpoint();
   }
 
   const winScore = scoreMatchOutcome(board, config.playerSide, rout, enemyRout);
@@ -959,6 +1027,9 @@ export async function runHeadlessMatch(
     winScore,
     rout,
     enemyRout,
+    dismissed,
+    dismissalCause,
+    dismissalPly,
     refusedGoodMoves,
     winningPositionDesertions,
     justifiedRefusalObviousness: Object.freeze(

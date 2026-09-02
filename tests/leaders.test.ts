@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
 import { createSeededRandom } from '../src/core/random';
-import { LEADERS } from '../sim/cli';
+import { LEADERS, opponentArchetypeForLeader } from '../sim/cli';
 import {
   ADAPTIVE_MEMORY_CONFIG,
   ADAPTIVE_POLICY_CONFIG,
@@ -87,6 +87,20 @@ function chosenMoves(
     );
     return choice?.features.san ?? 'none';
   });
+}
+
+function withExploitConfig<T>(
+  changes: Partial<typeof EXPLOIT_POLICY_CONFIG>,
+  action: () => T,
+): T {
+  const config = EXPLOIT_POLICY_CONFIG as unknown as Record<string, number>;
+  const original = { ...config };
+  Object.assign(config, changes);
+  try {
+    return action();
+  } finally {
+    Object.assign(config, original);
+  }
 }
 
 describe('scripted leader move shaping', () => {
@@ -492,7 +506,11 @@ describe('scripted leader move shaping', () => {
         'win_maxer',
         'generation_cycler',
         'cascade_dodger',
+        'dismissal_fisher',
       ]),
+    );
+    expect(() => opponentArchetypeForLeader('dismissal_fisher')).toThrow(
+      'has no opposing commander archetype',
     );
   });
 
@@ -570,6 +588,28 @@ describe('scripted leader move shaping', () => {
     expect(overrideCount('cascade_dodger', thin)).toBe(0);
   });
 
+  it('makes dismissal-fisher insist without a compliance brake', () => {
+    const context = contextWithObservation({
+      matchesObserved: 1,
+      refusalPermille: 1_000,
+      desertions: 20,
+      survivors: 1,
+      winScore: 0,
+    });
+    expect(overrideCount('dismissal_fisher', context)).toBeGreaterThan(800);
+    const fisherConfig = EXPLOIT_POLICY_CONFIG as unknown as Record<
+      string,
+      number
+    >;
+    const insistence = fisherConfig.fisherInsistence;
+    expect(
+      withExploitConfig({ fisherInsistence: 0 }, () =>
+        overrideCount('dismissal_fisher', context),
+      ),
+    ).toBe(0);
+    expect(fisherConfig.fisherInsistence).toBe(insistence);
+  });
+
   it('gives each exploit leader a defined choice with neutral bias', () => {
     const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
     const moves = legalScoredMoves(board);
@@ -584,6 +624,7 @@ describe('scripted leader move shaping', () => {
       'win_maxer',
       'generation_cycler',
       'cascade_dodger',
+      'dismissal_fisher',
     ] as const) {
       const choice = leaderPolicy(style).chooseMove(
         board,
@@ -610,6 +651,7 @@ describe('scripted leader move shaping', () => {
       'win_maxer',
       'generation_cycler',
       'cascade_dodger',
+      'dismissal_fisher',
     ] as const) {
       const policy = leaderPolicy(style);
       expect(

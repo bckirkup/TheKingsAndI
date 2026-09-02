@@ -110,6 +110,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],
@@ -124,10 +127,13 @@ describe('promotion harness metrics', () => {
     expect(metric.meanTrustFinal).toBe(metric.meanTrustEnd);
     expect(metric.emptiedChairs).toBe(0);
     expect(metric.emptiedChairsScore).toBe(0);
+    expect(metric.dismissed).toBe(false);
+    expect(metric.dismissalCause).toBeNull();
+    expect(metric.dismissalPly).toBeNull();
     expect(header).toMatch(
-      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score$/,
+      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply$/,
     );
-    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00$/);
+    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00,0,,$/);
   });
 
   it('uses departed exit trust in mean_trust_final but preserves survivor mean_trust_end', () => {
@@ -147,6 +153,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],
@@ -196,6 +205,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],
@@ -236,6 +248,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],
@@ -274,6 +289,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],
@@ -308,6 +326,9 @@ describe('promotion harness metrics', () => {
       winScore: 50,
       rout: false,
       enemyRout: false,
+      dismissed: false,
+      dismissalCause: null,
+      dismissalPly: null,
       refusedGoodMoves: 0,
       winningPositionDesertions: 0,
       justifiedRefusalObviousness: [],

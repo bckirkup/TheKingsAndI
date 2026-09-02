@@ -249,6 +249,8 @@ export interface ExploitPolicyConfig {
   readonly dodgerInsistence: number;
   /** Observed-survivor floor below which the dodger goes passive. */
   readonly dodgerSurvivorFloor: number;
+  /** Fisher override probability; deliberately no compliance brake (D205). */
+  readonly fisherInsistence: number;
 }
 
 export const EXPLOIT_POLICY_CONFIG: ExploitPolicyConfig = {
@@ -260,6 +262,7 @@ export const EXPLOIT_POLICY_CONFIG: ExploitPolicyConfig = {
   cyclerRisk: 0,
   dodgerInsistence: 90,
   dodgerSurvivorFloor: 12,
+  fisherInsistence: 90,
 } as const;
 
 function prospectTotal(prospect: Readonly<Record<string, number>>): number {
@@ -721,6 +724,23 @@ function createPolicy(style: Leader): LeaderPolicy {
           return random.nextInt(100) < chance;
         },
       };
+    case 'dismissal_fisher':
+      return {
+        style,
+        chooseMove: (board, moves, random) => {
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tacticalScore(feature, 0),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random) =>
+          random.nextInt(100) < EXPLOIT_POLICY_CONFIG.fisherInsistence,
+      };
     case 'random':
     default:
       return {
@@ -759,6 +779,7 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   win_maxer: createPolicy('win_maxer'),
   generation_cycler: createPolicy('generation_cycler'),
   cascade_dodger: createPolicy('cascade_dodger'),
+  dismissal_fisher: createPolicy('dismissal_fisher'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {
