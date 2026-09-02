@@ -825,9 +825,12 @@ export function detectDegeneracy(
   );
   if (counterfactual !== null) findings.push(counterfactual);
 
+  const allMatchesDismissed =
+    metrics.length > 0 && metrics.every((metric) => metric.dismissed);
   if (
     leader === 'tyrannical' &&
-    summary.desertionAttrition < config.noRoutAttritionThreshold
+    summary.desertionAttrition < config.noRoutAttritionThreshold &&
+    !allMatchesDismissed
   ) {
     findings.push({
       code: 'no-rout',
@@ -843,8 +846,6 @@ export function detectDegeneracy(
       message: `Supportive leader desertion attrition above ${config.supportiveRoutAttritionThreshold * 100}%.`,
     });
   }
-  const allMatchesDismissed =
-    metrics.length > 0 && metrics.every((metric) => metric.dismissed);
   if (
     summary.meanRefusalRate < config.refusalDeadRateThreshold &&
     leader !== 'supportive' &&
