@@ -1,7 +1,7 @@
 # ADR 0077: The Morning Lift
 
 Date: 2026-08-30
-Status: Accepted (D207 wired inert; magnitude open pending measurement)
+Status: Accepted (D207 ruled at permille 400, baseline 0 — 2026-09-02 addendum)
 
 ## Context
 
@@ -40,9 +40,21 @@ than a match that is over before it starts.
 
 ## Status
 
-The wiring is shipped inert at `MORNING_LIFT_PERMILLE = 0` and
-`MORNING_LIFT_TRUST_BASELINE = 0`. Magnitudes remain open pending the AWS
-measurement sweep; its evidence will be added as a dated addendum.
+The wiring is shipped at `MORNING_LIFT_PERMILLE = 400` and
+`MORNING_LIFT_TRUST_BASELINE = 0`; the magnitude is ruled by the dated
+fine-grid evidence addendum below.
+
+## Addendum (2026-09-02): the magnitude is ruled
+
+The owner ruled `MORNING_LIFT_PERMILLE = 400` and
+`MORNING_LIFT_TRUST_BASELINE = 0` on the fine-grid evidence in
+`docs/calibration/2026-08-31-the-morning-lift-measured.md` (2026-09-02
+addendum). At 400, the ply-≤2 repeat-dismissal conveyor is reduced to
+11–25/190, from 150–181/190 at zero, and the median re-dismissal ply is 3–7.
+Ply-1 dismissal remains possible for every cruel style, every cruel match
+still ends dismissed, supportive is invariant, and the fisher gains nothing.
+The owner chose 400 over the recommended 500 to keep a touch more of the
+conveyor.
 
 ## Consequences
 

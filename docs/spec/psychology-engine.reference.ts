@@ -112,7 +112,7 @@ export const ENGINE_CONFIG = {
     epsilon: 0.2, // Emptied Chairs weight (D202: ruled 0.2, 2026-08-30)
   },
   /** Fraction of the gap to the dawn baseline restored at each match boundary, permille (D207). */
-  MORNING_LIFT_PERMILLE: 0,
+  MORNING_LIFT_PERMILLE: 400,
   /** Trust baseline the morning lift reaches toward; earned trust above it is never dampened (D207). */
   MORNING_LIFT_TRUST_BASELINE: 0,
 };
