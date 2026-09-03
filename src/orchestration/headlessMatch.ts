@@ -72,6 +72,7 @@ import { applyMoveTrauma, type DreadExposureByPiece } from './trauma';
 import { applyCaptureInjury } from '../psychology';
 import { kingExposureAfterWithdrawals } from './kingExposure';
 import { applyPromotion } from './promotion';
+import { advancePromotionHope, initialPromotionHope } from './promotionHope';
 import { chooseKingCommandMove } from './kingCommand';
 import { evaluateDismissal, type DismissalCause } from './campaignPolicy';
 
@@ -471,6 +472,7 @@ export async function runHeadlessMatch(
   let departedEnemyRoster: PieceState[] = [];
   const enemyFieldedPieceIds = enemyRoster.map((piece) => piece.id);
   const events: MatchEvent[] = [];
+  let promotionHope = initialPromotionHope(board);
   let ply = 1;
   let rout = false;
   let enemyRout = false;
@@ -533,6 +535,15 @@ export async function runHeadlessMatch(
       roster = promotion.roster;
       events.push(promotion.event);
     }
+    const hope = advancePromotionHope(
+      board,
+      promotionHope,
+      ply,
+      applied.capture?.role === 'P' ? [applied.capture.pieceId] : [],
+      applied.promotion === undefined ? [] : [applied.promotion.pieceId],
+    );
+    promotionHope = hope.state;
+    events.push(...hope.events);
     const activeIds = new Set(activePlayerPieceIds(board, config.playerSide));
     departedRoster = appendDeparted(
       departedRoster,
@@ -600,6 +611,24 @@ export async function runHeadlessMatch(
       enemyDreadExposureByPiece = enemyTurn.dreadExposureByPiece;
       enemyRegardStreakByPiece = enemyTurn.regardStreakByPiece;
       events.push(...enemyTurn.events);
+      const enemyHope = advancePromotionHope(
+        board,
+        promotionHope,
+        enemyTurn.ply - 1,
+        enemyTurn.capturedPieceId !== undefined &&
+          roster.find((piece) => piece.id === enemyTurn.capturedPieceId)
+            ?.role === 'Pawn'
+          ? [enemyTurn.capturedPieceId]
+          : [],
+        enemyTurn.events
+          .filter(
+            (event): event is Extract<MatchEvent, { t: 'PROMOTION' }> =>
+              event.t === 'PROMOTION' && event.ply === enemyTurn.ply - 1,
+          )
+          .map((event) => event.pieceId),
+      );
+      promotionHope = enemyHope.state;
+      events.push(...enemyHope.events);
       const capturedByEnemy =
         enemyTurn.capturedPieceId === undefined
           ? undefined
@@ -922,6 +951,24 @@ export async function runHeadlessMatch(
         actorChallenged,
       });
       roster = committed.roster;
+      const playerHope = advancePromotionHope(
+        board,
+        promotionHope,
+        committed.ply - 1,
+        committed.capturedPieceId !== undefined &&
+          enemyRoster.find((piece) => piece.id === committed.capturedPieceId)
+            ?.role === 'Pawn'
+          ? [committed.capturedPieceId]
+          : [],
+        events
+          .filter(
+            (event): event is Extract<MatchEvent, { t: 'PROMOTION' }> =>
+              event.t === 'PROMOTION' && event.ply === committed.ply - 1,
+          )
+          .map((event) => event.pieceId),
+      );
+      promotionHope = playerHope.state;
+      events.push(...playerHope.events);
       const capturedByPlayer =
         committed.capturedPieceId === undefined
           ? undefined
@@ -995,6 +1042,24 @@ export async function runHeadlessMatch(
         actorChallenged: true,
       });
       roster = committed.roster;
+      const overrideHope = advancePromotionHope(
+        board,
+        promotionHope,
+        committed.ply - 1,
+        committed.capturedPieceId !== undefined &&
+          enemyRoster.find((piece) => piece.id === committed.capturedPieceId)
+            ?.role === 'Pawn'
+          ? [committed.capturedPieceId]
+          : [],
+        events
+          .filter(
+            (event): event is Extract<MatchEvent, { t: 'PROMOTION' }> =>
+              event.t === 'PROMOTION' && event.ply === committed.ply - 1,
+          )
+          .map((event) => event.pieceId),
+      );
+      promotionHope = overrideHope.state;
+      events.push(...overrideHope.events);
       enemyRoster = applyCapturedPieceInjury(
         enemyRoster,
         committed.capturedPieceId,

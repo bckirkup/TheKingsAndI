@@ -238,6 +238,73 @@ describe('foldCampaignCultureDrift', () => {
 });
 
 describe('buildCampaignDebrief', () => {
+  it('persists fielded promotion hope incidents and totals', () => {
+    const fielded = makeStoredPiece('w:P:a2', 40);
+    const opponent = makeStoredPiece('b:P:a7', 40);
+    const debrief = buildCampaignDebrief(
+      'campaign-1',
+      [
+        makeMatchRecord(
+          [
+            {
+              t: 'PROMOTION',
+              ply: 3,
+              pieceId: fielded.id,
+              fromRole: 'Pawn',
+              toRole: 'Queen',
+            },
+            {
+              t: 'PROMOTION',
+              ply: 4,
+              pieceId: opponent.id,
+              fromRole: 'Pawn',
+              toRole: 'Queen',
+            },
+            {
+              t: 'HOPE_EXTINGUISHED',
+              ply: 5,
+              pieceId: fielded.id,
+              object: 'promotion',
+              priorProspect: 600,
+              reason: 'unreachable',
+            },
+            {
+              t: 'HOPE_REKINDLED',
+              ply: 6,
+              pieceId: fielded.id,
+              object: 'promotion',
+              prospect: 300,
+            },
+          ],
+          {},
+          { rosterSnapshot: [fielded], rosterEnd: [fielded] },
+        ),
+      ],
+      [fielded],
+      [fielded],
+      'victory',
+    );
+    expect(debrief.hope).toEqual({
+      foldVersion: 'hope-v1',
+      realized: [
+        { matchId: 'match-1', matchIndex: 1, ply: 3, pieceId: fielded.id },
+      ],
+      extinguished: [
+        {
+          matchId: 'match-1',
+          matchIndex: 1,
+          ply: 5,
+          pieceId: fielded.id,
+          reason: 'unreachable',
+          priorProspect: 600,
+        },
+      ],
+      realizedCount: 1,
+      extinguishedCount: 1,
+      rekindledCount: 1,
+    });
+  });
+
   it('separates board quality and execution fidelity means', () => {
     const matches = [
       makeMatchRecord([], {

@@ -28,6 +28,7 @@ import {
   type MoveDecisionOutcome,
   type MoveResponseVerdict,
   type PieceState,
+  type PromotionHopeState,
 } from '../psychology';
 
 import { insightToEvaluation, isVindicatedMove } from './evaluation';
@@ -70,6 +71,7 @@ import {
 import { createStartingRoster } from './roster';
 import { kingExposureAfterWithdrawals } from './kingExposure';
 import { applyPromotion } from './promotion';
+import { advancePromotionHope, initialPromotionHope } from './promotionHope';
 import { lineupPieceIdFactory } from './lineup';
 
 export type MatchPhase =
@@ -211,6 +213,7 @@ export class MatchSession {
   private enemyDreadExposureByPiece: DreadExposureByPiece = {};
   private enemyRegardStreakByPiece: Readonly<Record<string, number>> = {};
   private readonly engineAudit: EngineAuditEntry[] = [];
+  private promotionHope: PromotionHopeState;
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -230,6 +233,7 @@ export class MatchSession {
         : LivingBoard.standard(
             lineupPieceIdFactory({ [this.playerSide]: config.initialLineup }),
           ));
+    this.promotionHope = initialPromotionHope(this.board);
     this.roster =
       config.initialRoster !== undefined
         ? config.initialRoster.map(normalizePieceState)
@@ -744,6 +748,15 @@ export class MatchSession {
       this.roster = promotion.roster;
       this.events.push(promotion.event);
     }
+    const hope = advancePromotionHope(
+      this.board,
+      this.promotionHope,
+      this.ply,
+      applied.capture?.role === 'P' ? [applied.capture.pieceId] : [],
+      applied.promotion === undefined ? [] : [applied.promotion.pieceId],
+    );
+    this.promotionHope = hope.state;
+    this.events.push(...hope.events);
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
     this.ply += 1;
     return true;
@@ -841,6 +854,15 @@ export class MatchSession {
     );
 
     this.roster = syncRoster(this.board, this.roster, this.playerSide);
+    const hope = advancePromotionHope(
+      this.board,
+      this.promotionHope,
+      this.ply,
+      applied.capture?.role === 'P' ? [applied.capture.pieceId] : [],
+      applied.promotion === undefined ? [] : [applied.promotion.pieceId],
+    );
+    this.promotionHope = hope.state;
+    this.events.push(...hope.events);
     this.ply += 1;
     this.selectedPieceId = null;
 
@@ -1035,6 +1057,24 @@ export class MatchSession {
     this.enemyRegardStreakByPiece = result.regardStreakByPiece;
     this.engineAudit.push(...(result.engineAudit ?? []));
     this.events.push(...result.events);
+    const hope = advancePromotionHope(
+      this.board,
+      this.promotionHope,
+      result.ply - 1,
+      result.capturedPieceId !== undefined &&
+        this.roster.find((piece) => piece.id === result.capturedPieceId)
+          ?.role === 'Pawn'
+        ? [result.capturedPieceId]
+        : [],
+      this.events
+        .filter(
+          (event): event is Extract<MatchEvent, { t: 'PROMOTION' }> =>
+            event.t === 'PROMOTION' && event.ply === result.ply - 1,
+        )
+        .map((event) => event.pieceId),
+    );
+    this.promotionHope = hope.state;
+    this.events.push(...hope.events);
     if (result.capturedPieceId !== undefined) {
       const captured = this.roster.find(
         (piece) => piece.id === result.capturedPieceId,

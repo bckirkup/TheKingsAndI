@@ -183,6 +183,57 @@ export function DebriefScreen({
         )}
       </section>
 
+      <section className="debrief-screen__judgement-seat">
+        <h2>Hope</h2>
+        {debrief.hope.realized.length === 0 &&
+        debrief.hope.extinguished.length === 0 &&
+        debrief.hope.rekindledCount === 0 ? (
+          <p>Every hope either lived or was realized.</p>
+        ) : (
+          <>
+            <dl className="debrief-screen__folds">
+              <div>
+                <dt>Rekindled hopes</dt>
+                <dd>{debrief.hope.rekindledCount}</dd>
+              </div>
+            </dl>
+            <h3>Realized crowns</h3>
+            <ul>
+              {debrief.hope.realized.map((incident) => (
+                <li
+                  key={`${incident.matchId}-${incident.ply}-${incident.pieceId}`}
+                >
+                  Match {incident.matchIndex}: {incident.pieceId} promoted at
+                  ply {incident.ply}
+                </li>
+              ))}
+            </ul>
+            <h3>Extinguished hopes</h3>
+            <ul>
+              {[...debrief.hope.extinguished]
+                .sort(
+                  (left, right) =>
+                    right.matchIndex - left.matchIndex || right.ply - left.ply,
+                )
+                .slice(0, 10)
+                .map((incident) => (
+                  <li
+                    key={`${incident.matchId}-${incident.ply}-${incident.pieceId}`}
+                  >
+                    Match {incident.matchIndex}: {incident.pieceId} at ply{' '}
+                    {incident.ply} —{' '}
+                    {incident.reason === 'unreachable'
+                      ? 'the file closed'
+                      : 'taken'}{' '}
+                    (prior prospect {(incident.priorProspect / 1000).toFixed(2)}
+                    )
+                  </li>
+                ))}
+            </ul>
+          </>
+        )}
+      </section>
+
       <div className="narration-audit">
         <h2 className="narration-audit__headline">{prose.headline}</h2>
         {prose.paragraphs.map((paragraph) => (

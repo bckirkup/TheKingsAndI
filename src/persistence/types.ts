@@ -15,6 +15,7 @@ export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
 export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v3';
 export const COURAGE_FOLD_VERSION = 'courage-v1';
+export const HOPE_FOLD_VERSION = 'hope-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -195,6 +196,26 @@ export interface CampaignDebrief {
     }[];
     readonly meanNormalized: number | null;
     readonly count: number;
+  };
+  readonly hope: {
+    readonly foldVersion: string;
+    readonly realized: readonly {
+      readonly matchId: string;
+      readonly matchIndex: number;
+      readonly ply: number;
+      readonly pieceId: string;
+    }[];
+    readonly extinguished: readonly {
+      readonly matchId: string;
+      readonly matchIndex: number;
+      readonly ply: number;
+      readonly pieceId: string;
+      readonly reason: 'unreachable' | 'captured';
+      readonly priorProspect: number;
+    }[];
+    readonly realizedCount: number;
+    readonly extinguishedCount: number;
+    readonly rekindledCount: number;
   };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
