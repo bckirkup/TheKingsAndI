@@ -2,7 +2,10 @@ import type { PieceId } from '../chess';
 import { ENGINE_CONFIG } from './config';
 import type {
   CampaignCultureDriftVector,
+  CandidateMoveEvaluation,
   MatchEvent,
+  MoveDecisionOutcome,
+  MoveResponseVerdict,
   PieceState,
 } from './types';
 import { sharedBondScalar } from './witness';
@@ -12,6 +15,80 @@ export function appendEvent(
   event: MatchEvent,
 ): readonly MatchEvent[] {
   return Object.freeze([...log, Object.freeze(event)]);
+}
+
+const FULL_EFFORT_VERDICTS: readonly MoveResponseVerdict[] = [
+  'COMPLIANT_EXECUTION',
+  'HEROIC_EXECUTION',
+  'FATALISTIC_COMPLIANCE',
+];
+
+export function courageForMove(
+  outcome: MoveDecisionOutcome,
+  moveEval: CandidateMoveEvaluation,
+): { margin: number; asked: number } | undefined {
+  if (
+    !FULL_EFFORT_VERDICTS.includes(outcome.verdict) ||
+    outcome.utilityScore >= 0
+  ) {
+    return undefined;
+  }
+  return {
+    margin: -outcome.utilityScore,
+    asked: Math.max(
+      moveEval.P_captured,
+      -moveEval.deltaV_board,
+      ENGINE_CONFIG.COURAGE_ASKED_COST_FLOOR,
+    ),
+  };
+}
+
+export function foldCourage(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+): {
+  readonly incidents: readonly {
+    ply: number;
+    pieceId: PieceId;
+    san: string;
+    verdict: MoveResponseVerdict;
+    margin: number;
+    asked: number;
+    normalized: number;
+  }[];
+  readonly meanNormalized: number | null;
+  readonly count: number;
+} {
+  const fieldedIds = new Set(fieldedPieceIds);
+  const incidents = events.flatMap((event) => {
+    if (
+      event.t !== 'MOVE' ||
+      event.courage === undefined ||
+      !fieldedIds.has(event.pieceId)
+    ) {
+      return [];
+    }
+    return [
+      {
+        ply: event.ply,
+        pieceId: event.pieceId,
+        san: event.san,
+        verdict: event.verdict,
+        margin: event.courage.margin,
+        asked: event.courage.asked,
+        normalized: Math.min(1, event.courage.margin / event.courage.asked),
+      },
+    ];
+  });
+  return {
+    incidents,
+    meanNormalized:
+      incidents.length === 0
+        ? null
+        : incidents.reduce((sum, incident) => sum + incident.normalized, 0) /
+          incidents.length,
+    count: incidents.length,
+  };
 }
 
 export function applyWitnessedSacrificeEvent(

@@ -161,6 +161,11 @@ export type MatchEvent =
       readonly verdict: MoveResponseVerdict;
       /** Centipawn-quality proxy for the order issued (ADR 0022 §5). */
       readonly orderQualityCp?: number;
+      /** Overcome margin and trait-free ask (ADR 0073 addendum, D199) — debrief-only. */
+      readonly courage?: {
+        readonly margin: number;
+        readonly asked: number;
+      };
     }
   | {
       readonly t: 'PROMOTION';

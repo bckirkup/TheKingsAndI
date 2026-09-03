@@ -2,6 +2,7 @@ import type {
   CampaignCultureDriftVector,
   CredenceState,
   MatchEvent,
+  MoveResponseVerdict,
   PieceRole,
   PieceState,
 } from '../psychology';
@@ -13,6 +14,7 @@ export const CULTURE_DRIFT_FOLD_VERSION = 'culture-drift-v1';
 export const AUDIT_FOLD_VERSION = 'audit-v3';
 export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
 export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v3';
+export const COURAGE_FOLD_VERSION = 'courage-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -177,6 +179,22 @@ export interface CampaignDebrief {
     readonly meanLeadershipIndex: number | null;
     readonly computedMatchCount: number;
     readonly totalMatchCount: number;
+  };
+  readonly courage: {
+    readonly foldVersion: string;
+    readonly incidents: readonly {
+      readonly matchId: string;
+      readonly matchIndex: number;
+      readonly ply: number;
+      readonly pieceId: string;
+      readonly san: string;
+      readonly verdict: MoveResponseVerdict;
+      readonly margin: number;
+      readonly asked: number;
+      readonly normalized: number;
+    }[];
+    readonly meanNormalized: number | null;
+    readonly count: number;
   };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;

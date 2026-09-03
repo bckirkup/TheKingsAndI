@@ -98,6 +98,8 @@ export const ENGINE_CONFIG = {
   MORNING_LIFT_PERMILLE: 400,
   /** Trust baseline the morning lift reaches toward; earned trust above it is never dampened (D207). */
   MORNING_LIFT_TRUST_BASELINE: 0,
+  /** Minimum trait-free risk asked of a piece for courage normalization (D199). */
+  COURAGE_ASKED_COST_FLOOR: 0.05,
   /** Ability-channel authority loss when a justified refusal is accepted. */
   REFUSAL_AUTHORITY_LOSS_SCALE: 20,
   /** Ability-channel credit for executed-order vindication. */

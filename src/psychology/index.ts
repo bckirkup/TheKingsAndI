@@ -67,6 +67,8 @@ export {
   calculateBenchingTrustPenalties,
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
+  courageForMove,
+  foldCourage,
   foldUnjustifiedTrauma,
 } from './events';
 export { applyOverride } from './override';

@@ -1,13 +1,14 @@
 # ADR 0073 — Hope, courage, and the closing debrief
 
-- **Status:** accepted in principle (owner ruling, 2026-08-30); **not wired**
+- **Status:** accepted in principle (owner ruling, 2026-08-30); **D199 ruled
+  in the dated addendum** — courage wiring may proceed
 - **Resolves:** **D195** (hope is a forecast attached to a reachable object,
   not the absence of despair), **D196** (courage is action taken against the
   actor's own expected cost), **D197** (both are computed during play, exposed
   to no one in play, and shown only in the closing debrief)
 - **Opens:** **D198** (what a hope object costs to destroy, and whether the
-  destruction is itself an event), **D199** (how courage is normalised against
-  what was asked, so it cannot be farmed)
+  destruction is itself an event), ~~**D199**~~ (how courage is normalised
+  against what was asked — ruled in the 2026-08-30 addendum: asked-risk-relative)
 - **Refines:** ADR 0053 (pawn hope — the one hope already in tree), ADR 0011
   (nothing is anticipated that the piece cannot see), ADR 0013 (the audit
   stream is hidden truth), ADR 0018 (the player never sees the arithmetic),
@@ -124,3 +125,36 @@ compute precisely because the log is hidden truth rather than a status feed.
   first-class product surface rather than a scoreboard rendering.
 - Nothing here is wired, and no magnitude is proposed. Do not invent candidate
   coefficients in the register.
+
+## Addendum (2026-08-30, owner ruling): D199 — courage is asked-risk-relative
+
+The owner rules the normalisation now so a courage reading ships with the
+debrief wiring: **each act's overcome margin is normalised by what was asked
+of the piece, measured trait-free**, and the campaign reading is a **mean over
+courage acts, never a sum**.
+
+- **The act.** A courage act is a full-effort execution
+  (`COMPLIANT_EXECUTION`, `HEROIC_EXECUTION`, or `FATALISTIC_COMPLIANCE`) by a
+  non-King piece whose own arithmetic scored the act below zero:
+  `margin = max(0, −utilityScore)`. Zero margin is zero courage — compliance
+  with nothing to lose scores nothing (D196), and refusal or desertion is the
+  arithmetic being obeyed, not overcome.
+- **What was asked.** The denominator is the order's demand as the audit sees
+  it, free of the actor's traits:
+  `asked = max(P_captured, −ΔV_board, COURAGE_ASKED_COST_FLOOR)`. The floor
+  keeps a near-costless ask from manufacturing a large ratio out of noise.
+- **The reading.** Per act, `c = min(1, margin / asked)`. Because the utility's
+  risk term scales with `P_captured`, scaling up the danger of an ask scales
+  numerator and denominator together: a commander who maximises danger does
+  not raise `c`, which is the farming hazard this decision exists to disarm.
+  The campaign courage reading is the mean of `c` over courage acts (with the
+  act count shown beside it, debrief-only); a sum would restore farming
+  through volume of dangerous orders.
+- **Where it lives.** The margin and the ask are recorded on the `MOVE` event
+  at emission (the fold cannot recompute utility from the log alone — the same
+  reason `REFUSAL` persists its utility and threshold). The debrief fold names
+  the incidents — piece, ply, move, verdict, normalised margin — and no live
+  surface, leader policy, or `LeaderObservation` may read any of it (D197,
+  D203's discipline).
+
+D198 stays open: naming a hope's destruction in the debrief is not pricing it.
