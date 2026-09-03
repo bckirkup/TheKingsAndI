@@ -2370,7 +2370,7 @@ matches 2..N dismiss at ply 1 — the cruel semester belongs to the King, and
 no pre-D205 committed number is comparable to post-D205 evidence.
 
 ### D206 ✅ Does the seminar get a Judgement Seat, and who sits at it? (ADR 0076)
-**Answered 2026-08-30 (owner).** Three instrumentation pieces and two
+**Answered 2026-08-30 (owner); wired 2026-09-02.** Three instrumentation pieces and two
 commanders. (1) At semester end each commander's Leadership Index is folded
 from their persisted `MatchRecord`s — the ruled five-term instrument,
 terminal-only per D203; no weekly surface, no standing bonus, no draft input

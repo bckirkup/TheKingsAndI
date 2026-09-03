@@ -54,6 +54,8 @@ export const LEADERS = [
   'generation_cycler',
   'cascade_dodger',
   'dismissal_fisher',
+  'tanker',
+  'commendation_farmer',
 ] as const;
 
 export const OPPONENT_ARCHETYPES = [
@@ -92,6 +94,8 @@ export function opponentArchetypeForLeader(leader: Leader): OpponentArchetype {
     case 'generation_cycler':
     case 'cascade_dodger':
     case 'dismissal_fisher':
+    case 'tanker':
+    case 'commendation_farmer':
       throw new Error(
         `Leader "${leader}" has no opposing commander archetype.`,
       );

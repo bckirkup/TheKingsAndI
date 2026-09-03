@@ -1,3 +1,5 @@
+import type { Leader } from './cli';
+
 export interface SeminarConfig {
   readonly WEEKS_PER_SEMESTER: number;
   readonly MATCHES_PER_WEEK: number;
@@ -18,6 +20,7 @@ export interface SeminarConfig {
   readonly DRAFT_LOT_ROLE_WEIGHT_PERMILLE: number;
   readonly DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: number;
   readonly COHORT_HISTORY_RELATIONS_PER_PIECE: number;
+  readonly COMMANDER_STYLE_CATALOGUE: readonly Leader[];
 }
 
 /**
@@ -43,4 +46,11 @@ export const SEMINAR_CONFIG = {
   DRAFT_LOT_ROLE_WEIGHT_PERMILLE: 10000,
   DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: 5000,
   COHORT_HISTORY_RELATIONS_PER_PIECE: 0,
+  COMMANDER_STYLE_CATALOGUE: [
+    'servant',
+    'supportive',
+    'tyrannical',
+    'volatile',
+    'random',
+  ],
 } as const satisfies SeminarConfig;
