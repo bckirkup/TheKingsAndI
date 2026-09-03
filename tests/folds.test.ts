@@ -433,6 +433,38 @@ describe('foldJudgementSeat', () => {
     expect(folded.meanEmptiedChairsScore).toBe(100);
   });
 
+  it("filters quiet quitting to the commander's fielded side", () => {
+    const own = makeStoredPiece('w:P:a2', 40);
+    const enemy = makeStoredPiece('b:P:a7', 40);
+    const folded = foldJudgementSeat([
+      makeMatchRecord(
+        [
+          {
+            t: 'MOVE',
+            ply: 1,
+            san: 'a2a3',
+            pieceId: own.id,
+            verdict: 'QUIET_QUITTING',
+          },
+          {
+            t: 'MOVE',
+            ply: 2,
+            san: 'a7a6',
+            pieceId: enemy.id,
+            verdict: 'QUIET_QUITTING',
+          },
+        ],
+        {},
+        {
+          result: 'WIN',
+          rosterSnapshot: [own],
+          rosterEnd: [own],
+        },
+      ),
+    ]);
+    expect(folded.matches[0]?.quietQuitTurns).toBe(1);
+  });
+
   it('falls back to ACTIVE roster pieces for legacy records', () => {
     const active = makeStoredPiece('w:P:a2', 40);
     const benched = makeStoredPiece('w:P:a3', 40, 'BENCHED');

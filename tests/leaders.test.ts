@@ -8,6 +8,7 @@ import {
   ADAPTIVE_POLICY_CONFIG,
   EXPLOIT_POLICY_CONFIG,
   LEADER_POLICY_CONFIG,
+  SEMINAR_EXPLOIT_POLICY_CONFIG,
   createPriorLeaderObservation,
   legalScoredMoves,
   leaderPolicy,
@@ -94,6 +95,23 @@ function withExploitConfig<T>(
   action: () => T,
 ): T {
   const config = EXPLOIT_POLICY_CONFIG as unknown as Record<string, number>;
+  const original = { ...config };
+  Object.assign(config, changes);
+  try {
+    return action();
+  } finally {
+    Object.assign(config, original);
+  }
+}
+
+function withSeminarExploitConfig<T>(
+  changes: Partial<typeof SEMINAR_EXPLOIT_POLICY_CONFIG>,
+  action: () => T,
+): T {
+  const config = SEMINAR_EXPLOIT_POLICY_CONFIG as unknown as Record<
+    string,
+    number
+  >;
   const original = { ...config };
   Object.assign(config, changes);
   try {
@@ -507,11 +525,19 @@ describe('scripted leader move shaping', () => {
         'generation_cycler',
         'cascade_dodger',
         'dismissal_fisher',
+        'tanker',
+        'commendation_farmer',
       ]),
     );
-    expect(() => opponentArchetypeForLeader('dismissal_fisher')).toThrow(
-      'has no opposing commander archetype',
-    );
+    for (const leader of [
+      'dismissal_fisher',
+      'tanker',
+      'commendation_farmer',
+    ] as const) {
+      expect(() => opponentArchetypeForLeader(leader)).toThrow(
+        'has no opposing commander archetype',
+      );
+    }
   });
 
   it('makes win-maxer insist while the room complies', () => {
@@ -792,4 +818,163 @@ describe('scripted leader move shaping', () => {
       expect(highMoves).not.toEqual(lowMoves);
     },
   );
+
+  it('tanks only while above the bottom seminar standing', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const seminarContext = {
+      ...contextWithObservation(),
+      seminar: {
+        week: 1,
+        weeksPerSemester: 4,
+        standingRank: 1,
+        cohortSize: 2,
+      },
+    };
+    const tanked = leaderPolicy('tanker').chooseMove(
+      board,
+      moves,
+      createSeededRandom(11),
+      seminarContext,
+    );
+    const bottom = leaderPolicy('tanker').chooseMove(
+      board,
+      moves,
+      createSeededRandom(11),
+      {
+        ...seminarContext,
+        seminar: { ...seminarContext.seminar, standingRank: 2 },
+      },
+    );
+    expect(tanked?.features.san).not.toBe(bottom?.features.san);
+  });
+
+  it('switches tanking behavior when the opening-week knob changes', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const context = {
+      ...contextWithObservation(),
+      seminar: {
+        week: 1,
+        weeksPerSemester: 4,
+        standingRank: 1,
+        cohortSize: 2,
+      },
+    };
+    const neverTanks = withSeminarExploitConfig({ tankerTankWeeks: 0 }, () =>
+      leaderPolicy('tanker').chooseMove(
+        board,
+        moves,
+        createSeededRandom(11),
+        context,
+      ),
+    );
+    const tanks = withSeminarExploitConfig({ tankerTankWeeks: 2 }, () =>
+      leaderPolicy('tanker').chooseMove(
+        board,
+        moves,
+        createSeededRandom(11),
+        context,
+      ),
+    );
+    expect(neverTanks?.features.san).not.toBe(tanks?.features.san);
+  });
+
+  it('uses the play phase without seminar context', () => {
+    const board = LivingBoard.fromFen(OFF_DIAGONAL_FEN);
+    const moves = legalScoredMoves(board);
+    const policy = leaderPolicy('tanker');
+    const context = contextWithObservation();
+    const withoutSeminar = policy.chooseMove(
+      board,
+      moves,
+      createSeededRandom(11),
+      context,
+    );
+    const explicitPlay = policy.chooseMove(
+      board,
+      moves,
+      createSeededRandom(11),
+      {
+        ...context,
+        seminar: {
+          week: 3,
+          weeksPerSemester: 4,
+          standingRank: 2,
+          cohortSize: 2,
+        },
+      },
+    );
+    expect(withoutSeminar).toEqual(explicitPlay);
+  });
+
+  it('probes each seminar exploiter configuration knob', () => {
+    const context = {
+      ...contextWithObservation(),
+      seminar: {
+        week: 1,
+        weeksPerSemester: 4,
+        standingRank: 1,
+        cohortSize: 2,
+      },
+    };
+    const tankWeeks = withSeminarExploitConfig({ tankerTankWeeks: 0 }, () =>
+      overrideCount('tanker', context),
+    );
+    const tankWeeksEnabled = withSeminarExploitConfig(
+      { tankerTankWeeks: 2 },
+      () => overrideCount('tanker', context),
+    );
+    expect(tankWeeks).not.toBe(tankWeeksEnabled);
+    const tankInsistence = withSeminarExploitConfig(
+      { tankerTankInsistence: 0 },
+      () => overrideCount('tanker', context),
+    );
+    const tankInsistenceHigh = withSeminarExploitConfig(
+      { tankerTankInsistence: 100 },
+      () => overrideCount('tanker', context),
+    );
+    expect(tankInsistence).not.toBe(tankInsistenceHigh);
+    const playInsistence = withSeminarExploitConfig(
+      { tankerTankWeeks: 0, tankerPlayInsistence: 0 },
+      () => overrideCount('tanker', context),
+    );
+    const playInsistenceHigh = withSeminarExploitConfig(
+      { tankerTankWeeks: 0, tankerPlayInsistence: 100 },
+      () => overrideCount('tanker', context),
+    );
+    expect(playInsistence).not.toBe(playInsistenceHigh);
+  });
+
+  it('rotates commendation farmer attention and never overrides', () => {
+    const board = LivingBoard.standard();
+    const moves = legalScoredMoves(board);
+    const farmer = leaderPolicy('commendation_farmer');
+    const moverIds = new Set(
+      Array.from({ length: 8 }, (_, ply) => {
+        const choice = farmer.chooseMove(
+          board,
+          moves,
+          createSeededRandom(ply + 1),
+          { ...contextWithObservation(), ply },
+        );
+        return choice?.features.moverId;
+      }),
+    );
+    expect(moverIds.size).toBeGreaterThan(1);
+    expect(
+      farmer.shouldOverride(createSeededRandom(1), contextWithObservation()),
+    ).toBe(false);
+  });
+
+  it('probes farmer risk weight', () => {
+    const context = contextWithObservation();
+    const low = withSeminarExploitConfig({ farmerRiskWeight: 0 }, () =>
+      chosenMoves('commendation_farmer', context),
+    );
+    const high = withSeminarExploitConfig({ farmerRiskWeight: 100 }, () =>
+      chosenMoves('commendation_farmer', context),
+    );
+    expect(low).not.toEqual(high);
+  });
 });

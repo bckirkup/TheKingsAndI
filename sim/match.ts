@@ -71,6 +71,8 @@ export interface RunMatchOptions {
   readonly opponent?: Leader;
   readonly leaderObservation?: LeaderObservation;
   readonly opponentObservation?: LeaderObservation;
+  readonly leaderSeminar?: LeaderContext['seminar'];
+  readonly opponentSeminar?: LeaderContext['seminar'];
   readonly enemyTrackedIdentities?: number;
   readonly engine: EnginePort;
   readonly journalEntries?: JournalEntry[];
@@ -89,10 +91,16 @@ export async function runMatch(
   const playerContextBase = {
     ...contextBase,
     observation: options.leaderObservation ?? createPriorLeaderObservation(),
+    ...(options.leaderSeminar === undefined
+      ? {}
+      : { seminar: options.leaderSeminar }),
   };
   const opponentContextBase = {
     ...contextBase,
     observation: options.opponentObservation ?? createPriorLeaderObservation(),
+    ...(options.opponentSeminar === undefined
+      ? {}
+      : { seminar: options.opponentSeminar }),
   };
   const opponent = options.opponent ?? 'random';
   const rawOpponentPort = leaderPort(opponent, opponentContextBase);

@@ -19,6 +19,13 @@ export interface LeaderContext {
    * deliberately excludes piece psychology and engine truth.
    */
   readonly observation: LeaderObservation;
+  readonly seminar?: {
+    readonly week: number;
+    readonly weeksPerSemester: number;
+    /** 1-based rank in the public standings before this week's matches; 1 is top. */
+    readonly standingRank: number;
+    readonly cohortSize: number;
+  };
 }
 
 export interface LeaderObservation {
@@ -263,6 +270,24 @@ export const EXPLOIT_POLICY_CONFIG: ExploitPolicyConfig = {
   dodgerInsistence: 90,
   dodgerSurvivorFloor: 12,
   fisherInsistence: 90,
+} as const;
+
+export interface SeminarExploitPolicyConfig {
+  /** Number of opening weeks in which the tanker may throw. */
+  readonly tankerTankWeeks: number;
+  /** Tanker override probability while tanking. */
+  readonly tankerTankInsistence: number;
+  /** Tanker override probability outside the tanking phase. */
+  readonly tankerPlayInsistence: number;
+  /** Farmer weight on avoiding captured pieces. */
+  readonly farmerRiskWeight: number;
+}
+
+export const SEMINAR_EXPLOIT_POLICY_CONFIG: SeminarExploitPolicyConfig = {
+  tankerTankWeeks: 2,
+  tankerTankInsistence: 5,
+  tankerPlayInsistence: 70,
+  farmerRiskWeight: 25,
 } as const;
 
 function prospectTotal(prospect: Readonly<Record<string, number>>): number {
@@ -741,6 +766,79 @@ function createPolicy(style: Leader): LeaderPolicy {
         shouldOverride: (random) =>
           random.nextInt(100) < EXPLOIT_POLICY_CONFIG.fisherInsistence,
       };
+    case 'tanker':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const tanking =
+            context.seminar !== undefined &&
+            context.seminar.week <=
+              SEMINAR_EXPLOIT_POLICY_CONFIG.tankerTankWeeks &&
+            context.seminar.standingRank < context.seminar.cohortSize;
+          const chosen = pickByScore(board, moves, random, (feature) =>
+            tanking ? -tacticalScore(feature, 0) : tacticalScore(feature, 0),
+          );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: (random, context) => {
+          const tanking =
+            context.seminar !== undefined &&
+            context.seminar.week <=
+              SEMINAR_EXPLOIT_POLICY_CONFIG.tankerTankWeeks &&
+            context.seminar.standingRank < context.seminar.cohortSize;
+          const insistence = tanking
+            ? SEMINAR_EXPLOIT_POLICY_CONFIG.tankerTankInsistence
+            : SEMINAR_EXPLOIT_POLICY_CONFIG.tankerPlayInsistence;
+          return random.nextInt(100) < insistence;
+        },
+      };
+    case 'commendation_farmer':
+      return {
+        style,
+        chooseMove: (board, moves, random, context) => {
+          const groups = new Map<string, ScoredMove[]>();
+          for (const move of moves) {
+            const group = groups.get(move.features.moverId) ?? [];
+            group.push(move);
+            groups.set(move.features.moverId, group);
+          }
+          const groupKeys = [...groups.keys()].sort((left, right) =>
+            left.localeCompare(right),
+          );
+          const groupKey =
+            groupKeys.length === 0
+              ? undefined
+              : groupKeys[
+                  ((context.ply % groupKeys.length) + groupKeys.length) %
+                    groupKeys.length
+                ];
+          const group =
+            groupKey === undefined ? undefined : groups.get(groupKey);
+          const chosen =
+            group === undefined
+              ? undefined
+              : pickByScore(
+                  board,
+                  group,
+                  random,
+                  (feature) =>
+                    -feature.pCaptured *
+                    SEMINAR_EXPLOIT_POLICY_CONFIG.farmerRiskWeight,
+                );
+          if (chosen === undefined) return undefined;
+          return {
+            intent: chosen.intent,
+            features: chosen.features,
+            leaderImpliedBias: 0.5,
+          };
+        },
+        shouldOverride: () => false,
+      };
     case 'random':
     default:
       return {
@@ -780,6 +878,8 @@ const POLICIES: Record<Leader, LeaderPolicy> = {
   generation_cycler: createPolicy('generation_cycler'),
   cascade_dodger: createPolicy('cascade_dodger'),
   dismissal_fisher: createPolicy('dismissal_fisher'),
+  tanker: createPolicy('tanker'),
+  commendation_farmer: createPolicy('commendation_farmer'),
 };
 
 export function leaderPolicy(style: Leader): LeaderPolicy {

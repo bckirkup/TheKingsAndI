@@ -837,7 +837,12 @@ describe('seminar spine', () => {
   });
 
   it('mirrors black WIN, LOSS, and DRAW from discrete scores', () => {
-    const base = { rout: false, enemyRout: false, winScore: 100 };
+    const base = {
+      rout: false,
+      enemyRout: false,
+      winScore: 100,
+      dismissed: false,
+    };
     expect(classifySeminarSideResult(base, 'b')).toBe('LOSS');
     expect(classifySeminarSideResult({ ...base, winScore: 0 }, 'b')).toBe(
       'WIN',

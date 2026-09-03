@@ -8,11 +8,13 @@
 import type { EnginePort } from '../src/engine/types';
 import {
   assembleMatchRecord,
+  foldJudgementSeat,
   foldPlayerCommendations,
   foldPublicRegister,
   publicMatchFactsFromRecord,
   PUBLIC_REGISTER_COLUMNS,
   type CommendationAward,
+  type CampaignDebrief,
   type MatchRecord,
   type PlayerCommendationSet,
   type PublicRegister,
@@ -51,6 +53,12 @@ import { runMatch } from './match';
 import { matchSeedForWorldPairing } from './world';
 import { SEMINAR_CONFIG, type SeminarConfig } from './seminarConfig';
 import {
+  createPriorLeaderObservation,
+  updateLeaderObservation,
+  type LeaderObservation,
+} from './leaders';
+import type { Leader } from './cli';
+import {
   createSeminarMarkets,
   publicContributionForRecords,
   runSeminarDraft,
@@ -67,20 +75,12 @@ import {
 } from './degeneracy';
 
 export const SEMINAR_WEEK_SEED_STRIDE = 1_000_003;
-const COMMANDER_STYLES = [
-  'servant',
-  'supportive',
-  'tyrannical',
-  'volatile',
-  'random',
-] as const;
-
 type CommanderSide = 'w' | 'b';
 
 export interface SeminarCommander {
   readonly id: string;
   readonly side: CommanderSide;
-  readonly style: (typeof COMMANDER_STYLES)[number];
+  readonly style: Leader;
 }
 
 export interface SeminarWeekResult {
@@ -101,6 +101,7 @@ export interface SeminarCommanderResult {
   readonly commander: SeminarCommander;
   readonly register: PublicRegister;
   readonly commendations: PlayerCommendationSet;
+  readonly judgementSeat: CampaignDebrief['judgementSeat'];
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -144,10 +145,16 @@ function commanderId(side: CommanderSide, index: number): string {
   return `${side}:commander:${String(index).padStart(2, '0')}`;
 }
 
-function createCommanders(count: number): readonly SeminarCommander[] {
+function createCommanders(
+  count: number,
+  catalogue: readonly Leader[],
+): readonly SeminarCommander[] {
+  if (catalogue.length === 0) {
+    throw new Error('Seminar commander style catalogue is empty.');
+  }
   return (['w', 'b'] as const).flatMap((side) =>
     Array.from({ length: count }, (_, index) => {
-      const style = COMMANDER_STYLES[index % COMMANDER_STYLES.length];
+      const style = catalogue[index % catalogue.length];
       if (style === undefined) {
         throw new Error('Seminar commander style catalogue is empty.');
       }
@@ -205,6 +212,10 @@ function recordForSide(input: {
     rosterEnd,
     events: input.result.events,
     engineAudit: input.result.engineAudit,
+    winScore:
+      input.commander.side === 'w'
+        ? input.result.winScore
+        : 100 - input.result.winScore,
     result,
   });
 }
@@ -214,14 +225,60 @@ function recordForSide(input: {
  * 0, 50, or 100, so the black perspective is exactly `100 - winScore`.
  */
 export function classifySeminarSideResult(
-  result: Pick<HeadlessMatchResult, 'rout' | 'enemyRout' | 'winScore'>,
+  result: Pick<
+    HeadlessMatchResult,
+    'rout' | 'enemyRout' | 'winScore' | 'dismissed'
+  >,
   side: CommanderSide,
 ) {
   return classifyMatchResult({
     rout: side === 'w' ? result.rout : result.enemyRout,
     winScore: side === 'w' ? result.winScore : 100 - result.winScore,
-    dismissed: false,
+    dismissed: side === 'w' ? result.dismissed : false,
   });
+}
+
+export function seminarObservableFromResult(
+  result: HeadlessMatchResult,
+  side: CommanderSide,
+  fieldedPieceIds: ReadonlySet<string>,
+): LeaderObservation {
+  let refusals = 0;
+  let executedOrders = 0;
+  let desertions = 0;
+  const desertionPlies = new Set<number>();
+  for (const event of result.events) {
+    if (!('pieceId' in event) || !fieldedPieceIds.has(event.pieceId)) {
+      continue;
+    }
+    if (event.t === 'REFUSAL') refusals += 1;
+    if (event.t === 'MOVE') executedOrders += 1;
+    if (event.t === 'DESERTION') {
+      desertions += 1;
+      desertionPlies.add(event.ply);
+    }
+  }
+  const refusalRate =
+    refusals / Math.max(1, executedOrders + refusals + desertionPlies.size);
+  return {
+    matchesObserved: 1,
+    refusalPermille: Math.max(
+      0,
+      Math.min(1_000, Math.trunc(refusalRate * 1_000)),
+    ),
+    desertions: Math.max(0, desertions),
+    survivors: Math.max(
+      0,
+      side === 'w' ? result.roster.length : result.enemyRoster.length,
+    ),
+    winScore: Math.max(
+      0,
+      Math.min(
+        100,
+        Math.trunc(side === 'w' ? result.winScore : 100 - result.winScore),
+      ),
+    ),
+  };
 }
 
 function pairingIndex(
@@ -286,6 +343,10 @@ async function runSeminarMatchPairing(input: {
   readonly weekRecords: Map<string, MatchRecord[]>;
   readonly weekFieldedLineups: Map<string, string[][]>;
   readonly allRecords: Map<string, MatchRecord[]>;
+  readonly observations: Map<string, LeaderObservation>;
+  readonly week: number;
+  readonly weeksPerSemester: number;
+  readonly standingRankByCommander: ReadonlyMap<string, number>;
   readonly engine: EnginePort;
 }): Promise<number> {
   let matchIndex = input.matchIndex;
@@ -313,8 +374,50 @@ async function runSeminarMatchPairing(input: {
       initialLineup: whiteFielded.lineup.map((member) => member.state),
       enemyRoster: blackFielded.lineup.map((member) => member.state),
       initialEnemyLineup: blackFielded.lineup.map((member) => member.state),
+      leaderObservation:
+        input.observations.get(input.white.id) ??
+        createPriorLeaderObservation(),
+      opponentObservation:
+        input.observations.get(input.black.id) ??
+        createPriorLeaderObservation(),
+      leaderSeminar: {
+        week: input.week,
+        weeksPerSemester: input.weeksPerSemester,
+        standingRank: input.standingRankByCommander.get(input.white.id) ?? 1,
+        cohortSize: input.cohortSize,
+      },
+      opponentSeminar: {
+        week: input.week,
+        weeksPerSemester: input.weeksPerSemester,
+        standingRank: input.standingRankByCommander.get(input.black.id) ?? 1,
+        cohortSize: input.cohortSize,
+      },
       engine: input.engine,
     });
+    input.observations.set(
+      input.white.id,
+      updateLeaderObservation(
+        input.observations.get(input.white.id) ??
+          createPriorLeaderObservation(),
+        seminarObservableFromResult(
+          result,
+          'w',
+          new Set(whiteFielded.lineup.map((member) => member.state.id)),
+        ),
+      ),
+    );
+    input.observations.set(
+      input.black.id,
+      updateLeaderObservation(
+        input.observations.get(input.black.id) ??
+          createPriorLeaderObservation(),
+        seminarObservableFromResult(
+          result,
+          'b',
+          new Set(blackFielded.lineup.map((member) => member.state.id)),
+        ),
+      ),
+    );
     const folded = foldMatchIntoPools({
       white: whitePool,
       black: blackPool,
@@ -443,7 +546,10 @@ export async function runSeminar(options: {
   ) {
     throw new RangeError('Seminar loop dimensions must be positive integers.');
   }
-  const commanders = createCommanders(config.COMMANDERS_PER_COHORT);
+  const commanders = createCommanders(
+    config.COMMANDERS_PER_COHORT,
+    config.COMMANDER_STYLE_CATALOGUE,
+  );
   const commanderById = new Map(
     commanders.map((commander) => [commander.id, commander]),
   );
@@ -519,6 +625,12 @@ export async function runSeminar(options: {
   let previousPurses = new Map<string, number>();
   const allRecords = new Map<string, MatchRecord[]>(
     commanders.map((commander) => [commander.id, []]),
+  );
+  const observations = new Map<string, LeaderObservation>(
+    commanders.map((commander) => [
+      commander.id,
+      createPriorLeaderObservation(),
+    ]),
   );
   const weeks: SeminarWeekResult[] = [];
   const draftCycles: DraftEconomyCycleObservation[] = [];
@@ -665,6 +777,15 @@ export async function runSeminar(options: {
             weekRecords,
             weekFieldedLineups,
             allRecords,
+            observations,
+            week,
+            weeksPerSemester: config.WEEKS_PER_SEMESTER,
+            standingRankByCommander: new Map(
+              standingsBefore.map((standing, index) => [
+                standing.commanderId,
+                index + 1,
+              ]),
+            ),
             engine,
           });
         }
@@ -723,6 +844,7 @@ export async function runSeminar(options: {
       commander,
       register: registerForSide(records, commander.side),
       commendations: foldPlayerCommendations(records),
+      judgementSeat: foldJudgementSeat(records),
     };
   });
   const standings = standingsFor(
@@ -803,7 +925,8 @@ export function seminarSummary(result: SeminarResult): string {
     lines.push(
       `${entry.commander.id} (${entry.commander.style}) ` +
         `${columns}; ` +
-        `commendations: ${earned}`,
+        `commendations: ${earned}; ` +
+        `LI=${entry.judgementSeat.meanLeadershipIndex ?? 'null'}`,
     );
   }
   return lines.join('\n');

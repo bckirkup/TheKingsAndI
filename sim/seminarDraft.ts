@@ -180,6 +180,11 @@ function draftStyle(style: SeminarCommander['style']): DraftBidder['style'] {
     case 'volatile':
       return 'aggressive';
     case 'random':
+    case 'commendation_farmer':
+      return 'balanced';
+    case 'tanker':
+      return 'aggressive';
+    default:
       return 'balanced';
   }
 }

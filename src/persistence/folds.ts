@@ -197,7 +197,12 @@ export function foldJudgementSeat(
       fieldedPieceIds,
       fieldedPieceIds.length,
     );
-    const quietQuitTurns = match.audit.quietQuitCount;
+    const quietQuitTurns = match.events.filter(
+      (event): event is Extract<MatchEvent, { t: 'MOVE' }> =>
+        event.t === 'MOVE' &&
+        event.verdict === 'QUIET_QUITTING' &&
+        fieldedIds.has(event.pieceId),
+    ).length;
     const desertions = new Set(
       match.events
         .filter(

@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 Status: Accepted (D205 wired and measured — see the 2026-08-31 addendum;
-D206 wiring in progress)
+D206 wired — see the 2026-09-02 addendum)
 
 ## Context
 
@@ -121,6 +121,23 @@ commendation count — remains permitted and priced.
 exploiter's number; the cascade stays undamped; α–ε are not tuning knobs;
 exploiters stay player-side/commander-side policies with no production
 surface; every new config knob carries a sensitivity probe.
+
+## Addendum (2026-09-02): D206 wired
+
+D206 is wired. At semester end, each commander's terminal Judgement Seat is
+`foldJudgementSeat` over that commander's persisted records. It is terminal
+only: it has no weekly surface and receives no standing or draft input. The
+observation carry is live with the existing five fields unchanged. Seminar
+commanders additionally receive the public observation
+`{week, weeksPerSemester, standingRank, cohortSize}`.
+
+`tanker` and `commendation_farmer` are wired at the
+`SEMINAR_EXPLOIT_POLICY_CONFIG` defaults. Seminar records persist
+side-flipped win scores, and white dismissal reaches its record. Black has no
+dismissal channel because the harness evaluates dismissal only on the player
+side; this asymmetry is intentional. The Judgement Seat quiet-quit term is
+side-filtered and the fold version is bumped. The measurement sweep is next.
+D204's pass criterion applies per commander at the seminar Judgement Seat.
 
 ## Consequences
 
