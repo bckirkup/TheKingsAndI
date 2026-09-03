@@ -2390,7 +2390,13 @@ terminal exists in the shared loop. **Pass criterion:** D204's, read per
 commander at the seminar Judgement Seat; any exploiting commander that
 out-reads an honest commander of comparable standing is a pricing gap owed a
 D ruling. Gaming standings, draft position, or commendation count remains
-permitted and priced.
+permitted and priced. **Measured 2026-09-03** (10 seminars × 8 weeks × 16
+commanders, AWS Batch, fake engine —
+`docs/calibration/2026-09-03-the-gamers-at-the-seminar-seat.md`): the
+criterion holds; every exploiter reads at or below the honest styles at
+comparable win score on its own side, and all three also lose the public
+standings (mean rank 11–12/16), because the seminar's opposition is other
+commanders. No pricing gap; no new ruling owed.
 
 ### D207 ✅ Does the room wake with hope? (ADR 0077)
 **Answered 2026-08-30 (owner); magnitude ruled 2026-09-02.** At every match

@@ -139,6 +139,23 @@ side; this asymmetry is intentional. The Judgement Seat quiet-quit term is
 side-filtered and the fold version is bumped. The measurement sweep is next.
 D204's pass criterion applies per commander at the seminar Judgement Seat.
 
+## Addendum (2026-09-03): D206 measured — the criterion holds
+
+The seminar gaming sweep ran on AWS Batch (10 seminars, seeds 9100–9109,
+8 weeks × 8 matches per commander, 16 commanders per seminar — the five
+honest styles plus `tanker`, `commendation_farmer`, and `dismissal_fisher`
+on each side; fake engine). Evidence:
+`docs/calibration/2026-09-03-the-gamers-at-the-seminar-seat.md`.
+
+Compared within a side (dismissal is white-only and the two sides face
+different opposition), every exploiter reads at or below the honest
+cruel/control styles at comparable win score, and all three also lose the
+public standings (mean finishing rank 11–12 of 16, roughly one win in 20
+semesters each) — in the seminar, unlike the campaign sweeps, even the
+visible scoreboard refuses the exploits, because the opposition is other
+commanders rather than a scripted archetype. **No pricing gap; no new
+ruling owed.** Both measurement sweeps promised below are now committed.
+
 ## Consequences
 
 - `src/orchestration/headlessMatch.ts` gains the dismissal checkpoint and
