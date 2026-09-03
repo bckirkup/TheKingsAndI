@@ -376,6 +376,7 @@ export function runSeminarDraft(options: {
   readonly standings: readonly CommanderStanding[];
   readonly registers: ReadonlyMap<string, PublicRegister>;
   readonly previousPurses: ReadonlyMap<string, number>;
+  readonly startingPurses?: ReadonlyMap<string, number>;
   readonly config: SeminarConfig;
   readonly firstMatch?: number;
   readonly cohortHistory?: CohortHistory;
@@ -592,8 +593,9 @@ export function runSeminarDraft(options: {
       counselSignalsByCommander.set(commander.id, counselSignals);
       willingnessByCommander.set(commander.id, willingness);
       const purse =
+        options.startingPurses?.get(commander.id) ??
         (basePurses.get(commander.id) ?? priority.purse) +
-        carryPurse(options.previousPurses.get(commander.id) ?? 0);
+          carryPurse(options.previousPurses.get(commander.id) ?? 0);
       bidders.push({
         commanderId: commander.id,
         priorityRank: priority.priorityRank,
@@ -675,6 +677,12 @@ export function runSeminarDraft(options: {
           ...winnerPool.members,
           {
             ...candidate,
+            state: {
+              ...candidate.state,
+              cash:
+                Math.max(0, Math.trunc(candidate.state.cash ?? 0)) +
+                Math.max(0, Math.trunc(cleared.clearingPrice)),
+            },
             availableAtMatch: firstMatch,
           },
         ],

@@ -301,3 +301,38 @@ charge at redemption time (the commander pays the room for the spend, like an
 override), or a standing claim on the next draft (the veteran expects a lot spent
 on *his* cohort). The first is cheapest and reuses ruled machinery; the second is
 the most legible as leadership; the third is the most economic and the slowest.
+
+## Addendum, 2026-08-30 (third) — The seminar ransom and the piece's purse
+
+**Status:** wired in the seminar harness only. The campaign and season paths
+remain disabled.
+
+The owner ruling is exact: **“Pieces first get paid during the draft.”** When a
+draft **hlutr** (lot) clears, its clearing price is credited to the drafted
+piece's persistent cash. That cash is the piece's bail under D183; this wires
+the cash vessel without yet wiring D182's self-appraisal magnitude or
+registration.
+
+The seminar-only `CAPTIVITY_HOLD_ENABLED` knob is off by default. When enabled,
+a fielded non-deserting piece absent from the surviving roster remains a
+**fengr**, the captive held as the opposing commander's prize, rather than
+being silently returned. A weekly ransom round runs before the draft, spends
+the same cycle purse, credits the captor, and returns redeemed pieces to their
+own pool. The v1 ordering (oldest held, then role value, then stable piece id)
+and commander/self/split redemption rules are harness policy, not doctrine.
+Unransomed captives do not become draft lots; D184 remains open. Retirement
+continues to close a career even while the piece is held, and held pieces are
+never fielded.
+
+`CAPTIVITY_BENEV_DECAY_PER_WEEK` is an integer knob and defaults to zero, so
+captivity decay is inert unless explicitly enabled. Ransom terms remain private:
+prices, payer, and split are developer ledger instrumentation only and do not
+reach registers, standings, commendations, or leader observations. Ransom money
+is paid to the captor, not removed from the economy. The exchange-hope object is
+deferred to the later PR.
+
+The owner considered **weregild** and rejected it: ransom prices a return, not a
+life. The alternative of **wælreaf**, spoils stripped from the fallen, is
+likewise not the implemented economy. Captor affinity movement remains deferred.
+D185 remains open, and D182 remains open for self-appraisal magnitude and
+registration.

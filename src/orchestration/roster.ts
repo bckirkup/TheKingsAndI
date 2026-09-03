@@ -79,6 +79,7 @@ export function createFreshPieceState(
     engagementFactor: 1,
     credence: defaultCredence(),
     rumor: defaultRumor(),
+    cash: 0,
   });
 }
 

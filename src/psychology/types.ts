@@ -59,6 +59,8 @@ export interface PieceState {
   readonly engagementFactor: number;
   readonly credence: CredenceState;
   readonly rumor: RumorState;
+  /** Integer cash held by the piece for seminar ransom (D183). */
+  readonly cash?: number;
 }
 
 export interface CandidateMoveEvaluation {

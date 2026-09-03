@@ -14,4 +14,23 @@ describe('seminar CLI arguments', () => {
       'not-a-leader',
     );
   });
+
+  it('parses captivity controls without changing their defaults', () => {
+    expect(parseArguments([]).captivity).toBe(false);
+    expect(
+      parseArguments(['--captivity=true', '--captivity-decay=4']),
+    ).toMatchObject({
+      captivity: true,
+      captivityDecay: 4,
+    });
+  });
+
+  it('validates captivity controls', () => {
+    expect(() => parseArguments(['--captivity=maybe'])).toThrow(
+      '--captivity must be true or false',
+    );
+    expect(() => parseArguments(['--captivity-decay=-1'])).toThrow(
+      '--captivity-decay must be a non-negative integer',
+    );
+  });
 });

@@ -21,6 +21,10 @@ export interface SeminarConfig {
   readonly DRAFT_LOT_SERVICE_WEIGHT_PERMILLE: number;
   readonly COHORT_HISTORY_RELATIONS_PER_PIECE: number;
   readonly COMMANDER_STYLE_CATALOGUE: readonly Leader[];
+  /** Whether captured seminar pieces persist as ransomable captives. */
+  readonly CAPTIVITY_HOLD_ENABLED: boolean;
+  /** Weekly benevolence decay for captives, in credence points. */
+  readonly CAPTIVITY_BENEV_DECAY_PER_WEEK: number;
 }
 
 /**
@@ -53,4 +57,6 @@ export const SEMINAR_CONFIG = {
     'volatile',
     'random',
   ],
+  CAPTIVITY_HOLD_ENABLED: false,
+  CAPTIVITY_BENEV_DECAY_PER_WEEK: 0,
 } as const satisfies SeminarConfig;

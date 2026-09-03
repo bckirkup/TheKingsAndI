@@ -65,6 +65,11 @@ import {
   type SeminarMarket,
 } from './seminarDraft';
 import {
+  decayCaptiveBenevolence,
+  ransomCaptives,
+  type RansomLedgerEntry,
+} from './ransom';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -95,6 +100,7 @@ export interface SeminarWeekResult {
   readonly poolStates: Readonly<Record<string, CommanderPool>>;
   readonly draftEconomy: DraftEconomyCycleObservation;
   readonly cohortHistory: CohortHistoryCycleObservation;
+  readonly ransomLedger: readonly RansomLedgerEntry[];
 }
 
 export interface SeminarCommanderResult {
@@ -165,13 +171,15 @@ function createCommanders(
 
 function statusForStoredPiece(
   status: CommanderPool['members'][number]['status'],
-): 'ACTIVE' | 'BENCHED' | 'RETIRED' | 'FIRED' {
+): 'ACTIVE' | 'BENCHED' | 'CAPTURED' | 'RETIRED' | 'FIRED' {
   switch (status) {
     case 'available':
       return 'ACTIVE';
     case 'recovering':
     case 'benched':
       return 'BENCHED';
+    case 'captive':
+      return 'CAPTURED';
     case 'retired':
       return 'RETIRED';
     case 'fired':
@@ -180,7 +188,7 @@ function statusForStoredPiece(
 }
 
 function storedRoster(fielded: FieldedPool): readonly (PieceState & {
-  readonly status: 'ACTIVE' | 'BENCHED' | 'RETIRED' | 'FIRED';
+  readonly status: 'ACTIVE' | 'BENCHED' | 'CAPTURED' | 'RETIRED' | 'FIRED';
 })[] {
   return fielded.lineup.map((member) => ({
     ...member.state,
@@ -348,6 +356,7 @@ async function runSeminarMatchPairing(input: {
   readonly week: number;
   readonly weeksPerSemester: number;
   readonly standingRankByCommander: ReadonlyMap<string, number>;
+  readonly config: SeminarConfig;
   readonly engine: EnginePort;
 }): Promise<number> {
   let matchIndex = input.matchIndex;
@@ -426,6 +435,16 @@ async function runSeminarMatchPairing(input: {
       blackFielded,
       result,
       match: matchIndex,
+      ...(input.config.CAPTIVITY_HOLD_ENABLED
+        ? {
+            captivity: {
+              enabled: true,
+              whiteCommanderId: input.white.id,
+              blackCommanderId: input.black.id,
+              week: input.week,
+            },
+          }
+        : {}),
     });
     input.pools.set(input.white.id, folded.white);
     input.pools.set(input.black.id, folded.black);
@@ -474,6 +493,7 @@ function buildSeminarWeekResult(input: {
   readonly config: SeminarConfig;
   readonly draftEconomy: DraftEconomyCycleObservation;
   readonly cohortHistory: CohortHistoryCycleObservation;
+  readonly ransom: readonly RansomLedgerEntry[];
 }): SeminarWeekResult {
   const records = Object.fromEntries(
     input.commanders.map((commander) => [
@@ -526,6 +546,7 @@ function buildSeminarWeekResult(input: {
     poolStates: Object.fromEntries(input.pools.entries()),
     draftEconomy: input.draftEconomy,
     cohortHistory: input.cohortHistory,
+    ransomLedger: input.ransom,
   };
 }
 
@@ -710,9 +731,25 @@ export async function runSeminar(options: {
       let draftPurses = new Map<string, number>(
         draftPriority(standingsBefore).map((entry) => [
           entry.commanderId,
-          entry.purse,
+          entry.purse + (previousPurses.get(entry.commanderId) ?? 0),
         ]),
       );
+      currentPools = new Map(
+        decayCaptiveBenevolence(
+          currentPools,
+          config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
+        ),
+      );
+      const ransom = ransomCaptives({
+        pools: currentPools,
+        purses: draftPurses,
+        priorities: draftPriority(standingsBefore),
+        week,
+        firstMatch: matchIndex + 1,
+        config,
+      });
+      currentPools = new Map(ransom.pools);
+      draftPurses = new Map(ransom.purses);
       let weekDraftSelections: readonly {
         readonly leader: string;
         readonly candidateId: string;
@@ -729,6 +766,7 @@ export async function runSeminar(options: {
           standings: standingsBefore,
           registers: registersBefore,
           previousPurses,
+          startingPurses: draftPurses,
           config,
           firstMatch: matchIndex + 1,
           cohortHistory,
@@ -788,6 +826,7 @@ export async function runSeminar(options: {
                 index + 1,
               ]),
             ),
+            config,
             engine,
           });
         }
@@ -834,6 +873,7 @@ export async function runSeminar(options: {
           config,
           draftEconomy: draftObservation,
           cohortHistory: cohortObservation,
+          ransom: ransom.ledger,
         }),
       );
     }
@@ -883,14 +923,35 @@ export async function runSeminar(options: {
 }
 
 export function seminarPayload(result: SeminarResult): string {
+  const config =
+    result.config.CAPTIVITY_HOLD_ENABLED ||
+    result.config.CAPTIVITY_BENEV_DECAY_PER_WEEK !== 0
+      ? result.config
+      : (() => {
+          const {
+            CAPTIVITY_HOLD_ENABLED,
+            CAPTIVITY_BENEV_DECAY_PER_WEEK,
+            ...withoutCaptivity
+          } = result.config;
+          void CAPTIVITY_HOLD_ENABLED;
+          void CAPTIVITY_BENEV_DECAY_PER_WEEK;
+          return withoutCaptivity;
+        })();
   return canonicalJson({
     seed: result.seed,
-    config: result.config,
+    config,
     commanders: result.commanders,
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
         Object.entries(week).filter(
-          ([key]) => key !== 'records' && key !== 'poolStates',
+          ([key, value]) =>
+            key !== 'records' &&
+            key !== 'poolStates' &&
+            !(
+              key === 'ransomLedger' &&
+              Array.isArray(value) &&
+              value.length === 0
+            ),
         ),
       ),
     ),

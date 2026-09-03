@@ -83,6 +83,7 @@ export function createFreshPieceState(
     engagementFactor: 1,
     credence: defaultCredence(),
     rumor: defaultRumor(),
+    cash: 0,
   });
 }
 
@@ -144,6 +145,7 @@ export function mergeCampaignRoster(
         engagementFactor: previous.engagementFactor,
         credence: { ...previous.credence },
         rumor: { ...previous.rumor },
+        cash: previous.cash ?? 0,
       });
     },
   );

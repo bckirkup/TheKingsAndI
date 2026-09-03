@@ -142,6 +142,8 @@ describe('seminar spine', () => {
     expect(payload).toContain('recordDigests');
     expect(payload).not.toContain('"events"');
     expect(payload).not.toContain('"records"');
+    expect(payload).not.toContain('"CAPTIVITY_HOLD_ENABLED"');
+    expect(payload).not.toContain('"ransomLedger"');
   });
 
   itHeavy('repeats a semester byte-identically for the same seed', async () => {

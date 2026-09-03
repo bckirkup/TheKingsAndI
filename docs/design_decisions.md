@@ -1821,7 +1821,7 @@ and it is the first place in the design where a piece's grievance is against a
 peer rather than the commander.
 
 ### D181 ✅ What does an exchange settle in? (ADR 0071 addendum)
-**Answered 2026-08-29 (owner) — not wired.** An exchange settles in money, paid
+**Answered 2026-08-29 (owner); wired in the seminar path 2026-08-30.** An exchange settles in money, paid
 out of the unspent draft purse. This largely dissolves D178: the market already
 prices a Queen above a pawn, so the class prejudice of ADR 0019 appears in what
 the market charges rather than in an authored exchange table.
@@ -1865,7 +1865,7 @@ generosity is not. *(ADR 0071 second addendum, 2026-08-29.)*
 
 ### D182 ✅ Does a piece read its own price as its worth? (ADR 0071 addendum)
 **Answered in principle 2026-08-29 (owner) — expectation baseline confirmed,
-magnitude open, not wired.** A piece's clearing price and ransom feed its
+magnitude and registration remain open; cash is now wired in the seminar path.** A piece's clearing price and ransom feed its
 self-regard: being bought back cheaply is an injury even though coming home is
 good news. The appraisal is a **signed difference from a persistent, moving
 expectation** the piece carries, updated by what that piece was previously
@@ -1874,13 +1874,11 @@ piece of its role and history expected, never with the absolute price. Absolute
 price would deterministically demoralise pawns, cheap by construction (D146),
 and confirm ADR 0019's class lean.
 
-No price exists in `PieceState` today. A clearing price lives only in the draft
-observation (`sim/seminarDraft.ts:443,713-744`), while `PieceState`
-(`src/psychology/types.ts:50-62`) has no price, wage, or cash field. This ruling
-therefore adds persistent piece state.
+Piece cash now exists in persistent `PieceState`; the self-appraisal magnitude
+and registration consumer remain deferred.
 
 ### D183 ✅ Do pieces hold cash and may they pay their own ransom? (ADR 0071 addendum)
-**Answered in principle 2026-08-29 (owner) — not wired.** Pieces hold cash and
+**Answered in principle 2026-08-29 (owner); wired in the seminar path.** Pieces hold cash and
 may pay part or all of their own ransom, creating four captivity outcomes:
 **he paid**, **I paid**, **we split it**, or **nobody came**. A piece that sprang
 itself owes the commander nothing, and knows it: independence is an authority-
