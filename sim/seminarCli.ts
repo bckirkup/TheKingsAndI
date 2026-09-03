@@ -1,3 +1,7 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+
+import { LEADERS, type Leader } from './cli';
 import { seminarPayload, seminarSummary, runSeminar } from './seminar';
 import { SEMINAR_CONFIG } from './seminarConfig';
 import type { SimEngineKind } from './engine';
@@ -15,12 +19,25 @@ function parseInteger(
   return value;
 }
 
-function parseArguments(argumentsList: readonly string[]): {
+function parseCatalogue(value: string | undefined): readonly Leader[] {
+  if (value === undefined) return SEMINAR_CONFIG.COMMANDER_STYLE_CATALOGUE;
+  const catalogue = value.split(',').map((style) => style.trim());
+  for (const style of catalogue) {
+    if (!LEADERS.includes(style as Leader)) {
+      throw new Error(`--catalogue contains an invalid leader style: ${style}`);
+    }
+  }
+  return catalogue as Leader[];
+}
+
+export function parseArguments(argumentsList: readonly string[]): {
   readonly seed: number;
   readonly weeks: number;
   readonly matches: number;
   readonly commanders: number;
   readonly engine: SimEngineKind;
+  readonly catalogue: readonly Leader[];
+  readonly out: string | undefined;
   readonly draftAtCycleOne: boolean;
   readonly clearingRule: 'first_price' | 'second_price';
   readonly purseToAskingRatioPermille: number;
@@ -33,6 +50,8 @@ function parseArguments(argumentsList: readonly string[]): {
     'matches',
     'commanders',
     'engine',
+    'catalogue',
+    'out',
     'draft-at-cycle-one',
     'clearing-rule',
     'purse-to-asking-ratio',
@@ -57,6 +76,9 @@ function parseArguments(argumentsList: readonly string[]): {
   const engine = values.get('engine') ?? 'fake';
   if (!['fake', 'lozza', 'stockfish'].includes(engine)) {
     throw new Error('--engine must be fake, lozza, or stockfish.');
+  }
+  if (values.has('out') && values.get('out') === '') {
+    throw new Error('--out must not be empty.');
   }
   const draftAtCycleOne = values.get('draft-at-cycle-one') ?? 'false';
   if (draftAtCycleOne !== 'true' && draftAtCycleOne !== 'false') {
@@ -101,6 +123,8 @@ function parseArguments(argumentsList: readonly string[]): {
       SEMINAR_CONFIG.COMMANDERS_PER_COHORT,
     ),
     engine: engine as SimEngineKind,
+    catalogue: parseCatalogue(values.get('catalogue')),
+    out: values.get('out'),
     draftAtCycleOne: draftAtCycleOne === 'true',
     clearingRule,
     purseToAskingRatioPermille,
@@ -108,21 +132,25 @@ function parseArguments(argumentsList: readonly string[]): {
   };
 }
 
+function configForOptions(options: ReturnType<typeof parseArguments>) {
+  return {
+    ...SEMINAR_CONFIG,
+    WEEKS_PER_SEMESTER: options.weeks,
+    MATCHES_PER_WEEK: options.matches,
+    COMMANDERS_PER_COHORT: options.commanders,
+    COMMANDER_STYLE_CATALOGUE: options.catalogue,
+    DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
+    DRAFT_CLEARING_RULE: options.clearingRule,
+    DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: options.purseToAskingRatioPermille,
+    COHORT_HISTORY_RELATIONS_PER_PIECE: options.cohortHistoryRelationsPerPiece,
+  };
+}
+
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
   const result = await runSeminar({
     seed: options.seed,
-    config: {
-      ...SEMINAR_CONFIG,
-      WEEKS_PER_SEMESTER: options.weeks,
-      MATCHES_PER_WEEK: options.matches,
-      COMMANDERS_PER_COHORT: options.commanders,
-      DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
-      DRAFT_CLEARING_RULE: options.clearingRule,
-      DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: options.purseToAskingRatioPermille,
-      COHORT_HISTORY_RELATIONS_PER_PIECE:
-        options.cohortHistoryRelationsPerPiece,
-    },
+    config: configForOptions(options),
     engineKind: options.engine,
   });
   const control =
@@ -131,19 +159,18 @@ async function main(): Promise<void> {
       : await runSeminar({
           seed: options.seed,
           config: {
-            ...SEMINAR_CONFIG,
-            WEEKS_PER_SEMESTER: options.weeks,
-            MATCHES_PER_WEEK: options.matches,
-            COMMANDERS_PER_COHORT: options.commanders,
-            DRAFT_AT_CYCLE_ONE: options.draftAtCycleOne,
-            DRAFT_CLEARING_RULE: options.clearingRule,
-            DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE:
-              options.purseToAskingRatioPermille,
+            ...configForOptions(options),
             COHORT_HISTORY_RELATIONS_PER_PIECE: 0,
           },
           engineKind: options.engine,
         });
-  console.log(seminarPayload(result));
+  const payload = seminarPayload(result);
+  if (options.out === undefined) {
+    console.log(payload);
+  } else {
+    await mkdir(dirname(options.out), { recursive: true });
+    await writeFile(options.out, payload, 'utf8');
+  }
   console.log(seminarSummary(result));
   const cohortFindings =
     options.cohortHistoryRelationsPerPiece === 0
