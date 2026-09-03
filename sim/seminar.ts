@@ -60,6 +60,8 @@ import {
 import type { Leader } from './cli';
 import {
   createSeminarMarkets,
+  draftLotsForSide,
+  draftStartingPurses,
   publicContributionForRecords,
   runSeminarDraft,
   type SeminarMarket,
@@ -185,6 +187,21 @@ function statusForStoredPiece(
     case 'fired':
       return 'FIRED';
   }
+}
+
+function digestableMatchRecord(record: MatchRecord): MatchRecord {
+  const stripCash = (
+    piece: MatchRecord['rosterSnapshot'][number],
+  ): MatchRecord['rosterSnapshot'][number] => {
+    const { cash, ...withoutCash } = piece;
+    void cash;
+    return withoutCash;
+  };
+  return {
+    ...record,
+    rosterSnapshot: record.rosterSnapshot.map(stripCash),
+    rosterEnd: record.rosterEnd.map(stripCash),
+  };
 }
 
 function storedRoster(fielded: FieldedPool): readonly (PieceState & {
@@ -504,7 +521,9 @@ function buildSeminarWeekResult(input: {
   const recordDigests = Object.fromEntries(
     input.commanders.map((commander) => [
       commander.id,
-      (records[commander.id] ?? []).map((record) => digest(record)),
+      (records[commander.id] ?? []).map((record) =>
+        digest(digestableMatchRecord(record)),
+      ),
     ]),
   );
   const fieldedLineups = Object.fromEntries(
@@ -728,34 +747,63 @@ export async function runSeminar(options: {
         retirements: 0,
         commendationsAwarded: 0,
       };
+      const priorities = draftPriority(standingsBefore);
+      const draftEnabled = week > 1 || config.DRAFT_AT_CYCLE_ONE;
       let draftPurses = new Map<string, number>(
-        draftPriority(standingsBefore).map((entry) => [
-          entry.commanderId,
-          entry.purse + (previousPurses.get(entry.commanderId) ?? 0),
-        ]),
+        priorities.map((entry) => [entry.commanderId, entry.purse]),
       );
-      currentPools = new Map(
-        decayCaptiveBenevolence(
-          currentPools,
-          config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
-        ),
-      );
-      const ransom = ransomCaptives({
-        pools: currentPools,
-        purses: draftPurses,
-        priorities: draftPriority(standingsBefore),
-        week,
-        firstMatch: matchIndex + 1,
-        config,
-      });
-      currentPools = new Map(ransom.pools);
-      draftPurses = new Map(ransom.purses);
+      let ransomLedger: readonly RansomLedgerEntry[] = [];
+      if (config.CAPTIVITY_HOLD_ENABLED) {
+        const trueStartingPurses = new Map<string, number>();
+        currentPools = new Map(
+          decayCaptiveBenevolence(
+            currentPools,
+            config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
+          ),
+        );
+        for (const side of ['w', 'b'] as const) {
+          const market = markets.get(side);
+          if (market === undefined) continue;
+          const sidePriorities = priorities.filter((entry) =>
+            commanders.some(
+              (commander) =>
+                commander.id === entry.commanderId && commander.side === side,
+            ),
+          );
+          const { lots } = draftLotsForSide({
+            side,
+            market,
+            commanders,
+            pools: currentPools,
+            firstMatch: matchIndex + 1,
+            config,
+          });
+          for (const [commanderId, purse] of draftStartingPurses({
+            priorities: sidePriorities,
+            lots,
+            previousPurses,
+            ratioPermille: config.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
+          })) {
+            trueStartingPurses.set(commanderId, purse);
+          }
+        }
+        const ransom = ransomCaptives({
+          pools: currentPools,
+          purses: trueStartingPurses,
+          priorities,
+          week,
+          firstMatch: matchIndex + 1,
+          config,
+        });
+        currentPools = new Map(ransom.pools);
+        draftPurses = new Map(ransom.purses);
+        ransomLedger = ransom.ledger;
+      }
       let weekDraftSelections: readonly {
         readonly leader: string;
         readonly candidateId: string;
         readonly counsel: number;
       }[] = [];
-      const draftEnabled = week > 1 || config.DRAFT_AT_CYCLE_ONE;
       if (draftEnabled) {
         const drafted = runSeminarDraft({
           cycle: week,
@@ -766,7 +814,9 @@ export async function runSeminar(options: {
           standings: standingsBefore,
           registers: registersBefore,
           previousPurses,
-          startingPurses: draftPurses,
+          ...(config.CAPTIVITY_HOLD_ENABLED
+            ? { startingPurses: draftPurses }
+            : {}),
           config,
           firstMatch: matchIndex + 1,
           cohortHistory,
@@ -873,7 +923,7 @@ export async function runSeminar(options: {
           config,
           draftEconomy: draftObservation,
           cohortHistory: cohortObservation,
-          ransom: ransom.ledger,
+          ransom: ransomLedger,
         }),
       );
     }

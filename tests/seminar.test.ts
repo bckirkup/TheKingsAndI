@@ -442,6 +442,45 @@ describe('seminar spine', () => {
     },
   );
 
+  itHeavy(
+    'keeps disabled-path purse observations at the main change-detector',
+    async () => {
+      // Change-detector only: this captures the disabled path, not its general correctness.
+      const result = await runSeminar({
+        seed: 7,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 2,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 2,
+          CAPTIVITY_HOLD_ENABLED: false,
+        },
+        engineKind: 'fake',
+      });
+      expect(
+        result.weeks.map((week) => ({
+          totalPurseLeftUnspent: week.draftEconomy.totalPurseLeftUnspent,
+          clearingPrices: week.draftEconomy.clearingPrices,
+        })),
+      ).toEqual([
+        { totalPurseLeftUnspent: 0, clearingPrices: [] },
+        {
+          totalPurseLeftUnspent: 393,
+          clearingPrices: [
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+          ],
+        },
+      ]);
+    },
+  );
+
   it('treats unavailable members as absent only in the strict demand branch', () => {
     const white = createCommanderPool({
       id: 'w:commander:00',

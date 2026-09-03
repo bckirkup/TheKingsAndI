@@ -216,6 +216,71 @@ function publicServiceValue(service: SquadMember['service']): number {
   return service.captures - service.desertions - service.refusals;
 }
 
+export function draftLotsForSide(input: {
+  readonly side: Side;
+  readonly market: SeminarMarket;
+  readonly commanders: readonly SeminarCommander[];
+  readonly pools: ReadonlyMap<string, CommanderPool>;
+  readonly firstMatch: number;
+  readonly config: SeminarConfig;
+}): {
+  readonly lots: readonly DraftLot[];
+  readonly candidatesByLot: ReadonlyMap<string, SquadMember>;
+} {
+  const shortfalls = new Map(
+    input.commanders
+      .filter((commander) => commander.side === input.side)
+      .map((commander) => [
+        commander.id,
+        (() => {
+          const pool = input.pools.get(commander.id);
+          if (pool === undefined)
+            throw new Error(`Missing pool for ${commander.id}.`);
+          return roleShortfall(
+            pool,
+            input.firstMatch,
+            input.config.DRAFT_COUNT_UNAVAILABLE_AS_PRESENT,
+          );
+        })(),
+      ]),
+  );
+  const lots: DraftLot[] = [];
+  const candidatesByLot = new Map<string, SquadMember>();
+  for (const candidate of input.market.members) {
+    const demandedRole = DRAFT_ROLES.find((role) =>
+      [...shortfalls.entries()].some(
+        ([, shortfall]) =>
+          (shortfall[role] ?? 0) > 0 &&
+          isEligibleForChair(
+            candidate.originRole,
+            candidate.attainedRole,
+            role,
+          ),
+      ),
+    );
+    if (demandedRole === undefined) continue;
+    const basePrice = publicLotBasePrice(candidate, input.config);
+    const baseLot: DraftLot = {
+      lotId: candidate.state.id,
+      basePrice,
+    };
+    const lot: DraftLot = {
+      ...baseLot,
+      minimumBidByCommander: Object.fromEntries(
+        input.commanders
+          .filter((commander) => commander.side === input.side)
+          .map((commander) => [
+            commander.id,
+            candidateAcceptancePrice(candidate, baseLot, commander.id),
+          ]),
+      ),
+    };
+    lots.push(lot);
+    candidatesByLot.set(lot.lotId, candidate);
+  }
+  return { lots, candidatesByLot };
+}
+
 export function publicLotBasePrice(
   candidate: SquadMember,
   config: SeminarConfig,
@@ -349,6 +414,26 @@ export function scaledDraftPurses(
   );
 }
 
+export function draftStartingPurses(input: {
+  readonly priorities: readonly DraftPriority[];
+  readonly lots: readonly DraftLot[];
+  readonly previousPurses: ReadonlyMap<string, number>;
+  readonly ratioPermille: number;
+}): ReadonlyMap<string, number> {
+  const basePurses = scaledDraftPurses(
+    input.priorities,
+    input.lots,
+    input.ratioPermille,
+  );
+  return new Map(
+    input.priorities.map((priority) => [
+      priority.commanderId,
+      (basePurses.get(priority.commanderId) ?? priority.purse) +
+        carryPurse(input.previousPurses.get(priority.commanderId) ?? 0),
+    ]),
+  );
+}
+
 function consultationMap(
   consultations: readonly CounselConsultation[],
   weight: number,
@@ -393,57 +478,18 @@ export function runSeminarDraft(options: {
   for (const side of ['w', 'b'] as const) {
     const market = sideMarkets.get(side);
     if (market === undefined) continue;
-    const lots: DraftLot[] = [];
-    const shortfalls = new Map(
-      options.commanders
-        .filter((commander) => commander.side === side)
-        .map((commander) => [
-          commander.id,
-          (() => {
-            const pool = options.pools.get(commander.id);
-            if (pool === undefined)
-              throw new Error(`Missing pool for ${commander.id}.`);
-            return roleShortfall(
-              pool,
-              firstMatch,
-              options.config.DRAFT_COUNT_UNAVAILABLE_AS_PRESENT,
-            );
-          })(),
-        ]),
-    );
-    for (const candidate of market.members) {
-      const demandedRole = DRAFT_ROLES.find((role) =>
-        [...shortfalls.entries()].some(
-          ([, shortfall]) =>
-            (shortfall[role] ?? 0) > 0 &&
-            isEligibleForChair(
-              candidate.originRole,
-              candidate.attainedRole,
-              role,
-            ),
-        ),
-      );
-      if (demandedRole === undefined) continue;
-      const basePrice = publicLotBasePrice(candidate, options.config);
-      const baseLot: DraftLot = {
-        lotId: candidate.state.id,
-        basePrice,
-      };
-      const lot: DraftLot = {
-        ...baseLot,
-        minimumBidByCommander: Object.fromEntries(
-          options.commanders
-            .filter((commander) => commander.side === side)
-            .map((commander) => [
-              commander.id,
-              candidateAcceptancePrice(candidate, baseLot, commander.id),
-            ]),
-        ),
-      };
-      lots.push(lot);
-      candidatesByLot.set(lot.lotId, candidate);
+    const built = draftLotsForSide({
+      side,
+      market,
+      commanders: options.commanders,
+      pools: options.pools,
+      firstMatch,
+      config: options.config,
+    });
+    lotsBySide.set(side, [...built.lots]);
+    for (const [id, candidate] of built.candidatesByLot) {
+      candidatesByLot.set(id, candidate);
     }
-    lotsBySide.set(side, lots);
   }
   const winsByCommander: Record<string, number> = {};
   const clearingPrices: { clearingPrice: number; minimumBid: number }[] = [];
@@ -498,11 +544,12 @@ export function runSeminarDraft(options: {
     const sidePriorities = sideCommanders
       .map((commander) => priorityById.get(commander.id))
       .filter((priority): priority is DraftPriority => priority !== undefined);
-    const basePurses = scaledDraftPurses(
-      sidePriorities,
+    const startingPurses = draftStartingPurses({
+      priorities: sidePriorities,
       lots,
-      options.config.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
-    );
+      previousPurses: options.previousPurses,
+      ratioPermille: options.config.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
+    });
     const bidders: DraftBidder[] = [];
     for (const commander of sideCommanders) {
       const pool = options.pools.get(commander.id);
@@ -594,8 +641,8 @@ export function runSeminarDraft(options: {
       willingnessByCommander.set(commander.id, willingness);
       const purse =
         options.startingPurses?.get(commander.id) ??
-        (basePurses.get(commander.id) ?? priority.purse) +
-          carryPurse(options.previousPurses.get(commander.id) ?? 0);
+        startingPurses.get(commander.id) ??
+        priority.purse;
       bidders.push({
         commanderId: commander.id,
         priorityRank: priority.priorityRank,

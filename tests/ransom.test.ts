@@ -161,4 +161,39 @@ describe('seminar ransom', () => {
     }
     expect(seminarPayload(first)).toBe(seminarPayload(second));
   });
+
+  it('conserves money across a seeded enabled two-week run', async () => {
+    const result = await runSeminar({
+      seed: 7,
+      config: {
+        ...SEMINAR_CONFIG,
+        WEEKS_PER_SEMESTER: 2,
+        MATCHES_PER_WEEK: 1,
+        COMMANDERS_PER_COHORT: 2,
+        CAPTIVITY_HOLD_ENABLED: true,
+        DRAFT_AT_CYCLE_ONE: true,
+      },
+      engineKind: 'fake',
+    });
+    const ledger = result.weeks.flatMap((week) => week.ransomLedger);
+    expect(ledger.length).toBeGreaterThan(0);
+    const commanderSpends = ledger.reduce(
+      (total, entry) => total + entry.commanderAmount,
+      0,
+    );
+    const pieceCashDebits = ledger.reduce(
+      (total, entry) => total + entry.pieceAmount,
+      0,
+    );
+    const captorCredits = ledger.reduce(
+      (total, entry) => total + entry.price,
+      0,
+    );
+    const ledgerPrices = ledger.reduce(
+      (total, entry) => total + entry.price,
+      0,
+    );
+    expect(commanderSpends + pieceCashDebits).toBe(captorCredits);
+    expect(captorCredits).toBe(ledgerPrices);
+  });
 });
