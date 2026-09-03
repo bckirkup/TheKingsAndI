@@ -142,6 +142,8 @@ describe('seminar spine', () => {
     expect(payload).toContain('recordDigests');
     expect(payload).not.toContain('"events"');
     expect(payload).not.toContain('"records"');
+    expect(payload).not.toContain('"CAPTIVITY_HOLD_ENABLED"');
+    expect(payload).not.toContain('"ransomLedger"');
   });
 
   itHeavy('repeats a semester byte-identically for the same seed', async () => {
@@ -437,6 +439,45 @@ describe('seminar spine', () => {
       expect(
         noConsultations.counselCorrelationPairs.length,
       ).toBeLessThanOrEqual(enabled.counselCorrelationPairs.length);
+    },
+  );
+
+  itHeavy(
+    'keeps disabled-path purse observations at the main change-detector',
+    async () => {
+      // Change-detector only: this captures the disabled path, not its general correctness.
+      const result = await runSeminar({
+        seed: 7,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 2,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 2,
+          CAPTIVITY_HOLD_ENABLED: false,
+        },
+        engineKind: 'fake',
+      });
+      expect(
+        result.weeks.map((week) => ({
+          totalPurseLeftUnspent: week.draftEconomy.totalPurseLeftUnspent,
+          clearingPrices: week.draftEconomy.clearingPrices,
+        })),
+      ).toEqual([
+        { totalPurseLeftUnspent: 0, clearingPrices: [] },
+        {
+          totalPurseLeftUnspent: 393,
+          clearingPrices: [
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 20, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+            { clearingPrice: 18, minimumBid: 1 },
+          ],
+        },
+      ]);
     },
   );
 

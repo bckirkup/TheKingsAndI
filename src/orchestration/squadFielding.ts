@@ -65,7 +65,15 @@ export interface SquadMember {
   readonly originRole: PieceRole;
   /** Highest role this member has attained through a PROMOTION event. */
   readonly attainedRole?: PieceRole;
-  readonly status: 'available' | 'recovering' | 'retired' | 'benched' | 'fired';
+  readonly status:
+    | 'available'
+    | 'recovering'
+    | 'captive'
+    | 'retired'
+    | 'benched'
+    | 'fired';
+  readonly heldBy?: string;
+  readonly heldSinceWeek?: number;
   readonly availableAtMatch: number;
   readonly provenance: 'original' | 'conscript' | 'drafted';
   readonly service: SquadService;
@@ -436,14 +444,31 @@ function updateMember(
   availableAtMatch: number,
   service: SquadService,
   retirementCause: SquadMember['retirementCause'] = member.retirementCause,
+  captivity?: {
+    readonly heldBy: string;
+    readonly week: number;
+  },
 ): SquadMember {
+  const withoutHold =
+    status === 'captive'
+      ? member
+      : (() => {
+          const { heldBy, heldSinceWeek, ...rest } = member;
+          void heldBy;
+          void heldSinceWeek;
+          return rest;
+        })();
   return {
-    ...member,
+    ...withoutHold,
     state,
     status,
     availableAtMatch,
     service,
     ...(retirementCause === undefined ? {} : { retirementCause }),
+    ...(captivity !== undefined &&
+    (status === 'captive' || retirementCause !== undefined)
+      ? { heldBy: captivity.heldBy, heldSinceWeek: captivity.week }
+      : {}),
   };
 }
 
@@ -459,6 +484,11 @@ function foldOneSquadMember(input: {
   readonly desertion: boolean;
   readonly captured: boolean;
   readonly refusalCount: number;
+  readonly captivity?: {
+    readonly enabled: boolean;
+    readonly heldBy: string;
+    readonly week: number;
+  };
 }): {
   readonly member: SquadMember;
   readonly events: SquadEvent[];
@@ -476,6 +506,7 @@ function foldOneSquadMember(input: {
     desertion,
     captured,
     refusalCount,
+    captivity,
   } = input;
   const memberEvents: SquadEvent[] = [];
   let state = resultState;
@@ -511,7 +542,19 @@ function foldOneSquadMember(input: {
       });
     }
     consecutiveNonSelections = 0;
-    if (
+    if (captured && captivity?.enabled) {
+      status =
+        state.role !== 'King' && state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+          ? 'retired'
+          : 'captive';
+      availableAtMatch = Number.MAX_SAFE_INTEGER;
+      if (
+        state.role !== 'King' &&
+        state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
+      ) {
+        retirementCause = 'trauma';
+      }
+    } else if (
       state.role !== 'King' &&
       state.B_i >= config.RETIREMENT_TRAUMA_THRESHOLD
     ) {
@@ -571,6 +614,9 @@ function foldOneSquadMember(input: {
     availableAtMatch,
     nextService,
     retirementCause,
+    captured && captivity?.enabled
+      ? { heldBy: captivity.heldBy, week: captivity.week }
+      : undefined,
   );
   return {
     member: nextMember,
@@ -591,6 +637,11 @@ export function foldSquadMatch(input: {
   readonly promotions: ReadonlyMap<PieceId, PieceRole>;
   readonly match: number;
   readonly config?: SquadConfig;
+  readonly captivity?: {
+    readonly enabled: boolean;
+    readonly heldBy: string;
+    readonly week: number;
+  };
 }): {
   readonly members: readonly SquadMember[];
   readonly events: readonly SquadEvent[];
@@ -627,6 +678,7 @@ export function foldSquadMatch(input: {
         wasFielded &&
         !input.desertions.has(member.state.id) &&
         !activeIds.has(member.state.id),
+      ...(input.captivity === undefined ? {} : { captivity: input.captivity }),
       refusalCount: input.refusals.get(member.state.id) ?? 0,
     });
     events.push(...folded.events);

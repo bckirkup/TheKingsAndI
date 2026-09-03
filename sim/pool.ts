@@ -477,6 +477,11 @@ function foldSide(
   promotions: ReadonlyMap<PieceId, PieceRole>,
   match: number,
   config: SeasonConfig,
+  captivity?: {
+    readonly enabled: boolean;
+    readonly heldBy: string;
+    readonly week: number;
+  },
 ): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
   const folded = foldSquadMatch({
     side: pool.side,
@@ -490,6 +495,7 @@ function foldSide(
     promotions,
     match,
     config,
+    ...(captivity === undefined ? {} : { captivity }),
   });
   const resultById = new Map(
     [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
@@ -551,6 +557,12 @@ export function foldMatchIntoPools(input: {
   readonly result: HeadlessMatchResult;
   readonly match: number;
   readonly config?: SeasonConfig;
+  readonly captivity?: {
+    readonly enabled: boolean;
+    readonly whiteCommanderId: string;
+    readonly blackCommanderId: string;
+    readonly week: number;
+  };
 }): {
   readonly white: CommanderPool;
   readonly black: CommanderPool;
@@ -618,6 +630,13 @@ export function foldMatchIntoPools(input: {
     playerPromotions,
     input.match,
     config,
+    input.captivity === undefined
+      ? undefined
+      : {
+          enabled: input.captivity.enabled,
+          heldBy: input.captivity.blackCommanderId,
+          week: input.captivity.week,
+        },
   );
   const blackFold = foldSide(
     input.black,
@@ -630,6 +649,13 @@ export function foldMatchIntoPools(input: {
     enemyPromotions,
     input.match,
     config,
+    input.captivity === undefined
+      ? undefined
+      : {
+          enabled: input.captivity.enabled,
+          heldBy: input.captivity.whiteCommanderId,
+          week: input.captivity.week,
+        },
   );
   return {
     white: whiteFold.pool,

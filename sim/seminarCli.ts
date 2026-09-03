@@ -42,6 +42,8 @@ export function parseArguments(argumentsList: readonly string[]): {
   readonly clearingRule: 'first_price' | 'second_price';
   readonly purseToAskingRatioPermille: number;
   readonly cohortHistoryRelationsPerPiece: number;
+  readonly captivity: boolean;
+  readonly captivityDecay: number;
 } {
   const values = new Map<string, string>();
   const supported = new Set([
@@ -56,6 +58,8 @@ export function parseArguments(argumentsList: readonly string[]): {
     'clearing-rule',
     'purse-to-asking-ratio',
     'cohort-history-relations-per-piece',
+    'captivity',
+    'captivity-decay',
   ]);
   for (const argument of argumentsList) {
     if (!argument.startsWith('--')) {
@@ -113,6 +117,17 @@ export function parseArguments(argumentsList: readonly string[]): {
       '--cohort-history-relations-per-piece must be a non-negative integer.',
     );
   }
+  const captivity = values.get('captivity') ?? 'false';
+  if (captivity !== 'true' && captivity !== 'false') {
+    throw new Error('--captivity must be true or false.');
+  }
+  const captivityDecay = Number(
+    values.get('captivity-decay') ??
+      SEMINAR_CONFIG.CAPTIVITY_BENEV_DECAY_PER_WEEK,
+  );
+  if (!Number.isSafeInteger(captivityDecay) || captivityDecay < 0) {
+    throw new Error('--captivity-decay must be a non-negative integer.');
+  }
   return {
     seed,
     weeks: parseInteger(values, 'weeks', SEMINAR_CONFIG.WEEKS_PER_SEMESTER),
@@ -129,6 +144,8 @@ export function parseArguments(argumentsList: readonly string[]): {
     clearingRule,
     purseToAskingRatioPermille,
     cohortHistoryRelationsPerPiece,
+    captivity: captivity === 'true',
+    captivityDecay,
   };
 }
 
@@ -143,6 +160,8 @@ function configForOptions(options: ReturnType<typeof parseArguments>) {
     DRAFT_CLEARING_RULE: options.clearingRule,
     DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: options.purseToAskingRatioPermille,
     COHORT_HISTORY_RELATIONS_PER_PIECE: options.cohortHistoryRelationsPerPiece,
+    CAPTIVITY_HOLD_ENABLED: options.captivity,
+    CAPTIVITY_BENEV_DECAY_PER_WEEK: options.captivityDecay,
   };
 }
 

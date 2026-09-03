@@ -60,10 +60,17 @@ import {
 import type { Leader } from './cli';
 import {
   createSeminarMarkets,
+  draftLotsForSide,
+  draftStartingPurses,
   publicContributionForRecords,
   runSeminarDraft,
   type SeminarMarket,
 } from './seminarDraft';
+import {
+  decayCaptiveBenevolence,
+  ransomCaptives,
+  type RansomLedgerEntry,
+} from './ransom';
 import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
@@ -95,6 +102,7 @@ export interface SeminarWeekResult {
   readonly poolStates: Readonly<Record<string, CommanderPool>>;
   readonly draftEconomy: DraftEconomyCycleObservation;
   readonly cohortHistory: CohortHistoryCycleObservation;
+  readonly ransomLedger: readonly RansomLedgerEntry[];
 }
 
 export interface SeminarCommanderResult {
@@ -165,13 +173,15 @@ function createCommanders(
 
 function statusForStoredPiece(
   status: CommanderPool['members'][number]['status'],
-): 'ACTIVE' | 'BENCHED' | 'RETIRED' | 'FIRED' {
+): 'ACTIVE' | 'BENCHED' | 'CAPTURED' | 'RETIRED' | 'FIRED' {
   switch (status) {
     case 'available':
       return 'ACTIVE';
     case 'recovering':
     case 'benched':
       return 'BENCHED';
+    case 'captive':
+      return 'CAPTURED';
     case 'retired':
       return 'RETIRED';
     case 'fired':
@@ -179,8 +189,23 @@ function statusForStoredPiece(
   }
 }
 
+function digestableMatchRecord(record: MatchRecord): MatchRecord {
+  const stripCash = (
+    piece: MatchRecord['rosterSnapshot'][number],
+  ): MatchRecord['rosterSnapshot'][number] => {
+    const { cash, ...withoutCash } = piece;
+    void cash;
+    return withoutCash;
+  };
+  return {
+    ...record,
+    rosterSnapshot: record.rosterSnapshot.map(stripCash),
+    rosterEnd: record.rosterEnd.map(stripCash),
+  };
+}
+
 function storedRoster(fielded: FieldedPool): readonly (PieceState & {
-  readonly status: 'ACTIVE' | 'BENCHED' | 'RETIRED' | 'FIRED';
+  readonly status: 'ACTIVE' | 'BENCHED' | 'CAPTURED' | 'RETIRED' | 'FIRED';
 })[] {
   return fielded.lineup.map((member) => ({
     ...member.state,
@@ -348,6 +373,7 @@ async function runSeminarMatchPairing(input: {
   readonly week: number;
   readonly weeksPerSemester: number;
   readonly standingRankByCommander: ReadonlyMap<string, number>;
+  readonly config: SeminarConfig;
   readonly engine: EnginePort;
 }): Promise<number> {
   let matchIndex = input.matchIndex;
@@ -426,6 +452,16 @@ async function runSeminarMatchPairing(input: {
       blackFielded,
       result,
       match: matchIndex,
+      ...(input.config.CAPTIVITY_HOLD_ENABLED
+        ? {
+            captivity: {
+              enabled: true,
+              whiteCommanderId: input.white.id,
+              blackCommanderId: input.black.id,
+              week: input.week,
+            },
+          }
+        : {}),
     });
     input.pools.set(input.white.id, folded.white);
     input.pools.set(input.black.id, folded.black);
@@ -474,6 +510,7 @@ function buildSeminarWeekResult(input: {
   readonly config: SeminarConfig;
   readonly draftEconomy: DraftEconomyCycleObservation;
   readonly cohortHistory: CohortHistoryCycleObservation;
+  readonly ransom: readonly RansomLedgerEntry[];
 }): SeminarWeekResult {
   const records = Object.fromEntries(
     input.commanders.map((commander) => [
@@ -484,7 +521,9 @@ function buildSeminarWeekResult(input: {
   const recordDigests = Object.fromEntries(
     input.commanders.map((commander) => [
       commander.id,
-      (records[commander.id] ?? []).map((record) => digest(record)),
+      (records[commander.id] ?? []).map((record) =>
+        digest(digestableMatchRecord(record)),
+      ),
     ]),
   );
   const fieldedLineups = Object.fromEntries(
@@ -526,6 +565,7 @@ function buildSeminarWeekResult(input: {
     poolStates: Object.fromEntries(input.pools.entries()),
     draftEconomy: input.draftEconomy,
     cohortHistory: input.cohortHistory,
+    ransomLedger: input.ransom,
   };
 }
 
@@ -707,18 +747,63 @@ export async function runSeminar(options: {
         retirements: 0,
         commendationsAwarded: 0,
       };
+      const priorities = draftPriority(standingsBefore);
+      const draftEnabled = week > 1 || config.DRAFT_AT_CYCLE_ONE;
       let draftPurses = new Map<string, number>(
-        draftPriority(standingsBefore).map((entry) => [
-          entry.commanderId,
-          entry.purse,
-        ]),
+        priorities.map((entry) => [entry.commanderId, entry.purse]),
       );
+      let ransomLedger: readonly RansomLedgerEntry[] = [];
+      if (config.CAPTIVITY_HOLD_ENABLED) {
+        const trueStartingPurses = new Map<string, number>();
+        currentPools = new Map(
+          decayCaptiveBenevolence(
+            currentPools,
+            config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
+          ),
+        );
+        for (const side of ['w', 'b'] as const) {
+          const market = markets.get(side);
+          if (market === undefined) continue;
+          const sidePriorities = priorities.filter((entry) =>
+            commanders.some(
+              (commander) =>
+                commander.id === entry.commanderId && commander.side === side,
+            ),
+          );
+          const { lots } = draftLotsForSide({
+            side,
+            market,
+            commanders,
+            pools: currentPools,
+            firstMatch: matchIndex + 1,
+            config,
+          });
+          for (const [commanderId, purse] of draftStartingPurses({
+            priorities: sidePriorities,
+            lots,
+            previousPurses,
+            ratioPermille: config.DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE,
+          })) {
+            trueStartingPurses.set(commanderId, purse);
+          }
+        }
+        const ransom = ransomCaptives({
+          pools: currentPools,
+          purses: trueStartingPurses,
+          priorities,
+          week,
+          firstMatch: matchIndex + 1,
+          config,
+        });
+        currentPools = new Map(ransom.pools);
+        draftPurses = new Map(ransom.purses);
+        ransomLedger = ransom.ledger;
+      }
       let weekDraftSelections: readonly {
         readonly leader: string;
         readonly candidateId: string;
         readonly counsel: number;
       }[] = [];
-      const draftEnabled = week > 1 || config.DRAFT_AT_CYCLE_ONE;
       if (draftEnabled) {
         const drafted = runSeminarDraft({
           cycle: week,
@@ -729,6 +814,9 @@ export async function runSeminar(options: {
           standings: standingsBefore,
           registers: registersBefore,
           previousPurses,
+          ...(config.CAPTIVITY_HOLD_ENABLED
+            ? { startingPurses: draftPurses }
+            : {}),
           config,
           firstMatch: matchIndex + 1,
           cohortHistory,
@@ -788,6 +876,7 @@ export async function runSeminar(options: {
                 index + 1,
               ]),
             ),
+            config,
             engine,
           });
         }
@@ -834,6 +923,7 @@ export async function runSeminar(options: {
           config,
           draftEconomy: draftObservation,
           cohortHistory: cohortObservation,
+          ransom: ransomLedger,
         }),
       );
     }
@@ -883,14 +973,35 @@ export async function runSeminar(options: {
 }
 
 export function seminarPayload(result: SeminarResult): string {
+  const config =
+    result.config.CAPTIVITY_HOLD_ENABLED ||
+    result.config.CAPTIVITY_BENEV_DECAY_PER_WEEK !== 0
+      ? result.config
+      : (() => {
+          const {
+            CAPTIVITY_HOLD_ENABLED,
+            CAPTIVITY_BENEV_DECAY_PER_WEEK,
+            ...withoutCaptivity
+          } = result.config;
+          void CAPTIVITY_HOLD_ENABLED;
+          void CAPTIVITY_BENEV_DECAY_PER_WEEK;
+          return withoutCaptivity;
+        })();
   return canonicalJson({
     seed: result.seed,
-    config: result.config,
+    config,
     commanders: result.commanders,
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
         Object.entries(week).filter(
-          ([key]) => key !== 'records' && key !== 'poolStates',
+          ([key, value]) =>
+            key !== 'records' &&
+            key !== 'poolStates' &&
+            !(
+              key === 'ransomLedger' &&
+              Array.isArray(value) &&
+              value.length === 0
+            ),
         ),
       ),
     ),
