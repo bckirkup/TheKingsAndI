@@ -17,6 +17,7 @@ import {
   applyNeglectSignal,
   applyOverride,
   applyRepairSignal,
+  courageForMove,
   isRegardEligible,
   ENGINE_CONFIG,
   evaluateMoveResponse,
@@ -308,6 +309,12 @@ function applyPlayerMoveConsequences(input: {
     san: choice.san,
     pieceId: actor.id,
     verdict: outcome.verdict,
+    ...(actor.role === 'King'
+      ? {}
+      : (() => {
+          const courage = courageForMove(outcome, moveEval);
+          return courage === undefined ? {} : { courage };
+        })()),
   });
   if (applied.promotion !== undefined) {
     const promotion = applyPromotion(roster, applied.promotion, ply);

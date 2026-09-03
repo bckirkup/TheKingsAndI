@@ -263,6 +263,53 @@ describe('buildCampaignDebrief', () => {
 });
 
 describe('foldJudgementSeat', () => {
+  it('folds debrief-only courage incidents from fielded pieces', () => {
+    const fielded = makeStoredPiece('w:P:a2', 40);
+    const opponent = makeStoredPiece('b:P:a7', 40);
+    const events: MatchEvent[] = [
+      {
+        t: 'MOVE',
+        ply: 1,
+        san: 'e4',
+        pieceId: fielded.id,
+        verdict: 'COMPLIANT_EXECUTION',
+        courage: { margin: 0.4, asked: 0.5 },
+      },
+      {
+        t: 'MOVE',
+        ply: 2,
+        san: 'e5',
+        pieceId: opponent.id,
+        verdict: 'HEROIC_EXECUTION',
+        courage: { margin: 1, asked: 1 },
+      },
+    ];
+    const record = makeMatchRecord(
+      events,
+      {},
+      {
+        result: 'WIN',
+        rosterSnapshot: [fielded],
+        rosterEnd: [fielded],
+      },
+    );
+    const debrief = buildCampaignDebrief(
+      'campaign-1',
+      [record],
+      [fielded],
+      [fielded],
+      'ongoing',
+    );
+    expect(debrief.courage.count).toBe(1);
+    expect(debrief.courage.meanNormalized).toBe(0.8);
+    expect(debrief.courage.incidents[0]).toMatchObject({
+      matchId: record.id,
+      matchIndex: record.matchIndex,
+      pieceId: fielded.id,
+      normalized: 0.8,
+    });
+  });
+
   it('maps legacy outcomes and excludes dismissed matches without a stored score', () => {
     const roster = [makeStoredPiece('w:P:a2', 40)];
     const folded = foldJudgementSeat([

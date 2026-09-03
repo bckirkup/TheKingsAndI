@@ -11,6 +11,7 @@ import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyRepairSignal,
+  courageForMove,
   isRegardEligible,
   ENGINE_CONFIG,
   applyNeglectSignal,
@@ -771,6 +772,12 @@ export class MatchSession {
       pieceId: actor.id,
       verdict: outcome.verdict,
       orderQualityCp,
+      ...(actor.role === 'King'
+        ? {}
+        : (() => {
+            const courage = courageForMove(outcome, moveEval);
+            return courage === undefined ? {} : { courage };
+          })()),
     });
     if (applied.promotion !== undefined) {
       const promotion = applyPromotion(

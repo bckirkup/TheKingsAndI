@@ -1,6 +1,7 @@
 import {
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
+  foldCourage,
   foldUnjustifiedTrauma,
 } from '../psychology/events';
 import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
@@ -9,6 +10,7 @@ import { foldCampaignTranscript } from './transcript';
 import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
+  COURAGE_FOLD_VERSION,
   JUDGEMENT_SEAT_FOLD_VERSION,
   type ActTerminalState,
   type CampaignDebrief,
@@ -271,6 +273,29 @@ export function foldJudgementSeat(
   };
 }
 
+function foldCampaignCourage(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['courage'] {
+  const incidents = matches.flatMap((match) => {
+    const folded = foldCourage(match.events, fieldedIdsForJudgementSeat(match));
+    return folded.incidents.map((incident) => ({
+      matchId: match.id,
+      matchIndex: match.matchIndex,
+      ...incident,
+    }));
+  });
+  return {
+    foldVersion: COURAGE_FOLD_VERSION,
+    incidents,
+    meanNormalized:
+      incidents.length === 0
+        ? null
+        : incidents.reduce((sum, incident) => sum + incident.normalized, 0) /
+          incidents.length,
+    count: incidents.length,
+  };
+}
+
 export function foldCampaignCultureDrift(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
@@ -309,6 +334,7 @@ export function buildCampaignDebrief(
     matches.map((match) => match.audit.realizedQuality),
   );
   const judgementSeat = foldJudgementSeat(matches);
+  const courage = foldCampaignCourage(matches);
   return {
     campaignId,
     matches,
@@ -317,6 +343,7 @@ export function buildCampaignDebrief(
     meanExecutionFidelity,
     meanRealizedQuality,
     judgementSeat,
+    courage,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

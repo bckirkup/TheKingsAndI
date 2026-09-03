@@ -11,6 +11,7 @@ import type { EngineAuditEntry } from '../engine';
 import type { MoveAskContext, OverrideAskContext } from './headlessMatch';
 import {
   applyFatalisticComplianceCosts,
+  courageForMove,
   isRegardEligible,
   ENGINE_CONFIG,
   evaluateMoveResponse,
@@ -300,6 +301,12 @@ function enemyCompliantTurn(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
     orderQualityCp,
+    ...(actor.role === 'King'
+      ? {}
+      : (() => {
+          const courage = courageForMove(outcome, moveEval);
+          return courage === undefined ? {} : { courage };
+        })()),
   });
   if (applied.promotion !== undefined) {
     const promotion = applyPromotion(enemyRoster, applied.promotion, ply);

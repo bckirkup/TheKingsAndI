@@ -2216,14 +2216,18 @@ the roster through the witness channel) or is merely a state transition
 readable at the debrief is unchosen, as is whether it feeds `B_i`. No candidate
 magnitude is proposed.
 
-### D199 ❓ How is courage normalised against what was asked?
-**Open — raised 2026-08-30 by ADR 0073, not wired.** Counted naively, a
-commander maximises courage by maximising danger, so the measure would reward
-endangerment — the same farming hazard ADR 0072 disarmed for grace. Courage
-must therefore be **offered relative to what was asked**, and the normaliser is
-unchosen: per-order margin, per-match aggregate against the risk the leader
-took, or a rate over opportunities. Courage may not be reported in any debrief
-until this is settled.
+### D199 ✅ How is courage normalised against what was asked? (ADR 0073 addendum)
+**Answered 2026-08-30 (owner) — asked-risk-relative.** Each courage act — a
+full-effort execution (`COMPLIANT_EXECUTION`, `HEROIC_EXECUTION`,
+`FATALISTIC_COMPLIANCE`) by a non-King piece whose own arithmetic scored the
+act below zero — carries `margin = max(0, −utilityScore)`, normalised by the
+trait-free demand of the order,
+`asked = max(P_captured, −ΔV_board, COURAGE_ASKED_COST_FLOOR)`, and read as
+`c = min(1, margin / asked)`. Endangerment scales numerator and denominator
+together, so maximising danger does not raise `c`; the campaign reading is the
+**mean** of `c` over courage acts (a sum would restore farming through volume).
+Margin and ask are persisted on the `MOVE` event at emission; the debrief fold
+names the incidents and nothing live may read them (D197, D203).
 
 ### D200 ✅ What does the harness price, and does the index replace the win score? (ADR 0074)
 **Answered 2026-08-30 (owner) — wired.** The harness reports the spec §9

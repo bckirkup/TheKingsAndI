@@ -144,6 +144,45 @@ export function DebriefScreen({
         ) : null}
       </section>
 
+      <section className="debrief-screen__judgement-seat">
+        <h2>Courage</h2>
+        {debrief.courage.count === 0 ? (
+          <p>No act overcame its own arithmetic.</p>
+        ) : (
+          <>
+            <dl className="debrief-screen__folds">
+              <div>
+                <dt>Mean normalized courage</dt>
+                <dd>{debrief.courage.meanNormalized?.toFixed(2)}</dd>
+              </div>
+              <div>
+                <dt>Acts</dt>
+                <dd>{debrief.courage.count} acts</dd>
+              </div>
+            </dl>
+            <ul>
+              {[...debrief.courage.incidents]
+                .sort(
+                  (left, right) =>
+                    right.normalized - left.normalized ||
+                    left.matchIndex - right.matchIndex ||
+                    left.ply - right.ply,
+                )
+                .slice(0, 10)
+                .map((incident) => (
+                  <li
+                    key={`${incident.matchId}-${incident.ply}-${incident.pieceId}`}
+                  >
+                    Match {incident.matchIndex}: {incident.pieceId}{' '}
+                    {incident.san} at ply {incident.ply} — {incident.verdict} (
+                    {incident.normalized.toFixed(2)})
+                  </li>
+                ))}
+            </ul>
+          </>
+        )}
+      </section>
+
       <div className="narration-audit">
         <h2 className="narration-audit__headline">{prose.headline}</h2>
         {prose.paragraphs.map((paragraph) => (
