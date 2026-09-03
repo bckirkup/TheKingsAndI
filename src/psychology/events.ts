@@ -10,6 +10,113 @@ import type {
 } from './types';
 import { sharedBondScalar } from './witness';
 
+export interface PromotionHopeState {
+  readonly prospects: Readonly<Record<PieceId, number>>;
+}
+
+export function trackPromotionHope(
+  state: PromotionHopeState | undefined,
+  current: Readonly<Record<PieceId, number>>,
+  capturedPawnIds: readonly PieceId[],
+  promotedPieceIds: readonly PieceId[],
+  ply: number,
+): { state: PromotionHopeState; events: readonly MatchEvent[] } {
+  const prior = state?.prospects ?? {};
+  const captured = new Set(capturedPawnIds);
+  const promoted = new Set(promotedPieceIds);
+  const pieceIds = [
+    ...new Set([...Object.keys(prior), ...Object.keys(current)]),
+  ].sort((left, right) => left.localeCompare(right)) as PieceId[];
+  const prospects: Record<PieceId, number> = {};
+  const events: MatchEvent[] = [];
+  for (const pieceId of pieceIds) {
+    const previousProspect = prior[pieceId];
+    if (previousProspect === undefined) {
+      const nextProspect = current[pieceId];
+      if (nextProspect !== undefined) prospects[pieceId] = nextProspect;
+      continue;
+    }
+    if (captured.has(pieceId)) {
+      if (previousProspect > 0) {
+        events.push({
+          t: 'HOPE_EXTINGUISHED',
+          ply,
+          pieceId,
+          object: 'promotion',
+          priorProspect: previousProspect,
+          reason: 'captured',
+        });
+      }
+      continue;
+    }
+    if (promoted.has(pieceId)) continue;
+    const nextProspect = current[pieceId];
+    if (nextProspect === undefined) continue;
+    prospects[pieceId] = nextProspect;
+    if (previousProspect > 0 && nextProspect === 0) {
+      events.push({
+        t: 'HOPE_EXTINGUISHED',
+        ply,
+        pieceId,
+        object: 'promotion',
+        priorProspect: previousProspect,
+        reason: 'unreachable',
+      });
+    } else if (previousProspect === 0 && nextProspect > 0) {
+      events.push({
+        t: 'HOPE_REKINDLED',
+        ply,
+        pieceId,
+        object: 'promotion',
+        prospect: nextProspect,
+      });
+    }
+  }
+  return { state: { prospects }, events };
+}
+
+export function foldHope(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+): {
+  readonly realized: readonly { ply: number; pieceId: PieceId }[];
+  readonly extinguished: readonly {
+    ply: number;
+    pieceId: PieceId;
+    reason: 'unreachable' | 'captured';
+    priorProspect: number;
+  }[];
+  readonly rekindledCount: number;
+} {
+  const fielded = new Set(fieldedPieceIds);
+  const realized: { ply: number; pieceId: PieceId }[] = [];
+  const extinguished: {
+    ply: number;
+    pieceId: PieceId;
+    reason: 'unreachable' | 'captured';
+    priorProspect: number;
+  }[] = [];
+  let rekindledCount = 0;
+  for (const event of events) {
+    if (event.t === 'PROMOTION') {
+      if (!fielded.has(event.pieceId)) continue;
+      realized.push({ ply: event.ply, pieceId: event.pieceId });
+    } else if (event.t === 'HOPE_EXTINGUISHED') {
+      if (!fielded.has(event.pieceId)) continue;
+      extinguished.push({
+        ply: event.ply,
+        pieceId: event.pieceId,
+        reason: event.reason,
+        priorProspect: event.priorProspect,
+      });
+    } else if (event.t === 'HOPE_REKINDLED') {
+      if (!fielded.has(event.pieceId)) continue;
+      rekindledCount += 1;
+    }
+  }
+  return { realized, extinguished, rekindledCount };
+}
+
 export function appendEvent(
   log: readonly MatchEvent[],
   event: MatchEvent,

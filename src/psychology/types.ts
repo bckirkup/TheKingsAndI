@@ -175,6 +175,23 @@ export type MatchEvent =
       readonly toRole: PieceRole;
     }
   | {
+      /** Hidden hope transition (ADR 0073) — debrief-only */
+      readonly t: 'HOPE_EXTINGUISHED';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly object: 'promotion';
+      readonly priorProspect: number;
+      readonly reason: 'unreachable' | 'captured';
+    }
+  | {
+      /** Hidden hope transition (ADR 0073) — debrief-only */
+      readonly t: 'HOPE_REKINDLED';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly object: 'promotion';
+      readonly prospect: number;
+    }
+  | {
       readonly t: 'SQUAD_FIELDING';
       readonly match: number;
       readonly side: 'w' | 'b';

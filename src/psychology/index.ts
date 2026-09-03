@@ -69,8 +69,11 @@ export {
   compileCampaignCultureDrift,
   courageForMove,
   foldCourage,
+  foldHope,
   foldUnjustifiedTrauma,
+  trackPromotionHope,
 } from './events';
+export type { PromotionHopeState } from './events';
 export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';
 export {

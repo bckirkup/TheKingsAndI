@@ -2208,7 +2208,8 @@ unheard rewards as things that were real and that nobody in the room ever
 learned.
 
 ### D198 ❓ What does destroying a hope object cost, and is the destruction an event?
-**Open — raised 2026-08-30 by ADR 0073, not wired.** If hope ends by
+**Open — raised 2026-08-30 by ADR 0073. Naming destroyed hope is now wired in
+the closing debrief; pricing remains open.** If hope ends by
 unreachability, something must notice: a pawn whose promotion file closes and a
 captive whose exchange window passes have both lost something, and the model
 currently records neither. Whether that emits an event (and therefore reaches

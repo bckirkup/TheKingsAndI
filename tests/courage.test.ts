@@ -7,6 +7,8 @@ import {
   courageForMove,
   ENGINE_CONFIG,
   foldCourage,
+  foldHope,
+  trackPromotionHope,
   type CandidateMoveEvaluation,
   type MatchEvent,
   type MoveDecisionOutcome,
@@ -79,6 +81,129 @@ describe('courageForMove', () => {
     ).toEqual({
       margin: 0.5,
       asked: ENGINE_CONFIG.COURAGE_ASKED_COST_FLOOR,
+    });
+  });
+});
+
+describe('promotion hope tracking', () => {
+  it('records capture and ignores a zero-prospect capture', () => {
+    const captured = trackPromotionHope(
+      { prospects: { 'w:p1': 400, 'w:p2': 0 } },
+      {},
+      ['w:p1', 'w:p2'],
+      [],
+      7,
+    );
+    expect(captured.events).toEqual([
+      {
+        t: 'HOPE_EXTINGUISHED',
+        ply: 7,
+        pieceId: 'w:p1',
+        object: 'promotion',
+        priorProspect: 400,
+        reason: 'captured',
+      },
+    ]);
+  });
+
+  it('records unreachable and rekindled transitions', () => {
+    const extinguished = trackPromotionHope(
+      { prospects: { 'w:p1': 400 } },
+      { 'w:p1': 0 },
+      [],
+      [],
+      8,
+    );
+    const rekindled = trackPromotionHope(
+      extinguished.state,
+      { 'w:p1': 250 },
+      [],
+      [],
+      9,
+    );
+    expect(extinguished.events[0]).toMatchObject({
+      t: 'HOPE_EXTINGUISHED',
+      reason: 'unreachable',
+    });
+    expect(rekindled.events[0]).toMatchObject({
+      t: 'HOPE_REKINDLED',
+      prospect: 250,
+    });
+  });
+
+  it('does not emit for initial or promoted hope and sorts emissions', () => {
+    const initial = trackPromotionHope(
+      undefined,
+      { 'w:z': 100, 'w:a': 200 },
+      [],
+      [],
+      1,
+    );
+    expect(initial.events).toEqual([]);
+    const promoted = trackPromotionHope(
+      initial.state,
+      { 'w:z': 0, 'w:a': 0 },
+      [],
+      ['w:a'],
+      2,
+    );
+    expect(promoted.events).toEqual([
+      {
+        t: 'HOPE_EXTINGUISHED',
+        ply: 2,
+        pieceId: 'w:z',
+        object: 'promotion',
+        priorProspect: 100,
+        reason: 'unreachable',
+      },
+    ]);
+  });
+});
+
+describe('foldHope', () => {
+  it('filters to fielded pieces and folds all transition kinds', () => {
+    const events: MatchEvent[] = [
+      {
+        t: 'PROMOTION',
+        ply: 3,
+        pieceId: 'w:p1',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
+        t: 'PROMOTION',
+        ply: 4,
+        pieceId: 'b:p2',
+        fromRole: 'Pawn',
+        toRole: 'Queen',
+      },
+      {
+        t: 'HOPE_EXTINGUISHED',
+        ply: 5,
+        pieceId: 'w:p1',
+        object: 'promotion',
+        priorProspect: 700,
+        reason: 'captured',
+      },
+      {
+        t: 'HOPE_REKINDLED',
+        ply: 6,
+        pieceId: 'w:p1',
+        object: 'promotion',
+        prospect: 200,
+      },
+    ];
+    expect(foldHope(events, ['w:p1'])).toEqual({
+      realized: [{ ply: 3, pieceId: 'w:p1' }],
+      extinguished: [
+        {
+          ply: 5,
+          pieceId: 'w:p1',
+          reason: 'captured',
+          priorProspect: 700,
+        },
+      ],
+      rekindledCount: 1,
     });
   });
 });
@@ -200,5 +325,72 @@ describe('headless courage emission', () => {
           ].includes(event.verdict),
       ),
     ).toBe(true);
+  });
+
+  it('emits deterministic bounded hope transitions across applied plies', async () => {
+    const leader: HeadlessLeaderPort = {
+      chooseMove(board, side, _random, _ply, refusedSans = new Set()) {
+        const candidate = board.legalMoves().find((intent) => {
+          const features = extractMoveFeatures(board, intent);
+          return (
+            board.pieceAt(intent.from)?.side === side &&
+            !refusedSans.has(features.san)
+          );
+        });
+        if (candidate === undefined) return undefined;
+        const features = extractMoveFeatures(board, candidate);
+        return {
+          moverId: board.pieceAt(candidate.from)?.id ?? '',
+          intent: candidate,
+          san: features.san,
+          moveEval: featuresToEvaluation(features),
+          objectivelyGood: false,
+        };
+      },
+      shouldOverride: () => false,
+    };
+    const run = () =>
+      runHeadlessMatch({
+        random: createSeededRandom(53),
+        maxPlies: 8,
+        playerSide: 'w',
+        leader,
+        opponent: leader,
+        initialBoard: LivingBoard.standard(),
+        initialRoster: createStartingRoster(
+          LivingBoard.standard(),
+          'w',
+          100,
+          0.5,
+        ),
+        initialEnemyRoster: createStartingRoster(
+          LivingBoard.standard(),
+          'b',
+          100,
+          0.5,
+        ),
+        engine: createFakeEnginePort(),
+      });
+    const [first, second] = await Promise.all([run(), run()]);
+    const hopeEvents = first.events.filter(
+      (event) =>
+        event.t === 'HOPE_EXTINGUISHED' || event.t === 'HOPE_REKINDLED',
+    );
+    expect(hopeEvents.length).toBeGreaterThan(0);
+    expect(
+      hopeEvents.every(
+        (event) =>
+          event.object === 'promotion' &&
+          (event.t === 'HOPE_REKINDLED'
+            ? event.prospect >= 0 && event.prospect <= 1000
+            : event.priorProspect >= 0 && event.priorProspect <= 1000),
+      ),
+    ).toBe(true);
+    expect(
+      second.events.filter(
+        (event) =>
+          event.t === 'HOPE_EXTINGUISHED' || event.t === 'HOPE_REKINDLED',
+      ),
+    ).toEqual(hopeEvents);
   });
 });

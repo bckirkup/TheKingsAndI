@@ -158,3 +158,17 @@ courage acts, never a sum**.
   D203's discipline).
 
 D198 stays open: naming a hope's destruction in the debrief is not pricing it.
+
+## Addendum (2026-09-03, owner ruling): promotion-hope v1 is wired
+
+Promotion hope now reaches the closing debrief as naming-only, debrief-only
+events. Every pawn holds the promotion object from the start; there is no
+formation threshold and no invented magnitude. The existing deterministic
+promotion prospect is the sole source: prospect `0` names extinction by
+unreachability, while capture is recorded as its own extinction reason.
+Rekindling after a zero prospect is tracked, and the existing `PROMOTION`
+event names realization.
+
+This wiring does not price hope and charges no cost anywhere. Exchange-object
+hope remains unexpressible pending ADR 0071 wiring, and credence registration
+remains deferred. D198 remains open: naming a destroyed hope is not pricing it.

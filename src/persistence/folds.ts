@@ -2,6 +2,7 @@ import {
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
   foldCourage,
+  foldHope,
   foldUnjustifiedTrauma,
 } from '../psychology/events';
 import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
@@ -11,6 +12,7 @@ import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   COURAGE_FOLD_VERSION,
+  HOPE_FOLD_VERSION,
   JUDGEMENT_SEAT_FOLD_VERSION,
   type ActTerminalState,
   type CampaignDebrief,
@@ -296,6 +298,40 @@ function foldCampaignCourage(
   };
 }
 
+function foldCampaignHope(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['hope'] {
+  const foldedMatches = matches.map((match) => ({
+    match,
+    folded: foldHope(match.events, fieldedIdsForJudgementSeat(match)),
+  }));
+  const realized = foldedMatches.flatMap(({ match, folded }) =>
+    folded.realized.map((incident) => ({
+      matchId: match.id,
+      matchIndex: match.matchIndex,
+      ...incident,
+    })),
+  );
+  const extinguished = foldedMatches.flatMap(({ match, folded }) =>
+    folded.extinguished.map((incident) => ({
+      matchId: match.id,
+      matchIndex: match.matchIndex,
+      ...incident,
+    })),
+  );
+  return {
+    foldVersion: HOPE_FOLD_VERSION,
+    realized,
+    extinguished,
+    realizedCount: realized.length,
+    extinguishedCount: extinguished.length,
+    rekindledCount: foldedMatches.reduce(
+      (count, { folded }) => count + folded.rekindledCount,
+      0,
+    ),
+  };
+}
+
 export function foldCampaignCultureDrift(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
@@ -335,6 +371,7 @@ export function buildCampaignDebrief(
   );
   const judgementSeat = foldJudgementSeat(matches);
   const courage = foldCampaignCourage(matches);
+  const hope = foldCampaignHope(matches);
   return {
     campaignId,
     matches,
@@ -344,6 +381,7 @@ export function buildCampaignDebrief(
     meanRealizedQuality,
     judgementSeat,
     courage,
+    hope,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),
