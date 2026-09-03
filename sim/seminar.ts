@@ -335,6 +335,7 @@ async function runSeminarMatchPairing(input: {
   readonly whiteIndex: number;
   readonly blackIndex: number;
   readonly cohortSize: number;
+  readonly publicCohortSize: number;
   readonly weekSeed: number;
   readonly seminarSeed: number;
   readonly matchesPerWeek: number;
@@ -384,13 +385,13 @@ async function runSeminarMatchPairing(input: {
         week: input.week,
         weeksPerSemester: input.weeksPerSemester,
         standingRank: input.standingRankByCommander.get(input.white.id) ?? 1,
-        cohortSize: input.cohortSize,
+        cohortSize: input.publicCohortSize,
       },
       opponentSeminar: {
         week: input.week,
         weeksPerSemester: input.weeksPerSemester,
         standingRank: input.standingRankByCommander.get(input.black.id) ?? 1,
-        cohortSize: input.cohortSize,
+        cohortSize: input.publicCohortSize,
       },
       engine: input.engine,
     });
@@ -769,6 +770,7 @@ export async function runSeminar(options: {
             whiteIndex,
             blackIndex,
             cohortSize: config.COMMANDERS_PER_COHORT,
+            publicCohortSize: commanders.length,
             weekSeed,
             seminarSeed: options.seed,
             matchesPerWeek: config.MATCHES_PER_WEEK,

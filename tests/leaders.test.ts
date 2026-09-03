@@ -827,8 +827,8 @@ describe('scripted leader move shaping', () => {
       seminar: {
         week: 1,
         weeksPerSemester: 4,
-        standingRank: 1,
-        cohortSize: 2,
+        standingRank: 3,
+        cohortSize: 4,
       },
     };
     const tanked = leaderPolicy('tanker').chooseMove(
@@ -843,7 +843,7 @@ describe('scripted leader move shaping', () => {
       createSeededRandom(11),
       {
         ...seminarContext,
-        seminar: { ...seminarContext.seminar, standingRank: 2 },
+        seminar: { ...seminarContext.seminar, standingRank: 4 },
       },
     );
     expect(tanked?.features.san).not.toBe(bottom?.features.san);
