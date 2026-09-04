@@ -44,21 +44,28 @@ import { describeHeavy, itHeavy } from './tier';
 
 // Campaign-scale: nightly tier (docs/testing_strategy.md §7).
 describeHeavy('simulation harness determinism', () => {
-  it('keeps the campaign digest unchanged with zero regard and repair steps', async () => {
+  it('moves the campaign digest when live regard and repair steps are zeroed (D166)', async () => {
+    // Pre-D166 this probe asserted inert defaults (== 0). D166 ruled the
+    // cushion live (50 / 30); zeroing must now move benevolence outcomes, and
+    // the inert path must stay self-identical.
+    expect(ENGINE_CONFIG.BENEV_REGARD_STEP).toBeGreaterThan(0);
+    expect(ENGINE_CONFIG.BENEV_REPAIR_STEP).toBeGreaterThan(0);
     const options = {
       matches: 1,
       leader: 'exacting' as const,
       seed: 7,
       engineKind: 'fake' as const,
     };
-    const baseline = renderCsv(await runSimulation(options));
+    const live = renderCsv(await runSimulation(options));
     const config = ENGINE_CONFIG as unknown as Record<string, number>;
     const originalRegard = ENGINE_CONFIG.BENEV_REGARD_STEP;
     const originalRepair = ENGINE_CONFIG.BENEV_REPAIR_STEP;
     config.BENEV_REGARD_STEP = 0;
     config.BENEV_REPAIR_STEP = 0;
     try {
-      expect(renderCsv(await runSimulation(options))).toBe(baseline);
+      const inert = renderCsv(await runSimulation(options));
+      expect(inert).not.toBe(live);
+      expect(renderCsv(await runSimulation(options))).toBe(inert);
     } finally {
       config.BENEV_REGARD_STEP = originalRegard;
       config.BENEV_REPAIR_STEP = originalRepair;
