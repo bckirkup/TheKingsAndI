@@ -117,6 +117,16 @@ export const ENGINE_CONFIG = {
   MORNING_LIFT_TRUST_BASELINE: 0,
   /** Minimum trait-free risk asked of a piece for courage normalization (D199). */
   COURAGE_ASKED_COST_FLOOR: 0.05,
+  /** Minimum peer affinity that makes a loss mournable (D211). */
+  GRIEF_AFFINITY_THRESHOLD: 50,
+  /** Load added per mourned peer, permille (D211; inert pending measurement). */
+  GRIEF_LOAD_PER_LOSS_PERMILLE: 0,
+  /** Captive fraction of a full grief load (D211). */
+  GRIEF_CAPTIVE_WEIGHT_PERMILLE: 500,
+  /** Search-depth suppression from grief, permille (D211; inert pending measurement). */
+  GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE: 0,
+  /** Grief decay at a match boundary, permille (D211; inert pending measurement). */
+  GRIEF_DECAY_PERMILLE_PER_MATCH: 0,
 };
 
 // ============================================================================

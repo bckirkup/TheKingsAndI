@@ -146,6 +146,9 @@ export function mergeCampaignRoster(
         credence: { ...previous.credence },
         rumor: { ...previous.rumor },
         cash: previous.cash ?? 0,
+        ...(previous.griefLoad === undefined
+          ? {}
+          : { griefLoad: previous.griefLoad }),
       });
     },
   );

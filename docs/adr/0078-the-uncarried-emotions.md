@@ -240,9 +240,10 @@ until an owner ruling picks one up.
 
 ## What this ADR does not do
 
-It wires nothing, prices nothing, and enables nothing. Its sole effects on
-tree are this file and the register entries for D208–D217. The implementation
-order, when the owner begins ruling, should follow the seams' freshness:
+It wires no pricing and enables no optional behavior by default. D210's
+recognition fold and D211's inert carrier are now implemented as dated
+addenda; the remaining implementation order should follow the seams'
+freshness:
 gratitude (D210) completes the ransom arc the captivity work just opened;
 grief (D211) and shame (D212) reuse live machinery; envy (D214) and pride
 (D215) wait on D182's magnitude; spite recognition (D209) is a pure fold any
@@ -255,3 +256,24 @@ with a measurement sweep (the ε discipline), defaults inert, determinism
 absolute (no unseeded randomness, no transcendentals, clamped integer
 arithmetic), and any carrier that changes play re-runs the exploit tier
 (D204/D206) before its knob may default on.
+
+## Addendum — 2026-09-05: D211 grief wired inert
+
+D211 is now wired as a deterministic, terminal-only reading. Each piece may
+carry an integer `griefLoad` in `0..1000`; a high-affinity peer loss
+(`captured`, `deserted`, or `career_ended`) can add load, while a captive
+fengr carries the loss at half weight and a ransom return lifts that captive
+portion. Match-boundary decay is the mechanism by which mourning ends, with
+the owed ADR 0007 note: the boundary is a permitted place for decay, not a
+new live event stream. A fresh career generation starts without its
+predecessor's grief.
+
+The carrier can suppress only effective search depth, after the existing
+quiet-quit calculation; it does not change quiet-quit classification or
+counting. Campaign and seminar closing debriefs may name carried incidents,
+but grief is absent from observations, standings, registers, commendations,
+policies, live UI, and the Leadership Index. The default load, suppression,
+and decay knobs are zero, so default payloads and seeded draws remain
+unchanged. The current threshold, load, captive weight, suppression curve, and
+decay magnitude are deliberately open for a measurement sweep before any
+ruling. No PRNG draw is consumed.

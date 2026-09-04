@@ -21,7 +21,14 @@ import {
   type SquadService,
   type CredenceIdentity,
 } from '../src/orchestration';
-import type { MatchEvent, PieceRole, PieceState } from '../src/psychology';
+import {
+  applyGriefLoss,
+  decayGrief,
+  ENGINE_CONFIG,
+  type MatchEvent,
+  type PieceRole,
+  type PieceState,
+} from '../src/psychology';
 
 import { leaderTrustBias } from './campaign';
 import type { Leader } from './cli';
@@ -481,8 +488,20 @@ function foldSide(
     readonly enabled: boolean;
     readonly heldBy: string;
     readonly week: number;
+    readonly grief?: {
+      readonly affinityThreshold?: number;
+      readonly loadPerLossPermille?: number;
+    };
   },
-): { readonly pool: CommanderPool; readonly events: readonly PoolEvent[] } {
+  losses: readonly {
+    readonly pieceId: PieceId;
+    readonly cause: 'captured' | 'deserted' | 'career_ended';
+  }[] = [],
+): {
+  readonly pool: CommanderPool;
+  readonly events: readonly PoolEvent[];
+  readonly griefEvents?: readonly MatchEvent[];
+} {
   const folded = foldSquadMatch({
     side: pool.side,
     members: fielded.chargedMembers ?? pool.members,
@@ -500,7 +519,7 @@ function foldSide(
   const resultById = new Map(
     [...resultRoster, ...departedRoster].map((piece) => [piece.id, piece]),
   );
-  const members = [...folded.members].map((member) => {
+  let members = [...folded.members].map((member) => {
     const identity = member.credenceIdentity;
     return identity === undefined
       ? member
@@ -546,7 +565,58 @@ function foldSide(
         : { credenceIdentity: checkedInIdentity }),
     });
   }
-  return { pool: { ...pool, members }, events: folded.events };
+  const griefEvents: MatchEvent[] = [];
+  const careerLosses = members
+    .filter(
+      (member) =>
+        member.status === 'retired' &&
+        member.retirementCause === 'trauma' &&
+        pool.members.find((prior) => prior.state.id === member.state.id)
+          ?.status !== 'retired',
+    )
+    .map((member) => ({
+      pieceId: member.state.id,
+      cause: 'career_ended' as const,
+    }));
+  for (const loss of [...losses, ...careerLosses]) {
+    const mourned = members.find((member) => member.state.id === loss.pieceId);
+    const transition = applyGriefLoss(
+      members.map((member) => member.state),
+      loss.pieceId,
+      loss.cause,
+      match,
+      loss.cause === 'captured' &&
+        captivity?.enabled &&
+        mourned?.status === 'captive'
+        ? ENGINE_CONFIG.GRIEF_CAPTIVE_WEIGHT_PERMILLE
+        : 1_000,
+      captivity?.grief,
+    );
+    for (const incident of transition.incidents) {
+      griefEvents.push({
+        t: 'GRIEF_MOURNING',
+        ply: 0,
+        pieceId: incident.pieceId,
+        mournedId: incident.mournedId,
+        cause: incident.cause,
+        weekOrMatch: incident.weekOrMatch,
+      });
+    }
+    const states = new Map(transition.roster.map((state) => [state.id, state]));
+    members = members.map((member) => {
+      const state = states.get(member.state.id);
+      return state === undefined ? member : { ...member, state };
+    });
+  }
+  members = members.map((member) => ({
+    ...member,
+    state: decayGrief(member.state),
+  }));
+  return {
+    pool: { ...pool, members },
+    events: folded.events,
+    ...(griefEvents.length === 0 ? {} : { griefEvents }),
+  };
 }
 
 export function foldMatchIntoPools(input: {
@@ -562,11 +632,16 @@ export function foldMatchIntoPools(input: {
     readonly whiteCommanderId: string;
     readonly blackCommanderId: string;
     readonly week: number;
+    readonly grief?: {
+      readonly affinityThreshold?: number;
+      readonly loadPerLossPermille?: number;
+    };
   };
 }): {
   readonly white: CommanderPool;
   readonly black: CommanderPool;
   readonly events: readonly PoolEvent[];
+  readonly griefEvents?: readonly MatchEvent[];
 } {
   const config = input.config ?? SEASON_CONFIG;
   const playerIds = new Set(
@@ -591,6 +666,30 @@ export function foldMatchIntoPools(input: {
       )
       .map((event) => event.pieceId),
   );
+  const playerLosses = [
+    ...input.result.events
+      .filter(
+        (event): event is Extract<MatchEvent, { t: 'CAPTURE' }> =>
+          event.t === 'CAPTURE' && playerIds.has(event.victim),
+      )
+      .map((event) => ({ pieceId: event.victim, cause: 'captured' as const })),
+    ...[...playerDesertions].map((pieceId) => ({
+      pieceId,
+      cause: 'deserted' as const,
+    })),
+  ];
+  const enemyLosses = [
+    ...input.result.events
+      .filter(
+        (event): event is Extract<MatchEvent, { t: 'CAPTURE' }> =>
+          event.t === 'CAPTURE' && enemyIds.has(event.victim),
+      )
+      .map((event) => ({ pieceId: event.victim, cause: 'captured' as const })),
+    ...[...enemyDesertions].map((pieceId) => ({
+      pieceId,
+      cause: 'deserted' as const,
+    })),
+  ];
   const playerRefusals = new Map<PieceId, number>();
   const enemyRefusals = new Map<PieceId, number>();
   const playerPromotions = new Map<PieceId, PieceRole>();
@@ -636,7 +735,11 @@ export function foldMatchIntoPools(input: {
           enabled: input.captivity.enabled,
           heldBy: input.captivity.blackCommanderId,
           week: input.captivity.week,
+          ...(input.captivity.grief === undefined
+            ? {}
+            : { grief: input.captivity.grief }),
         },
+    playerLosses,
   );
   const blackFold = foldSide(
     input.black,
@@ -655,12 +758,21 @@ export function foldMatchIntoPools(input: {
           enabled: input.captivity.enabled,
           heldBy: input.captivity.whiteCommanderId,
           week: input.captivity.week,
+          ...(input.captivity.grief === undefined
+            ? {}
+            : { grief: input.captivity.grief }),
         },
+    enemyLosses,
   );
+  const griefEvents = [
+    ...(whiteFold.griefEvents ?? []),
+    ...(blackFold.griefEvents ?? []),
+  ];
   return {
     white: whiteFold.pool,
     black: blackFold.pool,
     events: [...whiteFold.events, ...blackFold.events],
+    ...(griefEvents.length === 0 ? {} : { griefEvents }),
   };
 }
 

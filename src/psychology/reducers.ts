@@ -39,6 +39,9 @@ export function normalizePieceState(piece: PieceState): PieceState {
   return {
     ...piece,
     cash: Math.max(0, Math.trunc(piece.cash ?? 0)),
+    ...(piece.griefLoad === undefined
+      ? {}
+      : { griefLoad: clampPermille(piece.griefLoad) }),
     E_i: Math.max(1, Math.min(100, piece.E_i)),
     T_i: clampTrust(piece.T_i),
     M_i: clampMorale(piece.M_i),

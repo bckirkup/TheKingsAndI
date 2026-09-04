@@ -217,6 +217,15 @@ export interface CampaignDebrief {
     readonly extinguishedCount: number;
     readonly rekindledCount: number;
   };
+  /** D211: terminal-only naming of carried mourning incidents. */
+  readonly grief: {
+    readonly incidents: readonly {
+      readonly pieceId: string;
+      readonly mournedId: string;
+      readonly cause: 'captured' | 'deserted' | 'career_ended';
+      readonly weekOrMatch: number;
+    }[];
+  };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
   readonly transcript: CampaignTranscript;

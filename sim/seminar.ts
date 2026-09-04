@@ -28,7 +28,7 @@ import {
   classifyMatchResult,
   type HeadlessMatchResult,
 } from '../src/orchestration';
-import type { PieceState } from '../src/psychology';
+import { ENGINE_CONFIG, type PieceState } from '../src/psychology';
 import {
   COHORT_HISTORY_CONFIG,
   generateCohortHistory,
@@ -77,6 +77,11 @@ import {
   type ExchangeHopeOwnerResult,
 } from './exchangeHope';
 import {
+  EMPTY_SEMINAR_GRIEF,
+  foldSeminarGrief,
+  type SeminarGriefOwnerResult,
+} from './grief';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -116,6 +121,7 @@ export interface SeminarCommanderResult {
   readonly commendations: PlayerCommendationSet;
   readonly judgementSeat: CampaignDebrief['judgementSeat'];
   readonly exchangeHope: ExchangeHopeOwnerResult;
+  readonly grief: SeminarGriefOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -228,6 +234,7 @@ function recordForSide(input: {
   readonly matchSeed: number;
   readonly campaignId: string;
   readonly actId: string;
+  readonly additionalEvents?: readonly MatchRecord['events'][number][];
 }): MatchRecord {
   const result = classifySeminarSideResult(input.result, input.commander.side);
   const rosterEnd = input.rosterEndPool.members.map((member) => ({
@@ -241,7 +248,15 @@ function recordForSide(input: {
     seed: input.matchSeed,
     rosterSnapshot: storedRoster(input.fielded),
     rosterEnd,
-    events: input.result.events,
+    events: [
+      ...input.result.events,
+      ...(input.additionalEvents ?? []).filter((event) =>
+        input.rosterEndPool.members.some(
+          (member) =>
+            member.state.id === ('pieceId' in event ? event.pieceId : ''),
+        ),
+      ),
+    ],
     engineAudit: input.result.engineAudit,
     winScore:
       input.commander.side === 'w'
@@ -426,6 +441,7 @@ async function runSeminarMatchPairing(input: {
         cohortSize: input.publicCohortSize,
       },
       engine: input.engine,
+      griefEnabled: false,
     });
     input.observations.set(
       input.white.id,
@@ -465,12 +481,17 @@ async function runSeminarMatchPairing(input: {
               whiteCommanderId: input.white.id,
               blackCommanderId: input.black.id,
               week: input.week,
+              grief: {
+                affinityThreshold: ENGINE_CONFIG.GRIEF_AFFINITY_THRESHOLD,
+                loadPerLossPermille: ENGINE_CONFIG.GRIEF_LOAD_PER_LOSS_PERMILLE,
+              },
             },
           }
         : {}),
     });
     input.pools.set(input.white.id, folded.white);
     input.pools.set(input.black.id, folded.black);
+    const griefEvents = folded.griefEvents ?? [];
     const whiteRecord = recordForSide({
       commander: input.white,
       rosterEndPool: folded.white,
@@ -480,6 +501,7 @@ async function runSeminarMatchPairing(input: {
       matchSeed,
       campaignId: `seminar:${input.seminarSeed}:${input.white.id}`,
       actId: `semester:${input.seminarSeed}`,
+      additionalEvents: griefEvents,
     });
     const blackRecord = recordForSide({
       commander: input.black,
@@ -490,6 +512,7 @@ async function runSeminarMatchPairing(input: {
       matchSeed,
       campaignId: `seminar:${input.seminarSeed}:${input.black.id}`,
       actId: `semester:${input.seminarSeed}`,
+      additionalEvents: griefEvents,
     });
     input.weekRecords.get(input.white.id)?.push(whiteRecord);
     input.weekRecords.get(input.black.id)?.push(blackRecord);
@@ -937,6 +960,7 @@ export async function runSeminar(options: {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');
   }
   const exchangeHopeByOwner = foldExchangeHope(weeks, currentPools);
+  const griefByOwner = foldSeminarGrief(weeks);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -945,6 +969,7 @@ export async function runSeminar(options: {
       commendations: foldPlayerCommendations(records),
       judgementSeat: foldJudgementSeat(records),
       exchangeHope: exchangeHopeByOwner[commander.id] ?? EMPTY_EXCHANGE_HOPE,
+      grief: griefByOwner[commander.id] ?? EMPTY_SEMINAR_GRIEF,
     };
   });
   const standings = standingsFor(
@@ -1000,17 +1025,23 @@ export function seminarPayload(result: SeminarResult): string {
     config,
     commanders: result.commanders.map((commander) => {
       const { exchangeHope } = commander;
-      if (
+      const withoutHope =
         exchangeHope.realized.length === 0 &&
         exchangeHope.selfSprung.length === 0 &&
         exchangeHope.extinguished.length === 0
-      ) {
-        const { exchangeHope: _exchangeHope, ...withoutExchangeHope } =
-          commander;
-        void _exchangeHope;
-        return withoutExchangeHope;
+          ? (() => {
+              const { exchangeHope: _exchangeHope, ...rest } = commander;
+              void _exchangeHope;
+              return rest;
+            })()
+          : commander;
+      const { grief } = withoutHope;
+      if (grief.incidents.length === 0) {
+        const { grief: _grief, ...withoutGrief } = withoutHope;
+        void _grief;
+        return withoutGrief;
       }
-      return commander;
+      return withoutHope;
     }),
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
@@ -1069,6 +1100,11 @@ export function seminarSummary(result: SeminarResult): string {
       lines.push(
         `${entry.commander.id} exchange-hope: realized=${realized} ` +
           `self=${selfSprung} extinguished=${extinguished}`,
+      );
+    }
+    if (entry.grief.incidents.length > 0) {
+      lines.push(
+        `${entry.commander.id} grief: incidents=${entry.grief.incidents.length}`,
       );
     }
   }

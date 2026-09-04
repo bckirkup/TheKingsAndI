@@ -125,6 +125,7 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
         initialEnemyLineup: blackLineup,
         enemyTrackedIdentities: 16,
         engine,
+        griefEnabled: false,
       });
       const matchMetric = metricsFromMatch(
         match,

@@ -2444,13 +2444,12 @@ against own utility; voided by betrayal. Open: recognition-only versus a
 refusal-threshold credit, the gold-to-obedience exchange rate, and whether a
 voided debt converts to bitterness. Located in ADR 0078; nothing wired.
 
-### D211 ⬜ Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
-**Open.** A per-piece grief load raised by losing a high-affinity peer,
-suppressing engagement and decaying slowly (a permitted decay — mourning
-ending is the mechanism, with an ADR 0007 note owed); a held captive mourned
-at half weight, lifted by the ransom return. Open: threshold, magnitudes,
-suppression curve, and generation boundary. Located in ADR 0078; nothing
-wired.
+### D211 🟡 Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
+**Wired inert.** `griefLoad` is an integer, clamped carrier with deterministic
+peer-loss, captive half-weight/lift, decay, and post-quiet-quit depth helpers.
+Terminal campaign/seminar folds name carried incidents only; no live surface or
+Leadership Index term exists. Thresholds, magnitudes, and the suppression curve
+remain open for a measurement sweep. Located in ADR 0078.
 
 ### D212 ⬜ Shame: does it matter who watched? (ADR 0078)
 **Open.** The overridden piece's own losses scaled by the number and standing
