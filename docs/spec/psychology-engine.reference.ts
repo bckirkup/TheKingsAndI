@@ -143,6 +143,10 @@ export const ENGINE_CONFIG = {
   SHAME_STANDING_PERMILLE: 0,
   /** Shame cap, clamped to the 0..1000 permille range (D212). */
   SHAME_CAP_PERMILLE: 1_000,
+  /** D209 unjustified-refusal commander-cost floor; zero disables recognition. */
+  SPITE_COMMANDER_COST_FLOOR: 0,
+  /** D209 desertion pivotality floor; zero disables desertion recognition. */
+  SPITE_DESERTION_PIVOTALITY_FLOOR: 0,
 };
 
 // ============================================================================

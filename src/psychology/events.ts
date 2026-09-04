@@ -198,6 +198,84 @@ export function foldCourage(
   };
 }
 
+export interface SpiteIncident {
+  readonly ply: number;
+  readonly pieceId: PieceId;
+  readonly kind: 'refusal' | 'desertion';
+  readonly grievance: 'override' | 'bitterness';
+  readonly commanderCost: number;
+}
+
+export function foldSpite(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+): { readonly incidents: readonly SpiteIncident[]; readonly count: number } {
+  if (
+    ENGINE_CONFIG.SPITE_COMMANDER_COST_FLOOR <= 0 &&
+    ENGINE_CONFIG.SPITE_DESERTION_PIVOTALITY_FLOOR <= 0
+  ) {
+    return { incidents: [], count: 0 };
+  }
+  const fielded = new Set(fieldedPieceIds);
+  const overrideGround = new Set<PieceId>();
+  const bitternessGround = new Set<PieceId>();
+  const incidents: SpiteIncident[] = [];
+  for (const event of events) {
+    if (event.t === 'REPAIR') {
+      overrideGround.delete(event.pieceId);
+      continue;
+    }
+    if (event.t === 'OVERRIDE') {
+      if (event.vindicated !== true) overrideGround.add(event.pieceId);
+      continue;
+    }
+    if (event.t === 'BITTERNESS_FORMED') {
+      bitternessGround.add(event.pieceId);
+      continue;
+    }
+    if (event.t !== 'REFUSAL' && event.t !== 'DESERTION') continue;
+    if (!fielded.has(event.pieceId)) continue;
+    const grievance = overrideGround.has(event.pieceId)
+      ? 'override'
+      : bitternessGround.has(event.pieceId)
+        ? 'bitterness'
+        : undefined;
+    if (grievance === undefined) continue;
+    if (
+      event.t === 'REFUSAL' &&
+      ENGINE_CONFIG.SPITE_COMMANDER_COST_FLOOR > 0 &&
+      event.justified !== true &&
+      event.perceivedValue >= ENGINE_CONFIG.SPITE_COMMANDER_COST_FLOOR
+    ) {
+      incidents.push({
+        ply: event.ply,
+        pieceId: event.pieceId,
+        kind: 'refusal',
+        grievance,
+        commanderCost: event.perceivedValue,
+      });
+    } else if (
+      event.t === 'DESERTION' &&
+      ENGINE_CONFIG.SPITE_DESERTION_PIVOTALITY_FLOOR > 0 &&
+      event.terms?.pivotality !== undefined &&
+      event.terms.pivotality >= ENGINE_CONFIG.SPITE_DESERTION_PIVOTALITY_FLOOR
+    ) {
+      incidents.push({
+        ply: event.ply,
+        pieceId: event.pieceId,
+        kind: 'desertion',
+        grievance,
+        commanderCost: event.terms.pivotality,
+      });
+    }
+  }
+  incidents.sort(
+    (left, right) =>
+      left.pieceId.localeCompare(right.pieceId) || left.ply - right.ply,
+  );
+  return { incidents, count: incidents.length };
+}
+
 export function applyWitnessedSacrificeEvent(
   observer: PieceState,
   heroPiece: PieceState,

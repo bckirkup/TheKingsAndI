@@ -122,6 +122,10 @@ export const ENGINE_CONFIG = {
   SHAME_STANDING_PERMILLE: 0,
   /** Shame amplification cap, clamped to 0..1000 permille (D212). */
   SHAME_CAP_PERMILLE: 1_000,
+  /** D209 commander-cost floor for spite recognition; zero disables the fold. */
+  SPITE_COMMANDER_COST_FLOOR: 0,
+  /** D209 pivotality floor for desertion recognition; zero disables that shape. */
+  SPITE_DESERTION_PIVOTALITY_FLOOR: 0,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

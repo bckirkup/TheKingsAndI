@@ -81,10 +81,11 @@ export {
   courageForMove,
   foldCourage,
   foldHope,
+  foldSpite,
   foldUnjustifiedTrauma,
   trackPromotionHope,
 } from './events';
-export type { PromotionHopeState } from './events';
+export type { PromotionHopeState, SpiteIncident } from './events';
 export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';
 export {

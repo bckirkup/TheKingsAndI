@@ -2430,12 +2430,12 @@ discounts, decay, and all magnitudes remain at inert defaults. Thresholds and
 pricing remain open; whether a voided gratitude debt converts to bitterness is
 also open.
 
-### D209 ⬜ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
-**Open.** Courage's dark mirror — a full-effort act against the actor's own
-interest whose larger cost lands on the commander, classified over existing
-MOVE/REFUSAL/DESERTION arithmetic and named at the debrief. Open: the
-thresholds, and whether spite only *names* or also tilts the refusal timing
-(a play change requiring its own sweep). Located in ADR 0078; nothing wired.
+### D209 ✅ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
+**Wired inert.** Recognition-only `foldSpite` names unjustified refusals above
+the commander-cost floor and pivotal desertions above their independent floor
+when an earlier unvindicated override or bitterness grounds the grievance.
+Threshold magnitudes, MOVE classification, cross-match carry, and motivation
+remain open; both floors are zero by default.
 
 ### D210 ⬜ Gratitude: what does "he paid for me" create? (ADR 0078)
 **Partly wired (recognition).** A debt-object (object, magnitude, holder) — hope's sibling — formed
