@@ -88,6 +88,12 @@ export type { PromotionHopeState } from './events';
 export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';
 export {
+  calculateShamePermille,
+  scaleOwnLoss,
+  type ShameExposure,
+  type ShameOptions,
+} from './shame';
+export {
   applyCaptureInjury,
   applyGrace,
   applySustainedDread,

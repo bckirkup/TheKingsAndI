@@ -278,6 +278,14 @@ export type MatchEvent =
       readonly authorityGain?: number;
     }
   | {
+      /** Terminal-only naming of witness-scaled override shame (D212). */
+      readonly t: 'SHAME_EXPOSURE';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly witnesses: number;
+      readonly shamePermille: number;
+    }
+  | {
       readonly t: 'DESERTION';
       readonly ply: number;
       readonly pieceId: PieceId;

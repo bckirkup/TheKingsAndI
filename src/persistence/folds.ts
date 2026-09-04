@@ -354,6 +354,26 @@ function foldCampaignGrief(
   return { incidents };
 }
 
+export function foldCampaignShame(
+  matches: readonly MatchRecord[],
+): NonNullable<CampaignDebrief['shame']> {
+  const incidents: NonNullable<
+    CampaignDebrief['shame']
+  >['incidents'][number][] = [];
+  for (const match of matches) {
+    for (const event of match.events) {
+      if (event.t !== 'SHAME_EXPOSURE') continue;
+      incidents.push({
+        pieceId: event.pieceId,
+        ply: event.ply,
+        witnesses: event.witnesses,
+        shamePermille: event.shamePermille,
+      });
+    }
+  }
+  return { incidents };
+}
+
 export function foldCampaignCultureDrift(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
@@ -395,6 +415,7 @@ export function buildCampaignDebrief(
   const courage = foldCampaignCourage(matches);
   const hope = foldCampaignHope(matches);
   const grief = foldCampaignGrief(matches);
+  const shame = foldCampaignShame(matches);
   return {
     campaignId,
     matches,
@@ -406,6 +427,7 @@ export function buildCampaignDebrief(
     courage,
     hope,
     grief,
+    ...(shame.incidents.length === 0 ? {} : { shame }),
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

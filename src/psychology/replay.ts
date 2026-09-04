@@ -63,6 +63,9 @@ function commitPly(
     for (const witnessEvent of override.witnessEvents) {
       nextEvents = appendEvent(nextEvents, witnessEvent);
     }
+    if (override.shameEvent !== undefined) {
+      nextEvents = appendEvent(nextEvents, override.shameEvent);
+    }
     nextEvents = appendEvent(nextEvents, {
       t: 'MOVE',
       ply,

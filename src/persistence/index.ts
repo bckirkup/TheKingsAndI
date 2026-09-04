@@ -33,6 +33,7 @@ export {
 export {
   buildCampaignDebrief,
   foldCampaignCultureDrift,
+  foldCampaignShame,
   foldJudgementSeat,
   foldMatchAudit,
 } from './folds';

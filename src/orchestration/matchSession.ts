@@ -550,6 +550,7 @@ export class MatchSession {
         authorityGain: 0,
       } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
       ...override.witnessEvents,
+      ...(override.shameEvent === undefined ? [] : [override.shameEvent]),
     );
     this.roster = this.roster.map((piece) => {
       if (piece.id === override.overriddenPiece.id) {

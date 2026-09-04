@@ -226,6 +226,15 @@ export interface CampaignDebrief {
       readonly weekOrMatch: number;
     }[];
   };
+  /** D212: terminal-only naming of witness-scaled shame exposures. */
+  readonly shame?: {
+    readonly incidents: readonly {
+      readonly pieceId: string;
+      readonly ply: number;
+      readonly witnesses: number;
+      readonly shamePermille: number;
+    }[];
+  };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
   readonly transcript: CampaignTranscript;

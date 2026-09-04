@@ -127,6 +127,12 @@ export const ENGINE_CONFIG = {
   GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE: 0,
   /** Grief decay at a match boundary, permille (D211; inert pending measurement). */
   GRIEF_DECAY_PERMILLE_PER_MATCH: 0,
+  /** Nonnegative shame amplification per witness; zero keeps D212 inert. */
+  SHAME_PER_WITNESS_PERMILLE: 0,
+  /** Nonnegative shame amplification from standing; zero keeps D212 inert. */
+  SHAME_STANDING_PERMILLE: 0,
+  /** Shame cap, clamped to the 0..1000 permille range (D212). */
+  SHAME_CAP_PERMILLE: 1_000,
 };
 
 // ============================================================================

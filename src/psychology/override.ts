@@ -1,6 +1,11 @@
 import { clampMorale, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
 import { applyBetrayalSignal } from './credence';
+import {
+  calculateShamePermille,
+  scaleOwnLoss,
+  type ShameOptions,
+} from './shame';
 import { witnessAttachmentPermille } from './standing';
 import type { MatchEvent, PieceState } from './types';
 
@@ -9,6 +14,7 @@ export interface OverrideResult {
   readonly witnesses: PieceState[];
   readonly event: MatchEvent;
   readonly witnessEvents: readonly MatchEvent[];
+  readonly shameEvent?: Extract<MatchEvent, { t: 'SHAME_EXPOSURE' }>;
 }
 
 export function applyOverride(
@@ -17,14 +23,33 @@ export function applyOverride(
   ply: number,
   san: string,
   vindicated = false,
+  shameOptions: ShameOptions = {},
 ): OverrideResult {
-  const credence = applyBetrayalSignal(
-    piece.credence,
-    ENGINE_CONFIG.OVERRIDE_BENEV_CLIFF_INPUT,
+  const shamePermille = vindicated
+    ? 0
+    : calculateShamePermille(piece, witnesses, shameOptions);
+  const trustAfterBasePenalty = clampTrust(
+    piece.T_i + ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
   );
+  const trustAfterShame = scaleOwnLoss(
+    piece.T_i,
+    trustAfterBasePenalty,
+    shamePermille,
+  );
+  const credence =
+    shamePermille === 0
+      ? applyBetrayalSignal(
+          piece.credence,
+          ENGINE_CONFIG.OVERRIDE_BENEV_CLIFF_INPUT,
+        )
+      : applyBetrayalSignal(
+          piece.credence,
+          ENGINE_CONFIG.OVERRIDE_BENEV_CLIFF_INPUT,
+          1_000 + shamePermille,
+        );
   const overriddenPiece: PieceState = {
     ...piece,
-    T_i: clampTrust(piece.T_i + ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY),
+    T_i: trustAfterShame,
     M_i: clampMorale(piece.M_i - 10),
     credence,
   };
@@ -63,7 +88,10 @@ export function applyOverride(
     ply,
     pieceId: piece.id,
     san,
-    pieceTrustDelta: ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY,
+    pieceTrustDelta:
+      shamePermille === 0
+        ? ENGINE_CONFIG.OVERRIDE_PIECE_TRUST_PENALTY
+        : trustAfterShame - piece.T_i,
     vindicated,
   };
   const witnessEvents: MatchEvent[] = [];
@@ -76,6 +104,16 @@ export function applyOverride(
       delta: overriddenBenevDelta,
     });
   }
+  const shameEvent: MatchEvent | undefined =
+    shamePermille === 0
+      ? undefined
+      : {
+          t: 'SHAME_EXPOSURE',
+          ply,
+          pieceId: piece.id,
+          witnesses: witnesses.length,
+          shamePermille,
+        };
   updatedWitnesses.forEach((witness, index) => {
     const originalWitness = witnesses[index];
     if (originalWitness === undefined) return;
@@ -103,5 +141,6 @@ export function applyOverride(
     witnesses: updatedWitnesses,
     event,
     witnessEvents,
+    ...(shameEvent === undefined ? {} : { shameEvent }),
   };
 }
