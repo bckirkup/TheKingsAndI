@@ -308,6 +308,21 @@ export function publicLotBasePrice(
   );
 }
 
+export function roleExpectationPrice(
+  role: PieceRole,
+  config: SeminarConfig,
+): number {
+  return Math.max(
+    0,
+    Math.trunc(
+      config.DRAFT_LOT_BASE_PRICE +
+        (publicRoleValue(role) *
+          Math.trunc(config.DRAFT_LOT_ROLE_WEIGHT_PERMILLE)) /
+          1000,
+    ),
+  );
+}
+
 export function publicContributionForRecords(
   records: readonly MatchRecord[],
   candidateId: string,

@@ -3,10 +3,10 @@
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
   world for emotions we haven't figured in. … Locate them all."); **D208,
   D209, D211, D212, D213, and D214 are wired inert, D210 is partly wired for
-  recognition, and D216 is partly wired for recognition** — no opened
+  recognition, D215 is partly wired for price appraisal, and D216 is partly
+  wired for recognition** — no opened
   emotion is priced or enabled by default
-- **Opens:** **D210** (gratitude), **D215** (pride, refining D182),
-  **D217** (relief, awe,
+- **Opens:** **D210** (gratitude), **D217** (relief, awe,
   and loneliness — located, deferred together)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
   always, exposed nowhere in play, named once at the closing debrief), ADR
@@ -268,12 +268,13 @@ register, commendation, Leadership Index term, affinity discount, or PRNG
 draw is involved. The affinity-discount magnitude, whether envy of the
 ransomed joins the reading, and pricing remain open.
 
-### D215 — Pride (open; refines D182)
+### D215 — Pride (partly wired, 2026-09-05 addendum; refines D182)
 
 **What it is.** Self-appraisal against expectation — and its wounding. D182
 already rules that a piece appraises itself against a persistent expectation
 relative to role, and notes it will foolishly read its draft price as its
-worth. That ruling, still unwired, *is* the pride carrier.
+worth. The price side of that ruling is now a terminal recognition fold; live
+registration remains open.
 
 **Location.** Carrier: per-piece `selfAppraisal` per D182, updated by
 vindication (audit said I was right), promotion, clearing price, and
@@ -282,9 +283,41 @@ undercuts (D214's trigger, felt inward), and being passed over (the
 obsolescence streak finally lands somewhere). Wounded pride is the hinge
 into D208/D209. Debrief names the proud careers and the wounded ones.
 
-**Open in D215:** everything D182 left open (the magnitude question), plus
-whether pride enters the refusal threshold (a proud piece refuses beneath-it
-orders — a real play change requiring the full exploit-tier re-run).
+**Open in D215:** live registration and the non-price triggers, plus whether
+pride enters the refusal threshold (a proud piece refuses beneath-it orders —
+a real play change requiring the full exploit-tier re-run).
+
+#### D215 addendum (2026-09-05): the D182 magnitude, price side
+
+The owner ruled the shape of D182 in ADR 0071 — a signed difference from a
+persistent, moving expectation seeded by role — and here rules its first
+arithmetic. A piece's expectation begins at the role's public asking price,
+`DRAFT_LOT_BASE_PRICE + role value × DRAFT_LOT_ROLE_WEIGHT_PERMILLE / 1000`
+(a pawn expects 20, an officer 40–60, a Queen 100 at the defaults). Every
+price the piece is actually given — its draft clearing price, or the
+acceptance price paid to bring it home from captivity, whoever paid it —
+registers as `clamp((price − expectation) × 1000 / expectation, −1000..1000)`
+permille, and then moves the expectation toward that price by
+`PRIDE_EXPECTATION_EMA_PERMILLE`. A pawn paid an officer's price is proud; a
+Queen ransomed for a pawn's price is wounded; the same coin means opposite
+things, which is the whole of D182. A piece bought high once expects it
+again, which is the foolishness D182 was for.
+
+In v1 the carrier is not a `PieceState` field: the expectation and appraisal
+are reconstructed deterministically at semester close by `foldPride` from the
+cycle ledgers (ransoms first, then the draft, as the week actually runs). The
+trajectory is identical to what a carried field would hold, and it lifts into
+`PieceState` only when a live registration — the refusal threshold, trauma,
+or bitterness — is ruled. A career whose summed appraisal reaches
+`PRIDE_NAMING_FLOOR_PERMILLE` is named **proud** or **wounded** at the
+seminar debrief only. The EMA knob is a zero sentinel, so the fold is inert
+by default and the terminal `pride` block is omitted.
+
+Still open in D215: the non-price triggers (vindication, promotion,
+commendation conduct; overrides sustained, the obsolescence streak), whether
+pride enters the refusal threshold (a play change owed the exploit-tier
+re-run), the hinge into bitterness and spite, and the EMA and floor
+magnitudes, which await a measurement sweep.
 
 ### D216 — Panic (partly wired, 2026-09-05 addendum)
 
@@ -333,7 +366,7 @@ as dated addenda; the remaining implementation order should follow the seams'
 freshness:
 gratitude (D210) completes the ransom arc the captivity work just opened;
 grief (D211) and shame (D212) reuse live machinery; envy (D214) is implemented
-as a recognition fold, while pride (D215) still waits on D182's magnitude;
+as a recognition fold, while pride (D215) is partly wired for price appraisal;
 spite recognition (D209) is a pure fold any time after bitterness (D208)
 gives it a grievance to read.
 

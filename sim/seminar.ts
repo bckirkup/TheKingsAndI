@@ -103,6 +103,13 @@ import { foldSeminarSpite, type SeminarSpiteIncident } from './spite';
 import { foldSeminarGuilt, type SeminarGuiltIncident } from './guilt';
 import { foldEnvy, type EnvyIncident } from './envy';
 import {
+  EMPTY_PRIDE,
+  foldPride,
+  pricingEventsForCycle,
+  type PricingEvent,
+  type PrideReading,
+} from './pride';
+import {
   EMPTY_SEMINAR_PANIC,
   foldSeminarPanic,
   type SeminarPanicOwnerResult,
@@ -154,6 +161,7 @@ export interface SeminarCommanderResult {
   readonly spite: readonly SeminarSpiteIncident[];
   readonly guilt: readonly SeminarGuiltIncident[];
   readonly envy: readonly EnvyIncident[];
+  readonly pride: PrideReading;
   readonly panic: SeminarPanicOwnerResult;
 }
 
@@ -743,6 +751,7 @@ export async function runSeminar(options: {
     readonly cycle: number;
     readonly settlements: readonly DraftSettlement[];
   }[] = [];
+  const prideEvents: PricingEvent[] = [];
   const standingSeries: DraftStandingSeriesPoint[] = [];
   const counselCorrelationPairs: {
     leader: string;
@@ -873,6 +882,8 @@ export async function runSeminar(options: {
         draftPurses = new Map(ransom.purses);
         ransomLedger = ransom.ledger;
       }
+      const poolsBeforeDraft = currentPools;
+      let draftSettlements: readonly DraftSettlement[] = [];
       let weekDraftSelections: readonly {
         readonly leader: string;
         readonly candidateId: string;
@@ -902,8 +913,17 @@ export async function runSeminar(options: {
         standingSeries.push(...drafted.standingSeries);
         weekDraftSelections = drafted.counselSelections;
         cohortObservation = drafted.cohortHistory;
+        draftSettlements = drafted.settlements;
         envyCycles.push({ cycle: week, settlements: drafted.settlements });
       }
+      prideEvents.push(
+        ...pricingEventsForCycle(
+          week,
+          ransomLedger,
+          draftSettlements,
+          poolsBeforeDraft,
+        ),
+      );
       previousPurses = draftPurses;
       draftCycles.push(draftObservation);
       const weekRecords = new Map<string, MatchRecord[]>(
@@ -1047,6 +1067,7 @@ export async function runSeminar(options: {
     weeks.map((week) => ({ week: week.week, records: week.records })),
   );
   const envyByOwner = foldEnvy(envyCycles);
+  const prideByOwner = foldPride(prideEvents, config);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -1062,6 +1083,7 @@ export async function runSeminar(options: {
       spite: spiteByOwner[commander.id] ?? [],
       guilt: guiltByOwner[commander.id] ?? [],
       envy: envyByOwner[commander.id] ?? [],
+      pride: prideByOwner[commander.id] ?? EMPTY_PRIDE,
       panic: panicByOwner[commander.id] ?? EMPTY_SEMINAR_PANIC,
     };
   });
@@ -1126,6 +1148,7 @@ export function seminarPayload(result: SeminarResult): string {
         spite,
         guilt,
         envy,
+        pride,
         panic,
       } = commander;
       const hasGratitude =
@@ -1143,6 +1166,7 @@ export function seminarPayload(result: SeminarResult): string {
       const hasSpite = spite.length > 0;
       const hasGuilt = guilt.length > 0;
       const hasEnvy = envy.length > 0;
+      const hasPride = pride.proud.length + pride.wounded.length > 0;
       const hasPanic = panic.incidents.length > 0;
       const {
         exchangeHope: _exchangeHope,
@@ -1153,6 +1177,7 @@ export function seminarPayload(result: SeminarResult): string {
         spite: _spite,
         guilt: _guilt,
         envy: _envy,
+        pride: _pride,
         panic: _panic,
         ...withoutTerminalReadings
       } = commander;
@@ -1164,6 +1189,7 @@ export function seminarPayload(result: SeminarResult): string {
       void _spite;
       void _guilt;
       void _envy;
+      void _pride;
       void _panic;
       return {
         ...withoutTerminalReadings,
@@ -1175,6 +1201,7 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasSpite ? { spite } : {}),
         ...(hasGuilt ? { guilt } : {}),
         ...(hasEnvy ? { envy } : {}),
+        ...(hasPride ? { pride } : {}),
         ...(hasPanic ? { panic } : {}),
       };
     }),
@@ -1274,6 +1301,12 @@ export function seminarSummary(result: SeminarResult): string {
     }
     if (entry.envy.length > 0) {
       lines.push(`${entry.commander.id} envy: incidents=${entry.envy.length}`);
+    }
+    if (entry.pride.proud.length + entry.pride.wounded.length > 0) {
+      lines.push(
+        `${entry.commander.id} pride: proud=${entry.pride.proud.length} ` +
+          `wounded=${entry.pride.wounded.length}`,
+      );
     }
     if (entry.panic.incidents.length > 0) {
       lines.push(

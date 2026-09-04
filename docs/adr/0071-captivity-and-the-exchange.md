@@ -252,6 +252,8 @@ that expectation is itself persistent state and must move — a piece bought hig
 once will price its own recovery against that memory, which is exactly the
 foolishness D182 is for.
 
+**Magnitude ruled 2026-09-05 (price side):** see ADR 0078's D215 addendum — role-seeded expectation, permille appraisal per realized price, EMA movement, debrief-only naming, inert by default.
+
 ### The purse is the cycle purse (the boundary, ruled)
 Ransom is drawn from the **cycle** purse, not from a per-match allowance. A match
 that goes badly is therefore paid for over the weeks that follow, at the expense
@@ -310,8 +312,7 @@ remain disabled.
 The owner ruling is exact: **“Pieces first get paid during the draft.”** When a
 draft **hlutr** (lot) clears, its clearing price is credited to the drafted
 piece's persistent cash. That cash is the piece's bail under D183; this wires
-the cash vessel without yet wiring D182's self-appraisal magnitude or
-registration.
+the cash vessel without yet wiring D182's live registration.
 
 The seminar-only `CAPTIVITY_HOLD_ENABLED` knob is off by default. When enabled,
 a fielded non-deserting piece absent from the surviving roster remains a
@@ -336,5 +337,5 @@ life. The alternative of **wælreaf**, spoils stripped from the fallen, is
 likewise not the implemented economy. Captor affinity movement remains deferred.
 Exchange hope is now expressible as a terminal-only seminar fold; its
 realization, self-sprung release, and captivity extinguishment remain naming
-rather than pricing. D185 remains open, and D182 remains open for self-appraisal
-magnitude and registration.
+rather than pricing. D185 remains open, and D182 remains open for live
+registration.
