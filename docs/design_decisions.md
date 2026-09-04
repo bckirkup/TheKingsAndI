@@ -2474,7 +2474,7 @@ whether guilt becomes a carrier, and pricing remain open.
 over seminar draft settlements. A same-commander, same-role piece names the
 highest-paid peer above its own clearing price when the integer gap reaches
 `ENGINE_CONFIG.ENVY_PRICE_GAP_FLOOR`; the zero floor disables the fold, and
-non-empty envy is omitted from the terminal payload. It is seminar-only and
+an empty envy reading is omitted from the terminal payload. It is seminar-only and
 does not add campaign state, observations, policy, standings, registers,
 commendations, Leadership Index terms, affinity discounts, or PRNG draws.
 The affinity-discount magnitude, whether envy of the ransomed joins the
