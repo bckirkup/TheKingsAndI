@@ -61,10 +61,19 @@ export interface SeminarMarket {
   readonly members: readonly SquadMember[];
 }
 
+export interface DraftSettlement {
+  readonly ownerId: string;
+  readonly side: Side;
+  readonly pieceId: string;
+  readonly role: PieceRole;
+  readonly clearingPrice: number;
+}
+
 export interface SeminarDraftResult {
   readonly pools: ReadonlyMap<string, CommanderPool>;
   readonly markets: ReadonlyMap<Side, SeminarMarket>;
   readonly observation: DraftEconomyCycleObservation;
+  readonly settlements: readonly DraftSettlement[];
   readonly standingSeries: readonly DraftStandingSeriesPoint[];
   readonly remainingPurses: ReadonlyMap<string, number>;
   readonly willingnessByCommander: ReadonlyMap<
@@ -492,6 +501,7 @@ export function runSeminarDraft(options: {
     }
   }
   const winsByCommander: Record<string, number> = {};
+  const settlements: DraftSettlement[] = [];
   const clearingPrices: { clearingPrice: number; minimumBid: number }[] = [];
   const standingSeries: DraftStandingSeriesPoint[] = priorities.map(
     (entry) => ({
@@ -718,6 +728,14 @@ export function runSeminarDraft(options: {
         clearingPrice: cleared.clearingPrice,
         minimumBid: cleared.minimumBid,
       });
+      const clearingPrice = Math.max(0, Math.trunc(cleared.clearingPrice));
+      settlements.push({
+        ownerId: cleared.winnerId,
+        side,
+        pieceId: candidate.state.id,
+        role: candidate.state.role,
+        clearingPrice,
+      });
       nextPools.set(cleared.winnerId, {
         ...winnerPool,
         members: [
@@ -728,7 +746,7 @@ export function runSeminarDraft(options: {
               ...candidate.state,
               cash:
                 Math.max(0, Math.trunc(candidate.state.cash ?? 0)) +
-                Math.max(0, Math.trunc(cleared.clearingPrice)),
+                clearingPrice,
             },
             availableAtMatch: firstMatch,
           },
@@ -803,6 +821,7 @@ export function runSeminarDraft(options: {
       standingOrder: priorities.map((entry) => entry.commanderId),
       clearingPrices,
     },
+    settlements,
     standingSeries,
     remainingPurses,
     willingnessByCommander,

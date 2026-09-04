@@ -277,6 +277,24 @@ describe('seminar spine', () => {
     expect(result.cohortHistory.consultedIntakePairs).toBe(1);
     expect(result.cohortHistory.consultedAffinityPairs).toBe(1);
     expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
+    for (const settlement of result.settlements) {
+      const source = queen.state.id === settlement.pieceId ? queen : undefined;
+      const ownerMember = result.pools
+        .get(settlement.ownerId)
+        ?.members.find((member) => member.state.id === settlement.pieceId);
+      expect(source).toBeDefined();
+      expect(ownerMember).toBeDefined();
+      expect(ownerMember?.state.cash).toBe(
+        Math.max(0, Math.trunc(source?.state.cash ?? 0)) +
+          settlement.clearingPrice,
+      );
+    }
+    expect(result.settlements).toHaveLength(
+      Object.values(result.observation.winsByCommander).reduce(
+        (total, count) => total + count,
+        0,
+      ),
+    );
   });
 
   itHeavy(

@@ -2469,13 +2469,16 @@ The optional MOVE annotation is absent at the zero default floor; no live
 surface or Leadership Index term reads it. Attribution windows, magnitudes,
 whether guilt becomes a carrier, and pricing remain open.
 
-### D214 ⬜ Envy: what does a piece feel about another's price? (ADR 0078)
-**Open.** The draft's clearing prices (D183) give envy a denominated object:
-a same-role peer paid more. If priced, envy discounts dyadic affinity toward
-the envied peer — never toward the commander, which is favoritism's channel
-(ADR 0065). Open: what a piece knows of peers' prices, the magnitude, and
-whether envy of the ransomed joins the carrier. Located in ADR 0078; nothing
-wired.
+### D214 ✅ Envy: what does a piece feel about another's price? (ADR 0078)
+**Wired inert.** `foldEnvy` is a deterministic, terminal-only recognition fold
+over seminar draft settlements. A same-commander, same-role piece names the
+highest-paid peer above its own clearing price when the integer gap reaches
+`ENGINE_CONFIG.ENVY_PRICE_GAP_FLOOR`; the zero floor disables the fold, and
+an empty envy reading is omitted from the terminal payload. It is seminar-only and
+does not add campaign state, observations, policy, standings, registers,
+commendations, Leadership Index terms, affinity discounts, or PRNG draws.
+The affinity-discount magnitude, whether envy of the ransomed joins the
+reading, and pricing remain open.
 
 ### D215 ⬜ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
 **Open; refines D182.** The ruled-but-unwired self-appraisal against role

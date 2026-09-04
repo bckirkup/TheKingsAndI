@@ -65,6 +65,7 @@ import {
   draftStartingPurses,
   publicContributionForRecords,
   runSeminarDraft,
+  type DraftSettlement,
   type SeminarMarket,
 } from './seminarDraft';
 import {
@@ -100,6 +101,7 @@ import {
 } from './bitterness';
 import { foldSeminarSpite, type SeminarSpiteIncident } from './spite';
 import { foldSeminarGuilt, type SeminarGuiltIncident } from './guilt';
+import { foldEnvy, type EnvyIncident } from './envy';
 import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
@@ -146,6 +148,7 @@ export interface SeminarCommanderResult {
   readonly bitterness: readonly BitternessIncident[];
   readonly spite: readonly SeminarSpiteIncident[];
   readonly guilt: readonly SeminarGuiltIncident[];
+  readonly envy: readonly EnvyIncident[];
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -730,6 +733,10 @@ export async function runSeminar(options: {
   const weeks: SeminarWeekResult[] = [];
   const gratitudeWeeks: GratitudeWeek[] = [];
   const draftCycles: DraftEconomyCycleObservation[] = [];
+  const envyCycles: {
+    readonly cycle: number;
+    readonly settlements: readonly DraftSettlement[];
+  }[] = [];
   const standingSeries: DraftStandingSeriesPoint[] = [];
   const counselCorrelationPairs: {
     leader: string;
@@ -889,6 +896,7 @@ export async function runSeminar(options: {
         standingSeries.push(...drafted.standingSeries);
         weekDraftSelections = drafted.counselSelections;
         cohortObservation = drafted.cohortHistory;
+        envyCycles.push({ cycle: week, settlements: drafted.settlements });
       }
       previousPurses = draftPurses;
       draftCycles.push(draftObservation);
@@ -1031,6 +1039,7 @@ export async function runSeminar(options: {
   const guiltByOwner = foldSeminarGuilt(
     weeks.map((week) => ({ week: week.week, records: week.records })),
   );
+  const envyByOwner = foldEnvy(envyCycles);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -1045,6 +1054,7 @@ export async function runSeminar(options: {
       bitterness: bitternessByOwner[commander.id] ?? [],
       spite: spiteByOwner[commander.id] ?? [],
       guilt: guiltByOwner[commander.id] ?? [],
+      envy: envyByOwner[commander.id] ?? [],
     };
   });
   const standings = standingsFor(
@@ -1107,6 +1117,7 @@ export function seminarPayload(result: SeminarResult): string {
         bitterness,
         spite,
         guilt,
+        envy,
       } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
@@ -1122,6 +1133,7 @@ export function seminarPayload(result: SeminarResult): string {
       const hasBitterness = bitterness.length > 0;
       const hasSpite = spite.length > 0;
       const hasGuilt = guilt.length > 0;
+      const hasEnvy = envy.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
@@ -1130,6 +1142,7 @@ export function seminarPayload(result: SeminarResult): string {
         bitterness: _bitterness,
         spite: _spite,
         guilt: _guilt,
+        envy: _envy,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
@@ -1139,6 +1152,7 @@ export function seminarPayload(result: SeminarResult): string {
       void _bitterness;
       void _spite;
       void _guilt;
+      void _envy;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
@@ -1148,6 +1162,7 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasBitterness ? { bitterness } : {}),
         ...(hasSpite ? { spite } : {}),
         ...(hasGuilt ? { guilt } : {}),
+        ...(hasEnvy ? { envy } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1243,6 +1258,9 @@ export function seminarSummary(result: SeminarResult): string {
       lines.push(
         `${entry.commander.id} guilt: incidents=${entry.guilt.length}`,
       );
+    }
+    if (entry.envy.length > 0) {
+      lines.push(`${entry.commander.id} envy: incidents=${entry.envy.length}`);
     }
   }
   return lines.join('\n');
