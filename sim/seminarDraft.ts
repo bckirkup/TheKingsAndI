@@ -294,17 +294,26 @@ export function publicLotBasePrice(
   candidate: SquadMember,
   config: SeminarConfig,
 ): number {
-  const rolePrice =
-    (publicRoleValue(candidate.originRole) *
-      Math.trunc(config.DRAFT_LOT_ROLE_WEIGHT_PERMILLE)) /
-    1000;
+  const rolePrice = roleExpectationPrice(candidate.originRole, config);
   const servicePrice =
     (publicServiceValue(candidate.service) *
       Math.trunc(config.DRAFT_LOT_SERVICE_WEIGHT_PERMILLE)) /
     1000;
+  return Math.max(0, Math.trunc(rolePrice + servicePrice));
+}
+
+export function roleExpectationPrice(
+  role: PieceRole,
+  config: SeminarConfig,
+): number {
   return Math.max(
     0,
-    Math.trunc(config.DRAFT_LOT_BASE_PRICE + rolePrice + servicePrice),
+    Math.trunc(
+      config.DRAFT_LOT_BASE_PRICE +
+        (publicRoleValue(role) *
+          Math.trunc(config.DRAFT_LOT_ROLE_WEIGHT_PERMILLE)) /
+          1000,
+    ),
   );
 }
 
