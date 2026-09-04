@@ -2498,12 +2498,12 @@ lost-last-loved-one isolation ADR 0071 gestured at, a candidate stay-side
 desertion term. None opens work until an owner ruling picks one up. Located
 in ADR 0078; nothing wired.
 
-### D218 ❓ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
-The owner has said the game plays and the seminar survives. ADR 0079 proposes
-reading that as passed for the act-one single-player campaign and the seminar
-harness, and **not** passed for the draft, purse, ransom, honours, and
-between-cycle market, whose magnitudes ADR 0061 steps 3–7 are still moving.
-No GUI may render a knob that chain is still searching. Owner ruling owed.
+### D218 ✅ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
+**Answered 2026-09-04 (owner): the ADR 0079 proposal is accepted.** The gate
+is passed for the act-one single-player campaign and the seminar harness, and
+**not** passed for the draft, purse, ransom, honours, and between-cycle
+market, whose magnitudes ADR 0061 steps 3–7 are still moving. No GUI may
+render a knob that chain is still searching.
 
 ### D219 ❓ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0079)
 ADR 0079 §1 proposes that the interactive match path write ADR 0062
@@ -2518,13 +2518,17 @@ one-shot export of a file the participant can read first would be the consumer
 build's only network call. Whether that is inside ADR 0004's "no backend" is
 the owner's to rule.
 
-### D221 ❓ Is a model facilitator inside or outside ADR 0004? (ADR 0079)
-ADR 0028 D82 makes the facilitator a leader the instrument measures. A model
-facilitator would be an ADR 0062 agent over facilitator decision kinds
-(`pair`, `intervene`, `bench`, `feed`, `debrief`) plus debrief prose. ADR 0079
-assumes it is a host-side, API-keyed, opt-in tool outside the shipped game,
-with indices in and prose out, judged by the same facilitator audit as a
-human; it may not ship while the **unaccountable host** detector fires.
+### D221 ✅ Is a model facilitator inside or outside ADR 0004? (ADR 0079)
+**Answered 2026-09-04 (owner): outside.** The model facilitator is a
+*stand-in* — a fallback when no human facilitator is available — and as such
+sits outside ADR 0004's "no runtime LLM" rule: a host-side, API-keyed, opt-in
+tool outside the shipped game, with indices in and prose out. ADR 0028 D82
+makes the facilitator a leader the instrument measures, so the model
+facilitator is an ADR 0062 agent over facilitator decision kinds (`pair`,
+`intervene`, `bench`, `feed`, `debrief`) plus debrief prose, judged by the
+same facilitator audit as a human; it may not ship while the
+**unaccountable host** detector fires. The shipped game itself remains free of
+runtime LLMs.
 
 ### D222 ❓ What is disengagement, measurably? (ADR 0079)
 The bored and disengaged personas cannot be scored until `disengage` has a

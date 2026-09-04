@@ -1,8 +1,10 @@
 # ADR 0079 — Three trials before anyone loves it: the surface, the stranger, and the room
 
-- **Status:** Proposed (2026-09-04). A plan, in the manner of ADR 0061: it
-  resolves no decision and says in what order the ones it opens come due. It
-  opens **D218–D223**.
+- **Status:** Accepted (2026-09-04). A plan, in the manner of ADR 0061: it
+  says in what order the decisions it opens come due. It opens **D218–D223**;
+  the owner ruled **D218** (gate passed for act one and the seminar harness
+  only) and **D221** (the model facilitator is a stand-in fallback outside
+  ADR 0004) on 2026-09-04. D219, D220, D222, D223 remain open.
 - **Scope:** Everything between "the game plays and the seminar survives" and
   "someone who is not us loves it": the GUI, the model players, the human
   playtest, and the facilitator, human and model.
@@ -172,18 +174,19 @@ person should be scheduled before the instrument that will read what they did.
 
 ## Open decisions
 
-- **D218** — Is the ADR 0061 step-7 gate passed, and for which surfaces? This
-  ADR proposes: passed for the act-one campaign and the seminar harness; not
-  passed for the draft, purse, ransom, honours, and market.
+- **D218** ✅ — Is the ADR 0061 step-7 gate passed, and for which surfaces?
+  **Ruled 2026-09-04 (owner):** passed for the act-one campaign and the
+  seminar harness; not passed for the draft, purse, ransom, honours, and market.
 - **D219** — Does the GUI become a journal writer, and may the screen show
   anything not derivable from the `Observation`? The relationship inspector
   today does.
 - **D220** — May a consented playtest upload a journal — the consumer build's
   first and only network call — without breaching ADR 0004's "no backend"?
-- **D221** — Is a model facilitator inside ADR 0004 (no runtime LLM in the
-  shipped game) or outside it (a host-side, API-keyed, opt-in tool whose prose
-  is presentation and whose decisions are journal indices)? The plan assumes
-  outside, and that the human facilitator's audit is its pass criterion.
+- **D221** ✅ — Is a model facilitator inside ADR 0004 (no runtime LLM in the
+  shipped game) or outside it? **Ruled 2026-09-04 (owner): outside** — a
+  stand-in fallback for when no human facilitator is available; a host-side,
+  API-keyed, opt-in tool whose prose is presentation and whose decisions are
+  journal indices. The human facilitator's audit is its pass criterion.
 - **D222** — What is disengagement, measurably? A `disengage` entry, a latency
   threshold, an abandonment, or a run of fallback-to-scripted decisions
   (ADR 0062 §2)? The bored persona cannot be scored until this is answered.
