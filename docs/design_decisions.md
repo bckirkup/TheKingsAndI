@@ -2437,12 +2437,14 @@ thresholds, and whether spite only *names* or also tilts the refusal timing
 (a play change requiring its own sweep). Located in ADR 0078; nothing wired.
 
 ### D210 ⬜ Gratitude: what does "he paid for me" create? (ADR 0078)
-**Open.** A debt-object (object, magnitude, holder) — hope's sibling — formed
+**Partly wired (recognition).** A debt-object (object, magnitude, holder) — hope's sibling — formed
 by a commander-paid or split ransom and by peer-saving costly signals;
 negated by the self-sprung's "I owe him nothing"; discharged by obedience
 against own utility; voided by betrayal. Open: recognition-only versus a
 refusal-threshold credit, the gold-to-obedience exchange rate, and whether a
-voided debt converts to bitterness. Located in ADR 0078; nothing wired.
+voided debt converts to bitterness. The terminal fold now recognizes ransom
+formation, courage honor, betrayal-class void, and owed debts; costly-signal
+recognition and pricing remain open.
 
 ### D211 🟡 Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
 **Wired inert.** `griefLoad` is an integer, clamped carrier with deterministic
@@ -2496,6 +2498,78 @@ carrier); awe as the landing place for the never-consumed
 lost-last-loved-one isolation ADR 0071 gestured at, a candidate stay-side
 desertion term. None opens work until an owner ruling picks one up. Located
 in ADR 0078; nothing wired.
+
+### D218 ✅ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
+**Answered 2026-09-04 (owner): the ADR 0079 proposal is accepted.** The gate
+is passed for the act-one single-player campaign and the seminar harness, and
+**not** passed for the draft, purse, ransom, honours, and between-cycle
+market, whose magnitudes ADR 0061 steps 3–7 are still moving. No GUI may
+render a knob that chain is still searching.
+
+### D219 ✅ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0079)
+**Answered 2026-09-04 (owner): yes, and no.** "The GUI is just a visual layer
+on what already exists." The interactive match path writes ADR 0062
+`JournalEntry`s through the same seam the harness uses — build the
+`Observation`, enumerate the options, a click is `chosen = i` — and `ui/`
+reads only the observation projection, so human and model journals are
+comparable under ADR 0063 §3. The screen may show nothing not derivable from
+the `Observation`. The relationship inspector reads `PieceState` directly
+today and must be moved onto the projection. Detector: **the glass screen**.
+**Not wired.**
+
+### D220 ⬜ May a consented playtest upload a journal? (ADR 0079)
+**Closed as moot 2026-09-04 (owner).** The paid ninety-minute stranger
+playtest that needed the upload falls away: "sending files back and forth
+seems pointless; running less than a week seems pointless." The human test is
+the pilot intensive itself, in a room, where journals travel from a seat to
+the ADR 0028 local world host over the LAN and no further. The consumer build
+makes no network call and ADR 0004's "no backend" is untouched. In its place
+the ADR 0079 step-2 model playtest becomes a **hard gate**: no cohort is
+seated until every persona (honest, merchant, vicious, bored, disengaged) is
+contained in the ADR 0063 envelope or its escape is a named, understood
+finding — the bots are the only thing standing between the harness and twelve
+potentially angry people.
+
+### D221 ✅ Is a model facilitator inside or outside ADR 0004? (ADR 0079)
+**Answered 2026-09-04 (owner): outside.** The model facilitator is a
+*stand-in* — a fallback when no human facilitator is available — and as such
+sits outside ADR 0004's "no runtime LLM" rule: a host-side, API-keyed, opt-in
+tool outside the shipped game, with indices in and prose out. ADR 0028 D82
+makes the facilitator a leader the instrument measures, so the model
+facilitator is an ADR 0062 agent over facilitator decision kinds (`pair`,
+`intervene`, `bench`, `feed`, `debrief`) plus debrief prose, judged by the
+same facilitator audit as a human; it may not ship while the
+**unaccountable host** detector fires. The shipped game itself remains free of
+runtime LLMs.
+
+### D222 ✅ What is disengagement, measurably? (ADR 0079)
+**Answered 2026-09-04 (owner): "disengagement is a near random choice of
+moves."** Disengagement is a *behavioural* property of the journal, not a
+telemetry one: over a window of decisions, the decider's chosen indices are
+statistically indistinguishable from a uniform draw over the option set. It
+is computable from the journal alone — each `JournalEntry` carries the full
+`options` list and the harness engine can score every option, so a decider's
+picks have a rank distribution that can be tested against the uniform
+baseline (window length, test, and threshold are the detector's parameters
+and get a sensitivity probe). Consequences: an explicit `disengage` entry,
+decision latency, and abandonment are *correlates* recorded as telemetry, not
+the definition; the bored and disengaged personas are scored by how far their
+rank distribution sits from uniform, and the honest styles must sit
+measurably far from it or the axis is still two points. A scripted
+uniform-random NPC is the cheap floor of the emotional axis and belongs in
+the coverage set (ADR 0063 §1).
+
+### D223 ✅ Which content packs ship, and in what order? (ADR 0079)
+**Answered 2026-09-04 (owner): the four packs are military, medieval,
+corporate, classic/purist**, in that order. This replaces the M7.2 track
+names (indie / exec-lab / purist / academic) as the pack set: the packs are
+named for their *world*, not their audience, and any onboarding track picks
+a pack rather than owning one. Each pack is an ADR 0023 `ContentPack` —
+`themeTokens`, `nounMap`, `dialogue`, `epilogues` — bound to the same
+situation keys; the classic/purist pack is the chess nouns unrenamed and is
+the pack the ADR 0079 "pretty leak" detector diffs the others against. The
+step-2 persona sweep runs on every shipped pack (the "pretty leak" detector);
+the pilot cohort runs on corporate.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

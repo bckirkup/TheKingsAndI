@@ -77,11 +77,16 @@ import {
   type ExchangeHopeOwnerResult,
 } from './exchangeHope';
 import {
+  EMPTY_GRATITUDE,
+  foldGratitude,
+  type GratitudeOwnerResult,
+  type GratitudeWeek,
+} from './gratitude';
+import {
   EMPTY_SEMINAR_GRIEF,
   foldSeminarGrief,
   type SeminarGriefOwnerResult,
 } from './grief';
-import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -121,6 +126,7 @@ export interface SeminarCommanderResult {
   readonly commendations: PlayerCommendationSet;
   readonly judgementSeat: CampaignDebrief['judgementSeat'];
   readonly exchangeHope: ExchangeHopeOwnerResult;
+  readonly gratitude: GratitudeOwnerResult;
   readonly grief: SeminarGriefOwnerResult;
 }
 
@@ -703,6 +709,7 @@ export async function runSeminar(options: {
     ]),
   );
   const weeks: SeminarWeekResult[] = [];
+  const gratitudeWeeks: GratitudeWeek[] = [];
   const draftCycles: DraftEconomyCycleObservation[] = [];
   const standingSeries: DraftStandingSeriesPoint[] = [];
   const counselCorrelationPairs: {
@@ -782,6 +789,7 @@ export async function runSeminar(options: {
         priorities.map((entry) => [entry.commanderId, entry.purse]),
       );
       let ransomLedger: readonly RansomLedgerEntry[] = [];
+      const gratitudeWeekFirstMatch = matchIndex + 1;
       if (config.CAPTIVITY_HOLD_ENABLED) {
         const trueStartingPurses = new Map<string, number>();
         currentPools = new Map(
@@ -955,11 +963,17 @@ export async function runSeminar(options: {
           ransom: ransomLedger,
         }),
       );
+      gratitudeWeeks.push({
+        week,
+        firstMatch: gratitudeWeekFirstMatch,
+        ransomLedger,
+      });
     }
   } finally {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');
   }
   const exchangeHopeByOwner = foldExchangeHope(weeks, currentPools);
+  const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const griefByOwner = foldSeminarGrief(weeks);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
@@ -969,6 +983,7 @@ export async function runSeminar(options: {
       commendations: foldPlayerCommendations(records),
       judgementSeat: foldJudgementSeat(records),
       exchangeHope: exchangeHopeByOwner[commander.id] ?? EMPTY_EXCHANGE_HOPE,
+      gratitude: gratitudeByOwner[commander.id] ?? EMPTY_GRATITUDE,
       grief: griefByOwner[commander.id] ?? EMPTY_SEMINAR_GRIEF,
     };
   });
@@ -1024,24 +1039,59 @@ export function seminarPayload(result: SeminarResult): string {
     seed: result.seed,
     config,
     commanders: result.commanders.map((commander) => {
-      const { exchangeHope } = commander;
-      const withoutHope =
-        exchangeHope.realized.length === 0 &&
-        exchangeHope.selfSprung.length === 0 &&
-        exchangeHope.extinguished.length === 0
-          ? (() => {
-              const { exchangeHope: _exchangeHope, ...rest } = commander;
-              void _exchangeHope;
-              return rest;
-            })()
-          : commander;
-      const { grief } = withoutHope;
-      if (grief.incidents.length === 0) {
-        const { grief: _grief, ...withoutGrief } = withoutHope;
+      const { exchangeHope, gratitude, grief } = commander;
+      const hasGratitude =
+        gratitude.formed.length > 0 ||
+        gratitude.honored.length > 0 ||
+        gratitude.voided.length > 0 ||
+        gratitude.owed.length > 0;
+      const hasGrief = grief.incidents.length > 0;
+      const hasExchangeHope =
+        exchangeHope.realized.length > 0 ||
+        exchangeHope.selfSprung.length > 0 ||
+        exchangeHope.extinguished.length > 0;
+      if (!hasExchangeHope && !hasGratitude && !hasGrief) {
+        const {
+          exchangeHope: _exchangeHope,
+          gratitude: _gratitude,
+          grief: _grief,
+          ...withoutTerminalReadings
+        } = commander;
+        void _exchangeHope;
+        void _gratitude;
+        void _grief;
+        return withoutTerminalReadings;
+      }
+      if (!hasExchangeHope && !hasGratitude) {
+        const {
+          exchangeHope: _exchangeHope,
+          gratitude: _gratitude,
+          ...withoutExchangeAndGratitude
+        } = commander;
+        void _exchangeHope;
+        void _gratitude;
+        return hasGrief
+          ? withoutExchangeAndGratitude
+          : (() => {
+              const { grief: _grief, ...withoutGrief } =
+                withoutExchangeAndGratitude;
+              void _grief;
+              return withoutGrief;
+            })();
+      }
+      if (!hasExchangeHope) {
+        const { exchangeHope: _exchangeHope, ...withoutExchangeHope } =
+          commander;
+        void _exchangeHope;
+        if (hasGrief) return withoutExchangeHope;
+        const { grief: _grief, ...withoutGrief } = withoutExchangeHope;
         void _grief;
         return withoutGrief;
       }
-      return withoutHope;
+      if (hasGrief) return commander;
+      const { grief: _grief, ...withoutGrief } = commander;
+      void _grief;
+      return withoutGrief;
     }),
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
@@ -1100,6 +1150,16 @@ export function seminarSummary(result: SeminarResult): string {
       lines.push(
         `${entry.commander.id} exchange-hope: realized=${realized} ` +
           `self=${selfSprung} extinguished=${extinguished}`,
+      );
+    }
+    const formed = entry.gratitude.formed.length;
+    const honored = entry.gratitude.honored.length;
+    const voided = entry.gratitude.voided.length;
+    const owed = entry.gratitude.owed.length;
+    if (formed + honored + voided + owed > 0) {
+      lines.push(
+        `${entry.commander.id} gratitude: formed=${formed} ` +
+          `honored=${honored} voided=${voided} owed=${owed}`,
       );
     }
     if (entry.grief.incidents.length > 0) {
