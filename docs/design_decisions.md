@@ -2534,11 +2534,22 @@ same facilitator audit as a human; it may not ship while the
 **unaccountable host** detector fires. The shipped game itself remains free of
 runtime LLMs.
 
-### D222 ❓ What is disengagement, measurably? (ADR 0079)
-The bored and disengaged personas cannot be scored until `disengage` has a
-definition: a journal entry, a latency threshold, an abandonment, or a run of
-fallback-to-scripted decisions (ADR 0062 §2). Until answered the emotional
-axis stays two points and no containment number may be quoted.
+### D222 ✅ What is disengagement, measurably? (ADR 0079)
+**Answered 2026-09-04 (owner): "disengagement is a near random choice of
+moves."** Disengagement is a *behavioural* property of the journal, not a
+telemetry one: over a window of decisions, the decider's chosen indices are
+statistically indistinguishable from a uniform draw over the option set. It
+is computable from the journal alone — each `JournalEntry` carries the full
+`options` list and the harness engine can score every option, so a decider's
+picks have a rank distribution that can be tested against the uniform
+baseline (window length, test, and threshold are the detector's parameters
+and get a sensitivity probe). Consequences: an explicit `disengage` entry,
+decision latency, and abandonment are *correlates* recorded as telemetry, not
+the definition; the bored and disengaged personas are scored by how far their
+rank distribution sits from uniform, and the honest styles must sit
+measurably far from it or the axis is still two points. A scripted
+uniform-random NPC is the cheap floor of the emotional axis and belongs in
+the coverage set (ADR 0063 §1).
 
 ### D223 ❓ Which content packs ship first? (ADR 0079)
 The stranger playtest wants the indie pack; the pilot cohort wants exec-lab;

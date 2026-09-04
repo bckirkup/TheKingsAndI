@@ -5,7 +5,8 @@
   the owner ruled **D218** (gate passed for act one and the seminar harness
   only) and **D221** (the model facilitator is a stand-in fallback outside
   ADR 0004) and **D219** (the GUI is a visual layer over the existing journal
-  seam) on 2026-09-04. D220, D222, D223 remain open.
+  seam) and **D222** (disengagement is near-random choice, measured from the
+  journal) on 2026-09-04. D220 and D223 remain open.
 - **Scope:** Everything between "the game plays and the seminar survives" and
   "someone who is not us loves it": the GUI, the model players, the human
   playtest, and the facilitator, human and model.
@@ -189,9 +190,13 @@ person should be scheduled before the instrument that will read what they did.
   stand-in fallback for when no human facilitator is available; a host-side,
   API-keyed, opt-in tool whose prose is presentation and whose decisions are
   journal indices. The human facilitator's audit is its pass criterion.
-- **D222** — What is disengagement, measurably? A `disengage` entry, a latency
-  threshold, an abandonment, or a run of fallback-to-scripted decisions
-  (ADR 0062 §2)? The bored persona cannot be scored until this is answered.
+- **D222** ✅ — What is disengagement, measurably? **Ruled 2026-09-04
+  (owner): "a near random choice of moves."** A decider is disengaged over a
+  window when its chosen indices are indistinguishable from a uniform draw
+  over the option set; computable from the journal alone, since every option
+  is scored. Latency and abandonment are telemetry correlates, not the
+  definition. A uniform-random scripted NPC becomes the floor of the
+  emotional axis.
 - **D223** — Which packs ship first, and does the exec-lab pack precede the
   indie one? The stranger playtest wants indie; the pilot cohort wants exec-lab;
   both are step-4 inputs.
