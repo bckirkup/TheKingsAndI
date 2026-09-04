@@ -101,6 +101,7 @@ export {
   type ShameOptions,
 } from './shame';
 export { panicOnsetForPly } from './panic';
+export { reliefEventsForPly } from './relief';
 export {
   applyCaptureInjury,
   applyGrace,

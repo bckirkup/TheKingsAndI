@@ -21,6 +21,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   panicOnsetForPly,
+  reliefEventsForPly,
   applyOverride,
   justifiedRefusalObviousness,
   shouldDesert,
@@ -1030,9 +1031,10 @@ export class MatchSession {
         evaluation.P_captured,
       ]),
     );
+    const previousExposure = this.dreadExposureByPiece;
     const trauma = applyMoveTrauma(
       this.roster,
-      this.dreadExposureByPiece,
+      previousExposure,
       captureRiskByPiece,
       undefined,
       this.ply,
@@ -1047,6 +1049,13 @@ export class MatchSession {
       kingDanger,
     });
     if (panic !== undefined) this.events.push(panic);
+    this.events.push(
+      ...reliefEventsForPly({
+        ply: this.ply,
+        previousExposure,
+        captureRiskByPiece,
+      }),
+    );
 
     if (captured) {
       // Opponent captured on prior ply is tracked when we lose a piece; here

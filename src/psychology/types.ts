@@ -311,6 +311,16 @@ export type MatchEvent =
       readonly fielded: number;
     }
   | {
+      /** Terminal-only naming: the feared line survived (D217). */
+      readonly t: 'RELIEF';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      /** Prior-ply capture risk in permille. */
+      readonly priorRiskPermille: number;
+      /** Current capture risk in permille. */
+      readonly riskPermille: number;
+    }
+  | {
       readonly t: 'DESERTION';
       readonly ply: number;
       readonly pieceId: PieceId;

@@ -27,6 +27,7 @@ import {
   justifiedRefusalObviousness,
   normalizePieceState,
   panicOnsetForPly,
+  reliefEventsForPly,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MoveDecisionOutcome,
@@ -445,6 +446,13 @@ function applyPlayerMoveConsequences(input: {
     kingDanger,
   });
   if (panic !== undefined) events.push(panic);
+  events.push(
+    ...reliefEventsForPly({
+      ply,
+      previousExposure: dreadExposureByPiece,
+      captureRiskByPiece,
+    }),
+  );
 
   return {
     roster,

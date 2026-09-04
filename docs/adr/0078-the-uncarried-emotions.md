@@ -3,11 +3,10 @@
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
   world for emotions we haven't figured in. … Locate them all."); **D208,
   D209, D211, D212, D213, and D214 are wired inert, D210 is partly wired for
-  recognition, D215 is partly wired for price appraisal, and D216 is partly
-  wired for recognition** — no opened
+  recognition, D215 is partly wired for price appraisal, D216 is partly wired
+  for recognition, and D217 is partly wired for recognition** — no opened
   emotion is priced or enabled by default
-- **Opens:** **D210** (gratitude), **D217** (relief, awe,
-  and loneliness — located, deferred together)
+- **Opens:** **D210** (gratitude)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
   always, exposed nowhere in play, named once at the closing debrief), ADR
   0071 (captivity and the ransom — the freshest seams below), ADR 0065 (the
@@ -344,19 +343,29 @@ do contagion topology, the quiet-quit double-charge guard, and whether a UI
 should dramatize panic. The carrier is the play change owed the exploit-tier
 re-run.
 
-### D217 — Relief, awe, loneliness (located; deferred together)
+### D217 — Relief, awe, loneliness (partly wired, 2026-09-05 addendum)
 
-**Relief** — the feared line survived: derivable per ply as prior
-`P_captured` against outcome; if it ever lifts anything it inherits grace's
-constraints (ADR 0072: unearned, no leader input) — the morning lift may
-simply *be* relief's carrier at the boundary. **Awe** — hero-worship of a
-peer: `HEROISM_NOMINATION` is computed and lands nowhere; its natural
-consumer is a dyadic-affinity rise toward the hero from witnesses, plus a
-debrief name. **Loneliness** — the last-loved-one-gone isolation ADR 0071
-gestured at: derivable as the sum of lost above-threshold affinities with no
-survivors above the line; a candidate stay-side term in the desertion
-arithmetic beside standing. All three are located, none opens its own work
-until an owner ruling picks one up.
+**Relief** — the feared line survived: a `RELIEF` event names a piece whose
+prior own-ply capture risk was at or above `RELIEF_CAPTURE_RISK_PERMILLE` and
+then fell below it. **Awe** — a seminar fold names a hero when
+`HEROISM_NOMINATION` reaches `AWE_NOMINATION_FLOOR` in one match, reporting
+the fielded witnesses. **Loneliness** — a seminar fold names a survivor who
+lost above-threshold-affinity peers and has no surviving peer at or above the
+same `LONELINESS_AFFINITY_THRESHOLD`. All three are terminal seminar
+recognitions only, with zero sentinels and no state change, PRNG draw, or
+seeded-payload change at defaults.
+
+#### D217 addendum (2026-09-05)
+
+The three recognitions are wired inert and debrief-only. Relief is emitted per
+ply when the prior own-ply capture-risk reading crosses down through
+`RELIEF_CAPTURE_RISK_PERMILLE`; awe folds existing heroism nominations at
+`AWE_NOMINATION_FLOOR`; loneliness folds departed peers and survivor affinity
+at `LONELINESS_AFFINITY_THRESHOLD`. Each knob is a zero sentinel, and each
+reading is exposed only in the seminar terminal debrief. Relief as a lift
+inherits grace's constraints — the morning lift may be its carrier. Awe's
+open carrier is a dyadic-affinity rise toward the hero. Loneliness' open
+carrier is a stay-side desertion term. None is live state.
 
 ## What this ADR does not do
 

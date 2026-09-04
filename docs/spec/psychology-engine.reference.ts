@@ -163,6 +163,12 @@ export const ENGINE_CONFIG = {
   PANIC_ROSTER_FLOOR: 0,
   /** D216 permille capture risk at which a piece reads dread for panic purposes. */
   PANIC_CAPTURE_RISK_PERMILLE: 750,
+  /** D217 permille capture risk a piece must have read on its prior own ply, then fallen below, to be named relieved; zero disables. */
+  RELIEF_CAPTURE_RISK_PERMILLE: 0,
+  /** D217 heroism nominations a piece must collect in one match to be named awesome to its witnesses; zero disables. */
+  AWE_NOMINATION_FLOOR: 0,
+  /** D217 affinity a survivor must have held toward a departed peer, with no surviving peer at or above it, to be named lonely; zero disables. */
+  LONELINESS_AFFINITY_THRESHOLD: 0,
 };
 
 // ============================================================================
