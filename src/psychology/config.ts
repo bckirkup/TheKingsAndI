@@ -106,6 +106,12 @@ export const ENGINE_CONFIG = {
   ABIL_VINDICATION_GAIN_SCALE: 20,
   /** Match-end ability credit per contested win, disabled by default. */
   ABIL_OUTCOME_VINDICATION_SCALE: 0,
+  /** Nonnegative permille amplification per witness; zero keeps D212 inert. */
+  SHAME_PER_WITNESS_PERMILLE: 0,
+  /** Nonnegative permille standing scale; zero keeps D212 inert. */
+  SHAME_STANDING_PERMILLE: 0,
+  /** Shame amplification cap, clamped to 0..1000 permille (D212). */
+  SHAME_CAP_PERMILLE: 1_000,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

@@ -88,6 +88,11 @@ import {
   type SeminarGriefOwnerResult,
 } from './grief';
 import {
+  EMPTY_SEMINAR_SHAME,
+  foldSeminarShame,
+  type SeminarShameOwnerResult,
+} from './shame';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -129,6 +134,7 @@ export interface SeminarCommanderResult {
   readonly exchangeHope: ExchangeHopeOwnerResult;
   readonly gratitude: GratitudeOwnerResult;
   readonly grief: SeminarGriefOwnerResult;
+  readonly shame: SeminarShameOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -976,6 +982,7 @@ export async function runSeminar(options: {
   const exchangeHopeByOwner = foldExchangeHope(weeks, currentPools);
   const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const griefByOwner = foldSeminarGrief(weeks);
+  const shameByOwner = foldSeminarShame(weeks);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -986,6 +993,7 @@ export async function runSeminar(options: {
       exchangeHope: exchangeHopeByOwner[commander.id] ?? EMPTY_EXCHANGE_HOPE,
       gratitude: gratitudeByOwner[commander.id] ?? EMPTY_GRATITUDE,
       grief: griefByOwner[commander.id] ?? EMPTY_SEMINAR_GRIEF,
+      shame: shameByOwner[commander.id] ?? EMPTY_SEMINAR_SHAME,
     };
   });
   const standings = standingsFor(
@@ -1040,59 +1048,36 @@ export function seminarPayload(result: SeminarResult): string {
     seed: result.seed,
     config,
     commanders: result.commanders.map((commander) => {
-      const { exchangeHope, gratitude, grief } = commander;
+      const { exchangeHope, gratitude, grief, shame } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
         gratitude.honored.length > 0 ||
         gratitude.voided.length > 0 ||
         gratitude.owed.length > 0;
       const hasGrief = grief.incidents.length > 0;
+      const hasShame = shame.incidents.length > 0;
       const hasExchangeHope =
         exchangeHope.realized.length > 0 ||
         exchangeHope.selfSprung.length > 0 ||
         exchangeHope.extinguished.length > 0;
-      if (!hasExchangeHope && !hasGratitude && !hasGrief) {
-        const {
-          exchangeHope: _exchangeHope,
-          gratitude: _gratitude,
-          grief: _grief,
-          ...withoutTerminalReadings
-        } = commander;
-        void _exchangeHope;
-        void _gratitude;
-        void _grief;
-        return withoutTerminalReadings;
-      }
-      if (!hasExchangeHope && !hasGratitude) {
-        const {
-          exchangeHope: _exchangeHope,
-          gratitude: _gratitude,
-          ...withoutExchangeAndGratitude
-        } = commander;
-        void _exchangeHope;
-        void _gratitude;
-        return hasGrief
-          ? withoutExchangeAndGratitude
-          : (() => {
-              const { grief: _grief, ...withoutGrief } =
-                withoutExchangeAndGratitude;
-              void _grief;
-              return withoutGrief;
-            })();
-      }
-      if (!hasExchangeHope) {
-        const { exchangeHope: _exchangeHope, ...withoutExchangeHope } =
-          commander;
-        void _exchangeHope;
-        if (hasGrief) return withoutExchangeHope;
-        const { grief: _grief, ...withoutGrief } = withoutExchangeHope;
-        void _grief;
-        return withoutGrief;
-      }
-      if (hasGrief) return commander;
-      const { grief: _grief, ...withoutGrief } = commander;
+      const {
+        exchangeHope: _exchangeHope,
+        gratitude: _gratitude,
+        grief: _grief,
+        shame: _shame,
+        ...withoutTerminalReadings
+      } = commander;
+      void _exchangeHope;
+      void _gratitude;
       void _grief;
-      return withoutGrief;
+      void _shame;
+      return {
+        ...withoutTerminalReadings,
+        ...(hasExchangeHope ? { exchangeHope } : {}),
+        ...(hasGratitude ? { gratitude } : {}),
+        ...(hasGrief ? { grief } : {}),
+        ...(hasShame ? { shame } : {}),
+      };
     }),
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
@@ -1166,6 +1151,11 @@ export function seminarSummary(result: SeminarResult): string {
     if (entry.grief.incidents.length > 0) {
       lines.push(
         `${entry.commander.id} grief: incidents=${entry.grief.incidents.length}`,
+      );
+    }
+    if (entry.shame.incidents.length > 0) {
+      lines.push(
+        `${entry.commander.id} shame: incidents=${entry.shame.incidents.length}`,
       );
     }
   }

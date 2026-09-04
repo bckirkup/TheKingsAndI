@@ -1,9 +1,8 @@
 # ADR 0078 — The uncarried emotions: a location survey
 
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
-  world for emotions we haven't figured in. … Locate them all."); **every
-  ruling opened here is open** — nothing in this ADR wires, prices, or enables
-  anything
+  world for emotions we haven't figured in. … Locate them all."); D210 is
+  partly wired and D212 is wired inert; the remaining entries are open
 - **Opens:** **D208** (bitterness), **D209** (spite), **D210** (gratitude),
   **D211** (grief), **D212** (shame), **D213** (guilt), **D214** (envy),
   **D215** (pride, refining D182), **D216** (panic), **D217** (relief, awe,
@@ -157,7 +156,7 @@ engagement suppression curve, and whether grief transfers on generation
 the mourner, but the seat's replacement arriving into a grieving room is a
 scene the narration layer will want).
 
-### D212 — Shame (open)
+### D212 — Shame (wired inert, 2026-09-04)
 
 **What it is.** Humiliation is trust loss *scaled by who watched*. Today an
 override before twelve witnesses charges the twelve (ADR 0070) and the
@@ -172,10 +171,16 @@ the pawns she despises is the maximal case). The private confidence channel
 that never happens, which finally gives that channel its kept-confidence
 value. Debrief names the public humiliations.
 
-**Open in D212:** the witness-scaling curve; whether shame also charges
-`leaderAppraisal` among witnesses of the *humiliated* piece's class (the
-pawns watching a pawn shamed); interaction with D208 (public humiliation as
-a bitterness trigger).
+**Addendum (2026-09-04).** D212 is wired inert. An unvindicated override
+reuses ADR 0070's witness enumeration and standing values; shame is
+`min(cap, witnesses × perWitness + trunc(sumStanding × standing / 1000))`,
+and scales only the overridden piece's own trust and benevolence losses by
+`trunc(drop × (1000 + shame) / 1000)`. Private correction has no witnesses
+and therefore no shame. Positive exposures are terminal-only
+`SHAME_EXPOSURE` names in campaign and seminar debriefs; witness charges,
+broadcasts, and existing `PSYCH_DELTA` events are unchanged. The v1 curve is
+linear-with-cap, with magnitudes awaiting a measurement sweep. Whether
+`leaderAppraisal` or bitterness interactions should respond remains open.
 
 ### D213 — Guilt (open)
 
@@ -267,9 +272,9 @@ until an owner ruling picks one up.
 
 ## What this ADR does not do
 
-It wires no pricing and enables no optional behavior by default. D210's
-recognition fold and D211's inert carrier are now implemented as dated
-addenda; the remaining implementation order should follow the seams'
+It prices nothing and enables nothing by default. D210's recognition fold,
+D211's inert carrier, and D212's inert terminal reading are now implemented
+as dated addenda; the remaining implementation order should follow the seams'
 freshness:
 gratitude (D210) completes the ransom arc the captivity work just opened;
 grief (D211) and shame (D212) reuse live machinery; envy (D214) and pride

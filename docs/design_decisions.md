@@ -2453,12 +2453,13 @@ Terminal campaign/seminar folds name carried incidents only; no live surface or
 Leadership Index term exists. Thresholds, magnitudes, and the suppression curve
 remain open for a measurement sweep. Located in ADR 0078.
 
-### D212 ⬜ Shame: does it matter who watched? (ADR 0078)
-**Open.** The overridden piece's own losses scaled by the number and standing
-of witnesses ADR 0070 already enumerates; private correction (the ADR 0065
-channel) as the shame that never happens. Open: the witness-scaling curve,
-class-witness appraisal effects, and the bitterness interaction. Located in
-ADR 0078; nothing wired.
+### D212 ✅ Shame: does it matter who watched? (ADR 0078)
+**Wired inert.** An unvindicated override scales only the overridden piece's
+own trust/benevolence loss by a linear-with-cap witness curve, reusing ADR 0070
+standing and witness enumeration; a private correction has zero shame. A
+terminal-only event names positive exposures in campaign and seminar debriefs.
+The scale knobs default to zero; magnitudes await a measurement sweep.
+`leaderAppraisal` and bitterness interactions remain open.
 
 ### D213 ⬜ Guilt: does the survivor carry what its escape cost? (ADR 0078)
 **Open.** A terminal fold in v1 — losses attributed to the surviving choices

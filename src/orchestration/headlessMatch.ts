@@ -240,6 +240,7 @@ function applyPlayerOverride(
         authorityGain: 0,
       } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
       ...override.witnessEvents,
+      ...(override.shameEvent === undefined ? [] : [override.shameEvent]),
     ],
   };
 }
