@@ -2422,6 +2422,82 @@ fine-grid evidence — a touch more conveyor (11–25/190 ply-≤2 repeats) than
 the measured knee at 500, with ply-1 dismissal preserved for every cruel
 style.
 
+### D208 ⬜ Bitterness: when does grievance stop accepting repair? (ADR 0078)
+**Open.** A per-piece repair discount (default `0`), written when rupture debt
+crosses a threshold at the benevolence floor and thereafter discounting every
+inbound repair, regard, and (per the ruling) morning-lift reach. Open: the
+threshold, the magnitude, whether bitterness itself is ever repairable, and
+the morning-lift interaction. Located in ADR 0078; nothing wired.
+
+### D209 ⬜ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
+**Open.** Courage's dark mirror — a full-effort act against the actor's own
+interest whose larger cost lands on the commander, classified over existing
+MOVE/REFUSAL/DESERTION arithmetic and named at the debrief. Open: the
+thresholds, and whether spite only *names* or also tilts the refusal timing
+(a play change requiring its own sweep). Located in ADR 0078; nothing wired.
+
+### D210 ⬜ Gratitude: what does "he paid for me" create? (ADR 0078)
+**Open.** A debt-object (object, magnitude, holder) — hope's sibling — formed
+by a commander-paid or split ransom and by peer-saving costly signals;
+negated by the self-sprung's "I owe him nothing"; discharged by obedience
+against own utility; voided by betrayal. Open: recognition-only versus a
+refusal-threshold credit, the gold-to-obedience exchange rate, and whether a
+voided debt converts to bitterness. Located in ADR 0078; nothing wired.
+
+### D211 ⬜ Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
+**Open.** A per-piece grief load raised by losing a high-affinity peer,
+suppressing engagement and decaying slowly (a permitted decay — mourning
+ending is the mechanism, with an ADR 0007 note owed); a held captive mourned
+at half weight, lifted by the ransom return. Open: threshold, magnitudes,
+suppression curve, and generation boundary. Located in ADR 0078; nothing
+wired.
+
+### D212 ⬜ Shame: does it matter who watched? (ADR 0078)
+**Open.** The overridden piece's own losses scaled by the number and standing
+of witnesses ADR 0070 already enumerates; private correction (the ADR 0065
+channel) as the shame that never happens. Open: the witness-scaling curve,
+class-witness appraisal effects, and the bitterness interaction. Located in
+ADR 0078; nothing wired.
+
+### D213 ⬜ Guilt: does the survivor carry what its escape cost? (ADR 0078)
+**Open.** A terminal fold in v1 — losses attributed to the surviving choices
+that enabled them (direct links only, per the D201 attribution lesson),
+named at the debrief, never priced without a further ruling. Open: the
+attribution windows and whether a deserter receives its debrief. Located in
+ADR 0078; nothing wired.
+
+### D214 ⬜ Envy: what does a piece feel about another's price? (ADR 0078)
+**Open.** The draft's clearing prices (D183) give envy a denominated object:
+a same-role peer paid more. If priced, envy discounts dyadic affinity toward
+the envied peer — never toward the commander, which is favoritism's channel
+(ADR 0065). Open: what a piece knows of peers' prices, the magnitude, and
+whether envy of the ransomed joins the carrier. Located in ADR 0078; nothing
+wired.
+
+### D215 ⬜ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
+**Open; refines D182.** The ruled-but-unwired self-appraisal against role
+expectation is the pride carrier — raised by vindication, promotion, price,
+and conduct; wounded by overrides, undercuts, and being passed over; the
+hinge into bitterness and spite. Open: everything D182 left open, plus
+whether pride enters the refusal threshold (a play change requiring the
+exploit tier re-run). Located in ADR 0078; nothing wired.
+
+### D216 ⬜ Panic: can a room break by freezing instead of leaving? (ADR 0078)
+**Open.** Acute, shared terror as a synchronized temporary engagement
+collapse through the witness-broadcast machinery, decaying within the match;
+distinct from grief (object) and despair (chronic). Open: whether it is
+worth carrying before a UI dramatizes it, contagion topology, and the
+quiet-quit double-charge guard. Located in ADR 0078; nothing wired.
+
+### D217 ⬜ Relief, awe, loneliness: located together, deferred together (ADR 0078)
+**Open.** Relief derivable from prior `P_captured` against outcome (any lift
+inherits grace's constraints, and the morning lift may already be its
+carrier); awe as the landing place for the never-consumed
+`HEROISM_NOMINATION` (witness affinity toward the hero); loneliness as the
+lost-last-loved-one isolation ADR 0071 gestured at, a candidate stay-side
+desertion term. None opens work until an owner ruling picks one up. Located
+in ADR 0078; nothing wired.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
