@@ -149,6 +149,9 @@ describe('seminar spine', () => {
     expect(payload).not.toContain('"exchangeHope"');
     expect(payload).not.toContain('"gratitude"');
     expect(payload).not.toContain('"panic"');
+    expect(payload).not.toContain('"relief"');
+    expect(payload).not.toContain('"awe"');
+    expect(payload).not.toContain('"loneliness"');
   });
 
   itHeavy('repeats a semester byte-identically for the same seed', async () => {

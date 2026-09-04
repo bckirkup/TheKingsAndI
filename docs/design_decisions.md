@@ -2500,14 +2500,14 @@ synchronized `engagementFactor` carrier, contagion topology, quiet-quit
 double-charge guard, and UI dramatization remain open, with the carrier owed
 the exploit-tier re-run.
 
-### D217 ⬜ Relief, awe, loneliness: located together, deferred together (ADR 0078)
-**Open.** Relief derivable from prior `P_captured` against outcome (any lift
-inherits grace's constraints, and the morning lift may already be its
-carrier); awe as the landing place for the never-consumed
-`HEROISM_NOMINATION` (witness affinity toward the hero); loneliness as the
-lost-last-loved-one isolation ADR 0071 gestured at, a candidate stay-side
-desertion term. None opens work until an owner ruling picks one up. Located
-in ADR 0078; nothing wired.
+### D217 ✅ Relief, awe, loneliness: located together, deferred together (ADR 0078)
+**Partly wired (recognition), inert.** Terminal seminar folds name relief from
+down-crossing prior-ply capture risk, awe from per-match
+`HEROISM_NOMINATION` counts, and loneliness from departed-peer affinity with no
+surviving peer at the threshold. `RELIEF_CAPTURE_RISK_PERMILLE`,
+`AWE_NOMINATION_FLOOR`, and `LONELINESS_AFFINITY_THRESHOLD` are zero sentinels.
+The live relief lift, awe affinity rise, and loneliness stay-side desertion
+term remain open.
 
 ### D218 ✅ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
 **Answered 2026-09-04 (owner): the ADR 0079 proposal is accepted.** The gate

@@ -115,6 +115,21 @@ import {
   type SeminarPanicOwnerResult,
 } from './panic';
 import {
+  EMPTY_SEMINAR_RELIEF,
+  foldSeminarRelief,
+  type SeminarReliefOwnerResult,
+} from './relief';
+import {
+  EMPTY_SEMINAR_AWE,
+  foldSeminarAwe,
+  type SeminarAweOwnerResult,
+} from './awe';
+import {
+  EMPTY_SEMINAR_LONELINESS,
+  foldSeminarLoneliness,
+  type SeminarLonelinessOwnerResult,
+} from './loneliness';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -163,6 +178,9 @@ export interface SeminarCommanderResult {
   readonly envy: readonly EnvyIncident[];
   readonly pride: PrideReading;
   readonly panic: SeminarPanicOwnerResult;
+  readonly relief: SeminarReliefOwnerResult;
+  readonly awe: SeminarAweOwnerResult;
+  readonly loneliness: SeminarLonelinessOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -1056,6 +1074,9 @@ export async function runSeminar(options: {
   const griefByOwner = foldSeminarGrief(weeks);
   const shameByOwner = foldSeminarShame(weeks);
   const panicByOwner = foldSeminarPanic(weeks);
+  const reliefByOwner = foldSeminarRelief(weeks);
+  const aweByOwner = foldSeminarAwe(weeks);
+  const lonelinessByOwner = foldSeminarLoneliness(weeks);
   const bitternessByOwner = foldSeminarBitterness(
     bitternessWeeks,
     currentPools,
@@ -1085,6 +1106,9 @@ export async function runSeminar(options: {
       envy: envyByOwner[commander.id] ?? [],
       pride: prideByOwner[commander.id] ?? EMPTY_PRIDE,
       panic: panicByOwner[commander.id] ?? EMPTY_SEMINAR_PANIC,
+      relief: reliefByOwner[commander.id] ?? EMPTY_SEMINAR_RELIEF,
+      awe: aweByOwner[commander.id] ?? EMPTY_SEMINAR_AWE,
+      loneliness: lonelinessByOwner[commander.id] ?? EMPTY_SEMINAR_LONELINESS,
     };
   });
   const standings = standingsFor(
@@ -1150,6 +1174,9 @@ export function seminarPayload(result: SeminarResult): string {
         envy,
         pride,
         panic,
+        relief,
+        awe,
+        loneliness,
       } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
@@ -1168,6 +1195,9 @@ export function seminarPayload(result: SeminarResult): string {
       const hasEnvy = envy.length > 0;
       const hasPride = pride.proud.length + pride.wounded.length > 0;
       const hasPanic = panic.incidents.length > 0;
+      const hasRelief = relief.incidents.length > 0;
+      const hasAwe = awe.heroes.length > 0;
+      const hasLoneliness = loneliness.lonely.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
@@ -1179,6 +1209,9 @@ export function seminarPayload(result: SeminarResult): string {
         envy: _envy,
         pride: _pride,
         panic: _panic,
+        relief: _relief,
+        awe: _awe,
+        loneliness: _loneliness,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
@@ -1191,6 +1224,9 @@ export function seminarPayload(result: SeminarResult): string {
       void _envy;
       void _pride;
       void _panic;
+      void _relief;
+      void _awe;
+      void _loneliness;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
@@ -1203,6 +1239,9 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasEnvy ? { envy } : {}),
         ...(hasPride ? { pride } : {}),
         ...(hasPanic ? { panic } : {}),
+        ...(hasRelief ? { relief } : {}),
+        ...(hasAwe ? { awe } : {}),
+        ...(hasLoneliness ? { loneliness } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1311,6 +1350,21 @@ export function seminarSummary(result: SeminarResult): string {
     if (entry.panic.incidents.length > 0) {
       lines.push(
         `${entry.commander.id} panic: onsets=${entry.panic.incidents.length}`,
+      );
+    }
+    if (entry.relief.incidents.length > 0) {
+      lines.push(
+        `${entry.commander.id} relief: incidents=${entry.relief.incidents.length}`,
+      );
+    }
+    if (entry.awe.heroes.length > 0) {
+      lines.push(
+        `${entry.commander.id} awe: heroes=${entry.awe.heroes.length}`,
+      );
+    }
+    if (entry.loneliness.lonely.length > 0) {
+      lines.push(
+        `${entry.commander.id} loneliness: lonely=${entry.loneliness.lonely.length}`,
       );
     }
   }

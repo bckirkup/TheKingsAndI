@@ -17,6 +17,7 @@ import {
   evaluateMoveResponse,
   normalizePieceState,
   panicOnsetForPly,
+  reliefEventsForPly,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
@@ -373,9 +374,10 @@ function enemyCompliantTurn(input: {
       evaluation.P_captured,
     ]),
   );
+  const previousExposure = input.dreadExposureByPiece ?? {};
   const trauma = applyMoveTrauma(
     enemyRoster,
-    input.dreadExposureByPiece ?? {},
+    previousExposure,
     captureRiskByPiece,
     applied.capture?.pieceId,
     ply,
@@ -389,6 +391,13 @@ function enemyCompliantTurn(input: {
     kingDanger: false,
   });
   if (panic !== undefined) events.push(panic);
+  events.push(
+    ...reliefEventsForPly({
+      ply,
+      previousExposure,
+      captureRiskByPiece,
+    }),
+  );
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
     departedRoster: [],
