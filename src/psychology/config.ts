@@ -134,6 +134,10 @@ export const ENGINE_CONFIG = {
   GUILT_CAPTURE_WINDOW_PLIES: 2,
   /** D214 same-role clearing-price gap floor for envy recognition, in purse units; zero disables the fold. */
   ENVY_PRICE_GAP_FLOOR: 0,
+  /** D216 number of fielded pieces that must read dread at once for a panic onset to be named; zero disables the fold. */
+  PANIC_ROSTER_FLOOR: 0,
+  /** D216 permille capture risk at which a piece reads dread for panic purposes. */
+  PANIC_CAPTURE_RISK_PERMILLE: 750,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

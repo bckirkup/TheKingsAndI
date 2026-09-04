@@ -16,6 +16,7 @@ import {
   ENGINE_CONFIG,
   evaluateMoveResponse,
   normalizePieceState,
+  panicOnsetForPly,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MatchEvent,
@@ -366,20 +367,28 @@ function enemyCompliantTurn(input: {
     enemyRoster = fatalistic.roster;
     events.push(...fatalistic.events);
   }
+  const captureRiskByPiece = Object.fromEntries(
+    Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
+      id,
+      evaluation.P_captured,
+    ]),
+  );
   const trauma = applyMoveTrauma(
     enemyRoster,
     input.dreadExposureByPiece ?? {},
-    Object.fromEntries(
-      Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
-        id,
-        evaluation.P_captured,
-      ]),
-    ),
+    captureRiskByPiece,
     applied.capture?.pieceId,
     ply,
   );
   enemyRoster = trauma.roster;
   events.push(...trauma.events);
+  const panic = panicOnsetForPly({
+    ply,
+    side: enemySide,
+    captureRiskByPiece,
+    kingDanger: false,
+  });
+  if (panic !== undefined) events.push(panic);
   return {
     enemyRoster: syncSideRoster(board, enemyRoster, enemySide),
     departedRoster: [],

@@ -328,6 +328,7 @@ it('records exactly one CAPTURE event per resolved headless capture', async () =
   });
   const captures = result.events.filter((event) => event.t === 'CAPTURE');
   expect(captures).toHaveLength(1);
+  expect(result.events.some((event) => event.t === 'PANIC_ONSET')).toBe(false);
   expect(captures[0]).toMatchObject({
     t: 'CAPTURE',
     victim: 'b:P:d3',

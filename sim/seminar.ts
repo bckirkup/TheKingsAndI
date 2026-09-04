@@ -103,6 +103,11 @@ import { foldSeminarSpite, type SeminarSpiteIncident } from './spite';
 import { foldSeminarGuilt, type SeminarGuiltIncident } from './guilt';
 import { foldEnvy, type EnvyIncident } from './envy';
 import {
+  EMPTY_SEMINAR_PANIC,
+  foldSeminarPanic,
+  type SeminarPanicOwnerResult,
+} from './panic';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -149,6 +154,7 @@ export interface SeminarCommanderResult {
   readonly spite: readonly SeminarSpiteIncident[];
   readonly guilt: readonly SeminarGuiltIncident[];
   readonly envy: readonly EnvyIncident[];
+  readonly panic: SeminarPanicOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -1029,6 +1035,7 @@ export async function runSeminar(options: {
   const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const griefByOwner = foldSeminarGrief(weeks);
   const shameByOwner = foldSeminarShame(weeks);
+  const panicByOwner = foldSeminarPanic(weeks);
   const bitternessByOwner = foldSeminarBitterness(
     bitternessWeeks,
     currentPools,
@@ -1055,6 +1062,7 @@ export async function runSeminar(options: {
       spite: spiteByOwner[commander.id] ?? [],
       guilt: guiltByOwner[commander.id] ?? [],
       envy: envyByOwner[commander.id] ?? [],
+      panic: panicByOwner[commander.id] ?? EMPTY_SEMINAR_PANIC,
     };
   });
   const standings = standingsFor(
@@ -1118,6 +1126,7 @@ export function seminarPayload(result: SeminarResult): string {
         spite,
         guilt,
         envy,
+        panic,
       } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
@@ -1134,6 +1143,7 @@ export function seminarPayload(result: SeminarResult): string {
       const hasSpite = spite.length > 0;
       const hasGuilt = guilt.length > 0;
       const hasEnvy = envy.length > 0;
+      const hasPanic = panic.incidents.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
@@ -1143,6 +1153,7 @@ export function seminarPayload(result: SeminarResult): string {
         spite: _spite,
         guilt: _guilt,
         envy: _envy,
+        panic: _panic,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
@@ -1153,6 +1164,7 @@ export function seminarPayload(result: SeminarResult): string {
       void _spite;
       void _guilt;
       void _envy;
+      void _panic;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
@@ -1163,6 +1175,7 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasSpite ? { spite } : {}),
         ...(hasGuilt ? { guilt } : {}),
         ...(hasEnvy ? { envy } : {}),
+        ...(hasPanic ? { panic } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1261,6 +1274,11 @@ export function seminarSummary(result: SeminarResult): string {
     }
     if (entry.envy.length > 0) {
       lines.push(`${entry.commander.id} envy: incidents=${entry.envy.length}`);
+    }
+    if (entry.panic.incidents.length > 0) {
+      lines.push(
+        `${entry.commander.id} panic: onsets=${entry.panic.incidents.length}`,
+      );
     }
   }
   return lines.join('\n');
