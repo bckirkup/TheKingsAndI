@@ -2551,10 +2551,17 @@ measurably far from it or the axis is still two points. A scripted
 uniform-random NPC is the cheap floor of the emotional axis and belongs in
 the coverage set (ADR 0063 §1).
 
-### D223 ❓ Which content packs ship first? (ADR 0079)
-The stranger playtest wants the indie pack; the pilot cohort wants exec-lab;
-both are step-4 inputs and the four tracks (indie / exec-lab / purist /
-academic) are M7.2. Owner ordering owed.
+### D223 ✅ Which content packs ship, and in what order? (ADR 0079)
+**Answered 2026-09-04 (owner): the four packs are military, medieval,
+corporate, classic/purist**, in that order. This replaces the M7.2 track
+names (indie / exec-lab / purist / academic) as the pack set: the packs are
+named for their *world*, not their audience, and any onboarding track picks
+a pack rather than owning one. Each pack is an ADR 0023 `ContentPack` —
+`themeTokens`, `nounMap`, `dialogue`, `epilogues` — bound to the same
+situation keys; the classic/purist pack is the chess nouns unrenamed and is
+the pack the ADR 0079 "pretty leak" detector diffs the others against. The
+stranger playtest (step 4) runs on whichever pack has shipped first
+(military); the pilot cohort runs on corporate.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,

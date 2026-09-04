@@ -6,7 +6,8 @@
   only) and **D221** (the model facilitator is a stand-in fallback outside
   ADR 0004) and **D219** (the GUI is a visual layer over the existing journal
   seam) and **D222** (disengagement is near-random choice, measured from the
-  journal) on 2026-09-04. D220 and D223 remain open.
+  journal) and **D223** (packs: military, medieval, corporate, classic/purist,
+  in that order) on 2026-09-04. D220 remains open.
 - **Scope:** Everything between "the game plays and the seminar survives" and
   "someone who is not us loves it": the GUI, the model players, the human
   playtest, and the facilitator, human and model.
@@ -88,8 +89,8 @@ it. That separation is ADR 0001 again, applied to the people.
 | 0 | **The ruling** — the owner has said the ADR 0061 step-7 gate is passed. This ADR reads that as: passed for the *single-player act-one campaign and the seminar harness*; **not** passed for the draft, purse, ransom, honours, or between-cycle market, whose magnitudes are still under search (ADR 0061 steps 3–7). GUI work touches nothing whose knob is still moving | **D218** | Building a draft screen over a purse whose clearing rule may change is ADR 0061's exact failure mode |
 | 1 | **The journal reaches the app** — the interactive match path writes `JournalEntry`s; `ui/` reads only the `Observation`; a browser match exports `{journal, seed, determinismId}`; **the browser runs the harness's engine** (Lozza WASM in a worker behind the barrier), so `determinismId` matches | D219 | Every later step's evidence is a journal. A human playtest on the fake engine measures a game nobody else plays; the M4 note already flagged it |
 | 2 | **The model players** — the fork (ADR 0062 §5) over cheap NPC prefixes; a model agent behind `AgentIdentity{id, promptVersion, optionSetVersion}`; the containment envelope as a *computed* metric with a pass criterion; the persona set the owner names, each as **authored, versioned prompt text**: honest, merchant (already the exploit tier's job — the model merchant is a check that a *reasoning* gamer finds nothing the deterministic one missed), vicious, bored, disengaged | **D222** | Bored and disengaged are the players the NPCs cannot be (ADR 0062 context). Until `disengage` is a decision someone takes, the emotional axis stays two points and the coverage duty is unmet. This must be measured before a human is asked to play, or the human is the first bored player and there is no envelope to contain them |
-| 3 | **The surface** — three tracks that fan out (§4): (a) *legibility* — the first ninety minutes (ADR 0027 §4), the ADR 0018 "name a cause" panel, the transcript made visible (ADR 0030); (b) *variety* — the four packs for the four tracks (indie / exec-lab / purist / academic, M7.2) as data, with pack-coverage CI; (c) *access* — colour-safe aura encoding, keyboard play, reduced motion (M7.3) | **D223** | Pretty before step 1 is a screenshot; pretty after step 1 is an instrument with a skin. Variety before the packs are data is a fork (ADR 0023 rejected it) |
-| 4 | **The strangers** — paid, unselected humans on the consumer pacing profile: ninety minutes, the indie pack, one act, journal export plus a short protocol (§3). Then a pilot **intensive** cohort of ~12 with a human facilitator and the exec-lab pack | **D220** | Strangers are the harshest emotional population and the cheapest; they answer the ninety-minute cliff and the containment question in one sitting. The cohort answers cohort collapse (ADR 0027) and needs a facilitator to exist first — which it does, in a person |
+| 3 | **The surface** — three tracks that fan out (§4): (a) *legibility* — the first ninety minutes (ADR 0027 §4), the ADR 0018 "name a cause" panel, the transcript made visible (ADR 0030); (b) *variety* — the four packs (military, medieval, corporate, classic/purist — D223) as data, with pack-coverage CI; (c) *access* — colour-safe aura encoding, keyboard play, reduced motion (M7.3) | **D223** | Pretty before step 1 is a screenshot; pretty after step 1 is an instrument with a skin. Variety before the packs are data is a fork (ADR 0023 rejected it) |
+| 4 | **The strangers** — paid, unselected humans on the consumer pacing profile: ninety minutes, the first-shipped pack (military), one act, journal export plus a short protocol (§3). Then a pilot **intensive** cohort of ~12 with a human facilitator and the corporate pack | **D220** | Strangers are the harshest emotional population and the cheapest; they answer the ninety-minute cliff and the containment question in one sitting. The cohort answers cohort collapse (ADR 0027) and needs a facilitator to exist first — which it does, in a person |
 | 5 | **The room** — the facilitator audit (ADR 0028 D82) as a fold over the cohort's journals; the facilitator's own decision kinds (`pair`, `intervene`, `bench`, `feed`, `debrief`) as a **facilitator journal**; the cohort dashboard (5.8h) and the local world host (5.8j); then the **model facilitator** as an ADR 0062 agent over those decision kinds plus debrief prose, judged by the same audit as the human | **D221** | A model facilitator without a facilitator audit is unaccountable by construction — ADR 0028's own detector. The human facilitator in step 4 produces the first audit the model is measured against |
 
 Steps 1 → 2 → 4 → 5 are serial: each is the instrument for the next. Step 3
@@ -197,9 +198,10 @@ person should be scheduled before the instrument that will read what they did.
   is scored. Latency and abandonment are telemetry correlates, not the
   definition. A uniform-random scripted NPC becomes the floor of the
   emotional axis.
-- **D223** — Which packs ship first, and does the exec-lab pack precede the
-  indie one? The stranger playtest wants indie; the pilot cohort wants exec-lab;
-  both are step-4 inputs.
+- **D223** ✅ — Which packs ship, and in what order? **Ruled 2026-09-04
+  (owner): military, medieval, corporate, classic/purist**, in that order,
+  replacing the indie / exec-lab / purist / academic track names as the pack
+  set. Strangers play the first-shipped pack; the pilot cohort plays corporate.
 
 ## Consequences
 
