@@ -132,6 +132,8 @@ export const ENGINE_CONFIG = {
   GUILT_PEER_SAFETY_FLOOR: 0,
   /** D213 capture window after a safety-spending move, in plies. */
   GUILT_CAPTURE_WINDOW_PLIES: 2,
+  /** D214 same-role clearing-price gap floor for envy recognition, in purse units; zero disables the fold. */
+  ENVY_PRICE_GAP_FLOOR: 0,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

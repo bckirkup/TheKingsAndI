@@ -2,11 +2,11 @@
 
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
   world for emotions we haven't figured in. … Locate them all."); **D208,
-  D209, D211, D212, and D213 are wired inert and D210 is partly wired for
+  D209, D211, D212, D213, and D214 are wired inert and D210 is partly wired for
   recognition** — no opened
   emotion is priced or enabled by default
-- **Opens:** **D210** (gratitude), **D214** (envy),
-  **D215** (pride, refining D182), **D216** (panic), **D217** (relief, awe,
+- **Opens:** **D210** (gratitude), **D215** (pride, refining D182),
+  **D216** (panic), **D217** (relief, awe,
   and loneliness — located, deferred together)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
   always, exposed nowhere in play, named once at the closing debrief), ADR
@@ -228,7 +228,7 @@ The direct-link ruling intentionally does not attribute guilt through longer
 cascades. Window and floor magnitudes, whether guilt ever becomes a live
 carrier, and pricing remain open.
 
-### D214 — Envy (open)
+### D214 — Envy (wired inert, 2026-09-05 addendum)
 
 **What it is.** Wanting the portion another received. The draft just created
 its concrete object: clearing prices are now piece-held cash (D183), so a
@@ -247,6 +247,26 @@ then read for free.
 draft are public within a side today — confirm before wiring); the
 affinity-discount magnitude; whether envy of the ransomed ("he paid for
 *her*") joins the same carrier.
+
+#### D214 addendum (2026-09-05)
+
+D214 is wired inert and recognition-only, in the seminar path alone because
+the draft is envy's only denominated object. `foldEnvy` is a pure terminal
+fold over the cycle's draft settlements: within one settlement, a piece
+cleared strictly below a same-role peer drafted by the same commander names
+the highest-paid such peer and the gap in purse units, when the gap reaches
+`ENVY_PRICE_GAP_FLOOR`. The floor is a zero sentinel, so the fold is inert by
+default and the terminal `envy` block is omitted. Cycles are not compared
+with each other, roles are not compared with each other, and no commander's
+purse is compared with another's.
+
+v1 assumes what the draft already makes true today: clearing prices are
+settled side-wide and no private-knowledge model of the draft exists, so the
+piece is taken to know its peers' prices. A future knowledge model would gate
+the fold, not change it. No live state, observation, policy, standing,
+register, commendation, Leadership Index term, affinity discount, or PRNG
+draw is involved. The affinity-discount magnitude, whether envy of the
+ransomed joins the reading, and pricing remain open.
 
 ### D215 — Pride (open; refines D182)
 
@@ -304,9 +324,10 @@ D211's inert carrier, and D212's inert terminal reading are now implemented
 as dated addenda; the remaining implementation order should follow the seams'
 freshness:
 gratitude (D210) completes the ransom arc the captivity work just opened;
-grief (D211) and shame (D212) reuse live machinery; envy (D214) and pride
-(D215) wait on D182's magnitude; spite recognition (D209) is a pure fold any
-time after bitterness (D208) gives it a grievance to read.
+grief (D211) and shame (D212) reuse live machinery; envy (D214) is implemented
+as a recognition fold, while pride (D215) still waits on D182's magnitude;
+spite recognition (D209) is a pure fold any time after bitterness (D208)
+gives it a grievance to read.
 
 The house disciplines bind every entry: hidden during play (D203's
 quarantine extends to all of these), named at the closing debrief (ADR
