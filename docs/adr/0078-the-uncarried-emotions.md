@@ -76,23 +76,23 @@ Thresholds and magnitudes remain open for measurement before any ruling.
 Whether a voided gratitude debt converts to bitterness remains open, and
 pricing remains open.
 
-### D209 — Spite (open)
+### D209 — Spite (wired inert, 2026-09-05 addendum)
 
-**What it is.** Courage's dark mirror: a full-effort act whose utility to the
-actor is negative and whose *target is the commander's interest* — the
-refusal timed to cost the most, the desertion at the worst ply.
+**What it is.** Courage's dark mirror: a grievance-driven refusal or desertion
+whose commander cost is visible in the existing audit stream.
 
-**Location.** No new state. The verdict ladder already computes everything
-required (`utilityScore`, the board delta, the refusal margin); spite is a
-pure classifier over MOVE/REFUSAL/DESERTION events: actor pays (margin
-against its own interest) *and* the commander pays more (board or standing
-delta), *and* standing grievance exists (rupture debt or bitterness above
-zero). Folded at debrief-build time exactly as courage is, named beside it.
+**Location.** No new state or event fields. `foldSpite` is a match-local,
+recognition-only classifier over existing events. An unvindicated override
+grounds grievance until a later repair; bitterness grounds it permanently for
+the match. An unjustified refusal above `SPITE_COMMANDER_COST_FLOOR` names
+the perceived commander cost, while a desertion above
+`SPITE_DESERTION_PIVOTALITY_FLOOR` names pivotality as its cost. Override
+grievance wins when both grounds are present. Both floors are zero sentinels,
+so the fold is inert by default and terminal blocks remain omitted.
 
-**Open in D209:** the classification thresholds; whether spite is only
-recognized (named) or also *motivates* — i.e. whether a grieved piece's
-refusal threshold should tilt toward the spiteful timing. Recognition is
-cheap and safe; motivation changes play and needs its own measurement sweep.
+**Open in D209:** threshold magnitudes and the motivation question. A MOVE
+shape and cross-match grievance carry remain open; v1 does not change play or
+carry grievance between match logs.
 
 ### D210 — Gratitude (partly wired: recognition) — *the freshest seam*
 

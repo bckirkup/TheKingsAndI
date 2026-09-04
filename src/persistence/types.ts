@@ -16,6 +16,7 @@ export const TRANSCRIPT_FOLD_VERSION = 'transcript-v1';
 export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v3';
 export const COURAGE_FOLD_VERSION = 'courage-v1';
 export const HOPE_FOLD_VERSION = 'hope-v1';
+export const SPITE_FOLD_VERSION = 'spite-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -216,6 +217,19 @@ export interface CampaignDebrief {
     readonly realizedCount: number;
     readonly extinguishedCount: number;
     readonly rekindledCount: number;
+  };
+  /** D209: terminal-only recognition of grievance-driven commander costs. */
+  readonly spite?: {
+    readonly foldVersion: string;
+    readonly incidents: readonly {
+      readonly matchId: string;
+      readonly matchIndex: number;
+      readonly ply: number;
+      readonly pieceId: string;
+      readonly kind: 'refusal' | 'desertion';
+      readonly grievance: 'override' | 'bitterness';
+      readonly commanderCost: number;
+    }[];
   };
   /** D211: terminal-only naming of carried mourning incidents. */
   readonly grief: {
