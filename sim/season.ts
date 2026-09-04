@@ -20,6 +20,7 @@ import {
   createCommanderPool,
   fieldPool,
   foldMatchIntoPools,
+  decayPoolBitterness,
   poolSnapshot,
   poolSeasonMetrics,
   type CommanderPool,
@@ -106,6 +107,8 @@ export async function runSeason(options: SeasonOptions): Promise<SeasonResult> {
   const ownedEngine = options.engine === undefined;
   try {
     for (let match = 1; match <= options.matches; match += 1) {
+      whitePool = decayPoolBitterness(whitePool);
+      blackPool = decayPoolBitterness(blackPool);
       const whiteFielded = fieldPool(whitePool, match);
       const blackFielded = fieldPool(blackPool, match);
       const whiteLineup = whiteFielded.lineup.map((member) => member.state);

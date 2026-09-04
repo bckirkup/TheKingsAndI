@@ -115,6 +115,16 @@ export const ENGINE_CONFIG = {
   MORNING_LIFT_PERMILLE: 400,
   /** Trust baseline the morning lift reaches toward; earned trust above it is never dampened (D207). */
   MORNING_LIFT_TRUST_BASELINE: 0,
+  /** D208 bitterness formation per qualifying trigger, permille; inert by default. */
+  BITTERNESS_PER_TRIGGER_PERMILLE: 0,
+  /** D208 rupture-floor threshold as permille of the configured debt ceiling. */
+  BITTERNESS_RUPTURE_THRESHOLD_PERMILLE: 500,
+  /** D208 repair/regard gain discount, permille; inert by default. */
+  BITTERNESS_REPAIR_DISCOUNT_PERMILLE: 0,
+  /** D208 morning-lift gain discount, permille; inert by default. */
+  BITTERNESS_MORNING_DISCOUNT_PERMILLE: 0,
+  /** D208 match-boundary bitterness decay, permille; inert by default. */
+  BITTERNESS_DECAY_PERMILLE_PER_MATCH: 0,
   /** Minimum trait-free risk asked of a piece for courage normalization (D199). */
   COURAGE_ASKED_COST_FLOOR: 0.05,
   /** Minimum peer affinity that makes a loss mournable (D211). */

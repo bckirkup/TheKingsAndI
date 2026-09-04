@@ -44,6 +44,7 @@ import {
 } from './engine';
 import {
   createCommanderPool,
+  decayPoolBitterness,
   fieldPool,
   foldMatchIntoPools,
   type CommanderPool,
@@ -67,7 +68,7 @@ import {
   type SeminarMarket,
 } from './seminarDraft';
 import {
-  decayCaptiveBenevolence,
+  decayCaptiveBenevolenceWithEvents,
   ransomCaptives,
   type RansomLedgerEntry,
 } from './ransom';
@@ -92,6 +93,11 @@ import {
   foldSeminarShame,
   type SeminarShameOwnerResult,
 } from './shame';
+import {
+  foldSeminarBitterness,
+  type BitternessIncident,
+  type SeminarBitternessWeek,
+} from './bitterness';
 import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
@@ -135,6 +141,7 @@ export interface SeminarCommanderResult {
   readonly gratitude: GratitudeOwnerResult;
   readonly grief: SeminarGriefOwnerResult;
   readonly shame: SeminarShameOwnerResult;
+  readonly bitterness: readonly BitternessIncident[];
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -650,6 +657,7 @@ export async function runSeminar(options: {
     ]),
   );
   let currentPools = pools;
+  const bitternessWeeks: SeminarBitternessWeek[] = [];
   let markets: ReadonlyMap<'w' | 'b', SeminarMarket> = createSeminarMarkets(
     options.seed,
     currentPools,
@@ -796,15 +804,20 @@ export async function runSeminar(options: {
         priorities.map((entry) => [entry.commanderId, entry.purse]),
       );
       let ransomLedger: readonly RansomLedgerEntry[] = [];
+      let bitternessEvents: Extract<
+        import('../src/psychology').MatchEvent,
+        { t: 'BITTERNESS_FORMED' }
+      >[] = [];
       const gratitudeWeekFirstMatch = matchIndex + 1;
       if (config.CAPTIVITY_HOLD_ENABLED) {
         const trueStartingPurses = new Map<string, number>();
-        currentPools = new Map(
-          decayCaptiveBenevolence(
-            currentPools,
-            config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
-          ),
+        const decay = decayCaptiveBenevolenceWithEvents(
+          currentPools,
+          config.CAPTIVITY_BENEV_DECAY_PER_WEEK,
+          week,
         );
+        currentPools = new Map(decay.pools);
+        bitternessEvents = [...decay.events];
         for (const side of ['w', 'b'] as const) {
           const market = markets.get(side);
           if (market === undefined) continue;
@@ -923,6 +936,12 @@ export async function runSeminar(options: {
             config,
             engine,
           });
+          currentPools = new Map(
+            [...currentPools.entries()].map(([id, pool]) => [
+              id,
+              decayPoolBitterness(pool),
+            ]),
+          );
         }
       }
       counselCorrelationPairs.push(
@@ -970,6 +989,21 @@ export async function runSeminar(options: {
           ransom: ransomLedger,
         }),
       );
+      for (const records of weekRecords.values()) {
+        for (const record of records) {
+          bitternessEvents.push(
+            ...record.events.filter(
+              (
+                event,
+              ): event is Extract<
+                import('../src/psychology').MatchEvent,
+                { t: 'BITTERNESS_FORMED' }
+              > => event.t === 'BITTERNESS_FORMED',
+            ),
+          );
+        }
+      }
+      bitternessWeeks.push({ week, bitternessEvents });
       gratitudeWeeks.push({
         week,
         firstMatch: gratitudeWeekFirstMatch,
@@ -983,6 +1017,10 @@ export async function runSeminar(options: {
   const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const griefByOwner = foldSeminarGrief(weeks);
   const shameByOwner = foldSeminarShame(weeks);
+  const bitternessByOwner = foldSeminarBitterness(
+    bitternessWeeks,
+    currentPools,
+  );
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -994,6 +1032,7 @@ export async function runSeminar(options: {
       gratitude: gratitudeByOwner[commander.id] ?? EMPTY_GRATITUDE,
       grief: griefByOwner[commander.id] ?? EMPTY_SEMINAR_GRIEF,
       shame: shameByOwner[commander.id] ?? EMPTY_SEMINAR_SHAME,
+      bitterness: bitternessByOwner[commander.id] ?? [],
     };
   });
   const standings = standingsFor(
@@ -1048,7 +1087,7 @@ export function seminarPayload(result: SeminarResult): string {
     seed: result.seed,
     config,
     commanders: result.commanders.map((commander) => {
-      const { exchangeHope, gratitude, grief, shame } = commander;
+      const { exchangeHope, gratitude, grief, shame, bitterness } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
         gratitude.honored.length > 0 ||
@@ -1060,23 +1099,27 @@ export function seminarPayload(result: SeminarResult): string {
         exchangeHope.realized.length > 0 ||
         exchangeHope.selfSprung.length > 0 ||
         exchangeHope.extinguished.length > 0;
+      const hasBitterness = bitterness.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
         grief: _grief,
         shame: _shame,
+        bitterness: _bitterness,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
       void _gratitude;
       void _grief;
       void _shame;
+      void _bitterness;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
         ...(hasGratitude ? { gratitude } : {}),
         ...(hasGrief ? { grief } : {}),
         ...(hasShame ? { shame } : {}),
+        ...(hasBitterness ? { bitterness } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1156,6 +1199,11 @@ export function seminarSummary(result: SeminarResult): string {
     if (entry.shame.incidents.length > 0) {
       lines.push(
         `${entry.commander.id} shame: incidents=${entry.shame.incidents.length}`,
+      );
+    }
+    if (entry.bitterness.length > 0) {
+      lines.push(
+        `${entry.commander.id} bitterness: incidents=${entry.bitterness.length}`,
       );
     }
   }

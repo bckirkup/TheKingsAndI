@@ -239,6 +239,9 @@ function applyPlayerOverride(
         ...(implicit ? { implicit: true } : {}),
         authorityGain: 0,
       } as Extract<MatchEvent, { t: 'OVERRIDE' }>,
+      ...(override.bitternessEvent === undefined
+        ? []
+        : [override.bitternessEvent]),
       ...override.witnessEvents,
       ...(override.shameEvent === undefined ? [] : [override.shameEvent]),
     ],
@@ -860,6 +863,9 @@ export async function runHeadlessMatch(
           const repair = applyRepairSignal(
             roster.find((piece) => piece.id === actor.id)?.credence ??
               actor.credence,
+            roster.find((piece) => piece.id === actor.id)?.bitternessPermille ??
+              actor.bitternessPermille ??
+              0,
           );
           if (repair.repaid > 0) {
             roster = updatePiece(roster, actor.id, (piece) => ({

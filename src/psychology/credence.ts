@@ -1,6 +1,7 @@
 import { logistic, quantizeBoardValue } from '../core/math';
 import { clampCredence, clampRuptureDebt, clampTrust } from './clamp';
 import { ENGINE_CONFIG } from './config';
+import { discountPositiveGain } from './bitterness';
 import type { CredenceState } from './types';
 
 const REFUSAL_AUTHORITY_OBVIOUSNESS_RANGE = 2.5;
@@ -51,15 +52,19 @@ export function applyHeardSignal(
 export function applyRegardSignal(
   credence: CredenceState,
   streakLength: number,
+  bitternessPermille = 0,
 ): CredenceState {
   if (Math.trunc(streakLength) < ENGINE_CONFIG.BENEV_REGARD_STREAK_PLIES) {
     return credence;
   }
+  const gained = discountPositiveGain(
+    ENGINE_CONFIG.BENEV_REGARD_STEP,
+    bitternessPermille,
+    ENGINE_CONFIG.BITTERNESS_REPAIR_DISCOUNT_PERMILLE,
+  );
   return {
     ...credence,
-    tauBenev: clampCredence(
-      credence.tauBenev + ENGINE_CONFIG.BENEV_REGARD_STEP,
-    ),
+    tauBenev: clampCredence(credence.tauBenev + gained),
   };
 }
 
@@ -72,7 +77,10 @@ export function isRegardEligible(
   );
 }
 
-export function applyRepairSignal(credence: CredenceState): {
+export function applyRepairSignal(
+  credence: CredenceState,
+  bitternessPermille = 0,
+): {
   readonly credence: CredenceState;
   readonly repaid: number;
 } {
@@ -87,10 +95,15 @@ export function applyRepairSignal(credence: CredenceState): {
       repaid,
     };
   }
+  const gained = discountPositiveGain(
+    repaid,
+    bitternessPermille,
+    ENGINE_CONFIG.BITTERNESS_REPAIR_DISCOUNT_PERMILLE,
+  );
   return {
     credence: {
       ...credence,
-      tauBenev: clampCredence(credence.tauBenev + repaid),
+      tauBenev: clampCredence(credence.tauBenev + gained),
       ruptureDebt: debt - repaid,
     },
     repaid,

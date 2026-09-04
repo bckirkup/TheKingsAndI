@@ -101,6 +101,15 @@ export {
 } from './trauma';
 export { applyMorningLift } from './morningLift';
 export {
+  bitternessPermille,
+  decayBitterness,
+  discountPositiveGain,
+  formBitterness,
+  scalePositiveTrustGain,
+  type BitternessFormation,
+  type BitternessTrigger,
+} from './bitterness';
+export {
   defaultCredence,
   defaultRumor,
   applyEarnedAbilityObservation,

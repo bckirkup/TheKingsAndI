@@ -42,6 +42,9 @@ export function normalizePieceState(piece: PieceState): PieceState {
     ...(piece.griefLoad === undefined
       ? {}
       : { griefLoad: clampPermille(piece.griefLoad) }),
+    ...(piece.bitternessPermille === undefined
+      ? {}
+      : { bitternessPermille: clampPermille(piece.bitternessPermille) }),
     E_i: Math.max(1, Math.min(100, piece.E_i)),
     T_i: clampTrust(piece.T_i),
     M_i: clampMorale(piece.M_i),

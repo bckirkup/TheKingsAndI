@@ -1,10 +1,10 @@
 # ADR 0078 — The uncarried emotions: a location survey
 
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
-  world for emotions we haven't figured in. … Locate them all."); D210 is
-  partly wired and D212 is wired inert; the remaining entries are open
-- **Opens:** **D208** (bitterness), **D209** (spite), **D210** (gratitude),
-  **D211** (grief), **D212** (shame), **D213** (guilt), **D214** (envy),
+  world for emotions we haven't figured in. … Locate them all."); **D208 and
+  D212 are wired inert and D210 is partly wired for recognition** — no opened
+  emotion is priced or enabled by default
+- **Opens:** **D209** (spite), **D210** (gratitude), **D213** (guilt), **D214** (envy),
   **D215** (pride, refining D182), **D216** (panic), **D217** (relief, awe,
   and loneliness — located, deferred together)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
@@ -45,24 +45,36 @@ ruling. Every knob opened here ships inert.
 
 ## The survey
 
-### D208 — Bitterness (open)
+### D208 — Bitterness (wired inert, 2026-09-05 addendum)
 
 **What it is.** Grievance that has curdled into a standing stance: not low
 benevolence credence — which good conduct can rebuild — but a *discount on
 repair itself*. The bitter piece receives care at a fraction of its face
 value.
 
-**Location.** A per-piece `repairDiscountPermille` (default `0`, inert),
+**Location.** A per-piece `bitternessPermille` carrier (default absent, inert),
 written once when rupture debt crosses a threshold while `tauBenev` sits at
 the floor, and thereafter multiplying every inbound `REPAIR`/`REGARD` gain
 and the morning lift's reach for that piece. The captivity decay ("you did
 not come for me", ADR 0071) is the natural second trigger. Never surfaced;
 the debrief names it: *she stopped believing apologies in week three*.
 
-**Open in D208:** the threshold, the discount magnitude, whether bitterness
-itself can ever be repaired (the owner's call — the model should be able to
-represent the unforgivable), and whether the morning lift is inside or
-outside its reach.
+**Wired addendum (2026-09-05).** The optional `PieceState.bitternessPermille`
+carrier is clamped to `0..1000` and absent by default. An unvindicated
+rupture-floor charge forms one `rupture_floor` trigger when the post-charge
+rupture debt reaches the configured permille threshold and benevolence is at
+zero; each week of actual positive captive benevolence decay forms one
+`not_ransomed` trigger. Each trigger adds the shared inert-by-default
+`BITTERNESS_PER_TRIGGER_PERMILLE`. Repair and regard gains, plus the D207
+per-piece trust rise, have separate inert integer discounts; match-boundary
+decay is also inert by default. Nonzero formation is named only in terminal
+campaign and seminar folds as `BITTERNESS_FORMED`; no live observation,
+policy, register, standings, commendation, or Leadership Index surface reads
+it, and no PRNG draw is consumed.
+
+Thresholds and magnitudes remain open for measurement before any ruling.
+Whether a voided gratitude debt converts to bitterness remains open, and
+pricing remains open.
 
 ### D209 — Spite (open)
 

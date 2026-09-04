@@ -6,6 +6,7 @@ import {
   scaleOwnLoss,
   type ShameOptions,
 } from './shame';
+import { formBitterness, shouldFormRuptureBitterness } from './bitterness';
 import { witnessAttachmentPermille } from './standing';
 import type { MatchEvent, PieceState } from './types';
 
@@ -15,6 +16,9 @@ export interface OverrideResult {
   readonly event: MatchEvent;
   readonly witnessEvents: readonly MatchEvent[];
   readonly shameEvent?: Extract<MatchEvent, { t: 'SHAME_EXPOSURE' }>;
+  readonly bitternessEvent:
+    | Extract<MatchEvent, { t: 'BITTERNESS_FORMED' }>
+    | undefined;
 }
 
 export function applyOverride(
@@ -53,6 +57,10 @@ export function applyOverride(
     M_i: clampMorale(piece.M_i - 10),
     credence,
   };
+  const bitterness =
+    !vindicated && shouldFormRuptureBitterness(overriddenPiece)
+      ? formBitterness(overriddenPiece, 'rupture_floor', { ply })
+      : { piece: overriddenPiece, event: undefined };
   const updatedWitnesses = witnesses.map((witness) => {
     const attachment = witnessAttachmentPermille(witness, piece);
     const standingFactor = Math.max(
@@ -137,10 +145,11 @@ export function applyOverride(
     }
   });
   return {
-    overriddenPiece,
+    overriddenPiece: bitterness.piece,
     witnesses: updatedWitnesses,
     event,
     witnessEvents,
     ...(shameEvent === undefined ? {} : { shameEvent }),
+    bitternessEvent: bitterness.event,
   };
 }
