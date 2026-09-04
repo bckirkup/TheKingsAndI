@@ -75,6 +75,9 @@ describe('emotion census helpers', () => {
       'random',
       'steady',
     ]);
+    expect(
+      parseEmotionCensusArgs(['--guilt-safety-floor=0.05']).guiltSafetyFloor,
+    ).toBe(0.05);
     expect(() => parseEmotionCensusArgs(['--unknown=1'])).toThrow(
       'Unrecognised flag',
     );

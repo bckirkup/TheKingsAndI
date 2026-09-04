@@ -99,6 +99,18 @@ function nonNegativeInteger(
   return parsed;
 }
 
+function nonNegativeNumber(
+  value: string | undefined,
+  flag: string,
+  fallback: number,
+): number {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`--${flag} must be a non-negative number.`);
+  }
+  return parsed;
+}
+
 function parseCatalogue(value: string | undefined): readonly Leader[] {
   if (value === undefined) return DEFAULT_CATALOGUE;
   const catalogue = value.split(',').map((style) => style.trim());
@@ -181,7 +193,7 @@ export function parseEmotionCensusArgs(
       'relief',
       ENGINE_CONFIG.RELIEF_CAPTURE_RISK_PERMILLE,
     ),
-    guiltSafetyFloor: nonNegativeInteger(
+    guiltSafetyFloor: nonNegativeNumber(
       values.get('guilt-safety-floor'),
       'guilt-safety-floor',
       ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR,
