@@ -2437,12 +2437,14 @@ thresholds, and whether spite only *names* or also tilts the refusal timing
 (a play change requiring its own sweep). Located in ADR 0078; nothing wired.
 
 ### D210 ⬜ Gratitude: what does "he paid for me" create? (ADR 0078)
-**Open.** A debt-object (object, magnitude, holder) — hope's sibling — formed
+**Partly wired (recognition).** A debt-object (object, magnitude, holder) — hope's sibling — formed
 by a commander-paid or split ransom and by peer-saving costly signals;
 negated by the self-sprung's "I owe him nothing"; discharged by obedience
 against own utility; voided by betrayal. Open: recognition-only versus a
 refusal-threshold credit, the gold-to-obedience exchange rate, and whether a
-voided debt converts to bitterness. Located in ADR 0078; nothing wired.
+voided debt converts to bitterness. The terminal fold now recognizes ransom
+formation, courage honor, betrayal-class void, and owed debts; costly-signal
+recognition and pricing remain open.
 
 ### D211 ⬜ Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
 **Open.** A per-piece grief load raised by losing a high-affinity peer,

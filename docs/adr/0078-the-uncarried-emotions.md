@@ -83,7 +83,7 @@ recognized (named) or also *motivates* — i.e. whether a grieved piece's
 refusal threshold should tilt toward the spiteful timing. Recognition is
 cheap and safe; motivation changes play and needs its own measurement sweep.
 
-### D210 — Gratitude (open) — *the freshest seam*
+### D210 — Gratitude (partly wired: recognition) — *the freshest seam*
 
 **What it is.** A debt-object, structurally hope's sibling: object (what was
 done), magnitude (what it cost the doer), holder (who is owed). REGARD and
@@ -105,6 +105,33 @@ self-sprung who owed nothing.
 **Open in D210:** whether gratitude discounts the refusal threshold (play
 change) or is recognition-only in v1; the exchange rate between purse gold
 and obedience margin; whether a voided debt converts to bitterness (D208).
+
+#### D210 addendum — recognition without price (2026-09-04)
+
+The owner rules **v1 recognition-only**. The ransom is the only active
+formation trigger: a commander-paid or split ransom records “he paid for me”
+with magnitude equal to the commander’s actual share. Costly-signal
+recognition remains open pending its pricing ruling and is not inferred from
+other events.
+
+At semester close, the terminal gratitude fold names the first subsequent
+courage act by the ransomed piece as **honored**, provided the act is a
+positive-margin MOVE after the ransom week's first-match boundary. An
+unvindicated OVERRIDE before that act **voids** the debt; otherwise the debt
+is **owed** at close. Each debt has at most one honor, and an earlier void
+wins over a later courage act. This is naming-only: gratitude adds no live
+state, refusal-threshold credit, play change, Leadership Index term, or
+pricing.
+
+The self-sprung “I owe him nothing” negation remains named by the exchange-hope
+fold (ADR 0073/ADR 0071); gratitude does not duplicate that incident. The
+refusal-threshold credit, the exchange rate between purse gold and obedience
+margin, costly-signal recognition, and any bitterness conversion remain open.
+
+The vocabulary is deliberate: the captive is the captor's **fengr**, the draft
+lot is a **hlutr**, and **wælreaf** names the rejected alternative of stripping
+spoils from the fallen. Weregild was considered and rejected by the owner:
+ransom prices a return, not a life.
 
 ### D211 — Grief (open)
 

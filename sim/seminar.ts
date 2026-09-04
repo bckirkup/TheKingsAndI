@@ -77,6 +77,12 @@ import {
   type ExchangeHopeOwnerResult,
 } from './exchangeHope';
 import {
+  EMPTY_GRATITUDE,
+  foldGratitude,
+  type GratitudeOwnerResult,
+  type GratitudeWeek,
+} from './gratitude';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -116,6 +122,7 @@ export interface SeminarCommanderResult {
   readonly commendations: PlayerCommendationSet;
   readonly judgementSeat: CampaignDebrief['judgementSeat'];
   readonly exchangeHope: ExchangeHopeOwnerResult;
+  readonly gratitude: GratitudeOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -680,6 +687,7 @@ export async function runSeminar(options: {
     ]),
   );
   const weeks: SeminarWeekResult[] = [];
+  const gratitudeWeeks: GratitudeWeek[] = [];
   const draftCycles: DraftEconomyCycleObservation[] = [];
   const standingSeries: DraftStandingSeriesPoint[] = [];
   const counselCorrelationPairs: {
@@ -759,6 +767,7 @@ export async function runSeminar(options: {
         priorities.map((entry) => [entry.commanderId, entry.purse]),
       );
       let ransomLedger: readonly RansomLedgerEntry[] = [];
+      const gratitudeWeekFirstMatch = matchIndex + 1;
       if (config.CAPTIVITY_HOLD_ENABLED) {
         const trueStartingPurses = new Map<string, number>();
         currentPools = new Map(
@@ -932,11 +941,17 @@ export async function runSeminar(options: {
           ransom: ransomLedger,
         }),
       );
+      gratitudeWeeks.push({
+        week,
+        firstMatch: gratitudeWeekFirstMatch,
+        ransomLedger,
+      });
     }
   } finally {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');
   }
   const exchangeHopeByOwner = foldExchangeHope(weeks, currentPools);
+  const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -945,6 +960,7 @@ export async function runSeminar(options: {
       commendations: foldPlayerCommendations(records),
       judgementSeat: foldJudgementSeat(records),
       exchangeHope: exchangeHopeByOwner[commander.id] ?? EMPTY_EXCHANGE_HOPE,
+      gratitude: gratitudeByOwner[commander.id] ?? EMPTY_GRATITUDE,
     };
   });
   const standings = standingsFor(
@@ -999,7 +1015,31 @@ export function seminarPayload(result: SeminarResult): string {
     seed: result.seed,
     config,
     commanders: result.commanders.map((commander) => {
-      const { exchangeHope } = commander;
+      const { exchangeHope, gratitude } = commander;
+      const hasGratitude =
+        gratitude.formed.length > 0 ||
+        gratitude.honored.length > 0 ||
+        gratitude.voided.length > 0 ||
+        gratitude.owed.length > 0;
+      if (
+        exchangeHope.realized.length === 0 &&
+        exchangeHope.selfSprung.length === 0 &&
+        exchangeHope.extinguished.length === 0 &&
+        !hasGratitude
+      ) {
+        const { exchangeHope: _exchangeHope, ...withoutExchangeHope } =
+          commander;
+        void _exchangeHope;
+        const { gratitude: _gratitude, ...withoutGratitude } =
+          withoutExchangeHope;
+        void _gratitude;
+        return withoutGratitude;
+      }
+      if (!hasGratitude) {
+        const { gratitude: _gratitude, ...withoutGratitude } = commander;
+        void _gratitude;
+        return withoutGratitude;
+      }
       if (
         exchangeHope.realized.length === 0 &&
         exchangeHope.selfSprung.length === 0 &&
@@ -1069,6 +1109,16 @@ export function seminarSummary(result: SeminarResult): string {
       lines.push(
         `${entry.commander.id} exchange-hope: realized=${realized} ` +
           `self=${selfSprung} extinguished=${extinguished}`,
+      );
+    }
+    const formed = entry.gratitude.formed.length;
+    const honored = entry.gratitude.honored.length;
+    const voided = entry.gratitude.voided.length;
+    const owed = entry.gratitude.owed.length;
+    if (formed + honored + voided + owed > 0) {
+      lines.push(
+        `${entry.commander.id} gratitude: formed=${formed} ` +
+          `honored=${honored} voided=${voided} owed=${owed}`,
       );
     }
   }
