@@ -110,6 +110,11 @@ import {
   type PrideReading,
 } from './pride';
 import {
+  EMPTY_SEMINAR_PANIC,
+  foldSeminarPanic,
+  type SeminarPanicOwnerResult,
+} from './panic';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -157,6 +162,7 @@ export interface SeminarCommanderResult {
   readonly guilt: readonly SeminarGuiltIncident[];
   readonly envy: readonly EnvyIncident[];
   readonly pride: PrideReading;
+  readonly panic: SeminarPanicOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -1049,6 +1055,7 @@ export async function runSeminar(options: {
   const gratitudeByOwner = foldGratitude(gratitudeWeeks, allRecords);
   const griefByOwner = foldSeminarGrief(weeks);
   const shameByOwner = foldSeminarShame(weeks);
+  const panicByOwner = foldSeminarPanic(weeks);
   const bitternessByOwner = foldSeminarBitterness(
     bitternessWeeks,
     currentPools,
@@ -1077,6 +1084,7 @@ export async function runSeminar(options: {
       guilt: guiltByOwner[commander.id] ?? [],
       envy: envyByOwner[commander.id] ?? [],
       pride: prideByOwner[commander.id] ?? EMPTY_PRIDE,
+      panic: panicByOwner[commander.id] ?? EMPTY_SEMINAR_PANIC,
     };
   });
   const standings = standingsFor(
@@ -1141,6 +1149,7 @@ export function seminarPayload(result: SeminarResult): string {
         guilt,
         envy,
         pride,
+        panic,
       } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
@@ -1158,6 +1167,7 @@ export function seminarPayload(result: SeminarResult): string {
       const hasGuilt = guilt.length > 0;
       const hasEnvy = envy.length > 0;
       const hasPride = pride.proud.length + pride.wounded.length > 0;
+      const hasPanic = panic.incidents.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
@@ -1168,6 +1178,7 @@ export function seminarPayload(result: SeminarResult): string {
         guilt: _guilt,
         envy: _envy,
         pride: _pride,
+        panic: _panic,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
@@ -1179,6 +1190,7 @@ export function seminarPayload(result: SeminarResult): string {
       void _guilt;
       void _envy;
       void _pride;
+      void _panic;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
@@ -1190,6 +1202,7 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasGuilt ? { guilt } : {}),
         ...(hasEnvy ? { envy } : {}),
         ...(hasPride ? { pride } : {}),
+        ...(hasPanic ? { panic } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1293,6 +1306,11 @@ export function seminarSummary(result: SeminarResult): string {
       lines.push(
         `${entry.commander.id} pride: proud=${entry.pride.proud.length} ` +
           `wounded=${entry.pride.wounded.length}`,
+      );
+    }
+    if (entry.panic.incidents.length > 0) {
+      lines.push(
+        `${entry.commander.id} panic: onsets=${entry.panic.incidents.length}`,
       );
     }
   }

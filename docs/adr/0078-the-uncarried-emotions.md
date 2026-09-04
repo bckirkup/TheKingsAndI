@@ -3,9 +3,10 @@
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
   world for emotions we haven't figured in. … Locate them all."); **D208,
   D209, D211, D212, D213, and D214 are wired inert, D210 is partly wired for
-  recognition, and D215 is partly wired for price appraisal** — no opened
+  recognition, D215 is partly wired for price appraisal, and D216 is partly
+  wired for recognition** — no opened
   emotion is priced or enabled by default
-- **Opens:** **D210** (gratitude), **D216** (panic), **D217** (relief, awe,
+- **Opens:** **D210** (gratitude), **D217** (relief, awe,
   and loneliness — located, deferred together)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
   always, exposed nowhere in play, named once at the closing debrief), ADR
@@ -318,7 +319,7 @@ pride enters the refusal threshold (a play change owed the exploit-tier
 re-run), the hinge into bitterness and spite, and the EMA and floor
 magnitudes, which await a measurement sweep.
 
-### D216 — Panic (open)
+### D216 — Panic (partly wired, 2026-09-05 addendum)
 
 **What it is.** Terror that spreads without exits. The desertion cascade is
 the only contagion in tree, and it only carries pieces *off* the board;
@@ -331,9 +332,17 @@ none new in v1 — panic is expressible as a synchronized, temporary
 curdle uses, decaying within the match. Distinct from grief (object is a
 lost peer) and despair (chronic): panic is acute and shared.
 
-**Open in D216:** whether panic is worth carrying at all before a UI exists
-to dramatize it; contagion topology (affinity-weighted, like rumor); floor
-interaction with quiet-quit so panic cannot double-charge δ's term.
+#### D216 addendum (2026-09-05)
+
+Recognition only: a `PANIC_ONSET` event names the ply at which
+`PANIC_ROSTER_FLOOR` fielded pieces read capture risk ≥
+`PANIC_CAPTURE_RISK_PERMILLE` at once, or a King-danger costly signal fires
+while the fold is enabled. The zero floor is the sentinel; the event is folded
+only into the seminar terminal reading. The carrier — synchronized
+`engagementFactor` collapse through the witness broadcast — remains open, as
+do contagion topology, the quiet-quit double-charge guard, and whether a UI
+should dramatize panic. The carrier is the play change owed the exploit-tier
+re-run.
 
 ### D217 — Relief, awe, loneliness (located; deferred together)
 

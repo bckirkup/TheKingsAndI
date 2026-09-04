@@ -2491,12 +2491,14 @@ live registration remains open, as do vindication, promotion, commendation
 conduct, sustained overrides, passed-over obsolescence, refusal-threshold
 interaction, and the hinge into bitterness and spite.
 
-### D216 ⬜ Panic: can a room break by freezing instead of leaving? (ADR 0078)
-**Open.** Acute, shared terror as a synchronized temporary engagement
-collapse through the witness-broadcast machinery, decaying within the match;
-distinct from grief (object) and despair (chronic). Open: whether it is
-worth carrying before a UI dramatizes it, contagion topology, and the
-quiet-quit double-charge guard. Located in ADR 0078; nothing wired.
+### D216 ✅ Panic: can a room break by freezing instead of leaving? (ADR 0078)
+**Partly wired (recognition), inert.** A terminal-only `PANIC_ONSET` names a
+ply when `PANIC_ROSTER_FLOOR` fielded pieces read capture risk at or above
+`PANIC_CAPTURE_RISK_PERMILLE`, or a King-danger costly signal fires while the
+zero-default fold is enabled; the seminar fold is recognition-only. The
+synchronized `engagementFactor` carrier, contagion topology, quiet-quit
+double-charge guard, and UI dramatization remain open, with the carrier owed
+the exploit-tier re-run.
 
 ### D217 ⬜ Relief, awe, loneliness: located together, deferred together (ADR 0078)
 **Open.** Relief derivable from prior `P_captured` against outcome (any lift

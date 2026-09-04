@@ -301,6 +301,16 @@ export type MatchEvent =
       readonly shamePermille: number;
     }
   | {
+      /** Terminal-only naming of a shared, acute fright across the fielded roster (D216). */
+      readonly t: 'PANIC_ONSET';
+      readonly ply: number;
+      readonly side: 'w' | 'b';
+      readonly trigger: 'dread' | 'king_danger';
+      /** Pieces reading capture risk at or above the panic floor, sorted by id. */
+      readonly dreading: readonly PieceId[];
+      readonly fielded: number;
+    }
+  | {
       readonly t: 'DESERTION';
       readonly ply: number;
       readonly pieceId: PieceId;

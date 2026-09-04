@@ -20,6 +20,7 @@ import {
   applyFatalisticComplianceCosts,
   evaluateMoveResponse,
   normalizePieceState,
+  panicOnsetForPly,
   applyOverride,
   justifiedRefusalObviousness,
   shouldDesert,
@@ -977,6 +978,8 @@ export class MatchSession {
       this.events.push(...fatalistic.events);
     }
 
+    const kingDanger =
+      features !== undefined && detectKingEndangermentCostlySignal(features);
     if (features !== undefined) {
       const attribution = attributeSacrifice(
         features,
@@ -1010,7 +1013,7 @@ export class MatchSession {
       const kinds: Array<
         'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
       > = [];
-      if (detectKingEndangermentCostlySignal(features)) {
+      if (kingDanger) {
         kinds.push('king_endangerment');
       }
       if (captured && isAvengedCapture(this.lastFriendlyCapturePly, this.ply)) {
@@ -1021,21 +1024,29 @@ export class MatchSession {
       this.events.push(...costly.events);
     }
 
+    const captureRiskByPiece = Object.fromEntries(
+      Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
+        id,
+        evaluation.P_captured,
+      ]),
+    );
     const trauma = applyMoveTrauma(
       this.roster,
       this.dreadExposureByPiece,
-      Object.fromEntries(
-        Object.entries(desertionMoveEvals).map(([id, evaluation]) => [
-          id,
-          evaluation.P_captured,
-        ]),
-      ),
+      captureRiskByPiece,
       undefined,
       this.ply,
     );
     this.roster = trauma.roster;
     this.dreadExposureByPiece = trauma.exposure;
     this.events.push(...trauma.events);
+    const panic = panicOnsetForPly({
+      ply: this.ply,
+      side: this.playerSide,
+      captureRiskByPiece,
+      kingDanger,
+    });
+    if (panic !== undefined) this.events.push(panic);
 
     if (captured) {
       // Opponent captured on prior ply is tracked when we lose a piece; here

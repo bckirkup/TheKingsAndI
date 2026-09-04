@@ -159,6 +159,10 @@ export const ENGINE_CONFIG = {
   PRIDE_EXPECTATION_EMA_PERMILLE: 0,
   /** D215 absolute appraisal (permille) a career must reach to be named proud or wounded; zero names any nonzero appraisal. */
   PRIDE_NAMING_FLOOR_PERMILLE: 0,
+  /** D216 number of fielded pieces that must read dread at once for a panic onset to be named; zero disables the fold. */
+  PANIC_ROSTER_FLOOR: 0,
+  /** D216 permille capture risk at which a piece reads dread for panic purposes. */
+  PANIC_CAPTURE_RISK_PERMILLE: 750,
 };
 
 // ============================================================================

@@ -100,6 +100,7 @@ export {
   type ShameExposure,
   type ShameOptions,
 } from './shame';
+export { panicOnsetForPly } from './panic';
 export {
   applyCaptureInjury,
   applyGrace,

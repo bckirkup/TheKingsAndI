@@ -26,6 +26,7 @@ import {
   evaluateMoveResponse,
   justifiedRefusalObviousness,
   normalizePieceState,
+  panicOnsetForPly,
   shouldDesert,
   type CandidateMoveEvaluation,
   type MoveDecisionOutcome,
@@ -312,6 +313,7 @@ function applyPlayerMoveConsequences(input: {
   } = input;
   let roster = input.roster;
   let lastFriendlyCapturePly = input.lastFriendlyCapturePly;
+  const movingSide = board.turn();
   const applied = board.applySan(choice.san);
   events.push({
     t: 'MOVE',
@@ -404,10 +406,11 @@ function applyPlayerMoveConsequences(input: {
     events.push(...costly.events);
   }
 
+  const kingDanger = detectKingEndangermentCostlySignal(features);
   const kinds: Array<
     'king_endangerment' | 'declined_sacrifice' | 'avenged_capture'
   > = [];
-  if (detectKingEndangermentCostlySignal(features)) {
+  if (kingDanger) {
     kinds.push('king_endangerment');
   }
   if (
@@ -420,19 +423,28 @@ function applyPlayerMoveConsequences(input: {
   const costly = applyCostlySignalsToRoster(roster, kinds, ply);
   roster = costly.roster;
   events.push(...costly.events);
+  const captureRiskByPiece = Object.fromEntries(
+    Object.entries(moverInsights.desertionMoveEvals).map(([id, evaluation]) => [
+      id,
+      evaluation.P_captured,
+    ]),
+  );
   const trauma = applyMoveTrauma(
     roster,
     dreadExposureByPiece,
-    Object.fromEntries(
-      Object.entries(moverInsights.desertionMoveEvals).map(
-        ([id, evaluation]) => [id, evaluation.P_captured],
-      ),
-    ),
+    captureRiskByPiece,
     applied.capture?.pieceId,
     ply,
   );
   roster = trauma.roster;
   events.push(...trauma.events);
+  const panic = panicOnsetForPly({
+    ply,
+    side: movingSide,
+    captureRiskByPiece,
+    kingDanger,
+  });
+  if (panic !== undefined) events.push(panic);
 
   return {
     roster,
