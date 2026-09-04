@@ -513,6 +513,10 @@ export class MatchSession {
     const repair = applyRepairSignal(
       this.roster.find((piece) => piece.id === pending.actor.id)?.credence ??
         pending.actor.credence,
+      this.roster.find((piece) => piece.id === pending.actor.id)
+        ?.bitternessPermille ??
+        pending.actor.bitternessPermille ??
+        0,
     );
     if (repair.repaid > 0) {
       this.roster = updatePiece(this.roster, pending.actor.id, (piece) => ({
@@ -552,6 +556,9 @@ export class MatchSession {
       ...override.witnessEvents,
       ...(override.shameEvent === undefined ? [] : [override.shameEvent]),
     );
+    if (override.bitternessEvent !== undefined) {
+      this.events.push(override.bitternessEvent);
+    }
     this.roster = this.roster.map((piece) => {
       if (piece.id === override.overriddenPiece.id) {
         return normalizePieceState(override.overriddenPiece);

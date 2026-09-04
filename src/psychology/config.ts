@@ -43,6 +43,16 @@ export const ENGINE_CONFIG = {
   BENEV_REGARD_RISK_CEILING: 0.15,
   /** Benevolence repair applied after an honoured refusal. */
   BENEV_REPAIR_STEP: 30,
+  /** Bitterness written per qualifying rupture or captive-decay trigger (D208). */
+  BITTERNESS_PER_TRIGGER_PERMILLE: 0,
+  /** Rupture debt threshold for bitterness formation, permille of its ceiling. */
+  BITTERNESS_RUPTURE_THRESHOLD_PERMILLE: 500,
+  /** Fraction of repair/regard/morning gains discounted by bitterness, permille. */
+  BITTERNESS_REPAIR_DISCOUNT_PERMILLE: 0,
+  /** Separate morning-lift bitterness discount, permille. */
+  BITTERNESS_MORNING_DISCOUNT_PERMILLE: 0,
+  /** Match-boundary bitterness decay, permille. */
+  BITTERNESS_DECAY_PERMILLE_PER_MATCH: 0,
   /** Logistic cliff scale for betrayal (ADR 0019). */
   BENEV_BETRAYAL_CLIFF_SCALE: 4,
   BENEV_BETRAYAL_CLIFF_DROP: 40,

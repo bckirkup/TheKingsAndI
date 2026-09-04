@@ -35,6 +35,27 @@ const VERDICT_QUALITY_CP: Record<string, number> = {
   DESERTION_MUTINY: 0,
 };
 
+function foldCampaignBitterness(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['bitterness'] {
+  const incidents = matches.flatMap((match) =>
+    match.events
+      .filter(
+        (event): event is Extract<MatchEvent, { t: 'BITTERNESS_FORMED' }> =>
+          event.t === 'BITTERNESS_FORMED',
+      )
+      .map((event) => ({
+        pieceId: event.pieceId,
+        trigger: event.trigger,
+        bitternessPermille: event.bitternessPermille,
+        match: match.matchIndex,
+        ...(event.ply === undefined ? {} : { ply: event.ply }),
+        ...(event.week === undefined ? {} : { week: event.week }),
+      })),
+  );
+  return incidents.length === 0 ? undefined : { incidents };
+}
+
 function mean(values: readonly number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -416,6 +437,7 @@ export function buildCampaignDebrief(
   const hope = foldCampaignHope(matches);
   const grief = foldCampaignGrief(matches);
   const shame = foldCampaignShame(matches);
+  const bitterness = foldCampaignBitterness(matches);
   return {
     campaignId,
     matches,
@@ -428,6 +450,7 @@ export function buildCampaignDebrief(
     hope,
     grief,
     ...(shame.incidents.length === 0 ? {} : { shame }),
+    ...(bitterness === undefined ? {} : { bitterness }),
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

@@ -24,6 +24,7 @@ import {
 import {
   applyGriefLoss,
   decayGrief,
+  decayBitterness,
   ENGINE_CONFIG,
   type MatchEvent,
   type PieceRole,
@@ -70,6 +71,24 @@ export interface PoolSnapshot {
   readonly fieldedMemberCount: number;
   readonly benchUtilisation: number;
   readonly lineupChurn: number;
+}
+
+export function decayPoolBitterness(pool: CommanderPool): CommanderPool {
+  if (
+    Math.max(
+      0,
+      Math.trunc(ENGINE_CONFIG.BITTERNESS_DECAY_PERMILLE_PER_MATCH),
+    ) === 0
+  ) {
+    return pool;
+  }
+  return {
+    ...pool,
+    members: pool.members.map((member) => ({
+      ...member,
+      state: decayBitterness(member.state),
+    })),
+  };
 }
 
 export interface PoolSeasonMetrics {

@@ -63,6 +63,8 @@ export interface PieceState {
   readonly griefLoad?: number;
   /** Integer cash held by the piece for seminar ransom (D183). */
   readonly cash?: number;
+  /** Terminal-only grievance carrier; absent preserves legacy payload identity (D208). */
+  readonly bitternessPermille?: number;
 }
 
 export interface CandidateMoveEvaluation {
@@ -263,6 +265,15 @@ export type MatchEvent =
       readonly ply: number;
       readonly pieceId: PieceId;
       readonly gained: number;
+    }
+  | {
+      /** Hidden bitterness formation; terminal debrief only (D208). */
+      readonly t: 'BITTERNESS_FORMED';
+      readonly pieceId: PieceId;
+      readonly trigger: 'rupture_floor' | 'not_ransomed';
+      readonly bitternessPermille: number;
+      readonly ply?: number;
+      readonly week?: number;
     }
   | {
       readonly t: 'OVERRIDE';

@@ -6,9 +6,11 @@ import {
 import { publicRoleValue } from '../src/persistence/register';
 import {
   clampCredence,
+  formBitterness,
   ENGINE_CONFIG,
   releaseCaptiveGrief,
   type CredenceState,
+  type MatchEvent,
 } from '../src/psychology';
 import type { CommanderPool } from './pool';
 import { publicLotBasePrice } from './seminarDraft';
@@ -164,6 +166,47 @@ export function decayCaptiveBenevolence(
       },
     ]),
   );
+}
+
+export function decayCaptiveBenevolenceWithEvents(
+  pools: ReadonlyMap<string, CommanderPool>,
+  decayPerWeek: number,
+  week: number,
+): {
+  readonly pools: ReadonlyMap<string, CommanderPool>;
+  readonly events: readonly Extract<MatchEvent, { t: 'BITTERNESS_FORMED' }>[];
+} {
+  const decay = Math.max(0, Math.trunc(decayPerWeek));
+  if (decay === 0) return { pools, events: [] };
+  const events: Extract<MatchEvent, { t: 'BITTERNESS_FORMED' }>[] = [];
+  const next = new Map(
+    [...pools.entries()].map(([id, pool]) => [
+      id,
+      {
+        ...pool,
+        members: pool.members.map((member) => {
+          if (member.heldBy === undefined) return member;
+          const before = member.state.credence.tauBenev;
+          const after = clampCredence(before - decay);
+          if (after === before) return member;
+          const formed = formBitterness(
+            {
+              ...member.state,
+              credence: {
+                ...member.state.credence,
+                tauBenev: after,
+              },
+            },
+            'not_ransomed',
+            { week },
+          );
+          if (formed.event !== undefined) events.push(formed.event);
+          return { ...member, state: formed.piece };
+        }),
+      },
+    ]),
+  );
+  return { pools: next, events };
 }
 
 export function ransomCaptives(input: {

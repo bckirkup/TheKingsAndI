@@ -2423,11 +2423,12 @@ the measured knee at 500, with ply-1 dismissal preserved for every cruel
 style.
 
 ### D208 ⬜ Bitterness: when does grievance stop accepting repair? (ADR 0078)
-**Open.** A per-piece repair discount (default `0`), written when rupture debt
-crosses a threshold at the benevolence floor and thereafter discounting every
-inbound repair, regard, and (per the ruling) morning-lift reach. Open: the
-threshold, the magnitude, whether bitterness itself is ever repairable, and
-the morning-lift interaction. Located in ADR 0078; nothing wired.
+**Wired inert.** Optional per-piece bitterness recognition is formed by an
+unvindicated rupture-floor charge or a held-captive benevolence-decay week;
+terminal folds name the incidents, while repair/regard and morning-lift
+discounts, decay, and all magnitudes remain at inert defaults. Thresholds and
+pricing remain open; whether a voided gratitude debt converts to bitterness is
+also open.
 
 ### D209 ⬜ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
 **Open.** Courage's dark mirror — a full-effort act against the actor's own

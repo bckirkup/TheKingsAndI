@@ -196,7 +196,11 @@ export function applyRegardToPiece(
   readonly piece: PieceState;
   readonly event: Extract<MatchEvent, { t: 'REGARD' }> | undefined;
 } {
-  const credence = applyRegardSignal(piece.credence, streakLength);
+  const credence = applyRegardSignal(
+    piece.credence,
+    streakLength,
+    piece.bitternessPermille ?? 0,
+  );
   const gained = credence.tauBenev - piece.credence.tauBenev;
   return {
     piece: { ...piece, credence },

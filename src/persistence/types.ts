@@ -235,6 +235,16 @@ export interface CampaignDebrief {
       readonly shamePermille: number;
     }[];
   };
+  readonly bitterness?: {
+    readonly incidents: readonly {
+      readonly pieceId: string;
+      readonly trigger: 'rupture_floor' | 'not_ransomed';
+      readonly bitternessPermille: number;
+      readonly match?: number;
+      readonly ply?: number;
+      readonly week?: number;
+    }[];
+  };
   readonly foldVersion: string;
   readonly actTerminalState: ActTerminalState;
   readonly transcript: CampaignTranscript;
