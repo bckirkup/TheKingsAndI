@@ -94,6 +94,7 @@ describe('campaign retirement and grace', () => {
               ...candidate,
               B_i: ENGINE_CONFIG.RETIREMENT_TRAUMA_THRESHOLD,
               E_i: 99,
+              griefLoad: 777,
             }
           : candidate,
       ),
@@ -133,6 +134,7 @@ describe('campaign retirement and grace', () => {
     if (refielded === undefined) throw new Error('Expected the reused seat.');
     expect(refielded.B_i).toBe(0);
     expect(refielded.E_i).toBe(startingAbilityForRole(refielded.role));
+    expect(refielded.griefLoad).toBeUndefined();
   });
 
   it('never retires a King at the trauma ceiling', async () => {

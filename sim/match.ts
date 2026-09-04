@@ -77,6 +77,7 @@ export interface RunMatchOptions {
   readonly engine: EnginePort;
   readonly journalEntries?: JournalEntry[];
   readonly journalAgent?: JournalAgent;
+  readonly griefEnabled?: boolean;
 }
 
 export async function runMatch(
@@ -176,6 +177,10 @@ export async function runMatch(
     ...(options.enemyTrackedIdentities === undefined
       ? {}
       : { enemyTrackedIdentities: options.enemyTrackedIdentities }),
+    matchIndex: options.matchIndex,
+    ...(options.griefEnabled === undefined
+      ? {}
+      : { griefEnabled: options.griefEnabled }),
   });
 }
 

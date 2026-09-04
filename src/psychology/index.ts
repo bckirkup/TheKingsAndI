@@ -39,6 +39,17 @@ export {
 } from './credence';
 export { calculateEngineSearchDepth } from './depth';
 export {
+  applyGriefDepthSuppression,
+  applyGriefDecay,
+  applyGriefLoss,
+  calculateGriefSearchDepth,
+  decayGrief,
+  releaseCaptiveGrief,
+  type GriefCause,
+  type GriefIncident,
+  type GriefTransition,
+} from './grief';
+export {
   applyDesertionWithCascade,
   buildDesertionContexts,
   desertionContextFor,

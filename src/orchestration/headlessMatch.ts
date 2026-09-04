@@ -13,6 +13,8 @@ import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import { objectionStrengthWord } from '../core/qualitativeBands';
 import {
   applyFatalisticComplianceCosts,
+  applyGriefLoss,
+  decayGrief,
   applyMatchOutcomeTrust,
   applyNeglectSignal,
   applyOverride,
@@ -167,6 +169,8 @@ export interface HeadlessMatchConfig {
     context?: OverrideAskContext,
   ) => boolean;
   readonly kingTauAbil?: number;
+  readonly matchIndex?: number;
+  readonly griefEnabled?: boolean;
 }
 
 export interface HeadlessMatchResult {
@@ -1086,6 +1090,45 @@ export async function runHeadlessMatch(
     (event) => event.t === 'OVERRIDE' && event.vindicated === true,
   ).length;
   roster = applyOutcomeVindication(roster, winScore, contestedOrders);
+  if (config.griefEnabled !== false) {
+    const playerIds = new Set(config.initialRoster.map((piece) => piece.id));
+    const enemyIds = new Set(
+      (config.initialEnemyRoster ?? []).map((piece) => piece.id),
+    );
+    const losses = events.filter(
+      (event): event is Extract<MatchEvent, { t: 'CAPTURE' | 'DESERTION' }> =>
+        event.t === 'CAPTURE' || event.t === 'DESERTION',
+    );
+    for (const loss of losses) {
+      const mournedId = loss.t === 'CAPTURE' ? loss.victim : loss.pieceId;
+      const sideRoster = playerIds.has(mournedId)
+        ? roster
+        : enemyIds.has(mournedId)
+          ? enemyRoster
+          : undefined;
+      if (sideRoster === undefined) continue;
+      const transition = applyGriefLoss(
+        sideRoster,
+        mournedId,
+        loss.t === 'CAPTURE' ? 'captured' : 'deserted',
+        config.matchIndex ?? loss.ply,
+      );
+      if (sideRoster === roster) roster = [...transition.roster];
+      else enemyRoster = [...transition.roster];
+      events.push(
+        ...transition.incidents.map((incident) => ({
+          t: 'GRIEF_MOURNING' as const,
+          ply: loss.ply,
+          pieceId: incident.pieceId,
+          mournedId: incident.mournedId,
+          cause: incident.cause,
+          weekOrMatch: incident.weekOrMatch,
+        })),
+      );
+    }
+    roster = roster.map((piece) => decayGrief(piece));
+    enemyRoster = enemyRoster.map((piece) => decayGrief(piece));
+  }
 
   return {
     events: Object.freeze(events),

@@ -100,6 +100,9 @@ export function evaluateMoveResponse(
         effectiveSearchDepth: calculateEngineSearchDepth(
           actor.E_i,
           ENGINE_CONFIG.FULL_ENGAGEMENT,
+          ENGINE_CONFIG.MIN_SEARCH_DEPTH,
+          ENGINE_CONFIG.MAX_SEARCH_DEPTH,
+          actor.griefLoad,
         ),
         engagementFactor: ENGINE_CONFIG.FULL_ENGAGEMENT,
       };
@@ -110,7 +113,13 @@ export function evaluateMoveResponse(
       utilityScore,
       perceivedValue,
       refusalThreshold,
-      effectiveSearchDepth: calculateEngineSearchDepth(actor.E_i, engagement),
+      effectiveSearchDepth: calculateEngineSearchDepth(
+        actor.E_i,
+        engagement,
+        ENGINE_CONFIG.MIN_SEARCH_DEPTH,
+        ENGINE_CONFIG.MAX_SEARCH_DEPTH,
+        actor.griefLoad,
+      ),
       engagementFactor: engagement,
     };
   }
@@ -126,7 +135,13 @@ export function evaluateMoveResponse(
     utilityScore,
     perceivedValue,
     refusalThreshold,
-    effectiveSearchDepth: calculateEngineSearchDepth(actor.E_i, engagement),
+    effectiveSearchDepth: calculateEngineSearchDepth(
+      actor.E_i,
+      engagement,
+      ENGINE_CONFIG.MIN_SEARCH_DEPTH,
+      ENGINE_CONFIG.MAX_SEARCH_DEPTH,
+      actor.griefLoad,
+    ),
     engagementFactor: engagement,
   };
 }

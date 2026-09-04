@@ -59,6 +59,8 @@ export interface PieceState {
   readonly engagementFactor: number;
   readonly credence: CredenceState;
   readonly rumor: RumorState;
+  /** Integer mourning load, in permille (D211). */
+  readonly griefLoad?: number;
   /** Integer cash held by the piece for seminar ransom (D183). */
   readonly cash?: number;
 }
@@ -311,6 +313,15 @@ export type MatchEvent =
       readonly ply: number;
       readonly victim: PieceId;
       readonly by: PieceId;
+    }
+  | {
+      /** Terminal-only grief naming; emitted only when the load is non-zero. */
+      readonly t: 'GRIEF_MOURNING';
+      readonly ply: number;
+      readonly pieceId: PieceId;
+      readonly mournedId: PieceId;
+      readonly cause: 'captured' | 'deserted' | 'career_ended';
+      readonly weekOrMatch: number;
     }
   | {
       readonly t: 'POSTHUMOUS_CLASS_CREDIT';

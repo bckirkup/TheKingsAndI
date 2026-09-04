@@ -10,7 +10,7 @@ import { buildInsightRound } from '../engine/round';
 import { SHARED_SEARCH_D_MAX } from '../engine/search';
 import type { EngineEvaluation, EnginePort, Insight } from '../engine/types';
 import {
-  calculateEngineSearchDepth,
+  calculateGriefSearchDepth,
   ENGINE_CONFIG,
   type CandidateMoveEvaluation,
   type PieceState,
@@ -87,7 +87,11 @@ export async function resolveMoverInsights(
   if (actor.id === LEADER_INSIGHT_SEAT_ID) {
     throw new Error(`PieceId is reserved: ${LEADER_INSIGHT_SEAT_ID}`);
   }
-  const depth = calculateEngineSearchDepth(actor.E_i, actor.engagementFactor);
+  const depth = calculateGriefSearchDepth(
+    actor.E_i,
+    actor.engagementFactor,
+    actor.griefLoad,
+  );
   const probe = board.clone();
   probe.applyMove(intent);
   const terminalScore = terminalMoveScore(probe);
@@ -101,7 +105,11 @@ export async function resolveMoverInsights(
     const depths = [
       ...new Set(
         orderedRoster.map((piece) =>
-          calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+          calculateGriefSearchDepth(
+            piece.E_i,
+            piece.engagementFactor,
+            piece.griefLoad,
+          ),
         ),
       ),
     ].sort((left, right) => left - right);
@@ -118,7 +126,11 @@ export async function resolveMoverInsights(
       fen: board.fen(),
       seats: orderedRoster.map((piece) => ({
         pieceId: beforeInsightSeatId(piece.id),
-        depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        depth: calculateGriefSearchDepth(
+          piece.E_i,
+          piece.engagementFactor,
+          piece.griefLoad,
+        ),
         evalProfile: beforeProfiles.get(piece.id) ?? {},
       })),
     });
@@ -164,7 +176,11 @@ export async function resolveMoverInsights(
         piece,
         beforeProfiles.get(piece.id) ?? {},
         beforeAttentionByDepth.get(
-          calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+          calculateGriefSearchDepth(
+            piece.E_i,
+            piece.engagementFactor,
+            piece.griefLoad,
+          ),
         ) ?? [],
       );
       if (piece.id === actor.id) {
@@ -211,7 +227,11 @@ export async function resolveMoverInsights(
   const depths = [
     ...new Set(
       orderedRoster.map((piece) =>
-        calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        calculateGriefSearchDepth(
+          piece.E_i,
+          piece.engagementFactor,
+          piece.griefLoad,
+        ),
       ),
     ),
   ].sort((left, right) => left - right);
@@ -240,7 +260,11 @@ export async function resolveMoverInsights(
       seats: [
         ...orderedRoster.map((piece) => ({
           pieceId: piece.id,
-          depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+          depth: calculateGriefSearchDepth(
+            piece.E_i,
+            piece.engagementFactor,
+            piece.griefLoad,
+          ),
           evalProfile: profiles.get(piece.id) ?? {},
         })),
         {
@@ -254,7 +278,11 @@ export async function resolveMoverInsights(
       fen: beforeFen,
       seats: orderedRoster.map((piece) => ({
         pieceId: beforeInsightSeatId(piece.id),
-        depth: calculateEngineSearchDepth(piece.E_i, piece.engagementFactor),
+        depth: calculateGriefSearchDepth(
+          piece.E_i,
+          piece.engagementFactor,
+          piece.griefLoad,
+        ),
         evalProfile: beforeProfiles.get(piece.id) ?? {},
       })),
     }),
@@ -305,9 +333,10 @@ export async function resolveMoverInsights(
     if (sharedInsight === undefined) {
       throw new Error(`Missing insight for ${piece.id}`);
     }
-    const pieceDepth = calculateEngineSearchDepth(
+    const pieceDepth = calculateGriefSearchDepth(
       piece.E_i,
       piece.engagementFactor,
+      piece.griefLoad,
     );
     const privateInsight = applyPrivateEvaluation(
       {
@@ -327,9 +356,10 @@ export async function resolveMoverInsights(
     if (beforeSharedInsight === undefined) {
       throw new Error(`Missing before insight for ${piece.id}`);
     }
-    const beforeDepth = calculateEngineSearchDepth(
+    const beforeDepth = calculateGriefSearchDepth(
       piece.E_i,
       piece.engagementFactor,
+      piece.griefLoad,
     );
     const privateBeforeInsight = applyPrivateEvaluation(
       beforeSharedInsight,

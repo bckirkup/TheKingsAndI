@@ -203,6 +203,16 @@ export const ENGINE_CONFIG = {
   FATALISTIC_WITNESS_TRUST_PENALTY: -12,
   /** Actor future-willingness hit after fatalistic compliance. */
   FATALISTIC_ACTOR_ENGAGEMENT_PENALTY: 0.25,
+  /** Minimum dyadic affinity that makes a peer loss mournable (D211). */
+  GRIEF_AFFINITY_THRESHOLD: 50,
+  /** Load written for each mourned peer, in permille. */
+  GRIEF_LOAD_PER_LOSS_PERMILLE: 0,
+  /** Fraction of a full peer loss carried while the peer is captive. */
+  GRIEF_CAPTIVE_WEIGHT_PERMILLE: 500,
+  /** Engagement suppression applied to carried grief, in permille. */
+  GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE: 0,
+  /** Load ending at each match boundary, in permille. */
+  GRIEF_DECAY_PERMILLE_PER_MATCH: 0,
 } as const;
 
 export type EngineConfig = typeof ENGINE_CONFIG;

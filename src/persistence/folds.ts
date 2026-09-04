@@ -5,7 +5,11 @@ import {
   foldHope,
   foldUnjustifiedTrauma,
 } from '../psychology/events';
-import type { CampaignCultureDriftVector, MatchEvent } from '../psychology';
+import type {
+  CampaignCultureDriftVector,
+  GriefIncident,
+  MatchEvent,
+} from '../psychology';
 import { foldPlayerCommendations } from './commendations';
 import { foldCampaignTranscript } from './transcript';
 import {
@@ -332,6 +336,24 @@ function foldCampaignHope(
   };
 }
 
+function foldCampaignGrief(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['grief'] {
+  const incidents: GriefIncident[] = [];
+  for (const match of matches) {
+    for (const event of match.events) {
+      if (event.t !== 'GRIEF_MOURNING') continue;
+      incidents.push({
+        pieceId: event.pieceId,
+        mournedId: event.mournedId,
+        cause: event.cause,
+        weekOrMatch: event.weekOrMatch ?? match.matchIndex,
+      });
+    }
+  }
+  return { incidents };
+}
+
 export function foldCampaignCultureDrift(
   matches: readonly MatchRecord[],
   initialRoster: readonly StoredPieceState[],
@@ -372,6 +394,7 @@ export function buildCampaignDebrief(
   const judgementSeat = foldJudgementSeat(matches);
   const courage = foldCampaignCourage(matches);
   const hope = foldCampaignHope(matches);
+  const grief = foldCampaignGrief(matches);
   return {
     campaignId,
     matches,
@@ -382,6 +405,7 @@ export function buildCampaignDebrief(
     judgementSeat,
     courage,
     hope,
+    grief,
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

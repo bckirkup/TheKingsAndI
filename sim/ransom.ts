@@ -4,7 +4,12 @@ import {
   type DraftPriority,
 } from '../src/core/draftEconomy';
 import { publicRoleValue } from '../src/persistence/register';
-import { clampCredence, type CredenceState } from '../src/psychology';
+import {
+  clampCredence,
+  ENGINE_CONFIG,
+  releaseCaptiveGrief,
+  type CredenceState,
+} from '../src/psychology';
 import type { CommanderPool } from './pool';
 import { publicLotBasePrice } from './seminarDraft';
 import type { SeminarConfig } from './seminarConfig';
@@ -119,7 +124,11 @@ function redeem(
     status: 'available',
     availableAtMatch: firstMatch,
     state: {
-      ...current.state,
+      ...releaseCaptiveGrief(
+        current.state,
+        ENGINE_CONFIG.GRIEF_CAPTIVE_WEIGHT_PERMILLE,
+        ENGINE_CONFIG.GRIEF_LOAD_PER_LOSS_PERMILLE,
+      ),
       cash: Math.max(0, Math.trunc(current.state.cash ?? 0) - pieceAmount),
     },
   }));
