@@ -4,7 +4,8 @@
   says in what order the decisions it opens come due. It opens **D218–D223**;
   the owner ruled **D218** (gate passed for act one and the seminar harness
   only) and **D221** (the model facilitator is a stand-in fallback outside
-  ADR 0004) on 2026-09-04. D219, D220, D222, D223 remain open.
+  ADR 0004) and **D219** (the GUI is a visual layer over the existing journal
+  seam) on 2026-09-04. D220, D222, D223 remain open.
 - **Scope:** Everything between "the game plays and the seminar survives" and
   "someone who is not us loves it": the GUI, the model players, the human
   playtest, and the facilitator, human and model.
@@ -177,9 +178,10 @@ person should be scheduled before the instrument that will read what they did.
 - **D218** ✅ — Is the ADR 0061 step-7 gate passed, and for which surfaces?
   **Ruled 2026-09-04 (owner):** passed for the act-one campaign and the
   seminar harness; not passed for the draft, purse, ransom, honours, and market.
-- **D219** — Does the GUI become a journal writer, and may the screen show
-  anything not derivable from the `Observation`? The relationship inspector
-  today does.
+- **D219** ✅ — Does the GUI become a journal writer, and may the screen show
+  anything not derivable from the `Observation`? **Ruled 2026-09-04 (owner):
+  yes, and no** — "the GUI is just a visual layer on what already exists."
+  The relationship inspector today reads past the projection and must move.
 - **D220** — May a consented playtest upload a journal — the consumer build's
   first and only network call — without breaching ADR 0004's "no backend"?
 - **D221** ✅ — Is a model facilitator inside ADR 0004 (no runtime LLM in the

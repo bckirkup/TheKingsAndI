@@ -2505,12 +2505,16 @@ is passed for the act-one single-player campaign and the seminar harness, and
 market, whose magnitudes ADR 0061 steps 3–7 are still moving. No GUI may
 render a knob that chain is still searching.
 
-### D219 ❓ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0079)
-ADR 0079 §1 proposes that the interactive match path write ADR 0062
-`JournalEntry`s and that `ui/` read only the observation projection, so human
-and model journals are comparable under ADR 0063 §3. The relationship
-inspector reads `PieceState` directly today, so the ruling changes a shipped
-surface. Detector: **the glass screen**. **Not wired.**
+### D219 ✅ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0079)
+**Answered 2026-09-04 (owner): yes, and no.** "The GUI is just a visual layer
+on what already exists." The interactive match path writes ADR 0062
+`JournalEntry`s through the same seam the harness uses — build the
+`Observation`, enumerate the options, a click is `chosen = i` — and `ui/`
+reads only the observation projection, so human and model journals are
+comparable under ADR 0063 §3. The screen may show nothing not derivable from
+the `Observation`. The relationship inspector reads `PieceState` directly
+today and must be moved onto the projection. Detector: **the glass screen**.
+**Not wired.**
 
 ### D220 ❓ May a consented playtest upload a journal? (ADR 0079)
 The stranger playtest needs the journal to leave the browser. An opt-in,
