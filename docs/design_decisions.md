@@ -2417,6 +2417,45 @@ fine-grid evidence — a touch more conveyor (11–25/190 ply-≤2 repeats) than
 the measured knee at 500, with ply-1 dismissal preserved for every cruel
 style.
 
+### D208 ❓ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0078)
+The owner has said the game plays and the seminar survives. ADR 0078 proposes
+reading that as passed for the act-one single-player campaign and the seminar
+harness, and **not** passed for the draft, purse, ransom, honours, and
+between-cycle market, whose magnitudes ADR 0061 steps 3–7 are still moving.
+No GUI may render a knob that chain is still searching. Owner ruling owed.
+
+### D209 ❓ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0078)
+ADR 0078 §1 proposes that the interactive match path write ADR 0062
+`JournalEntry`s and that `ui/` read only the observation projection, so human
+and model journals are comparable under ADR 0063 §3. The relationship
+inspector reads `PieceState` directly today, so the ruling changes a shipped
+surface. Detector: **the glass screen**. **Not wired.**
+
+### D210 ❓ May a consented playtest upload a journal? (ADR 0078)
+The stranger playtest needs the journal to leave the browser. An opt-in,
+one-shot export of a file the participant can read first would be the consumer
+build's only network call. Whether that is inside ADR 0004's "no backend" is
+the owner's to rule.
+
+### D211 ❓ Is a model facilitator inside or outside ADR 0004? (ADR 0078)
+ADR 0028 D82 makes the facilitator a leader the instrument measures. A model
+facilitator would be an ADR 0062 agent over facilitator decision kinds
+(`pair`, `intervene`, `bench`, `feed`, `debrief`) plus debrief prose. ADR 0078
+assumes it is a host-side, API-keyed, opt-in tool outside the shipped game,
+with indices in and prose out, judged by the same facilitator audit as a
+human; it may not ship while the **unaccountable host** detector fires.
+
+### D212 ❓ What is disengagement, measurably? (ADR 0078)
+The bored and disengaged personas cannot be scored until `disengage` has a
+definition: a journal entry, a latency threshold, an abandonment, or a run of
+fallback-to-scripted decisions (ADR 0062 §2). Until answered the emotional
+axis stays two points and no containment number may be quoted.
+
+### D213 ❓ Which content packs ship first? (ADR 0078)
+The stranger playtest wants the indie pack; the pilot cohort wants exec-lab;
+both are step-4 inputs and the four tracks (indie / exec-lab / purist /
+academic) are M7.2. Owner ordering owed.
+
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
 with three riders that govern every magnitude chosen later: (a) **good news
