@@ -2485,7 +2485,7 @@ reading, and pricing remain open.
 **Partly wired (price appraisal), inert.** `foldPride` reconstructs a
 role-seeded, moving expectation from seminar draft and ransom price events,
 using `PRIDE_EXPECTATION_EMA_PERMILLE` and naming nonzero appraisals at
-`PRIDE_NAMING_FLOOR_PERMILLE`; both default to zero, and non-empty pride is
+`PRIDE_NAMING_FLOOR_PERMILLE`; both default to zero, and an empty pride reading is
 omitted from the terminal payload. The carrier is not yet a `PieceState` field:
 live registration remains open, as do vindication, promotion, commendation
 conduct, sustained overrides, passed-over obsolescence, refusal-threshold
