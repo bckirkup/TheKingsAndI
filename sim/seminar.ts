@@ -72,6 +72,11 @@ import {
   type RansomLedgerEntry,
 } from './ransom';
 import {
+  EMPTY_EXCHANGE_HOPE,
+  foldExchangeHope,
+  type ExchangeHopeOwnerResult,
+} from './exchangeHope';
+import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
   type DraftEconomyCycleObservation,
@@ -110,6 +115,7 @@ export interface SeminarCommanderResult {
   readonly register: PublicRegister;
   readonly commendations: PlayerCommendationSet;
   readonly judgementSeat: CampaignDebrief['judgementSeat'];
+  readonly exchangeHope: ExchangeHopeOwnerResult;
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -930,6 +936,7 @@ export async function runSeminar(options: {
   } finally {
     if (ownedEngine) await disposeSimEngine(options.engineKind ?? 'fake');
   }
+  const exchangeHopeByOwner = foldExchangeHope(weeks, currentPools);
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -937,6 +944,7 @@ export async function runSeminar(options: {
       register: registerForSide(records, commander.side),
       commendations: foldPlayerCommendations(records),
       judgementSeat: foldJudgementSeat(records),
+      exchangeHope: exchangeHopeByOwner[commander.id] ?? EMPTY_EXCHANGE_HOPE,
     };
   });
   const standings = standingsFor(
@@ -990,7 +998,20 @@ export function seminarPayload(result: SeminarResult): string {
   return canonicalJson({
     seed: result.seed,
     config,
-    commanders: result.commanders,
+    commanders: result.commanders.map((commander) => {
+      const { exchangeHope } = commander;
+      if (
+        exchangeHope.realized.length === 0 &&
+        exchangeHope.selfSprung.length === 0 &&
+        exchangeHope.extinguished.length === 0
+      ) {
+        const { exchangeHope: _exchangeHope, ...withoutExchangeHope } =
+          commander;
+        void _exchangeHope;
+        return withoutExchangeHope;
+      }
+      return commander;
+    }),
     weeks: result.weeks.map((week) =>
       Object.fromEntries(
         Object.entries(week).filter(
@@ -1041,6 +1062,15 @@ export function seminarSummary(result: SeminarResult): string {
         `commendations: ${earned}; ` +
         `LI=${entry.judgementSeat.meanLeadershipIndex ?? 'null'}`,
     );
+    const realized = entry.exchangeHope.realized.length;
+    const selfSprung = entry.exchangeHope.selfSprung.length;
+    const extinguished = entry.exchangeHope.extinguished.length;
+    if (realized + selfSprung + extinguished > 0) {
+      lines.push(
+        `${entry.commander.id} exchange-hope: realized=${realized} ` +
+          `self=${selfSprung} extinguished=${extinguished}`,
+      );
+    }
   }
   return lines.join('\n');
 }

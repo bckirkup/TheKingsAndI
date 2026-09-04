@@ -2173,7 +2173,8 @@ survivors, lower win score). Raising it above `1000` is a measurement, not a
 default, and no campaign evidence for it exists yet.
 
 ### D195 ✅ What is hope, and how does it differ from the absence of despair? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Hope is a **forecast attached to a
+**Answered 2026-08-30 (owner) — promotion and exchange objects wired in the
+seminar closing debrief.** Hope is a **forecast attached to a
 reachable object**, not a mood and not low despair: an object (a specific
 future state the piece counts as good), a prospect (how reachable it looks from
 the piece's own `D_i` view, never engine truth), and a credence (whether whoever
@@ -2182,10 +2183,14 @@ example already in tree and the template for the rest. Hope is extinguished by
 unreachability rather than by elapsed time, which keeps ADR 0007 intact; a hope
 that cannot be named in one clause is a mood and does not qualify. ADR 0071's
 exchange supplies the second hope object — "someone will come for me" — and its
-destruction is a leader's omission rather than an accident of the board.
+destruction is a leader's omission rather than an accident of the board. The
+terminal seminar fold names commander/split realization, self-sprung release,
+career-end captivity, and semester-close captivity, with terminal benevolence as
+the credence reading; it remains debrief-only and does not price hope.
 
 ### D196 ✅ What is courage in this model? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Courage is **action against the
+**Answered 2026-08-30 (owner) — wired in the closing debrief.** Courage is
+**action against the
 actor's own expected cost**: taking the option its own arithmetic scored below
 the one it declined — obeying an order utility said refuse, staying when the
 exit comparison said leave, offering counsel whose expected standing cost is
@@ -2195,7 +2200,7 @@ a piece with nothing to lose that obeys scores zero. It is the first quantity
 in the design by which a piece can be admirable rather than merely compliant.
 
 ### D197 ✅ Who may see hope and courage, and when? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Computed always, exposed to no one
+**Answered 2026-08-30 (owner) — wired in the closing debrief.** Computed always, exposed to no one
 in play, shown once in the **closing debrief** as named incidents with the
 position and the piece attached. No live gauge, status board, stated reason,
 facilitator console, or adaptive-player observation (D193) may carry either:

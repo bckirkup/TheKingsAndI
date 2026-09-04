@@ -170,5 +170,25 @@ Rekindling after a zero prospect is tracked, and the existing `PROMOTION`
 event names realization.
 
 This wiring does not price hope and charges no cost anywhere. Exchange-object
-hope remains unexpressible pending ADR 0071 wiring, and credence registration
+hope is now expressible through the terminal seminar fold; credence registration
 remains deferred. D198 remains open: naming a destroyed hope is not pricing it.
+
+## Addendum (2026-09-03, owner ruling): exchange-hope v1 is wired
+
+The second hope object is now expressible in the seminar path. Its object is
+**exchange** — “someone will come for me” — and its prospect is that ransom
+remains possible while the career is alive and the semester remains open. Its
+credence is the captive's benevolence credence toward its own commander, the
+same reading that captivity decay lowers each week.
+
+Exchange hope is folded at the terminal boundary only. A commander-paid or
+split ransom realizes the hope; self-payment is named separately as
+**self-sprung**: the piece came home, but the hope that someone else would come
+was disappointed. A captive whose career ends while held extinguishes the
+object as `career_ended`; a captive still held when the semester closes is
+`semester_closed`. Terminal incidents carry the captive's final benevolence
+reading, showing how long it kept believing.
+
+This is naming, not pricing. No exchange-hope value reaches live policy,
+observation, standings, registers, or commendations, and no cost is charged.
+D198 remains open: naming a destroyed hope is not pricing it.
