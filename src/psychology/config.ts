@@ -134,6 +134,10 @@ export const ENGINE_CONFIG = {
   GUILT_CAPTURE_WINDOW_PLIES: 2,
   /** D214 same-role clearing-price gap floor for envy recognition, in purse units; zero disables the fold. */
   ENVY_PRICE_GAP_FLOOR: 0,
+  /** D182 permille by which a piece's price expectation moves toward each realized price; zero disables the D215 pride fold. */
+  PRIDE_EXPECTATION_EMA_PERMILLE: 0,
+  /** D215 absolute appraisal (permille) a career must reach to be named proud or wounded; zero names any nonzero appraisal. */
+  PRIDE_NAMING_FLOOR_PERMILLE: 0,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

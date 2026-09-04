@@ -18,9 +18,11 @@ import {
   bidderAcceptanceDiscountPermille,
   createSeminarMarkets,
   publicLotBasePrice,
+  roleExpectationPrice,
   runSeminarDraft,
   scaledDraftPurses,
 } from '../sim/seminarDraft';
+import { foldPride, pricingEventsForCycle } from '../sim/pride';
 import {
   createCommanderPool,
   poolSeasonMetrics,
@@ -277,6 +279,35 @@ describe('seminar spine', () => {
     expect(result.cohortHistory.consultedIntakePairs).toBe(1);
     expect(result.cohortHistory.consultedAffinityPairs).toBe(1);
     expect(result.cohortHistory.acquisitionsWithAffinity).toBe(1);
+    const prideConfig = {
+      ...SEMINAR_CONFIG,
+      DRAFT_CONSULTATIONS_PER_CYCLE: 1,
+      DRAFT_PURSE_TO_ASKING_RATIO_PERMILLE: 1000,
+      DRAFT_LOT_BASE_PRICE: SEMINAR_CONFIG.DRAFT_LOT_BASE_PRICE - 1,
+    };
+    const pride = foldPride(
+      pricingEventsForCycle(
+        1,
+        [],
+        result.settlements,
+        new Map([
+          [pooledWhite.id, pooledWhite],
+          [black.id, black],
+        ]),
+      ),
+      prideConfig,
+      500,
+    );
+    const prideCareers = Object.values(pride).flatMap((reading) => [
+      ...reading.proud,
+      ...reading.wounded,
+    ]);
+    expect(prideCareers).toHaveLength(result.settlements.length);
+    for (const career of prideCareers) {
+      expect(career.steps[0]?.expectation).toBe(
+        roleExpectationPrice(career.role, prideConfig),
+      );
+    }
     for (const settlement of result.settlements) {
       const source = queen.state.id === settlement.pieceId ? queen : undefined;
       const ownerMember = result.pools

@@ -1864,8 +1864,9 @@ tell of §5 therefore survives only coarsely: presence is observable,
 generosity is not. *(ADR 0071 second addendum, 2026-08-29.)*
 
 ### D182 ✅ Does a piece read its own price as its worth? (ADR 0071 addendum)
-**Answered in principle 2026-08-29 (owner) — expectation baseline confirmed,
-magnitude and registration remain open; cash is now wired in the seminar path.** A piece's clearing price and ransom feed its
+**Answered in principle 2026-08-29 (owner) — expectation baseline confirmed;
+price-side magnitude is ruled and wired inert via `foldPride` (ADR 0078 D215
+addendum), while live registration remains open; cash is now wired in the seminar path.** A piece's clearing price and ransom feed its
 self-regard: being bought back cheaply is an injury even though coming home is
 good news. The appraisal is a **signed difference from a persistent, moving
 expectation** the piece carries, updated by what that piece was previously
@@ -2480,13 +2481,15 @@ commendations, Leadership Index terms, affinity discounts, or PRNG draws.
 The affinity-discount magnitude, whether envy of the ransomed joins the
 reading, and pricing remain open.
 
-### D215 ⬜ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
-**Open; refines D182.** The ruled-but-unwired self-appraisal against role
-expectation is the pride carrier — raised by vindication, promotion, price,
-and conduct; wounded by overrides, undercuts, and being passed over; the
-hinge into bitterness and spite. Open: everything D182 left open, plus
-whether pride enters the refusal threshold (a play change requiring the
-exploit tier re-run). Located in ADR 0078; nothing wired.
+### D215 ✅ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
+**Partly wired (price appraisal), inert.** `foldPride` reconstructs a
+role-seeded, moving expectation from seminar draft and ransom price events,
+using `PRIDE_EXPECTATION_EMA_PERMILLE` and naming nonzero appraisals at
+`PRIDE_NAMING_FLOOR_PERMILLE`; both default to zero, and an empty pride reading is
+omitted from the terminal payload. The carrier is not yet a `PieceState` field:
+live registration remains open, as do vindication, promotion, commendation
+conduct, sustained overrides, passed-over obsolescence, refusal-threshold
+interaction, and the hinge into bitterness and spite.
 
 ### D216 ⬜ Panic: can a room break by freezing instead of leaving? (ADR 0078)
 **Open.** Acute, shared terror as a synchronized temporary engagement
