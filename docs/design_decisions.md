@@ -2516,11 +2516,18 @@ the `Observation`. The relationship inspector reads `PieceState` directly
 today and must be moved onto the projection. Detector: **the glass screen**.
 **Not wired.**
 
-### D220 ❓ May a consented playtest upload a journal? (ADR 0079)
-The stranger playtest needs the journal to leave the browser. An opt-in,
-one-shot export of a file the participant can read first would be the consumer
-build's only network call. Whether that is inside ADR 0004's "no backend" is
-the owner's to rule.
+### D220 ⬜ May a consented playtest upload a journal? (ADR 0079)
+**Closed as moot 2026-09-04 (owner).** The paid ninety-minute stranger
+playtest that needed the upload falls away: "sending files back and forth
+seems pointless; running less than a week seems pointless." The human test is
+the pilot intensive itself, in a room, where journals travel from a seat to
+the ADR 0028 local world host over the LAN and no further. The consumer build
+makes no network call and ADR 0004's "no backend" is untouched. In its place
+the ADR 0079 step-2 model playtest becomes a **hard gate**: no cohort is
+seated until every persona (honest, merchant, vicious, bored, disengaged) is
+contained in the ADR 0063 envelope or its escape is a named, understood
+finding — the bots are the only thing standing between the harness and twelve
+potentially angry people.
 
 ### D221 ✅ Is a model facilitator inside or outside ADR 0004? (ADR 0079)
 **Answered 2026-09-04 (owner): outside.** The model facilitator is a
@@ -2560,8 +2567,8 @@ a pack rather than owning one. Each pack is an ADR 0023 `ContentPack` —
 `themeTokens`, `nounMap`, `dialogue`, `epilogues` — bound to the same
 situation keys; the classic/purist pack is the chess nouns unrenamed and is
 the pack the ADR 0079 "pretty leak" detector diffs the others against. The
-stranger playtest (step 4) runs on whichever pack has shipped first
-(military); the pilot cohort runs on corporate.
+step-2 persona sweep runs on every shipped pack (the "pretty leak" detector);
+the pilot cohort runs on corporate.
 
 ### D168 ✅ Does a private confidence exist, and what may travel through it? (ADR 0065)
 **Answered 2026-08-28 (owner) — not wired.** The private channel *must* exist,
