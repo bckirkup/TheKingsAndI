@@ -10,7 +10,7 @@ export interface SeminarSpiteIncident extends SpiteIncident {
   readonly match: number;
 }
 
-function fieldedPieceIds(match: MatchRecord): readonly string[] {
+export function fieldedPieceIds(match: MatchRecord): readonly string[] {
   const fielding = match.events.filter(
     (event): event is Extract<MatchEvent, { t: 'SQUAD_FIELDING' }> =>
       event.t === 'SQUAD_FIELDING' && event.side === 'w',

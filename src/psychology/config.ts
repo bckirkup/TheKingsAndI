@@ -126,6 +126,12 @@ export const ENGINE_CONFIG = {
   SPITE_COMMANDER_COST_FLOOR: 0,
   /** D209 pivotality floor for desertion recognition; zero disables that shape. */
   SPITE_DESERTION_PIVOTALITY_FLOOR: 0,
+  /** D213 cascade window for deserter guilt recognition, in plies; zero disables. */
+  GUILT_CASCADE_WINDOW_PLIES: 0,
+  /** D213 peer-safety loss floor for survivor guilt; zero disables. */
+  GUILT_PEER_SAFETY_FLOOR: 0,
+  /** D213 capture window after a safety-spending move, in plies. */
+  GUILT_CAPTURE_WINDOW_PLIES: 2,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

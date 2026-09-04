@@ -150,6 +150,21 @@ export function courageForMove(
   };
 }
 
+export function guiltForMove(
+  moveEval: CandidateMoveEvaluation,
+): { readonly spentPeers: Readonly<Record<PieceId, number>> } | undefined {
+  if (ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR <= 0) return undefined;
+  const spentPeers: Record<PieceId, number> = {};
+  for (const [peerId, safetyDelta] of Object.entries(
+    moveEval.peerSafetyDeltas,
+  )) {
+    if (safetyDelta <= -ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR) {
+      spentPeers[peerId as PieceId] = -safetyDelta;
+    }
+  }
+  return Object.keys(spentPeers).length === 0 ? undefined : { spentPeers };
+}
+
 export function foldCourage(
   events: readonly MatchEvent[],
   fieldedPieceIds: readonly PieceId[],
@@ -272,6 +287,104 @@ export function foldSpite(
   incidents.sort(
     (left, right) =>
       left.pieceId.localeCompare(right.pieceId) || left.ply - right.ply,
+  );
+  return { incidents, count: incidents.length };
+}
+
+export type GuiltIncident =
+  | {
+      readonly kind: 'deserter';
+      readonly pieceId: PieceId;
+      readonly ply: number;
+      readonly followers: number;
+    }
+  | {
+      readonly kind: 'survivor';
+      readonly pieceId: PieceId;
+      readonly ply: number;
+      readonly peerId: PieceId;
+      readonly safetySpent: number;
+      readonly capturePly: number;
+    };
+
+export function foldGuilt(
+  events: readonly MatchEvent[],
+  fieldedPieceIds: readonly PieceId[],
+): { readonly incidents: readonly GuiltIncident[]; readonly count: number } {
+  if (
+    ENGINE_CONFIG.GUILT_CASCADE_WINDOW_PLIES <= 0 &&
+    ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR <= 0
+  ) {
+    return { incidents: [], count: 0 };
+  }
+  const fielded = new Set(fieldedPieceIds);
+  const incidents: GuiltIncident[] = [];
+  for (const event of events) {
+    if (
+      event.t === 'DESERTION' &&
+      event.departureKind === 'first' &&
+      ENGINE_CONFIG.GUILT_CASCADE_WINDOW_PLIES > 0 &&
+      fielded.has(event.pieceId)
+    ) {
+      const windowEnd = event.ply + ENGINE_CONFIG.GUILT_CASCADE_WINDOW_PLIES;
+      const followers = events.filter(
+        (candidate) =>
+          candidate.t === 'DESERTION' &&
+          candidate.departureKind === 'cascade' &&
+          candidate.ply > event.ply &&
+          candidate.ply <= windowEnd,
+      ).length;
+      if (followers > 0) {
+        incidents.push({
+          kind: 'deserter',
+          pieceId: event.pieceId,
+          ply: event.ply,
+          followers,
+        });
+      }
+    }
+    if (
+      event.t !== 'MOVE' ||
+      event.guilt === undefined ||
+      ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR <= 0 ||
+      !fielded.has(event.pieceId)
+    ) {
+      continue;
+    }
+    const windowEnd = event.ply + ENGINE_CONFIG.GUILT_CAPTURE_WINDOW_PLIES;
+    for (const [peerId, safetySpent] of Object.entries(
+      event.guilt.spentPeers,
+    )) {
+      const capture = events.find(
+        (candidate): candidate is Extract<MatchEvent, { t: 'CAPTURE' }> => {
+          if (candidate.t !== 'CAPTURE') return false;
+          return (
+            candidate.victim === peerId &&
+            candidate.ply >= event.ply &&
+            candidate.ply <= windowEnd
+          );
+        },
+      );
+      if (capture !== undefined) {
+        incidents.push({
+          kind: 'survivor',
+          pieceId: event.pieceId,
+          ply: event.ply,
+          peerId: peerId as PieceId,
+          safetySpent,
+          capturePly: capture.ply,
+        });
+      }
+    }
+  }
+  incidents.sort(
+    (left, right) =>
+      left.pieceId.localeCompare(right.pieceId) ||
+      left.ply - right.ply ||
+      left.kind.localeCompare(right.kind) ||
+      (left.kind === 'survivor' ? left.peerId : '').localeCompare(
+        right.kind === 'survivor' ? right.peerId : '',
+      ),
   );
   return { incidents, count: incidents.length };
 }

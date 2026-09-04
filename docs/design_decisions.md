@@ -2462,12 +2462,12 @@ terminal-only event names positive exposures in campaign and seminar debriefs.
 The scale knobs default to zero; magnitudes await a measurement sweep.
 `leaderAppraisal` and bitterness interactions remain open.
 
-### D213 ⬜ Guilt: does the survivor carry what its escape cost? (ADR 0078)
-**Open.** A terminal fold in v1 — losses attributed to the surviving choices
-that enabled them (direct links only, per the D201 attribution lesson),
-named at the debrief, never priced without a further ruling. Open: the
-attribution windows and whether a deserter receives its debrief. Located in
-ADR 0078; nothing wired.
+### D213 ✅ Guilt: does the survivor carry what its escape cost? (ADR 0078)
+**Wired inert.** Terminal-only `foldGuilt` recognizes direct deserter cascade
+followers and floor-gated survivor safety spending followed by a peer capture.
+The optional MOVE annotation is absent at the zero default floor; no live
+surface or Leadership Index term reads it. Attribution windows, magnitudes,
+whether guilt becomes a carrier, and pricing remain open.
 
 ### D214 ⬜ Envy: what does a piece feel about another's price? (ADR 0078)
 **Open.** The draft's clearing prices (D183) give envy a denominated object:

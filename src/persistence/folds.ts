@@ -2,6 +2,7 @@ import {
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
   foldCourage,
+  foldGuilt,
   foldHope,
   foldSpite,
   foldUnjustifiedTrauma,
@@ -17,6 +18,7 @@ import {
   AUDIT_FOLD_VERSION,
   CULTURE_DRIFT_FOLD_VERSION,
   COURAGE_FOLD_VERSION,
+  GUILT_FOLD_VERSION,
   HOPE_FOLD_VERSION,
   SPITE_FOLD_VERSION,
   JUDGEMENT_SEAT_FOLD_VERSION,
@@ -375,6 +377,22 @@ function foldCampaignSpite(
     : { foldVersion: SPITE_FOLD_VERSION, incidents };
 }
 
+function foldCampaignGuilt(
+  matches: readonly MatchRecord[],
+): CampaignDebrief['guilt'] {
+  const incidents = matches.flatMap((match) => {
+    const folded = foldGuilt(match.events, fieldedIdsForJudgementSeat(match));
+    return folded.incidents.map((incident) => ({
+      matchId: match.id,
+      matchIndex: match.matchIndex,
+      ...incident,
+    }));
+  });
+  return incidents.length === 0
+    ? undefined
+    : { foldVersion: GUILT_FOLD_VERSION, incidents };
+}
+
 function foldCampaignGrief(
   matches: readonly MatchRecord[],
 ): CampaignDebrief['grief'] {
@@ -457,6 +475,7 @@ export function buildCampaignDebrief(
   const shame = foldCampaignShame(matches);
   const bitterness = foldCampaignBitterness(matches);
   const spite = foldCampaignSpite(matches);
+  const guilt = foldCampaignGuilt(matches);
   return {
     campaignId,
     matches,
@@ -471,6 +490,7 @@ export function buildCampaignDebrief(
     ...(shame.incidents.length === 0 ? {} : { shame }),
     ...(bitterness === undefined ? {} : { bitterness }),
     ...(spite === undefined ? {} : { spite }),
+    ...(guilt === undefined ? {} : { guilt }),
     foldVersion: CULTURE_DRIFT_FOLD_VERSION,
     actTerminalState,
     transcript: foldCampaignTranscript(matches),

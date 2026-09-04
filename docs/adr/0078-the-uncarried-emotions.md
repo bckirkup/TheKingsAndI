@@ -1,10 +1,11 @@
 # ADR 0078 — The uncarried emotions: a location survey
 
 - **Status:** survey accepted (owner request, 2026-09-04: "Please survey the
-  world for emotions we haven't figured in. … Locate them all."); **D208 and
-  D212 are wired inert and D210 is partly wired for recognition** — no opened
+  world for emotions we haven't figured in. … Locate them all."); **D208,
+  D209, D211, D212, and D213 are wired inert and D210 is partly wired for
+  recognition** — no opened
   emotion is priced or enabled by default
-- **Opens:** **D209** (spite), **D210** (gratitude), **D213** (guilt), **D214** (envy),
+- **Opens:** **D210** (gratitude), **D214** (envy),
   **D215** (pride, refining D182), **D216** (panic), **D217** (relief, awe,
   and loneliness — located, deferred together)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
@@ -194,24 +195,38 @@ broadcasts, and existing `PSYCH_DELTA` events are unchanged. The v1 curve is
 linear-with-cap, with magnitudes awaiting a measurement sweep. Whether
 `leaderAppraisal` or bitterness interactions should respond remains open.
 
-### D213 — Guilt (open)
+### D213 — Guilt (wired inert, 2026-09-05 addendum)
 
 **What it is.** The survivor's and the deserter's burden. A piece whose
 escape a peer's capture bought, or a deserter whose remaining squad then
 collapsed, carries nothing today.
 
-**Location.** Derivable from the log — no new live state. The desertion
-cascade already names its chain; capture events carry `peerSafetyDeltas`
-(whose safety my move spent). Guilt is a terminal fold in v1: at
-debrief-build time, attribute each loss to the surviving choices that
-enabled it (the deserter's exit within the cascade window; the move that
-traded a peer's safety for own). Named, never priced, until a ruling says a
-guilt-carrier belongs in live state.
+**Location.** Derivable from the log — no new live state. A terminal
+`foldGuilt` reads the desertion cascade and a floor-gated optional `MOVE`
+annotation. The annotation is produced from `CandidateMoveEvaluation`'s
+`peerSafetyDeltas`; capture events themselves do not carry those deltas.
+Guilt recognizes only direct links in v1: a first deserter with cascade
+followers inside `GUILT_CASCADE_WINDOW_PLIES`, or a surviving mover whose
+floor-qualified peer-safety spend is followed by that peer's capture inside
+`GUILT_CAPTURE_WINDOW_PLIES`. Both shapes are named only in terminal
+campaign/seminar debriefs and remain unpriced.
 
-**Open in D213:** the attribution windows (the D201 lesson: attribution
-through cascades is contestable — start with the direct link only); whether
-a deserter can even *receive* the debrief (it left; ADR 0071's answer for
-captives suggests exits still get their names read).
+#### D213 addendum (2026-09-05)
+
+D213 is wired inert and recognition-only. `GUILT_CASCADE_WINDOW_PLIES` and
+`GUILT_PEER_SAFETY_FLOOR` are zero sentinels; the capture window defaults to
+two plies and is consulted only when its floor is enabled. The deserter
+incident names the first departure and its cascade follower count. The
+survivor incident names the mover, peer, positive safety spent, and capture
+ply. Fielding filters actors as in the other terminal folds. The optional
+MOVE annotation is absent at the default floor, preserving seeded payload
+identity; no live state, observation, policy, standing, register,
+commendation, Leadership Index, or PRNG draw is involved. A deserter still
+receives a terminal name, following the exit precedent in ADR 0071.
+
+The direct-link ruling intentionally does not attribute guilt through longer
+cascades. Window and floor magnitudes, whether guilt ever becomes a live
+carrier, and pricing remain open.
 
 ### D214 — Envy (open)
 

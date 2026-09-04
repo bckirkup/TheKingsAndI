@@ -99,6 +99,7 @@ import {
   type SeminarBitternessWeek,
 } from './bitterness';
 import { foldSeminarSpite, type SeminarSpiteIncident } from './spite';
+import { foldSeminarGuilt, type SeminarGuiltIncident } from './guilt';
 import {
   draftEconomyDegeneracyFindings,
   type DegeneracyFinding,
@@ -144,6 +145,7 @@ export interface SeminarCommanderResult {
   readonly shame: SeminarShameOwnerResult;
   readonly bitterness: readonly BitternessIncident[];
   readonly spite: readonly SeminarSpiteIncident[];
+  readonly guilt: readonly SeminarGuiltIncident[];
 }
 
 export interface SeminarStanding extends CommanderStanding {
@@ -1026,6 +1028,9 @@ export async function runSeminar(options: {
   const spiteByOwner = foldSeminarSpite(
     weeks.map((week) => ({ week: week.week, records: week.records })),
   );
+  const guiltByOwner = foldSeminarGuilt(
+    weeks.map((week) => ({ week: week.week, records: week.records })),
+  );
   const terminal = commanders.map((commander) => {
     const records = allRecords.get(commander.id) ?? [];
     return {
@@ -1039,6 +1044,7 @@ export async function runSeminar(options: {
       shame: shameByOwner[commander.id] ?? EMPTY_SEMINAR_SHAME,
       bitterness: bitternessByOwner[commander.id] ?? [],
       spite: spiteByOwner[commander.id] ?? [],
+      guilt: guiltByOwner[commander.id] ?? [],
     };
   });
   const standings = standingsFor(
@@ -1093,8 +1099,15 @@ export function seminarPayload(result: SeminarResult): string {
     seed: result.seed,
     config,
     commanders: result.commanders.map((commander) => {
-      const { exchangeHope, gratitude, grief, shame, bitterness, spite } =
-        commander;
+      const {
+        exchangeHope,
+        gratitude,
+        grief,
+        shame,
+        bitterness,
+        spite,
+        guilt,
+      } = commander;
       const hasGratitude =
         gratitude.formed.length > 0 ||
         gratitude.honored.length > 0 ||
@@ -1108,6 +1121,7 @@ export function seminarPayload(result: SeminarResult): string {
         exchangeHope.extinguished.length > 0;
       const hasBitterness = bitterness.length > 0;
       const hasSpite = spite.length > 0;
+      const hasGuilt = guilt.length > 0;
       const {
         exchangeHope: _exchangeHope,
         gratitude: _gratitude,
@@ -1115,6 +1129,7 @@ export function seminarPayload(result: SeminarResult): string {
         shame: _shame,
         bitterness: _bitterness,
         spite: _spite,
+        guilt: _guilt,
         ...withoutTerminalReadings
       } = commander;
       void _exchangeHope;
@@ -1123,6 +1138,7 @@ export function seminarPayload(result: SeminarResult): string {
       void _shame;
       void _bitterness;
       void _spite;
+      void _guilt;
       return {
         ...withoutTerminalReadings,
         ...(hasExchangeHope ? { exchangeHope } : {}),
@@ -1131,6 +1147,7 @@ export function seminarPayload(result: SeminarResult): string {
         ...(hasShame ? { shame } : {}),
         ...(hasBitterness ? { bitterness } : {}),
         ...(hasSpite ? { spite } : {}),
+        ...(hasGuilt ? { guilt } : {}),
       };
     }),
     weeks: result.weeks.map((week) =>
@@ -1220,6 +1237,11 @@ export function seminarSummary(result: SeminarResult): string {
     if (entry.spite.length > 0) {
       lines.push(
         `${entry.commander.id} spite: incidents=${entry.spite.length}`,
+      );
+    }
+    if (entry.guilt.length > 0) {
+      lines.push(
+        `${entry.commander.id} guilt: incidents=${entry.guilt.length}`,
       );
     }
   }

@@ -1,6 +1,7 @@
 import type {
   CampaignCultureDriftVector,
   CredenceState,
+  GuiltIncident,
   MatchEvent,
   MoveResponseVerdict,
   PieceRole,
@@ -17,6 +18,7 @@ export const JUDGEMENT_SEAT_FOLD_VERSION = 'judgement-seat-v3';
 export const COURAGE_FOLD_VERSION = 'courage-v1';
 export const HOPE_FOLD_VERSION = 'hope-v1';
 export const SPITE_FOLD_VERSION = 'spite-v1';
+export const GUILT_FOLD_VERSION = 'guilt-v1';
 export const CERTIFICATE_VERSION = 'certificate-v1';
 export const PASSPORT_VERSION = 'passport-v1';
 export const PSYCH_CONFIG_VERSION = 'engine-config-v1';
@@ -230,6 +232,14 @@ export interface CampaignDebrief {
       readonly grievance: 'override' | 'bitterness';
       readonly commanderCost: number;
     }[];
+  };
+  /** D213: terminal-only direct-link guilt attribution. */
+  readonly guilt?: {
+    readonly foldVersion: string;
+    readonly incidents: readonly ({
+      readonly matchId: string;
+      readonly matchIndex: number;
+    } & GuiltIncident)[];
   };
   /** D211: terminal-only naming of carried mourning incidents. */
   readonly grief: {

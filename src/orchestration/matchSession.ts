@@ -12,6 +12,7 @@ import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import {
   applyRepairSignal,
   courageForMove,
+  guiltForMove,
   isRegardEligible,
   ENGINE_CONFIG,
   applyNeglectSignal,
@@ -797,7 +798,11 @@ export class MatchSession {
         ? {}
         : (() => {
             const courage = courageForMove(outcome, moveEval);
-            return courage === undefined ? {} : { courage };
+            const guilt = guiltForMove(moveEval);
+            return {
+              ...(courage === undefined ? {} : { courage }),
+              ...(guilt === undefined ? {} : { guilt }),
+            };
           })()),
     });
     if (applied.promotion !== undefined) {
