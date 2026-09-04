@@ -329,10 +329,12 @@ captivity decay is inert unless explicitly enabled. Ransom terms remain private:
 prices, payer, and split are developer ledger instrumentation only and do not
 reach registers, standings, commendations, or leader observations. Ransom money
 is paid to the captor, not removed from the economy. The exchange-hope object is
-deferred to the later PR.
+now named by a terminal-only seminar fold.
 
 The owner considered **weregild** and rejected it: ransom prices a return, not a
 life. The alternative of **wælreaf**, spoils stripped from the fallen, is
 likewise not the implemented economy. Captor affinity movement remains deferred.
-D185 remains open, and D182 remains open for self-appraisal magnitude and
-registration.
+Exchange hope is now expressible as a terminal-only seminar fold; its
+realization, self-sprung release, and captivity extinguishment remain naming
+rather than pricing. D185 remains open, and D182 remains open for self-appraisal
+magnitude and registration.

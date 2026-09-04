@@ -1,8 +1,8 @@
-# ADR 0078 — Three trials before anyone loves it: the surface, the stranger, and the room
+# ADR 0079 — Three trials before anyone loves it: the surface, the stranger, and the room
 
 - **Status:** Proposed (2026-09-04). A plan, in the manner of ADR 0061: it
   resolves no decision and says in what order the ones it opens come due. It
-  opens **D208–D213**.
+  opens **D218–D223**.
 - **Scope:** Everything between "the game plays and the seminar survives" and
   "someone who is not us loves it": the GUI, the model players, the human
   playtest, and the facilitator, human and model.
@@ -67,7 +67,7 @@ Three things follow, and they are why the plan is one plan rather than four:
    is the live example — then a human knows more than a model did, and every
    model-versus-human comparison is invalid. The rule is *the screen is the
    projection*; the test is a leak test over `ui/`'s inputs, not a formatting
-   test. This is **D209**.
+   test. This is **D219**.
 3. **A theme may not change a decision.** Packs are `themeTokens`, `nounMap`,
    `dialogue`, `epilogues` (ADR 0023 §4). Two humans on two packs, same seed,
    should produce journals that differ only in `agent`. A pack that measurably
@@ -81,12 +81,12 @@ it. That separation is ADR 0001 again, applied to the people.
 
 | # | Step | Gate it opens | Why it cannot move later |
 |---|---|---|---|
-| 0 | **The ruling** — the owner has said the ADR 0061 step-7 gate is passed. This ADR reads that as: passed for the *single-player act-one campaign and the seminar harness*; **not** passed for the draft, purse, ransom, honours, or between-cycle market, whose magnitudes are still under search (ADR 0061 steps 3–7). GUI work touches nothing whose knob is still moving | **D208** | Building a draft screen over a purse whose clearing rule may change is ADR 0061's exact failure mode |
-| 1 | **The journal reaches the app** — the interactive match path writes `JournalEntry`s; `ui/` reads only the `Observation`; a browser match exports `{journal, seed, determinismId}`; **the browser runs the harness's engine** (Lozza WASM in a worker behind the barrier), so `determinismId` matches | D209 | Every later step's evidence is a journal. A human playtest on the fake engine measures a game nobody else plays; the M4 note already flagged it |
-| 2 | **The model players** — the fork (ADR 0062 §5) over cheap NPC prefixes; a model agent behind `AgentIdentity{id, promptVersion, optionSetVersion}`; the containment envelope as a *computed* metric with a pass criterion; the persona set the owner names, each as **authored, versioned prompt text**: honest, merchant (already the exploit tier's job — the model merchant is a check that a *reasoning* gamer finds nothing the deterministic one missed), vicious, bored, disengaged | **D212** | Bored and disengaged are the players the NPCs cannot be (ADR 0062 context). Until `disengage` is a decision someone takes, the emotional axis stays two points and the coverage duty is unmet. This must be measured before a human is asked to play, or the human is the first bored player and there is no envelope to contain them |
-| 3 | **The surface** — three tracks that fan out (§4): (a) *legibility* — the first ninety minutes (ADR 0027 §4), the ADR 0018 "name a cause" panel, the transcript made visible (ADR 0030); (b) *variety* — the four packs for the four tracks (indie / exec-lab / purist / academic, M7.2) as data, with pack-coverage CI; (c) *access* — colour-safe aura encoding, keyboard play, reduced motion (M7.3) | **D213** | Pretty before step 1 is a screenshot; pretty after step 1 is an instrument with a skin. Variety before the packs are data is a fork (ADR 0023 rejected it) |
-| 4 | **The strangers** — paid, unselected humans on the consumer pacing profile: ninety minutes, the indie pack, one act, journal export plus a short protocol (§3). Then a pilot **intensive** cohort of ~12 with a human facilitator and the exec-lab pack | **D210** | Strangers are the harshest emotional population and the cheapest; they answer the ninety-minute cliff and the containment question in one sitting. The cohort answers cohort collapse (ADR 0027) and needs a facilitator to exist first — which it does, in a person |
-| 5 | **The room** — the facilitator audit (ADR 0028 D82) as a fold over the cohort's journals; the facilitator's own decision kinds (`pair`, `intervene`, `bench`, `feed`, `debrief`) as a **facilitator journal**; the cohort dashboard (5.8h) and the local world host (5.8j); then the **model facilitator** as an ADR 0062 agent over those decision kinds plus debrief prose, judged by the same audit as the human | **D211** | A model facilitator without a facilitator audit is unaccountable by construction — ADR 0028's own detector. The human facilitator in step 4 produces the first audit the model is measured against |
+| 0 | **The ruling** — the owner has said the ADR 0061 step-7 gate is passed. This ADR reads that as: passed for the *single-player act-one campaign and the seminar harness*; **not** passed for the draft, purse, ransom, honours, or between-cycle market, whose magnitudes are still under search (ADR 0061 steps 3–7). GUI work touches nothing whose knob is still moving | **D218** | Building a draft screen over a purse whose clearing rule may change is ADR 0061's exact failure mode |
+| 1 | **The journal reaches the app** — the interactive match path writes `JournalEntry`s; `ui/` reads only the `Observation`; a browser match exports `{journal, seed, determinismId}`; **the browser runs the harness's engine** (Lozza WASM in a worker behind the barrier), so `determinismId` matches | D219 | Every later step's evidence is a journal. A human playtest on the fake engine measures a game nobody else plays; the M4 note already flagged it |
+| 2 | **The model players** — the fork (ADR 0062 §5) over cheap NPC prefixes; a model agent behind `AgentIdentity{id, promptVersion, optionSetVersion}`; the containment envelope as a *computed* metric with a pass criterion; the persona set the owner names, each as **authored, versioned prompt text**: honest, merchant (already the exploit tier's job — the model merchant is a check that a *reasoning* gamer finds nothing the deterministic one missed), vicious, bored, disengaged | **D222** | Bored and disengaged are the players the NPCs cannot be (ADR 0062 context). Until `disengage` is a decision someone takes, the emotional axis stays two points and the coverage duty is unmet. This must be measured before a human is asked to play, or the human is the first bored player and there is no envelope to contain them |
+| 3 | **The surface** — three tracks that fan out (§4): (a) *legibility* — the first ninety minutes (ADR 0027 §4), the ADR 0018 "name a cause" panel, the transcript made visible (ADR 0030); (b) *variety* — the four packs for the four tracks (indie / exec-lab / purist / academic, M7.2) as data, with pack-coverage CI; (c) *access* — colour-safe aura encoding, keyboard play, reduced motion (M7.3) | **D223** | Pretty before step 1 is a screenshot; pretty after step 1 is an instrument with a skin. Variety before the packs are data is a fork (ADR 0023 rejected it) |
+| 4 | **The strangers** — paid, unselected humans on the consumer pacing profile: ninety minutes, the indie pack, one act, journal export plus a short protocol (§3). Then a pilot **intensive** cohort of ~12 with a human facilitator and the exec-lab pack | **D220** | Strangers are the harshest emotional population and the cheapest; they answer the ninety-minute cliff and the containment question in one sitting. The cohort answers cohort collapse (ADR 0027) and needs a facilitator to exist first — which it does, in a person |
+| 5 | **The room** — the facilitator audit (ADR 0028 D82) as a fold over the cohort's journals; the facilitator's own decision kinds (`pair`, `intervene`, `bench`, `feed`, `debrief`) as a **facilitator journal**; the cohort dashboard (5.8h) and the local world host (5.8j); then the **model facilitator** as an ADR 0062 agent over those decision kinds plus debrief prose, judged by the same audit as the human | **D221** | A model facilitator without a facilitator audit is unaccountable by construction — ADR 0028's own detector. The human facilitator in step 4 produces the first audit the model is measured against |
 
 Steps 1 → 2 → 4 → 5 are serial: each is the instrument for the next. Step 3
 depends on step 1 and is otherwise parallel with step 2. Step 0 precedes all.
@@ -110,7 +110,7 @@ The task-rabbit playtest is designed as a sweep, not a focus group:
   four-item affect check; (4) everything else.
 - **Consent and transport:** the journal leaves the browser only by explicit
   export, and its upload is the one network call the consumer build has ever
-  made. Whether that is inside ADR 0004's "no backend" is **D210**; the plan
+  made. Whether that is inside ADR 0004's "no backend" is **D220**; the plan
   assumes an opt-in, one-shot POST of a file the participant can read first.
 - **Pass criterion:** the human population is *contained* — no human journal
   escapes the NPC envelope on an axis the model population did not already
@@ -165,29 +165,29 @@ and one of inference spend, with the spend needing a budget ruling; step 3's
 three tracks are one to two sessions each and parallel; step 4 is one session
 of build plus an external wait measured in recruitment days, then a pilot
 cohort measured in the intensive's five days; step 5 is two sessions for the
-audit and dashboard and one for the model facilitator once D211 is ruled. The
+audit and dashboard and one for the model facilitator once D221 is ruled. The
 external waits — recruitment, the pilot week, the inference budget — dominate
 the calendar and are the reason the order matters: nothing that waits on a
 person should be scheduled before the instrument that will read what they did.
 
 ## Open decisions
 
-- **D208** — Is the ADR 0061 step-7 gate passed, and for which surfaces? This
+- **D218** — Is the ADR 0061 step-7 gate passed, and for which surfaces? This
   ADR proposes: passed for the act-one campaign and the seminar harness; not
   passed for the draft, purse, ransom, honours, and market.
-- **D209** — Does the GUI become a journal writer, and may the screen show
+- **D219** — Does the GUI become a journal writer, and may the screen show
   anything not derivable from the `Observation`? The relationship inspector
   today does.
-- **D210** — May a consented playtest upload a journal — the consumer build's
+- **D220** — May a consented playtest upload a journal — the consumer build's
   first and only network call — without breaching ADR 0004's "no backend"?
-- **D211** — Is a model facilitator inside ADR 0004 (no runtime LLM in the
+- **D221** — Is a model facilitator inside ADR 0004 (no runtime LLM in the
   shipped game) or outside it (a host-side, API-keyed, opt-in tool whose prose
   is presentation and whose decisions are journal indices)? The plan assumes
   outside, and that the human facilitator's audit is its pass criterion.
-- **D212** — What is disengagement, measurably? A `disengage` entry, a latency
+- **D222** — What is disengagement, measurably? A `disengage` entry, a latency
   threshold, an abandonment, or a run of fallback-to-scripted decisions
   (ADR 0062 §2)? The bored persona cannot be scored until this is answered.
-- **D213** — Which packs ship first, and does the exec-lab pack precede the
+- **D223** — Which packs ship first, and does the exec-lab pack precede the
   indie one? The stranger playtest wants indie; the pilot cohort wants exec-lab;
   both are step-4 inputs.
 
@@ -200,7 +200,7 @@ person should be scheduled before the instrument that will read what they did.
   evidence is admissible beside a harness number (`src/app/README.md`).
 - Human evidence enters `docs/calibration/` on the same terms as sweep
   evidence: dated, seeded, `determinismId` recorded, one baseline.
-- A model facilitator, if D211 rules it outside ADR 0004, is the first place a
+- A model facilitator, if D221 rules it outside ADR 0004, is the first place a
   live model touches the product at all, and the boundary is the same as ADR
   0062's: indices in, prose out, nothing re-enters state.
 

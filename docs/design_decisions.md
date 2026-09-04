@@ -2173,7 +2173,8 @@ survivors, lower win score). Raising it above `1000` is a measurement, not a
 default, and no campaign evidence for it exists yet.
 
 ### D195 ✅ What is hope, and how does it differ from the absence of despair? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Hope is a **forecast attached to a
+**Answered 2026-08-30 (owner) — promotion and exchange objects wired in the
+seminar closing debrief.** Hope is a **forecast attached to a
 reachable object**, not a mood and not low despair: an object (a specific
 future state the piece counts as good), a prospect (how reachable it looks from
 the piece's own `D_i` view, never engine truth), and a credence (whether whoever
@@ -2182,10 +2183,14 @@ example already in tree and the template for the rest. Hope is extinguished by
 unreachability rather than by elapsed time, which keeps ADR 0007 intact; a hope
 that cannot be named in one clause is a mood and does not qualify. ADR 0071's
 exchange supplies the second hope object — "someone will come for me" — and its
-destruction is a leader's omission rather than an accident of the board.
+destruction is a leader's omission rather than an accident of the board. The
+terminal seminar fold names commander/split realization, self-sprung release,
+career-end captivity, and semester-close captivity, with terminal benevolence as
+the credence reading; it remains debrief-only and does not price hope.
 
 ### D196 ✅ What is courage in this model? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Courage is **action against the
+**Answered 2026-08-30 (owner) — wired in the closing debrief.** Courage is
+**action against the
 actor's own expected cost**: taking the option its own arithmetic scored below
 the one it declined — obeying an order utility said refuse, staying when the
 exit comparison said leave, offering counsel whose expected standing cost is
@@ -2195,7 +2200,7 @@ a piece with nothing to lose that obeys scores zero. It is the first quantity
 in the design by which a piece can be admirable rather than merely compliant.
 
 ### D197 ✅ Who may see hope and courage, and when? (ADR 0073)
-**Answered 2026-08-30 (owner) — not wired.** Computed always, exposed to no one
+**Answered 2026-08-30 (owner) — wired in the closing debrief.** Computed always, exposed to no one
 in play, shown once in the **closing debrief** as named incidents with the
 position and the piece attached. No live gauge, status board, stated reason,
 facilitator console, or adaptive-player observation (D193) may carry either:
@@ -2417,41 +2422,117 @@ fine-grid evidence — a touch more conveyor (11–25/190 ply-≤2 repeats) than
 the measured knee at 500, with ply-1 dismissal preserved for every cruel
 style.
 
-### D208 ❓ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0078)
-The owner has said the game plays and the seminar survives. ADR 0078 proposes
+### D208 ⬜ Bitterness: when does grievance stop accepting repair? (ADR 0078)
+**Open.** A per-piece repair discount (default `0`), written when rupture debt
+crosses a threshold at the benevolence floor and thereafter discounting every
+inbound repair, regard, and (per the ruling) morning-lift reach. Open: the
+threshold, the magnitude, whether bitterness itself is ever repairable, and
+the morning-lift interaction. Located in ADR 0078; nothing wired.
+
+### D209 ⬜ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
+**Open.** Courage's dark mirror — a full-effort act against the actor's own
+interest whose larger cost lands on the commander, classified over existing
+MOVE/REFUSAL/DESERTION arithmetic and named at the debrief. Open: the
+thresholds, and whether spite only *names* or also tilts the refusal timing
+(a play change requiring its own sweep). Located in ADR 0078; nothing wired.
+
+### D210 ⬜ Gratitude: what does "he paid for me" create? (ADR 0078)
+**Open.** A debt-object (object, magnitude, holder) — hope's sibling — formed
+by a commander-paid or split ransom and by peer-saving costly signals;
+negated by the self-sprung's "I owe him nothing"; discharged by obedience
+against own utility; voided by betrayal. Open: recognition-only versus a
+refusal-threshold credit, the gold-to-obedience exchange rate, and whether a
+voided debt converts to bitterness. Located in ADR 0078; nothing wired.
+
+### D211 ⬜ Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
+**Open.** A per-piece grief load raised by losing a high-affinity peer,
+suppressing engagement and decaying slowly (a permitted decay — mourning
+ending is the mechanism, with an ADR 0007 note owed); a held captive mourned
+at half weight, lifted by the ransom return. Open: threshold, magnitudes,
+suppression curve, and generation boundary. Located in ADR 0078; nothing
+wired.
+
+### D212 ⬜ Shame: does it matter who watched? (ADR 0078)
+**Open.** The overridden piece's own losses scaled by the number and standing
+of witnesses ADR 0070 already enumerates; private correction (the ADR 0065
+channel) as the shame that never happens. Open: the witness-scaling curve,
+class-witness appraisal effects, and the bitterness interaction. Located in
+ADR 0078; nothing wired.
+
+### D213 ⬜ Guilt: does the survivor carry what its escape cost? (ADR 0078)
+**Open.** A terminal fold in v1 — losses attributed to the surviving choices
+that enabled them (direct links only, per the D201 attribution lesson),
+named at the debrief, never priced without a further ruling. Open: the
+attribution windows and whether a deserter receives its debrief. Located in
+ADR 0078; nothing wired.
+
+### D214 ⬜ Envy: what does a piece feel about another's price? (ADR 0078)
+**Open.** The draft's clearing prices (D183) give envy a denominated object:
+a same-role peer paid more. If priced, envy discounts dyadic affinity toward
+the envied peer — never toward the commander, which is favoritism's channel
+(ADR 0065). Open: what a piece knows of peers' prices, the magnitude, and
+whether envy of the ransomed joins the carrier. Located in ADR 0078; nothing
+wired.
+
+### D215 ⬜ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
+**Open; refines D182.** The ruled-but-unwired self-appraisal against role
+expectation is the pride carrier — raised by vindication, promotion, price,
+and conduct; wounded by overrides, undercuts, and being passed over; the
+hinge into bitterness and spite. Open: everything D182 left open, plus
+whether pride enters the refusal threshold (a play change requiring the
+exploit tier re-run). Located in ADR 0078; nothing wired.
+
+### D216 ⬜ Panic: can a room break by freezing instead of leaving? (ADR 0078)
+**Open.** Acute, shared terror as a synchronized temporary engagement
+collapse through the witness-broadcast machinery, decaying within the match;
+distinct from grief (object) and despair (chronic). Open: whether it is
+worth carrying before a UI dramatizes it, contagion topology, and the
+quiet-quit double-charge guard. Located in ADR 0078; nothing wired.
+
+### D217 ⬜ Relief, awe, loneliness: located together, deferred together (ADR 0078)
+**Open.** Relief derivable from prior `P_captured` against outcome (any lift
+inherits grace's constraints, and the morning lift may already be its
+carrier); awe as the landing place for the never-consumed
+`HEROISM_NOMINATION` (witness affinity toward the hero); loneliness as the
+lost-last-loved-one isolation ADR 0071 gestured at, a candidate stay-side
+desertion term. None opens work until an owner ruling picks one up. Located
+in ADR 0078; nothing wired.
+
+### D218 ❓ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
+The owner has said the game plays and the seminar survives. ADR 0079 proposes
 reading that as passed for the act-one single-player campaign and the seminar
 harness, and **not** passed for the draft, purse, ransom, honours, and
 between-cycle market, whose magnitudes ADR 0061 steps 3–7 are still moving.
 No GUI may render a knob that chain is still searching. Owner ruling owed.
 
-### D209 ❓ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0078)
-ADR 0078 §1 proposes that the interactive match path write ADR 0062
+### D219 ❓ Does the GUI become a journal writer, and may the screen show anything not derivable from the `Observation`? (ADR 0079)
+ADR 0079 §1 proposes that the interactive match path write ADR 0062
 `JournalEntry`s and that `ui/` read only the observation projection, so human
 and model journals are comparable under ADR 0063 §3. The relationship
 inspector reads `PieceState` directly today, so the ruling changes a shipped
 surface. Detector: **the glass screen**. **Not wired.**
 
-### D210 ❓ May a consented playtest upload a journal? (ADR 0078)
+### D220 ❓ May a consented playtest upload a journal? (ADR 0079)
 The stranger playtest needs the journal to leave the browser. An opt-in,
 one-shot export of a file the participant can read first would be the consumer
 build's only network call. Whether that is inside ADR 0004's "no backend" is
 the owner's to rule.
 
-### D211 ❓ Is a model facilitator inside or outside ADR 0004? (ADR 0078)
+### D221 ❓ Is a model facilitator inside or outside ADR 0004? (ADR 0079)
 ADR 0028 D82 makes the facilitator a leader the instrument measures. A model
 facilitator would be an ADR 0062 agent over facilitator decision kinds
-(`pair`, `intervene`, `bench`, `feed`, `debrief`) plus debrief prose. ADR 0078
+(`pair`, `intervene`, `bench`, `feed`, `debrief`) plus debrief prose. ADR 0079
 assumes it is a host-side, API-keyed, opt-in tool outside the shipped game,
 with indices in and prose out, judged by the same facilitator audit as a
 human; it may not ship while the **unaccountable host** detector fires.
 
-### D212 ❓ What is disengagement, measurably? (ADR 0078)
+### D222 ❓ What is disengagement, measurably? (ADR 0079)
 The bored and disengaged personas cannot be scored until `disengage` has a
 definition: a journal entry, a latency threshold, an abandonment, or a run of
 fallback-to-scripted decisions (ADR 0062 §2). Until answered the emotional
 axis stays two points and no containment number may be quoted.
 
-### D213 ❓ Which content packs ship first? (ADR 0078)
+### D223 ❓ Which content packs ship first? (ADR 0079)
 The stranger playtest wants the indie pack; the pilot cohort wants exec-lab;
 both are step-4 inputs and the four tracks (indie / exec-lab / purist /
 academic) are M7.2. Owner ordering owed.
