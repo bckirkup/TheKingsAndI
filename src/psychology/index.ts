@@ -79,13 +79,19 @@ export {
   calculateSingleMatchLeadershipIndex,
   compileCampaignCultureDrift,
   courageForMove,
+  foldGuilt,
   foldCourage,
   foldHope,
   foldSpite,
+  guiltForMove,
   foldUnjustifiedTrauma,
   trackPromotionHope,
 } from './events';
-export type { PromotionHopeState, SpiteIncident } from './events';
+export type {
+  GuiltIncident,
+  PromotionHopeState,
+  SpiteIncident,
+} from './events';
 export { applyOverride } from './override';
 export { witnessAttachmentPermille } from './standing';
 export {

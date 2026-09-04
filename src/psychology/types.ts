@@ -172,6 +172,10 @@ export type MatchEvent =
         readonly margin: number;
         readonly asked: number;
       };
+      /** Optional D213 debrief-only survivor-guilt attribution. */
+      readonly guilt?: {
+        readonly spentPeers: Readonly<Record<PieceId, number>>;
+      };
     }
   | {
       readonly t: 'PROMOTION';

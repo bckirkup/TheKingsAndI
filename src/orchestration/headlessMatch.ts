@@ -20,6 +20,7 @@ import {
   applyOverride,
   applyRepairSignal,
   courageForMove,
+  guiltForMove,
   isRegardEligible,
   ENGINE_CONFIG,
   evaluateMoveResponse,
@@ -322,7 +323,11 @@ function applyPlayerMoveConsequences(input: {
       ? {}
       : (() => {
           const courage = courageForMove(outcome, moveEval);
-          return courage === undefined ? {} : { courage };
+          const guilt = guiltForMove(moveEval);
+          return {
+            ...(courage === undefined ? {} : { courage }),
+            ...(guilt === undefined ? {} : { guilt }),
+          };
         })()),
   });
   if (applied.promotion !== undefined) {
