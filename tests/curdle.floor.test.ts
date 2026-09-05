@@ -81,6 +81,7 @@ describe('D167 curdle floor controls', () => {
       {
         OVERRIDE_WITNESS_BENEV_MULTIPLIER_PERMILLE: 1_000,
         OVERRIDE_STANDING_PRICE_PERMILLE: 0,
+        SHAME_PER_WITNESS_PERMILLE: 0,
       },
       () => applyOverride(target, [witness, secondWitness], 3, 'Nf3'),
     );

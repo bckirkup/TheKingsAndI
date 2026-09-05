@@ -175,7 +175,7 @@ describe('D212 shame', () => {
     const implicitDefaults = applyOverride(target, [witness], 2, 'Nf3');
     const explicitDefaults = withConfig(
       {
-        SHAME_PER_WITNESS_PERMILLE: 0,
+        SHAME_PER_WITNESS_PERMILLE: 50,
         SHAME_STANDING_PERMILLE: 0,
         SHAME_CAP_PERMILLE: 1_000,
       },

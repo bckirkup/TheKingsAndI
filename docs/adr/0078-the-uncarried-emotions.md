@@ -40,6 +40,32 @@ floors, `ENVY_PRICE_GAP_FLOOR`, `AWE_NOMINATION_FLOOR`, and gratitude remain
 unpriced until their required market, audit, ransom, or cascade evidence
 exists.
 
+### Phase B carrier rulings (2026-09-05)
+
+On the Phase B sweep at
+`docs/calibration/2026-09-05-the-carriers-and-the-floor.md` (PR #209) the
+owner rules:
+
+- **D212 shame:** `SHAME_PER_WITNESS_PERMILLE = 50`. Shame is *correctly
+  rare* in this environment — ≈1 exposure per cruel-room match, none in kind
+  rooms — and correctly signed; its faint price at the Seat is the floor's
+  doing, not the carrier's. `SHAME_STANDING_PERMILLE` stays 0 unswept. This
+  is a play change in principle (the multiplier is live for unfloored
+  losses); the ADR 0075 gaming sweep should be rerun before its criterion is
+  next relied on.
+- **D211 grief:** `GRIEF_LOAD_PER_LOSS_PERMILLE = 100`,
+  `GRIEF_DECAY_PERMILLE_PER_MATCH = 250`,
+  `GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE = 0` **as a ruled zero**. The room
+  mourns and carries the load for the debrief; the depth tax stays off
+  because only the bonded room can pay it. Play-identical to before by
+  construction (`applyGriefDepthSuppression` returns `depth` at suppression
+  0).
+- **D208 bitterness:** the trigger **stays as written and unreachable**.
+  The owner declines to redefine it to make it fire: if bitterness ever forms
+  under a later change to the cliff, the ransom path, or neglect erosion, the
+  formation is itself the evidence that the world changed, and pricing
+  follows then. All `BITTERNESS_*` defaults stay 0.
+
 ## Context
 
 The model carries more feeling than its vocabulary admits. Before asking what
