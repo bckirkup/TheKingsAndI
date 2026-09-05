@@ -5,16 +5,20 @@ import { foldSeminarPanic } from '../sim/panic';
 import type { MatchRecord } from '../src/persistence';
 
 describe('D216 panic recognition', () => {
-  it('is inert at the default roster floor', () => {
+  it('is inert at a zero roster floor', () => {
     expect(
-      panicOnsetForPly({
-        ply: 4,
-        side: 'w',
-        captureRiskByPiece: { a: 1, b: 1 },
-        kingDanger: true,
-      }),
+      panicOnsetForPly(
+        {
+          ply: 4,
+          side: 'w',
+          captureRiskByPiece: { a: 1, b: 1 },
+          kingDanger: true,
+        },
+        0,
+        750,
+      ),
     ).toBeUndefined();
-    expect(ENGINE_CONFIG.PANIC_ROSTER_FLOOR).toBe(0);
+    expect(ENGINE_CONFIG.PANIC_ROSTER_FLOOR).toBe(4);
   });
 
   it('grades the roster floor and falls back to King danger', () => {

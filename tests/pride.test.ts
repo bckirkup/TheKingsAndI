@@ -23,14 +23,15 @@ function ev(
 }
 
 describe('D182/D215 pride', () => {
-  it('is inert at the default zero EMA', () => {
+  it('is inert at a zero EMA', () => {
     expect(
       foldPride(
         [ev(1, 'draft', 'owner', 'piece', 'Queen', 1_000)],
         SEMINAR_CONFIG,
+        0,
       ),
     ).toEqual({});
-    expect(ENGINE_CONFIG.PRIDE_EXPECTATION_EMA_PERMILLE).toBe(0);
+    expect(ENGINE_CONFIG.PRIDE_EXPECTATION_EMA_PERMILLE).toBe(250);
   });
 
   it('uses role expectation instead of absolute price', () => {

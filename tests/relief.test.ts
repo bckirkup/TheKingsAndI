@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { reliefEventsForPly } from '../src/psychology';
 
 describe('D217 relief recognition', () => {
-  it('is inert at the default floor', () => {
+  it('is inert at a zero floor', () => {
     expect(
-      reliefEventsForPly({
-        ply: 3,
-        previousExposure: { a: { risk: 1, streak: 1 } },
-        captureRiskByPiece: { a: 0 },
-      }),
+      reliefEventsForPly(
+        {
+          ply: 3,
+          previousExposure: { a: { risk: 1, streak: 1 } },
+          captureRiskByPiece: { a: 0 },
+        },
+        0,
+      ),
     ).toEqual([]);
   });
 

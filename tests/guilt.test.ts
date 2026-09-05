@@ -90,11 +90,13 @@ describe('D213 guilt', () => {
       move('survivor', 4, { peer: -100 }),
       capture('peer', 'enemy', 5),
     ];
-    expect(foldGuilt(events, ['deserter', 'survivor'])).toEqual({
-      incidents: [],
-      count: 0,
+    withConfig({ GUILT_PEER_SAFETY_FLOOR: 0 }, () => {
+      expect(foldGuilt(events, ['deserter', 'survivor'])).toEqual({
+        incidents: [],
+        count: 0,
+      });
+      expect(guiltForMove(evaluation({ peer: -100 }))).toBeUndefined();
     });
-    expect(guiltForMove(evaluation({ peer: -100 }))).toBeUndefined();
   });
 
   it('grades cascade windows by follower count', () => {

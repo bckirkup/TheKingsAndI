@@ -128,26 +128,26 @@ export const ENGINE_CONFIG = {
   SPITE_DESERTION_PIVOTALITY_FLOOR: 0,
   /** D213 cascade window for deserter guilt recognition, in plies; zero disables. */
   GUILT_CASCADE_WINDOW_PLIES: 0,
-  /** D213 peer-safety loss floor for survivor guilt; zero disables. */
-  GUILT_PEER_SAFETY_FLOOR: 0,
+  /** D213 peer-safety loss floor for survivor guilt; default 0.05. */
+  GUILT_PEER_SAFETY_FLOOR: 0.05,
   /** D213 capture window after a safety-spending move, in plies. */
   GUILT_CAPTURE_WINDOW_PLIES: 2,
   /** D214 same-role clearing-price gap floor for envy recognition, in purse units; zero disables the fold. */
   ENVY_PRICE_GAP_FLOOR: 0,
-  /** D182 permille by which a piece's price expectation moves toward each realized price; zero disables the D215 pride fold. */
-  PRIDE_EXPECTATION_EMA_PERMILLE: 0,
-  /** D215 absolute appraisal (permille) a career must reach to be named proud or wounded; zero names any nonzero appraisal. */
-  PRIDE_NAMING_FLOOR_PERMILLE: 0,
-  /** D216 number of fielded pieces that must read dread at once for a panic onset to be named; zero disables the fold. */
-  PANIC_ROSTER_FLOOR: 0,
+  /** D182 permille by which a piece's price expectation moves toward each realized price; default 250. */
+  PRIDE_EXPECTATION_EMA_PERMILLE: 250,
+  /** D215 absolute appraisal (permille) a career must reach to be named proud or wounded; default 100. */
+  PRIDE_NAMING_FLOOR_PERMILLE: 100,
+  /** D216 number of fielded pieces that must read dread at once for a panic onset to be named; default 4. */
+  PANIC_ROSTER_FLOOR: 4,
   /** D216 permille capture risk at which a piece reads dread for panic purposes. */
   PANIC_CAPTURE_RISK_PERMILLE: 750,
-  /** D217 permille capture risk a piece must have read on its prior own ply, then fallen below, to be named relieved; zero disables. */
-  RELIEF_CAPTURE_RISK_PERMILLE: 0,
+  /** D217 permille capture risk a piece must have read on its prior own ply, then fallen below, to be named relieved; default 500. */
+  RELIEF_CAPTURE_RISK_PERMILLE: 500,
   /** D217 heroism nominations a piece must collect in one match to be named awesome to its witnesses; zero disables. */
   AWE_NOMINATION_FLOOR: 0,
-  /** D217 affinity a survivor must have held toward a departed peer, with no surviving peer at or above it, to be named lonely; zero disables. */
-  LONELINESS_AFFINITY_THRESHOLD: 0,
+  /** D217 affinity a survivor must have held toward a departed peer, with no surviving peer at or above it, to be named lonely; default 50. */
+  LONELINESS_AFFINITY_THRESHOLD: 50,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */
