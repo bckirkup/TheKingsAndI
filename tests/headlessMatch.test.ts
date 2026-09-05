@@ -52,7 +52,7 @@ describe('headless player refusal replanning', () => {
       shouldOverride: () => false,
     };
 
-    const runWithDefaultShame = async () => {
+    const runWithShameOff = async () => {
       const config = ENGINE_CONFIG as unknown as Record<string, number>;
       const originalShame = config.SHAME_PER_WITNESS_PERMILLE;
       config.SHAME_PER_WITNESS_PERMILLE = 0;
@@ -71,7 +71,7 @@ describe('headless player refusal replanning', () => {
       }
     };
 
-    const result = await runWithDefaultShame();
+    const result = await runWithShameOff();
 
     const refusals = result.events.filter((event) => event.t === 'REFUSAL');
     const overrides = result.events.filter((event) => event.t === 'OVERRIDE');
@@ -106,7 +106,7 @@ describe('headless player refusal replanning', () => {
       new Set(refusals.map((event) => event.t === 'REFUSAL' && event.san)),
     ).toHaveLength(20);
 
-    const repeated = await runWithDefaultShame();
+    const repeated = await runWithShameOff();
     const observableEvents = (events: typeof result.events) =>
       events.map((event) => {
         if (event.t !== 'DESERTION') return event;
