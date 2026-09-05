@@ -20,6 +20,7 @@ export function desertionContextFor(
   piece: PieceState,
   moveEval: CandidateMoveEvaluation,
   activePeers: readonly PieceState[],
+  departedPeerIds: readonly string[] = [],
 ): DesertionContext {
   const score = Math.trunc(moveEval.privateScoreCp);
   const scale = Math.max(1, ENGINE_CONFIG.DESERTION_BOARD_LOSS_SCALE_CP);
@@ -59,6 +60,7 @@ export function desertionContextFor(
     pivotality: pivotalityLossPermille / 1_000,
     shadowFactor: calculateShadowFactor(pLossIfStayPermille / 1_000),
     promotionProspect: moveEval.promotionProspect,
+    ...(departedPeerIds.length === 0 ? {} : { departedPeerIds }),
   };
 }
 

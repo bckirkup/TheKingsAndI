@@ -418,6 +418,32 @@ export function applyWitnessedSacrificeEvent(
   };
 }
 
+export function applyAweShift(
+  roster: readonly PieceState[],
+  heroId: string,
+  shift: number = ENGINE_CONFIG.AWE_AFFINITY_SHIFT,
+): PieceState[] {
+  const amount = Math.trunc(shift);
+  if (amount === 0) return [...roster];
+  const hero = roster.find((piece) => piece.id === heroId);
+  if (hero === undefined) return [...roster];
+  return roster.map((piece) => {
+    if (piece.id === heroId || piece.id.charAt(0) !== hero.id.charAt(0)) {
+      return piece;
+    }
+    return {
+      ...piece,
+      dyadicAffinity: {
+        ...piece.dyadicAffinity,
+        [heroId]: Math.max(
+          -100,
+          Math.min(100, (piece.dyadicAffinity[heroId] ?? 0) + amount),
+        ),
+      },
+    };
+  });
+}
+
 export function applyPosthumousClassCreditEvent(
   observer: PieceState,
   heroPiece: PieceState,

@@ -1,4 +1,9 @@
-import { ENGINE_CONFIG, type PieceRole } from '../src/psychology';
+import {
+  ENGINE_CONFIG,
+  prideAppraisalDelta,
+  prideExpectationAfter,
+  type PieceRole,
+} from '../src/psychology';
 import type { CommanderPool } from './pool';
 import { roleExpectationPrice, type DraftSettlement } from './seminarDraft';
 import type { RansomLedgerEntry } from './ransom';
@@ -37,10 +42,6 @@ export interface PrideReading {
 }
 
 export const EMPTY_PRIDE: PrideReading = { proud: [], wounded: [] };
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(high, Math.max(low, value));
-}
 
 export function pricingEventsForCycle(
   cycle: number,
@@ -86,7 +87,7 @@ export function foldPride(
   ema: number = ENGINE_CONFIG.PRIDE_EXPECTATION_EMA_PERMILLE,
   floor: number = ENGINE_CONFIG.PRIDE_NAMING_FLOOR_PERMILLE,
 ): Readonly<Record<string, PrideReading>> {
-  const movement = clamp(Math.trunc(ema), 0, 1000);
+  const movement = Math.max(0, Math.min(1_000, Math.trunc(ema)));
   if (movement === 0) return {};
   const namingFloor = Math.max(0, Math.trunc(floor));
   const threshold = Math.max(1, namingFloor);
@@ -116,13 +117,7 @@ export function foldPride(
         return created;
       })();
     const expectation = career.expectation;
-    const delta = clamp(
-      Math.trunc(
-        ((event.price - expectation) * 1000) / Math.max(1, expectation),
-      ),
-      -1000,
-      1000,
-    );
+    const delta = prideAppraisalDelta(event.price, expectation);
     career.steps.push({
       cycle: event.cycle,
       kind: event.kind,
@@ -130,8 +125,11 @@ export function foldPride(
       expectation,
       delta,
     });
-    career.expectation =
-      expectation + Math.trunc(((event.price - expectation) * movement) / 1000);
+    career.expectation = prideExpectationAfter(
+      event.price,
+      expectation,
+      movement,
+    );
     career.appraisal += delta;
     career.role = event.role;
     career.ownerId = event.ownerId;
@@ -143,7 +141,7 @@ export function foldPride(
       pieceId,
       role: career.role,
       ownerId: career.ownerId,
-      appraisal: clamp(career.appraisal, -1000, 1000),
+      appraisal: Math.max(-1_000, Math.min(1_000, career.appraisal)),
       steps: career.steps,
     };
     const appraisal = result.appraisal;
