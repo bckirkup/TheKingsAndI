@@ -2503,21 +2503,31 @@ reading, and pricing remain open.
 role-seeded, moving expectation from seminar draft and ransom price events,
 using `PRIDE_EXPECTATION_EMA_PERMILLE` and naming nonzero appraisals at
 `PRIDE_NAMING_FLOOR_PERMILLE`; defaults are 250 and 100 respectively, and an
-empty pride reading is omitted from the terminal payload. The carrier is not
-yet a `PieceState` field:
-live registration remains open, as do vindication, promotion, commendation
-conduct, sustained overrides, passed-over obsolescence, refusal-threshold
-interaction, and the hinge into bitterness and spite.
+empty pride reading is omitted from the terminal payload. **Live registration
+wired inert (Phase C):** `selfAppraisal` is an optional `PieceState` field
+written in the seminar path from the same price events by the same arithmetic
+(shared helpers, parity-tested against `foldPride`), and
+`evaluateMoveResponse` adds `trunc(max(0, selfAppraisal) ·
+PRIDE_REFUSAL_SCALE / 1000)` to the refusal threshold — pride raises the bar;
+the wounded side does not lower it. The field lifts into state only while
+`PRIDE_REFUSAL_SCALE ≠ 0` (default 0), so payloads are unchanged. Open:
+vindication, promotion, commendation conduct, sustained overrides,
+passed-over obsolescence, the hinge into bitterness and spite, and the scale
+magnitude (a play change owed the exploit-tier re-run).
 
 ### D216 ✅ Panic: can a room break by freezing instead of leaving? (ADR 0078)
 **Partly wired (recognition), terminal-only at `PANIC_ROSTER_FLOOR = 4`.**
 A terminal-only `PANIC_ONSET` names a
 ply when `PANIC_ROSTER_FLOOR` fielded pieces read capture risk at or above
 `PANIC_CAPTURE_RISK_PERMILLE`, or a King-danger costly signal fires while the
-fold is enabled; the seminar fold is recognition-only. The
-synchronized `engagementFactor` carrier, contagion topology, quiet-quit
-double-charge guard, and UI dramatization remain open, with the carrier owed
-the exploit-tier re-run.
+fold is enabled; the seminar fold is recognition-only. **Carrier wired inert
+(Phase C):** on onset every fielded piece of that side takes a match-local
+`panicPermille = PANIC_COLLAPSE_PERMILLE`, decayed by
+`PANIC_DECAY_PERMILLE_PER_PLY` before each own ply and stripped at match end;
+it scales effective search depth only, after grief, with no verdict
+reclassification or quiet-quit count (the double-charge guard). Both knobs
+default 0. Open: contagion topology (v1 is uniform across the side), UI
+dramatization, and the magnitudes, owed the exploit-tier re-run.
 
 ### D217 ✅ Relief, awe, loneliness: located together, deferred together (ADR 0078)
 **Partly wired (recognition), terminal-only at ruled defaults.** Terminal
@@ -2526,8 +2536,15 @@ down-crossing prior-ply capture risk, awe from per-match
 `HEROISM_NOMINATION` counts, and loneliness from departed-peer affinity with no
 surviving peer at the threshold. `RELIEF_CAPTURE_RISK_PERMILLE = 500` and
 `LONELINESS_AFFINITY_THRESHOLD = 50`; `AWE_NOMINATION_FLOOR` remains zero as a
-structural sentinel. The live relief lift, awe affinity rise, and loneliness
-stay-side desertion term remain open.
+structural sentinel. **Three carriers wired inert (Phase C):** relief adds
+`min(RELIEF_LIFT_CAP_PERMILLE, reliefCount · RELIEF_LIFT_PERMILLE_PER_EVENT)`
+to the morning-lift permille from that match's `RELIEF` events (leader-
+reachable, unlike grace — an ADR 0075 gaming target when priced); awe shifts
+every same-side witness's affinity toward a `HEROISM_NOMINATION` hero by
+`AWE_AFFINITY_SHIFT` (class prestige untouched); loneliness, read live at the
+desertion decision from the match's departed peers and the surviving roster,
+lowers the D145 stay weight by `LONELINESS_STAY_PENALTY_PERMILLE`. All knobs
+default 0; magnitudes are owed a sweep and the exploit-tier re-run.
 
 ### D218 ✅ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
 **Answered 2026-09-04 (owner): the ADR 0079 proposal is accepted.** The gate

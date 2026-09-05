@@ -52,6 +52,19 @@ quiet-quitting (`η=0.2`) sees depth 4; a rookie (`E=1`) sees depth 2.
 Quiet quitting is *only* `η_i → 0.2`. It is not a special case anywhere in the
 move pipeline.
 
+Two inert post-suppressions follow the base depth, in order (ADR 0078):
+
+```
+D_i ← applyGriefDepthSuppression(D_i, griefLoad)            // D211, knob 0
+D_i ← max(1, trunc(D_i · (1000 - panicPermille) / 1000))   // D216, knob 0
+```
+
+`panicPermille` is a match-local field written to every fielded piece of a
+side at `PANIC_ONSET` (`PANIC_COLLAPSE_PERMILLE`), decayed by
+`PANIC_DECAY_PERMILLE_PER_PLY` before each of that side's own plies, and
+stripped from every roster before the match result is returned. Neither
+suppression reclassifies the verdict or counts as a quiet-quit turn.
+
 ## 4. Move utility
 
 ```
@@ -105,6 +118,18 @@ itself make every order look bad.
 | `+100` | `-3` | a loyal piece tolerates a move it dislikes |
 | `0` | `0` | neutral piece refuses anything net-negative |
 | `-100` | `+3` | a hostile piece refuses even good moves |
+
+Pride (D215, ADR 0078) may raise the bar, never lower it:
+
+```
+Θ_refusal ← Θ_refusal(T_i) + trunc(max(0, selfAppraisal) · PRIDE_REFUSAL_SCALE / 1000)
+```
+
+`selfAppraisal` is the career's clamped D182 appraisal sum in permille; it is
+written only in the seminar path (draft and ransom prices) and only while
+`PRIDE_REFUSAL_SCALE ≠ 0`, so campaign pieces and default payloads never carry
+it. A wounded (negative) appraisal does not enter the threshold; its hinge is
+bitterness, not compliance.
 
 Refusal is available at *every* trust level — a devoted piece will still refuse
 a catastrophic order. The threshold now shares the board-value units of
