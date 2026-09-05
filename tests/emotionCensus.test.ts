@@ -3,11 +3,177 @@ import { describe, expect, it } from 'vitest';
 import { ENGINE_CONFIG } from '../src/psychology/config';
 import {
   buildIncidenceTable,
+  buildDiagnostics,
   parseEmotionCensusArgs,
   withPatchedEngineConfig,
 } from '../sim/emotionCensus';
+import type { MatchEvent } from '../src/psychology';
 
 describe('emotion census helpers', () => {
+  it('counts diagnostic events and settlement/pride inputs', () => {
+    const events: MatchEvent[] = [
+      {
+        t: 'MOVE',
+        ply: 1,
+        san: 'e4',
+        pieceId: 'p',
+        verdict: 'COMPLIANT_EXECUTION',
+      },
+      {
+        t: 'OVERRIDE',
+        ply: 2,
+        pieceId: 'p',
+        san: 'e5',
+        pieceTrustDelta: -1,
+        vindicated: true,
+      },
+      {
+        t: 'OVERRIDE',
+        ply: 3,
+        pieceId: 'q',
+        san: 'Qh5',
+        pieceTrustDelta: -2,
+      },
+      {
+        t: 'REFUSAL',
+        ply: 4,
+        pieceId: 'p',
+        utility: 1,
+        threshold: 2,
+        perceivedValue: 1,
+        justified: true,
+      },
+      {
+        t: 'REFUSAL',
+        ply: 5,
+        pieceId: 'q',
+        utility: 1,
+        threshold: 2,
+        perceivedValue: 0,
+        justified: false,
+      },
+      {
+        t: 'DESERTION',
+        ply: 6,
+        pieceId: 'p',
+        refusedMove: 'e6',
+        uStay: 1,
+        uDesert: 2,
+        terms: {
+          P_captured: 0.5,
+          pain: 1,
+          P_lossIfStay: 1,
+          P_lossIfLeave: 2,
+          pivotality: 0.75,
+          lambda: 1,
+          lambdaTrust: 1,
+          lambdaMorale: 1,
+          lambdaLoyalty: 1,
+          lambdaAffinity: 1,
+          standingCost: 1,
+          gloryWeight: 1,
+          tauBenev: 1,
+          tauAbil: 1,
+        },
+        departureKind: 'first',
+      },
+      { t: 'CAPTURE', ply: 7, victim: 'p', by: 'q' },
+      { t: 'HEROISM_NOMINATION', ply: 8, pieceId: 'q', san: 'Qh7' },
+      {
+        t: 'BITTERNESS_FORMED',
+        pieceId: 'q',
+        trigger: 'rupture_floor',
+        bitternessPermille: 500,
+      },
+      {
+        t: 'PANIC_ONSET',
+        ply: 9,
+        side: 'w',
+        trigger: 'dread',
+        dreading: ['p'],
+        fielded: 2,
+      },
+      {
+        t: 'RELIEF',
+        ply: 10,
+        pieceId: 'p',
+        priorRiskPermille: 800,
+        riskPermille: 200,
+      },
+    ];
+    const diagnostics = buildDiagnostics({
+      records: [{ ownerId: 'w:commander:00', rosterSize: 4, events }],
+      commanders: [{ id: 'w:commander:00', style: 'supportive' }],
+      settlements: [
+        {
+          cycle: 1,
+          ownerId: 'w:commander:00',
+          side: 'w',
+          pieceId: 'p',
+          role: 'Pawn',
+          clearingPrice: 10,
+        },
+        {
+          cycle: 1,
+          ownerId: 'w:commander:00',
+          side: 'w',
+          pieceId: 'q',
+          role: 'Pawn',
+          clearingPrice: 15,
+        },
+      ],
+      prideEvents: [
+        {
+          cycle: 1,
+          kind: 'ransom',
+          ownerId: 'w:commander:00',
+          pieceId: 'p',
+          role: 'Pawn',
+          price: 10,
+        },
+        {
+          cycle: 1,
+          kind: 'draft',
+          ownerId: 'w:commander:00',
+          pieceId: 'q',
+          role: 'Pawn',
+          price: 15,
+        },
+      ],
+    });
+    expect(diagnostics.byStyle.supportive).toMatchObject({
+      records: 1,
+      move: 1,
+      override: 2,
+      overrideVindicated: 1,
+      overrideUnvindicated: 1,
+      refusal: 2,
+      refusalJustified: 1,
+      refusalUnjustified: 1,
+      refusalPerceivedValueAtLeastOne: 1,
+      desertion: 1,
+      desertionWithPivotality: 1,
+      desertionMaxPivotality: 0.75,
+      capture: 1,
+      heroismNomination: 1,
+      bitternessFormed: 1,
+      panicOnset: 1,
+      relief: 1,
+      meanFieldedRoster: 4,
+    });
+    expect(diagnostics.draftSettlements).toMatchObject({
+      totalSettlements: 2,
+      groupsWithAtLeastTwoLots: 1,
+      groupsWithPositiveSpread: 1,
+      maxSpread: 5,
+    });
+    expect(diagnostics.prideEvents).toEqual({
+      total: 2,
+      ransom: 1,
+      draft: 1,
+    });
+  });
+
   it('builds per-style incidence rows with distinct match and piece counts', () => {
     const table = buildIncidenceTable(
       [

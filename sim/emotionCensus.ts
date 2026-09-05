@@ -14,10 +14,12 @@ import { foldSeminarRelief, type SeminarReliefOwnerResult } from './relief';
 import { foldSeminarSpite } from './spite';
 import { foldSeminarGuilt } from './guilt';
 import { foldEnvy } from './envy';
-import { foldPride } from './pride';
+import { foldPride, type PricingEvent } from './pride';
+import type { DraftSettlement } from './seminarDraft';
 import { runSeminar, type SeminarResult } from './seminar';
 import { SEMINAR_CONFIG } from './seminarConfig';
 import type { SimEngineKind } from './engine';
+import type { MatchEvent } from '../src/psychology';
 
 export interface EmotionCensusArgs {
   readonly seed: number;
@@ -60,9 +62,69 @@ export interface EmotionCensusOutput {
   readonly args: EmotionCensusArgs;
   readonly playDigest: string;
   readonly recordDigest: string;
+  readonly diagnostics: EmotionCensusDiagnostics;
   readonly tables: Readonly<
     Record<string, Readonly<Record<string, CensusTable>>>
   >;
+}
+
+export interface CensusDiagnosticRecord {
+  readonly ownerId: string;
+  readonly rosterSize: number;
+  readonly events: readonly MatchEvent[];
+}
+
+export interface CensusSettlement extends DraftSettlement {
+  readonly cycle: number;
+}
+
+export interface CensusStyleDiagnostics {
+  readonly records: number;
+  readonly move: number;
+  readonly override: number;
+  readonly overrideVindicated: number;
+  readonly overrideUnvindicated: number;
+  readonly refusal: number;
+  readonly refusalJustified: number;
+  readonly refusalUnjustified: number;
+  readonly refusalPerceivedValueAtLeastOne: number;
+  readonly desertion: number;
+  readonly desertionWithPivotality: number;
+  readonly desertionMaxPivotality: number;
+  readonly capture: number;
+  readonly heroismNomination: number;
+  readonly bitternessFormed: number;
+  readonly panicOnset: number;
+  readonly relief: number;
+  readonly meanFieldedRoster: number;
+}
+
+export interface CensusSettlementGroup {
+  readonly cycle: number;
+  readonly ownerId: string;
+  readonly role: DraftSettlement['role'];
+  readonly lots: number;
+  readonly spread: number;
+}
+
+export interface CensusDraftDiagnostics {
+  readonly totalSettlements: number;
+  readonly groupsWithAtLeastTwoLots: number;
+  readonly groupsWithPositiveSpread: number;
+  readonly maxSpread: number;
+  readonly groups: readonly CensusSettlementGroup[];
+}
+
+export interface CensusPrideDiagnostics {
+  readonly total: number;
+  readonly ransom: number;
+  readonly draft: number;
+}
+
+export interface EmotionCensusDiagnostics {
+  readonly byStyle: Readonly<Record<string, CensusStyleDiagnostics>>;
+  readonly draftSettlements: CensusDraftDiagnostics;
+  readonly prideEvents: CensusPrideDiagnostics;
 }
 
 const MUTABLE_CONFIG = ENGINE_CONFIG as unknown as Record<string, number>;
@@ -303,6 +365,188 @@ export function buildIncidenceTable(
   );
 }
 
+function emptyStyleDiagnostics(): CensusStyleDiagnostics {
+  return {
+    records: 0,
+    move: 0,
+    override: 0,
+    overrideVindicated: 0,
+    overrideUnvindicated: 0,
+    refusal: 0,
+    refusalJustified: 0,
+    refusalUnjustified: 0,
+    refusalPerceivedValueAtLeastOne: 0,
+    desertion: 0,
+    desertionWithPivotality: 0,
+    desertionMaxPivotality: 0,
+    capture: 0,
+    heroismNomination: 0,
+    bitternessFormed: 0,
+    panicOnset: 0,
+    relief: 0,
+    meanFieldedRoster: 0,
+  };
+}
+
+export function buildDiagnostics(input: {
+  readonly records: readonly CensusDiagnosticRecord[];
+  readonly commanders: readonly CensusCommander[];
+  readonly settlements: readonly CensusSettlement[];
+  readonly prideEvents: readonly PricingEvent[];
+}): EmotionCensusDiagnostics {
+  const styles = new Set(input.commanders.map((commander) => commander.style));
+
+  const styleByCommander = new Map(
+    input.commanders.map((commander) => [commander.id, commander.style]),
+  );
+  const counters = new Map<string, CensusStyleDiagnostics>();
+  for (const style of styles) counters.set(style, emptyStyleDiagnostics());
+
+  for (const record of input.records) {
+    const style = styleByCommander.get(record.ownerId);
+    if (style === undefined) {
+      throw new Error(`Unknown census commander: ${record.ownerId}`);
+    }
+    const previous = counters.get(style);
+    if (previous === undefined)
+      throw new Error(`Missing census style: ${style}`);
+    const current = {
+      ...previous,
+      records: previous.records + 1,
+      meanFieldedRoster: previous.meanFieldedRoster + record.rosterSize,
+    };
+    for (const event of record.events) {
+      switch (event.t) {
+        case 'MOVE':
+          current.move += 1;
+          break;
+        case 'OVERRIDE':
+          current.override += 1;
+          if (event.vindicated === true) current.overrideVindicated += 1;
+          else current.overrideUnvindicated += 1;
+          break;
+        case 'REFUSAL':
+          current.refusal += 1;
+          if (event.justified === true) current.refusalJustified += 1;
+          else current.refusalUnjustified += 1;
+          if (event.perceivedValue >= 1) {
+            current.refusalPerceivedValueAtLeastOne += 1;
+          }
+          break;
+        case 'DESERTION':
+          current.desertion += 1;
+          if (event.terms?.pivotality !== undefined) {
+            current.desertionWithPivotality += 1;
+            current.desertionMaxPivotality = Math.max(
+              current.desertionMaxPivotality,
+              event.terms.pivotality,
+            );
+          }
+          break;
+        case 'CAPTURE':
+          current.capture += 1;
+          break;
+        case 'HEROISM_NOMINATION':
+          current.heroismNomination += 1;
+          break;
+        case 'BITTERNESS_FORMED':
+          current.bitternessFormed += 1;
+          break;
+        case 'PANIC_ONSET':
+          current.panicOnset += 1;
+          break;
+        case 'RELIEF':
+          current.relief += 1;
+          break;
+        default:
+          break;
+      }
+    }
+    counters.set(style, current);
+  }
+
+  const byStyle = Object.fromEntries(
+    [...styles].map((style) => {
+      const current = counters.get(style) ?? emptyStyleDiagnostics();
+      return [
+        style,
+        {
+          ...current,
+          meanFieldedRoster:
+            current.records === 0
+              ? 0
+              : current.meanFieldedRoster / current.records,
+        },
+      ];
+    }),
+  );
+
+  const settlementGroups = new Map<
+    string,
+    {
+      readonly cycle: number;
+      readonly ownerId: string;
+      readonly role: DraftSettlement['role'];
+      readonly prices: number[];
+    }
+  >();
+  for (const settlement of input.settlements) {
+    const key = `${settlement.cycle}:${settlement.ownerId}:${settlement.role}`;
+    const current = settlementGroups.get(key);
+    if (current === undefined) {
+      settlementGroups.set(key, {
+        cycle: settlement.cycle,
+        ownerId: settlement.ownerId,
+        role: settlement.role,
+        prices: [settlement.clearingPrice],
+      });
+    } else {
+      current.prices.push(settlement.clearingPrice);
+    }
+  }
+  const groups = [...settlementGroups.values()]
+    .map((group) => {
+      const highest = Math.max(...group.prices);
+      const lowest = Math.min(...group.prices);
+      return {
+        cycle: group.cycle,
+        ownerId: group.ownerId,
+        role: group.role,
+        lots: group.prices.length,
+        spread: highest - lowest,
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.cycle - right.cycle ||
+        left.ownerId.localeCompare(right.ownerId) ||
+        left.role.localeCompare(right.role),
+    );
+  const multiLotGroups = groups.filter((group) => group.lots >= 2);
+
+  return {
+    byStyle,
+    draftSettlements: {
+      totalSettlements: input.settlements.length,
+      groupsWithAtLeastTwoLots: multiLotGroups.length,
+      groupsWithPositiveSpread: multiLotGroups.filter(
+        (group) => group.spread > 0,
+      ).length,
+      maxSpread: groups.reduce(
+        (maximum, group) => Math.max(maximum, group.spread),
+        0,
+      ),
+      groups,
+    },
+    prideEvents: {
+      total: input.prideEvents.length,
+      ransom: input.prideEvents.filter((event) => event.kind === 'ransom')
+        .length,
+      draft: input.prideEvents.filter((event) => event.kind === 'draft').length,
+    },
+  };
+}
+
 function foldWeeks(result: SeminarResult) {
   return result.weeks.map(({ week, records }) => ({ week, records }));
 }
@@ -512,6 +756,25 @@ export async function runEmotionCensus(
   );
   const commanders = styleMap(result);
   const weeks = foldWeeks(result);
+  const diagnostics = buildDiagnostics({
+    records: weeks.flatMap((week) =>
+      Object.entries(week.records).flatMap(([ownerId, records]) =>
+        records.map((record) => ({
+          ownerId,
+          rosterSize: record.rosterSnapshot.length,
+          events: record.events,
+        })),
+      ),
+    ),
+    commanders,
+    settlements: result.envyCycles.flatMap((cycle) =>
+      cycle.settlements.map((settlement) => ({
+        ...settlement,
+        cycle: cycle.cycle,
+      })),
+    ),
+    prideEvents: result.prideEvents,
+  });
   const tables: Record<string, Record<string, CensusTable>> = {};
   const add = (
     knob: string,
@@ -637,6 +900,7 @@ export async function runEmotionCensus(
       ]),
     ]),
     recordDigest: digest(result.weeks.map((week) => week.recordDigests)),
+    diagnostics,
     tables,
   };
 }
@@ -644,6 +908,69 @@ export async function runEmotionCensus(
 function printCensus(output: EmotionCensusOutput): void {
   console.log(`playDigest=${output.playDigest}`);
   console.log(`recordDigest=${output.recordDigest}`);
+  for (const [style, diagnostics] of Object.entries(
+    output.diagnostics.byStyle,
+  )) {
+    console.log(
+      [
+        'diagnostics',
+        'style',
+        style,
+        `records=${diagnostics.records}`,
+        `move=${diagnostics.move}`,
+        `override=${diagnostics.override}`,
+        `overrideVindicated=${diagnostics.overrideVindicated}`,
+        `overrideUnvindicated=${diagnostics.overrideUnvindicated}`,
+        `refusal=${diagnostics.refusal}`,
+        `refusalJustified=${diagnostics.refusalJustified}`,
+        `refusalUnjustified=${diagnostics.refusalUnjustified}`,
+        `refusalPerceivedValueAtLeastOne=${diagnostics.refusalPerceivedValueAtLeastOne}`,
+        `desertion=${diagnostics.desertion}`,
+        `desertionWithPivotality=${diagnostics.desertionWithPivotality}`,
+        `desertionMaxPivotality=${diagnostics.desertionMaxPivotality}`,
+        `capture=${diagnostics.capture}`,
+        `heroismNomination=${diagnostics.heroismNomination}`,
+        `bitternessFormed=${diagnostics.bitternessFormed}`,
+        `panicOnset=${diagnostics.panicOnset}`,
+        `relief=${diagnostics.relief}`,
+        `meanFieldedRoster=${diagnostics.meanFieldedRoster}`,
+      ].join('\t'),
+    );
+  }
+  const draft = output.diagnostics.draftSettlements;
+  console.log(
+    [
+      'diagnostics',
+      'draftSettlements',
+      `total=${draft.totalSettlements}`,
+      `groupsWithAtLeastTwoLots=${draft.groupsWithAtLeastTwoLots}`,
+      `groupsWithPositiveSpread=${draft.groupsWithPositiveSpread}`,
+      `maxSpread=${draft.maxSpread}`,
+    ].join('\t'),
+  );
+  for (const group of draft.groups) {
+    console.log(
+      [
+        'diagnostics',
+        'draftGroup',
+        `cycle=${group.cycle}`,
+        `owner=${group.ownerId}`,
+        `role=${group.role}`,
+        `lots=${group.lots}`,
+        `spread=${group.spread}`,
+      ].join('\t'),
+    );
+  }
+  const pride = output.diagnostics.prideEvents;
+  console.log(
+    [
+      'diagnostics',
+      'prideEvents',
+      `total=${pride.total}`,
+      `ransom=${pride.ransom}`,
+      `draft=${pride.draft}`,
+    ].join('\t'),
+  );
   for (const [knob, values] of Object.entries(output.tables)) {
     for (const [value, rows] of Object.entries(values)) {
       for (const [style, row] of Object.entries(rows)) {
