@@ -133,6 +133,7 @@ export function calculateGriefSearchDepth(
   experienceLevel: number,
   engagementFactor: number,
   griefLoad?: number,
+  panicPermille?: number,
 ): number {
   const boundedExperience = Math.max(1, Math.min(100, experienceLevel));
   const boundedEngagement = Math.max(0.1, Math.min(1, engagementFactor));
@@ -145,5 +146,7 @@ export function calculateGriefSearchDepth(
           (ENGINE_CONFIG.MAX_SEARCH_DEPTH - ENGINE_CONFIG.MIN_SEARCH_DEPTH),
     ),
   );
-  return applyGriefDepthSuppression(base, griefLoad);
+  const griefDepth = applyGriefDepthSuppression(base, griefLoad);
+  const panic = Math.max(0, Math.min(1_000, Math.trunc(panicPermille ?? 0)));
+  return Math.max(1, Math.trunc((griefDepth * (1_000 - panic)) / 1_000));
 }

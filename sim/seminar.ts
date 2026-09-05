@@ -24,11 +24,18 @@ import {
   draftPriority,
   type CommanderStanding,
 } from '../src/core/draftEconomy';
+import { roleExpectationPrice } from './seminarDraft';
 import {
   classifyMatchResult,
   type HeadlessMatchResult,
 } from '../src/orchestration';
-import { ENGINE_CONFIG, type PieceState } from '../src/psychology';
+import {
+  ENGINE_CONFIG,
+  prideAppraisalDelta,
+  prideAppraisalSum,
+  prideExpectationAfter,
+  type PieceState,
+} from '../src/psychology';
 import {
   COHORT_HISTORY_CONFIG,
   generateCohortHistory,
@@ -227,6 +234,56 @@ export function weekSeedForSemester(
 
 function commanderId(side: CommanderSide, index: number): string {
   return `${side}:commander:${String(index).padStart(2, '0')}`;
+}
+
+export function applyLivePride(
+  pools: ReadonlyMap<string, CommanderPool>,
+  events: readonly PricingEvent[],
+  config: SeminarConfig,
+): ReadonlyMap<string, CommanderPool> {
+  if (
+    events.length === 0 ||
+    Math.trunc(ENGINE_CONFIG.PRIDE_REFUSAL_SCALE) === 0
+  ) {
+    return pools;
+  }
+  const appraisals = new Map<string, number>();
+  const expectations = new Map<string, number>();
+  for (const event of events) {
+    const expectation =
+      expectations.get(event.pieceId) ??
+      roleExpectationPrice(event.role, config);
+    const appraisal = prideAppraisalDelta(event.price, expectation);
+    appraisals.set(
+      event.pieceId,
+      prideAppraisalSum(appraisals.get(event.pieceId) ?? 0, appraisal),
+    );
+    expectations.set(
+      event.pieceId,
+      prideExpectationAfter(
+        event.price,
+        expectation,
+        ENGINE_CONFIG.PRIDE_EXPECTATION_EMA_PERMILLE,
+      ),
+    );
+  }
+  return new Map(
+    [...pools.entries()].map(([ownerId, pool]) => [
+      ownerId,
+      {
+        ...pool,
+        members: pool.members.map((member) => {
+          const appraisal = appraisals.get(member.state.id);
+          return appraisal === undefined
+            ? member
+            : {
+                ...member,
+                state: { ...member.state, selfAppraisal: appraisal },
+              };
+        }),
+      },
+    ]),
+  );
 }
 
 function createCommanders(
@@ -947,6 +1004,7 @@ export async function runSeminar(options: {
           poolsBeforeDraft,
         ),
       );
+      currentPools = new Map(applyLivePride(currentPools, prideEvents, config));
       previousPurses = draftPurses;
       draftCycles.push(draftObservation);
       const weekRecords = new Map<string, MatchRecord[]>(

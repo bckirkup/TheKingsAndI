@@ -91,6 +91,7 @@ export async function resolveMoverInsights(
     actor.E_i,
     actor.engagementFactor,
     actor.griefLoad,
+    actor.panicPermille,
   );
   const probe = board.clone();
   probe.applyMove(intent);
@@ -109,6 +110,7 @@ export async function resolveMoverInsights(
             piece.E_i,
             piece.engagementFactor,
             piece.griefLoad,
+            piece.panicPermille,
           ),
         ),
       ),
@@ -130,6 +132,7 @@ export async function resolveMoverInsights(
           piece.E_i,
           piece.engagementFactor,
           piece.griefLoad,
+          piece.panicPermille,
         ),
         evalProfile: beforeProfiles.get(piece.id) ?? {},
       })),
@@ -180,6 +183,7 @@ export async function resolveMoverInsights(
             piece.E_i,
             piece.engagementFactor,
             piece.griefLoad,
+            piece.panicPermille,
           ),
         ) ?? [],
       );
@@ -231,6 +235,7 @@ export async function resolveMoverInsights(
           piece.E_i,
           piece.engagementFactor,
           piece.griefLoad,
+          piece.panicPermille,
         ),
       ),
     ),
@@ -337,6 +342,7 @@ export async function resolveMoverInsights(
       piece.E_i,
       piece.engagementFactor,
       piece.griefLoad,
+      piece.panicPermille,
     );
     const privateInsight = applyPrivateEvaluation(
       {
@@ -360,6 +366,7 @@ export async function resolveMoverInsights(
       piece.E_i,
       piece.engagementFactor,
       piece.griefLoad,
+      piece.panicPermille,
     );
     const privateBeforeInsight = applyPrivateEvaluation(
       beforeSharedInsight,

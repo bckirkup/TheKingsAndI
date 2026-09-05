@@ -18,6 +18,7 @@ import {
   applyNeglectSignal,
   applyCaptureInjury,
   applyFatalisticComplianceCosts,
+  applyAweShift,
   evaluateMoveResponse,
   normalizePieceState,
   panicOnsetForPly,
@@ -838,7 +839,12 @@ export class MatchSession {
       }
     }
     const nomination = heroismNomination(this.events, moveEval, audit);
-    if (nomination !== undefined) this.events.push(nomination);
+    if (nomination !== undefined) {
+      this.events.push(nomination);
+      if (ENGINE_CONFIG.AWE_AFFINITY_SHIFT !== 0) {
+        this.roster = applyAweShift(this.roster, actor.id);
+      }
+    }
     if (applied.capture !== undefined) {
       this.enemyRoster = this.enemyRoster.map((piece) => {
         if (piece.id !== applied.capture?.pieceId) return piece;

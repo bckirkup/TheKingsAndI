@@ -11,6 +11,7 @@ import type { EngineAuditEntry } from '../engine';
 import type { MoveAskContext, OverrideAskContext } from './headlessMatch';
 import {
   applyFatalisticComplianceCosts,
+  applyPanicCollapse,
   courageForMove,
   isRegardEligible,
   ENGINE_CONFIG,
@@ -390,7 +391,10 @@ function enemyCompliantTurn(input: {
     captureRiskByPiece,
     kingDanger: false,
   });
-  if (panic !== undefined) events.push(panic);
+  if (panic !== undefined) {
+    events.push(panic);
+    enemyRoster = applyPanicCollapse(enemyRoster);
+  }
   events.push(
     ...reliefEventsForPly({
       ply,
@@ -436,6 +440,7 @@ function applyTrackedEnemyDecision(input: {
   readonly bestAuditScore?: number;
   readonly preMoveAuditScore?: number;
   readonly regardStreakByPiece?: Readonly<Record<string, number>>;
+  readonly departedPeerIds?: readonly string[];
 }): EnemyTurnResult {
   const {
     board,
@@ -467,6 +472,7 @@ function applyTrackedEnemyDecision(input: {
     actor,
     moveEval,
     input.enemyRoster,
+    input.departedPeerIds,
   );
   const desertionDecision = shouldDesert(
     actor,
@@ -560,6 +566,7 @@ export function applyEnemyTurnSync(input: {
   readonly ply: number;
   readonly overrideRefusals?: boolean;
   readonly regardStreakByPiece?: Readonly<Record<string, number>>;
+  readonly departedPeerIds?: readonly string[];
 }): EnemyTurnResult {
   const enemyRoster = syncSideRoster(
     input.board,
@@ -647,6 +654,9 @@ export function applyEnemyTurnSync(input: {
         (input.overrideRefusals ?? input.archetype === 'tyrannical') ||
         attempt === maxCandidates - 1,
       regardStreakByPiece,
+      ...(input.departedPeerIds === undefined
+        ? {}
+        : { departedPeerIds: input.departedPeerIds }),
     });
     if (!result.events.some((event) => event.t === 'REFUSAL')) {
       return mergeRefusalHistory(priorEvents, priorBehaviours, result);
@@ -674,6 +684,7 @@ export async function applyEnemyTurn(input: {
   readonly overrideRefusals?: boolean;
   readonly dreadExposureByPiece?: DreadExposureByPiece;
   readonly regardStreakByPiece?: Readonly<Record<string, number>>;
+  readonly departedPeerIds?: readonly string[];
   readonly chooseMove?: EnemyMoveChooser;
   readonly shouldOverride?: (
     random: SeededRandom,
@@ -806,7 +817,12 @@ export async function applyEnemyTurn(input: {
         actor,
         moveEval,
         currentEnemyRoster,
-        desertionContextFor(actor, moveEval, currentEnemyRoster),
+        desertionContextFor(
+          actor,
+          moveEval,
+          currentEnemyRoster,
+          input.departedPeerIds,
+        ),
       );
       if (candidateOutcome.verdict === 'MORAL_REFUSAL') {
         overrideContext = {
@@ -842,6 +858,9 @@ export async function applyEnemyTurn(input: {
       orderQualityCp,
       objectivelyGood,
       regardStreakByPiece,
+      ...(input.departedPeerIds === undefined
+        ? {}
+        : { departedPeerIds: input.departedPeerIds }),
       bestAuditScore,
       preMoveAuditScore,
     });

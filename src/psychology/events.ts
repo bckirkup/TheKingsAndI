@@ -418,6 +418,33 @@ export function applyWitnessedSacrificeEvent(
   };
 }
 
+/** Applies the shift to a same-side fielded roster containing the hero. */
+export function applyAweShift(
+  roster: readonly PieceState[],
+  heroId: string,
+  shift: number = ENGINE_CONFIG.AWE_AFFINITY_SHIFT,
+): PieceState[] {
+  const amount = Math.trunc(shift);
+  if (amount === 0) return [...roster];
+  const hero = roster.find((piece) => piece.id === heroId);
+  if (hero === undefined) return [...roster];
+  return roster.map((piece) => {
+    if (piece.id === hero.id) {
+      return piece;
+    }
+    return {
+      ...piece,
+      dyadicAffinity: {
+        ...piece.dyadicAffinity,
+        [heroId]: Math.max(
+          -100,
+          Math.min(100, (piece.dyadicAffinity[heroId] ?? 0) + amount),
+        ),
+      },
+    };
+  });
+}
+
 export function applyPosthumousClassCreditEvent(
   observer: PieceState,
   heroPiece: PieceState,

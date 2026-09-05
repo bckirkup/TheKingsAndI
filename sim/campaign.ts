@@ -158,10 +158,11 @@ export function applyCampaignBoundary(
   generations: Readonly<Record<PieceId, number>>,
   retiredCareerIds: readonly string[],
   random: { nextInt(maxExclusive: number): number },
+  reliefCountByPiece: Readonly<Record<PieceId, number>> = {},
 ): CampaignBoundaryFold {
   const currentGenerations: Record<PieceId, number> = { ...generations };
   let roster = carriedRoster.map((piece) =>
-    applyMorningLift(decayBitterness(piece)),
+    applyMorningLift(decayBitterness(piece), reliefCountByPiece[piece.id] ?? 0),
   );
   const graceCareerIds: string[] = [];
   const rate = Math.max(
@@ -555,6 +556,15 @@ export async function runCampaign(
       result.enemyRoster,
       result.departedEnemyRoster,
     );
+    const reliefCountByPiece = result.events.reduce<Record<PieceId, number>>(
+      (counts, event) => {
+        if (event.t === 'RELIEF') {
+          counts[event.pieceId] = (counts[event.pieceId] ?? 0) + 1;
+        }
+        return counts;
+      },
+      {},
+    );
     const playerRetiredCareerCountBefore = retiredCareerIds.length;
     const enemyRetiredCareerCountBefore = enemyRetiredCareerIds.length;
     const playerBoundary = applyCampaignBoundary(
@@ -562,12 +572,14 @@ export async function runCampaign(
       generations,
       retiredCareerIds,
       random,
+      reliefCountByPiece,
     );
     const enemyBoundary = applyCampaignBoundary(
       enemyRoster,
       enemyGenerations,
       enemyRetiredCareerIds,
       random,
+      reliefCountByPiece,
     );
     roster = [...playerBoundary.roster];
     generations = playerBoundary.generations;

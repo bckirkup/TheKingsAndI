@@ -502,3 +502,51 @@ and decay knobs are zero, so default payloads and seeded draws remain
 unchanged. The current threshold, load, captive weight, suppression curve, and
 decay magnitude are deliberately open for a measurement sweep before any
 ruling. No PRNG draw is consumed.
+
+## Addendum — 2026-09-05: Phase C, the five live carriers wired inert
+
+The owner approved the Phase C design as one change: every carrier the survey
+left open now has a live seam, each behind a knob that defaults to `0`, so
+default play, payloads, and seeded digests are byte-identical to the
+recognition-only tree. Pricing each is a play change and is owed a Phase C
+sweep plus the ADR 0075 exploit-tier re-run before any knob defaults on.
+
+- **D215 pride → refusal threshold.** `selfAppraisal` (integer permille,
+  `-1000..1000`) is an optional `PieceState` field written in the seminar
+  path at the same price events `foldPride` reads — ransom acceptance, then
+  the draft clearing price — by shared helpers (`prideAppraisalDelta`,
+  `prideExpectationAfter`, clamped sum) so the live carrier and the terminal
+  reconstruction cannot diverge; a parity test holds them equal.
+  `evaluateMoveResponse` adds `trunc(max(0, selfAppraisal) ·
+  PRIDE_REFUSAL_SCALE / 1000)` to `Θ_refusal`. Pride raises the bar; the
+  wounded side is not made compliant — its hinge stays with D208/D209. The
+  field lifts into state only while `PRIDE_REFUSAL_SCALE ≠ 0`, honouring the
+  D215 addendum's "lifts into `PieceState` only when a live registration is
+  ruled". Campaign pieces are never priced and never carry it.
+- **D216 panic → engagement collapse.** On `PANIC_ONSET`, every fielded piece
+  of the panicking side takes a match-local `panicPermille =
+  PANIC_COLLAPSE_PERMILLE`, decayed by `PANIC_DECAY_PERMILLE_PER_PLY` before
+  each own ply and stripped from all four rosters before the match result is
+  returned, so it never reaches a boundary or a payload. It scales effective
+  search depth after grief (`max(1, trunc(D · (1000 − panic) / 1000))`) and
+  nothing else: no verdict reclassification, no quiet-quit count. Contagion
+  is uniform across the side in v1; topology stays open.
+- **D217 loneliness → stay term.** `DesertionContext.departedPeerIds` carries
+  the side's captured, deserted, and career-ended pieces so far this match;
+  `shouldDesert` reads lonely when the actor held affinity ≥
+  `LONELINESS_AFFINITY_THRESHOLD` toward a departed peer and holds it toward
+  no surviving one, and lowers the D145 stay weight by
+  `LONELINESS_STAY_PENALTY_PERMILLE`. The live predicate reads the roster as
+  it stands at the decision; the seminar fold reads it at match end, so the
+  two may differ for a piece whose last friend leaves later.
+- **D217 awe → affinity.** `applyAweShift` moves every same-side witness's
+  affinity toward a `HEROISM_NOMINATION` hero by `AWE_AFFINITY_SHIFT`,
+  clamped `-100..100`, in both the headless and interactive paths; class
+  prestige is untouched and the event shape is unchanged.
+- **D217 relief → lift.** The campaign boundary counts each piece's `RELIEF`
+  events from the match just played and raises the D207 morning-lift
+  permille by `min(RELIEF_LIFT_CAP_PERMILLE, count ·
+  RELIEF_LIFT_PERMILLE_PER_EVENT)`, still through the bitterness discount.
+  Unlike grace, this term is leader-reachable — a leader can march a piece
+  into danger and out again — so when priced it is an ADR 0075 gaming target
+  and must be measured against the exploiters before it defaults on.

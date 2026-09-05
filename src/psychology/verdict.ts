@@ -42,7 +42,13 @@ export function evaluateMoveResponse(
   desertionContext?: DesertionContext,
 ): MoveDecisionOutcome {
   const utilityScore = calculateMoveUtility(actor, moveEval, allActivePieces);
-  const refusalThreshold = calculateRefusalThreshold(actor.T_i);
+  const refusalThreshold =
+    calculateRefusalThreshold(actor.T_i) +
+    Math.trunc(
+      (Math.max(0, actor.selfAppraisal ?? 0) *
+        Math.max(0, Math.trunc(ENGINE_CONFIG.PRIDE_REFUSAL_SCALE))) /
+        1_000,
+    );
   const perceivedValue = calculatePerceivedValue(
     moveEval.deltaV_board,
     moveEval.vLeaderImplied,
@@ -85,7 +91,14 @@ export function evaluateMoveResponse(
       utilityScore,
       perceivedValue,
       refusalThreshold,
-      effectiveSearchDepth: calculateEngineSearchDepth(actor.E_i, engagement),
+      effectiveSearchDepth: calculateEngineSearchDepth(
+        actor.E_i,
+        engagement,
+        undefined,
+        undefined,
+        undefined,
+        actor.panicPermille,
+      ),
       engagementFactor: engagement,
     };
   }
@@ -103,6 +116,7 @@ export function evaluateMoveResponse(
           ENGINE_CONFIG.MIN_SEARCH_DEPTH,
           ENGINE_CONFIG.MAX_SEARCH_DEPTH,
           actor.griefLoad,
+          actor.panicPermille,
         ),
         engagementFactor: ENGINE_CONFIG.FULL_ENGAGEMENT,
       };
@@ -119,6 +133,7 @@ export function evaluateMoveResponse(
         ENGINE_CONFIG.MIN_SEARCH_DEPTH,
         ENGINE_CONFIG.MAX_SEARCH_DEPTH,
         actor.griefLoad,
+        actor.panicPermille,
       ),
       engagementFactor: engagement,
     };
@@ -141,6 +156,7 @@ export function evaluateMoveResponse(
       ENGINE_CONFIG.MIN_SEARCH_DEPTH,
       ENGINE_CONFIG.MAX_SEARCH_DEPTH,
       actor.griefLoad,
+      actor.panicPermille,
     ),
     engagementFactor: engagement,
   };

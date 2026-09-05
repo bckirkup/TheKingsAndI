@@ -45,6 +45,17 @@ export function normalizePieceState(piece: PieceState): PieceState {
     ...(piece.bitternessPermille === undefined
       ? {}
       : { bitternessPermille: clampPermille(piece.bitternessPermille) }),
+    ...(piece.selfAppraisal === undefined
+      ? {}
+      : {
+          selfAppraisal: Math.max(
+            -1_000,
+            Math.min(1_000, Math.trunc(piece.selfAppraisal)),
+          ),
+        }),
+    ...(piece.panicPermille === undefined
+      ? {}
+      : { panicPermille: clampPermille(piece.panicPermille) }),
     E_i: Math.max(1, Math.min(100, piece.E_i)),
     T_i: clampTrust(piece.T_i),
     M_i: clampMorale(piece.M_i),

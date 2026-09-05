@@ -74,6 +74,7 @@ export type { LambdaComponents } from './desertion';
 export {
   appendEvent,
   applyWitnessedSacrificeEvent,
+  applyAweShift,
   applyPosthumousClassCreditEvent,
   calculateBenchingTrustPenalties,
   calculateSingleMatchLeadershipIndex,
@@ -100,7 +101,12 @@ export {
   type ShameExposure,
   type ShameOptions,
 } from './shame';
-export { panicOnsetForPly } from './panic';
+export {
+  applyPanicCollapse,
+  decayPanic,
+  panicOnsetForPly,
+  withoutPanic,
+} from './panic';
 export { reliefEventsForPly } from './relief';
 export {
   applyCaptureInjury,
@@ -109,6 +115,11 @@ export {
   type DreadExposure,
 } from './trauma';
 export { applyMorningLift } from './morningLift';
+export {
+  prideAppraisalDelta,
+  prideAppraisalSum,
+  prideExpectationAfter,
+} from './pride';
 export {
   bitternessPermille,
   decayBitterness,

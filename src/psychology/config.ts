@@ -138,16 +138,30 @@ export const ENGINE_CONFIG = {
   PRIDE_EXPECTATION_EMA_PERMILLE: 250,
   /** D215 absolute appraisal (permille) a career must reach to be named proud or wounded; default 100. */
   PRIDE_NAMING_FLOOR_PERMILLE: 100,
+  /** D215 refusal-threshold points added per positive appraisal permille; zero disables. */
+  PRIDE_REFUSAL_SCALE: 0,
   /** D216 number of fielded pieces that must read dread at once for a panic onset to be named; default 4. */
   PANIC_ROSTER_FLOOR: 4,
   /** D216 permille capture risk at which a piece reads dread for panic purposes. */
   PANIC_CAPTURE_RISK_PERMILLE: 750,
+  /** D216 temporary engagement collapse written on panic onset, permille; zero disables. */
+  PANIC_COLLAPSE_PERMILLE: 0,
+  /** D216 panic decay before each affected side's own ply, permille. */
+  PANIC_DECAY_PERMILLE_PER_PLY: 0,
   /** D217 permille capture risk a piece must have read on its prior own ply, then fallen below, to be named relieved; default 500. */
   RELIEF_CAPTURE_RISK_PERMILLE: 500,
   /** D217 heroism nominations a piece must collect in one match to be named awesome to its witnesses; zero disables. */
   AWE_NOMINATION_FLOOR: 0,
   /** D217 affinity a survivor must have held toward a departed peer, with no surviving peer at or above it, to be named lonely; default 50. */
   LONELINESS_AFFINITY_THRESHOLD: 50,
+  /** D217 stay-weight penalty for a lonely piece, permille; zero disables. */
+  LONELINESS_STAY_PENALTY_PERMILLE: 0,
+  /** D217 affinity shift from witnessing a heroism nomination; zero disables. */
+  AWE_AFFINITY_SHIFT: 0,
+  /** D217 additional morning-lift permille per relief event; zero disables. */
+  RELIEF_LIFT_PERMILLE_PER_EVENT: 0,
+  /** D217 cap on relief-derived morning lift, permille. */
+  RELIEF_LIFT_CAP_PERMILLE: 0,
   /** Ability credence drip after an uninterrupted safe-play stretch (ADR 0044). */
   ABIL_DRIP_SCALE: 4,
   /** Near-refusal margin in utility units that qualifies for adjudication (ADR 0044). */

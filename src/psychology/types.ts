@@ -57,6 +57,10 @@ export interface PieceState {
   readonly dyadicAffinity: Readonly<Record<PieceId, number>>;
   readonly classPrestige: ClassPrestigeMatrix;
   readonly engagementFactor: number;
+  /** Career pride appraisal, integer permille; absent before the first price. */
+  readonly selfAppraisal?: number;
+  /** In-match panic modifier, cleared before a match result is returned. */
+  readonly panicPermille?: number;
   readonly credence: CredenceState;
   readonly rumor: RumorState;
   /** Integer mourning load, in permille (D211). */
@@ -108,6 +112,7 @@ export interface DesertionContext {
   readonly shadowFactor: number;
   /** Post-move promotion prospect for the evaluated actor, 0..1000. */
   readonly promotionProspect: number;
+  readonly departedPeerIds?: readonly string[];
 }
 
 export interface DesertionDecisionTerms {
@@ -119,6 +124,7 @@ export interface DesertionDecisionTerms {
   readonly pivotality?: number;
   readonly shadowFactor?: number;
   readonly attachment?: number;
+  readonly stayAttachmentWeightPermille?: number;
   readonly lambda: number;
   readonly lambdaTrust: number;
   readonly lambdaMorale: number;

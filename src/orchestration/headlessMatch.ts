@@ -13,6 +13,10 @@ import type { EngineAuditEntry, EnginePort } from '../engine/types';
 import { objectionStrengthWord } from '../core/qualitativeBands';
 import {
   applyFatalisticComplianceCosts,
+  applyPanicCollapse,
+  decayPanic,
+  withoutPanic,
+  applyAweShift,
   applyGriefLoss,
   decayGrief,
   applyMatchOutcomeTrust,
@@ -347,7 +351,12 @@ function applyPlayerMoveConsequences(input: {
     });
   }
   const nomination = heroismNomination(events, moveEval, input.audit);
-  if (nomination !== undefined) events.push(nomination);
+  if (nomination !== undefined) {
+    events.push(nomination);
+    if (ENGINE_CONFIG.AWE_AFFINITY_SHIFT !== 0) {
+      roster = applyAweShift(roster, actor.id);
+    }
+  }
   const abilityObservations = applyRosterAbilityObservations(
     roster,
     { ...moverInsights.desertionMoveEvals, [actor.id]: moveEval },
@@ -445,7 +454,10 @@ function applyPlayerMoveConsequences(input: {
     captureRiskByPiece,
     kingDanger,
   });
-  if (panic !== undefined) events.push(panic);
+  if (panic !== undefined) {
+    events.push(panic);
+    roster = applyPanicCollapse(roster);
+  }
   events.push(
     ...reliefEventsForPly({
       ply,
@@ -617,6 +629,7 @@ export async function runHeadlessMatch(
     }
 
     if (side !== config.playerSide) {
+      enemyRoster = decayPanic(enemyRoster);
       const beforeIds = new Set(playerActiveIds);
       const enemyTurn = await applyEnemyTurn({
         board,
@@ -632,6 +645,7 @@ export async function runHeadlessMatch(
           : {}),
         dreadExposureByPiece: enemyDreadExposureByPiece,
         regardStreakByPiece: enemyRegardStreakByPiece,
+        departedPeerIds: departedEnemyRoster.map((piece) => piece.id),
         ...(config.opponentMoveChooser === undefined
           ? {}
           : { chooseMove: config.opponentMoveChooser }),
@@ -705,6 +719,7 @@ export async function runHeadlessMatch(
     }
 
     const refusedSans = new Set<string>();
+    roster = decayPanic(roster);
     const maxCandidates = board.legalMoves().length;
     let firstRefused:
       | {
@@ -794,7 +809,12 @@ export async function runHeadlessMatch(
       engineAudit.push(audit);
       const justifiedRefusal = moveEval.deltaV_board < 0 && auditScore < 0;
 
-      const desertionContext = desertionContextFor(actor, moveEval, roster);
+      const desertionContext = desertionContextFor(
+        actor,
+        moveEval,
+        roster,
+        departedRoster.map((piece) => piece.id),
+      );
       const desertionDecision = shouldDesert(actor, desertionContext, roster);
       let outcome = evaluateMoveResponse(
         actor,
@@ -1165,10 +1185,16 @@ export async function runHeadlessMatch(
   return {
     events: Object.freeze(events),
     engineAudit: Object.freeze(engineAudit),
-    roster: roster.map(normalizePieceState),
-    departedRoster: departedRoster.map(normalizePieceState),
-    enemyRoster: enemyRoster.map(normalizePieceState),
-    departedEnemyRoster: departedEnemyRoster.map(normalizePieceState),
+    roster: roster.map((piece) => normalizePieceState(withoutPanic(piece))),
+    departedRoster: departedRoster.map((piece) =>
+      normalizePieceState(withoutPanic(piece)),
+    ),
+    enemyRoster: enemyRoster.map((piece) =>
+      normalizePieceState(withoutPanic(piece)),
+    ),
+    departedEnemyRoster: departedEnemyRoster.map((piece) =>
+      normalizePieceState(withoutPanic(piece)),
+    ),
     enemyFieldedPieceIds,
     plies: ply - 1,
     winScore,

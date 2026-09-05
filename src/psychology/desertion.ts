@@ -312,8 +312,34 @@ export function shouldDesert(
     0,
     Math.min(1_000, Math.trunc(attachment * 1_000)),
   );
-  const stayAttachmentWeightPermille =
+  let stayAttachmentWeightPermille =
     calculateStayAttachmentWeightPermille(attachmentPermille);
+  const lonelinessThreshold = Math.max(
+    0,
+    Math.min(100, Math.trunc(ENGINE_CONFIG.LONELINESS_AFFINITY_THRESHOLD)),
+  );
+  const lonely =
+    (context.departedPeerIds ?? []).some(
+      (peerId) => (piece.dyadicAffinity[peerId] ?? 0) >= lonelinessThreshold,
+    ) &&
+    !activePeers.some(
+      (peer) =>
+        peer.id !== piece.id &&
+        (piece.dyadicAffinity[peer.id] ?? 0) >= lonelinessThreshold,
+    );
+  if (lonely) {
+    stayAttachmentWeightPermille = Math.max(
+      0,
+      stayAttachmentWeightPermille -
+        Math.max(
+          0,
+          Math.min(
+            1_000,
+            Math.trunc(ENGINE_CONFIG.LONELINESS_STAY_PENALTY_PERMILLE),
+          ),
+        ),
+    );
+  }
   const uStay = calculateUStay(
     piece,
     context,
@@ -348,6 +374,7 @@ export function shouldDesert(
       pivotality,
       shadowFactor: calculateShadowFactor(context.P_lossIfStay),
       attachment,
+      stayAttachmentWeightPermille,
       lambda,
       lambdaTrust: lambdaComponents.trust,
       lambdaMorale: lambdaComponents.morale,
