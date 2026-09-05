@@ -131,9 +131,9 @@ describe('promotion harness metrics', () => {
     expect(metric.dismissalCause).toBeNull();
     expect(metric.dismissalPly).toBeNull();
     expect(header).toMatch(
-      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply$/,
+      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply,shame_exposures,grief_mournings,bitterness_formations,mean_grief_load_end,mean_bitterness_end$/,
     );
-    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00,0,,$/);
+    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00,0,,,0,0,0,0\.00,0\.00$/);
   });
 
   it('uses departed exit trust in mean_trust_final but preserves survivor mean_trust_end', () => {

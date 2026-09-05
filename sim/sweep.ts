@@ -54,6 +54,11 @@ export interface SweepPoint {
   readonly meanDripGainTotal: number;
   readonly meanRegardEvents: number;
   readonly meanRegardGainTotal: number;
+  readonly meanShameExposures: number;
+  readonly meanGriefMournings: number;
+  readonly meanBitternessFormations: number;
+  readonly meanGriefLoadEnd: number;
+  readonly meanBitternessEnd: number;
   readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
   readonly meanQuietQuitRate: number;
@@ -217,6 +222,11 @@ function sweepMetrics(
     meanDripGainTotal: campaign.summary.meanDripGainTotal,
     meanRegardEvents: campaign.summary.meanRegardEvents,
     meanRegardGainTotal: campaign.summary.meanRegardGainTotal,
+    meanShameExposures: campaign.summary.meanShameExposures,
+    meanGriefMournings: campaign.summary.meanGriefMournings,
+    meanBitternessFormations: campaign.summary.meanBitternessFormations,
+    meanGriefLoadEnd: campaign.summary.meanGriefLoadEnd,
+    meanBitternessEnd: campaign.summary.meanBitternessEnd,
     meanAdjudicationLoss: campaign.summary.meanAdjudicationLoss,
     meanTauBenev: campaign.summary.meanTauBenev,
     meanQuietQuitRate: campaign.summary.meanQuietQuitRate,
@@ -421,7 +431,7 @@ interface SweepCliOptions {
 }
 
 const SWEEP_METRIC_HEADER =
-  'refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score';
+  'refusal,refusals_per_ply,desertion_match,desertion_attrition,override,win,trust_delta,mean_plies,win_count,draw_count,loss_count,promotions_per_match,promotion_match,promotion_to_role_counts,enemy_desertion_attrition,mean_enemy_desertions,plain_chess_win_delta,drip_gain_total,regard_events,regard_gain_total,override_count,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,adjudication_loss,tau_benev,quiet_quit,tau_abil,role_tau_abil,ability_min,ability_max,mean_ability,ability_moved_count,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,shame_exposures,grief_mournings,bitterness_formations,mean_grief_load_end,mean_bitterness_end';
 
 function sweepMetricFields(
   point: Omit<SweepPoint, 'knob' | 'value'>,
@@ -466,6 +476,11 @@ function sweepMetricFields(
     point.meanTrustFinal.toFixed(2),
     point.meanEmptiedChairs.toFixed(2),
     point.meanEmptiedChairsScore.toFixed(2),
+    point.meanShameExposures.toFixed(2),
+    point.meanGriefMournings.toFixed(2),
+    point.meanBitternessFormations.toFixed(2),
+    point.meanGriefLoadEnd.toFixed(2),
+    point.meanBitternessEnd.toFixed(2),
   ];
 }
 
