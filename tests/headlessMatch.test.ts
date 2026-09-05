@@ -8,7 +8,7 @@ import {
   runHeadlessMatch,
   type HeadlessLeaderPort,
 } from '../src/orchestration';
-import type { CandidateMoveEvaluation } from '../src/psychology';
+import { ENGINE_CONFIG, type CandidateMoveEvaluation } from '../src/psychology';
 import {
   ADAPTIVE_POLICY_CONFIG,
   legalScoredMoves,
@@ -52,15 +52,26 @@ describe('headless player refusal replanning', () => {
       shouldOverride: () => false,
     };
 
-    const result = await runHeadlessMatch({
-      random: createSeededRandom(7),
-      maxPlies: 1,
-      playerSide: 'w',
-      leader,
-      opponent: leader,
-      initialRoster: createStartingRoster(board, 'w', 0, 0.5),
-      engine: createFakeEnginePort(),
-    });
+    const runWithShameOff = async () => {
+      const config = ENGINE_CONFIG as unknown as Record<string, number>;
+      const originalShame = config.SHAME_PER_WITNESS_PERMILLE ?? 0;
+      config.SHAME_PER_WITNESS_PERMILLE = 0;
+      try {
+        return await runHeadlessMatch({
+          random: createSeededRandom(7),
+          maxPlies: 1,
+          playerSide: 'w',
+          leader,
+          opponent: leader,
+          initialRoster: createStartingRoster(board, 'w', 0, 0.5),
+          engine: createFakeEnginePort(),
+        });
+      } finally {
+        config.SHAME_PER_WITNESS_PERMILLE = originalShame;
+      }
+    };
+
+    const result = await runWithShameOff();
 
     const refusals = result.events.filter((event) => event.t === 'REFUSAL');
     const overrides = result.events.filter((event) => event.t === 'OVERRIDE');
@@ -95,15 +106,7 @@ describe('headless player refusal replanning', () => {
       new Set(refusals.map((event) => event.t === 'REFUSAL' && event.san)),
     ).toHaveLength(20);
 
-    const repeated = await runHeadlessMatch({
-      random: createSeededRandom(7),
-      maxPlies: 1,
-      playerSide: 'w',
-      leader,
-      opponent: leader,
-      initialRoster: createStartingRoster(board, 'w', 0, 0.5),
-      engine: createFakeEnginePort(),
-    });
+    const repeated = await runWithShameOff();
     const observableEvents = (events: typeof result.events) =>
       events.map((event) => {
         if (event.t !== 'DESERTION') return event;

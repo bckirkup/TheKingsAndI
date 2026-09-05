@@ -117,7 +117,7 @@ export const ENGINE_CONFIG = {
   /** Match-end ability credit per contested win, disabled by default. */
   ABIL_OUTCOME_VINDICATION_SCALE: 0,
   /** Nonnegative permille amplification per witness; zero keeps D212 inert. */
-  SHAME_PER_WITNESS_PERMILLE: 0,
+  SHAME_PER_WITNESS_PERMILLE: 50,
   /** Nonnegative permille standing scale; zero keeps D212 inert. */
   SHAME_STANDING_PERMILLE: 0,
   /** Shame amplification cap, clamped to 0..1000 permille (D212). */
@@ -248,13 +248,13 @@ export const ENGINE_CONFIG = {
   /** Minimum dyadic affinity that makes a peer loss mournable (D211). */
   GRIEF_AFFINITY_THRESHOLD: 50,
   /** Load written for each mourned peer, in permille. */
-  GRIEF_LOAD_PER_LOSS_PERMILLE: 0,
+  GRIEF_LOAD_PER_LOSS_PERMILLE: 100,
   /** Fraction of a full peer loss carried while the peer is captive. */
   GRIEF_CAPTIVE_WEIGHT_PERMILLE: 500,
   /** Engagement suppression applied to carried grief, in permille. */
   GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE: 0,
   /** Load ending at each match boundary, in permille. */
-  GRIEF_DECAY_PERMILLE_PER_MATCH: 0,
+  GRIEF_DECAY_PERMILLE_PER_MATCH: 250,
 } as const;
 
 export type EngineConfig = typeof ENGINE_CONFIG;

@@ -2423,13 +2423,19 @@ fine-grid evidence — a touch more conveyor (11–25/190 ply-≤2 repeats) than
 the measured knee at 500, with ply-1 dismissal preserved for every cruel
 style.
 
-### D208 ⬜ Bitterness: when does grievance stop accepting repair? (ADR 0078)
-**Wired inert.** Optional per-piece bitterness recognition is formed by an
-unvindicated rupture-floor charge or a held-captive benevolence-decay week;
-terminal folds name the incidents, while repair/regard and morning-lift
-discounts, decay, and all magnitudes remain at inert defaults. Thresholds and
-pricing remain open; whether a voided gratitude debt converts to bitterness is
-also open.
+### D208 🟡 Bitterness: when does grievance stop accepting repair? (ADR 0078)
+**Wired inert; ruled unreachable for now (2026-09-05).** Optional per-piece
+bitterness recognition is formed by an unvindicated rupture-floor charge or a
+held-captive benevolence-decay week; terminal folds name the incidents, while
+repair/regard and morning-lift discounts, decay, and all magnitudes remain at
+inert defaults. The Phase B sweep
+(`docs/calibration/2026-09-05-the-carriers-and-the-floor.md`) found the
+rupture trigger structurally unreachable under the ADR 0066 proportional
+cliff (benevolence stalls at 3, debt at 47 < 50). The owner rules the trigger
+**stays as written**: bitterness is left unreachable rather than redefined;
+if it ever forms under a later change to the cliff, ransom, or neglect paths,
+the formation itself is the evidence that the world changed. Pricing waits on
+that. Whether a voided gratitude debt converts to bitterness is also open.
 
 ### D209 ✅ Spite: is the act that hurts them both recognized, or motivated? (ADR 0078)
 **Wired inert.** Recognition-only `foldSpite` names unjustified refusals above
@@ -2449,19 +2455,28 @@ formation, courage honor, betrayal-class void, and owed debts; costly-signal
 recognition and pricing remain open.
 
 ### D211 🟡 Grief: who mourns the lost, as distinct from blaming the leader? (ADR 0078)
-**Wired inert.** `griefLoad` is an integer, clamped carrier with deterministic
-peer-loss, captive half-weight/lift, decay, and post-quiet-quit depth helpers.
-Terminal campaign/seminar folds name carried incidents only; no live surface or
-Leadership Index term exists. Thresholds, magnitudes, and the suppression curve
-remain open for a measurement sweep. Located in ADR 0078.
+**Recognition live, suppression a ruled zero (2026-09-05).** `griefLoad` is an
+integer, clamped carrier with deterministic peer-loss, captive
+half-weight/lift, decay, and post-quiet-quit depth helpers. Ruled from the
+Phase B sweep: `GRIEF_LOAD_PER_LOSS_PERMILLE = 100`,
+`GRIEF_DECAY_PERMILLE_PER_MATCH = 250` (the room mourns and the load is
+carried for the debrief), `GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE = 0` because
+the depth tax is a cost only the bonded room can pay — wrong sign for D188 —
+so play is unchanged. Terminal campaign/seminar folds name carried incidents;
+no live surface or Leadership Index term exists. Open: a grief consumer that
+is not a chess penalty, and the cruel room's missing bond source.
 
 ### D212 ✅ Shame: does it matter who watched? (ADR 0078)
-**Wired inert.** An unvindicated override scales only the overridden piece's
+**Live at the ruled recognition-grade magnitude.** An unvindicated override scales only the overridden piece's
 own trust/benevolence loss by a linear-with-cap witness curve, reusing ADR 0070
 standing and witness enumeration; a private correction has zero shame. A
 terminal-only event names positive exposures in campaign and seminar debriefs.
-The scale knobs default to zero; magnitudes await a measurement sweep.
-`leaderAppraisal` and bitterness interactions remain open.
+Ruled from the Phase B sweep (2026-09-05): `SHAME_PER_WITNESS_PERMILLE = 50`
+— correctly rare (≈1 exposure per cruel-room match, none in kind rooms) and
+correctly signed (≈1 trust point at this opponent, where the overridden piece
+is already at the floor). `SHAME_STANDING_PERMILLE` stays 0 unswept; the
+magnitude proper waits on an unsaturated trust term. `leaderAppraisal` and
+bitterness interactions remain open.
 
 ### D213 ✅ Guilt: does the survivor carry what its escape cost? (ADR 0078)
 **Recognition default ruled at `GUILT_PEER_SAFETY_FLOOR = 0.05`; cascade

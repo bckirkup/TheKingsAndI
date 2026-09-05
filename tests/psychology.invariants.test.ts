@@ -643,6 +643,8 @@ describe('psychology invariants (docs/psychology_engine.md §11)', () => {
       [firstWitness, secondWitness],
       3,
       'Nf3',
+      false,
+      { perWitnessPermille: 0 },
     );
     expect(
       result.witnessEvents
