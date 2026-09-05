@@ -100,6 +100,20 @@ Thresholds and magnitudes remain open for measurement before any ruling.
 Whether a voided gratitude debt converts to bitterness remains open, and
 pricing remains open.
 
+**Measured (2026-09-05, Phase B,
+`docs/calibration/2026-09-05-the-carriers-and-the-floor.md`).** The
+`rupture_floor` trigger is a **structural zero** on the campaign harness:
+it requires `tauBenev <= 0`, but ADR 0066's proportional cliff
+(`trunc(tauBenev / 4)` per override) stalls benevolence at 3 after eleven
+overrides with 47 rupture debt, below the 50 floor, and the D175 ruling
+accepts that truncation. Neglect erosion reaches 0 only on heeded refusals
+(a kind-room event) and `not_ransomed` needs a ransom the census never saw.
+No knob on the trigger can make it fire. A trigger ruling is owed before
+any magnitude sweep: debt-only (drop the benevolence clause, threshold
+≤ 470‰ or ceiling read as the seeded benevolence), a derived benevolence
+floor in place of `<= 0`, or rounding the cliff up (reopens D175 and every
+cruel-room number). All `BITTERNESS_*` defaults stay 0.
+
 ### D209 — Spite (wired inert, 2026-09-05 addendum)
 
 **What it is.** Courage's dark mirror: a grievance-driven refusal or desertion
@@ -186,6 +200,21 @@ a held fengr is mourned at half weight — lost, but not gone — and the
 ransom return lifts that grief, which is the roster-side half of the
 exchange hope.
 
+**Measured (2026-09-05, Phase B,
+`docs/calibration/2026-09-05-the-carriers-and-the-floor.md`).** Grief
+fires where bonds exist and nowhere else: ≈18 mournings per supportive
+match, 1.2 steady, 0.2 tyrannical (the cruel room has no affinity ≥ 50, the
+Phase A loneliness finding). With the depth suppression live the carrier is
+a tax only the kind room can pay — pooled ≤ 0.7 LI and ≤ 1.75 win at
+loads 250–500‰, with single paired campaigns falling 6 LI / 17.5 win — and
+nothing else follows (no exit, no quiet quit): the wrong sign for the D188
+trajectory gate. Load and decay behave as designed (decay 0 saturates toward
+1000‰, 250 holds ≈500‰ at load 250, 500 holds ≈270‰). Proposed and
+awaiting the owner's ruling: `GRIEF_LOAD_PER_LOSS_PERMILLE = 100`,
+`GRIEF_DECAY_PERMILLE_PER_MATCH = 250` as recognition-grade defaults with
+`GRIEF_ENGAGEMENT_SUPPRESSION_PERMILLE` a **ruled zero** until grief has a
+consumer that is not a chess penalty or the cruel room a bond source.
+
 **Open in D211:** the affinity threshold, the load and decay magnitudes, the
 engagement suppression curve, and whether grief transfers on generation
 (D189 says careers have no memory of predecessors — grief should die with
@@ -217,6 +246,18 @@ and therefore no shame. Positive exposures are terminal-only
 broadcasts, and existing `PSYCH_DELTA` events are unchanged. The v1 curve is
 linear-with-cap, with magnitudes awaiting a measurement sweep. Whether
 `leaderAppraisal` or bitterness interactions should respond remains open.
+
+**Measured (2026-09-05, Phase B,
+`docs/calibration/2026-09-05-the-carriers-and-the-floor.md`).** Shame fires
+≈0.8 times per tyrannical match and ≈1.1 per steady, never in the
+supportive room (byte-identical to control at 25/50/100‰ per witness). Its
+price at the Judgement Seat is ≈0.8–1.3 points of `trust_final` at
+50–100‰, monotone and correctly signed but under the play-divergence noise,
+because the overridden piece's trust and benevolence are already floored by
+mid-campaign at this opponent. Proposed and awaiting the owner's ruling:
+`SHAME_PER_WITNESS_PERMILLE = 50` as a recognition-grade default;
+`SHAME_STANDING_PERMILLE` stays 0 unswept; the D212 magnitude proper waits
+on an unsaturated trust term.
 
 ### D213 — Guilt (wired inert, 2026-09-05 addendum)
 
