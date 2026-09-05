@@ -14,7 +14,13 @@ pnpm sim --matches=20 --leader=tyrannical --engine=fake --enforce-calibration=tr
 pnpm sim --matches=3 --campaign=3 --leader=tyrannical --seed=1 --engine=fake --checkpoint-out=checkpoint.json
 pnpm sim --matches=6 --campaign=6 --leader=tyrannical --seed=1 --engine=fake --resume=checkpoint.json
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4 --seed=7
+pnpm sim:census --seed=1 --weeks=4 --matches=2 --commanders=2 --engine=fake --out=census.json
 ```
+
+`sim:census` runs one seminar with the selected match-time recognition knobs,
+then re-folds its recorded weeks across fixed recognition-threshold grids.
+It prints per-style incidence tables and writes the same tables, plus play and
+record digests, to the requested JSON output.
 
 `--campaign-length=N` is the number of sequential matches in one campaign;
 `--campaign=N` remains an alias. `--matches=T` is the total number of matches

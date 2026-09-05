@@ -19,6 +19,7 @@
     "season": "tsx sim/seasonCli.ts",
     "sim:aggregate": "tsx sim/aggregate.ts",
     "sim:sweep": "tsx sim/sweep.ts",
+    "sim:census": "tsx sim/emotionCensus.ts",
     "dialogue:distill": "tsx scripts/distill-dialogue.ts",
     "dialogue:check": "tsx scripts/distill-dialogue.ts --check",
     "trait-leakage:check": "tsx scripts/check-trait-leakage.ts"

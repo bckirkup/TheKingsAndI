@@ -194,6 +194,11 @@ export interface SeminarResult {
   readonly config: SeminarConfig;
   readonly commanders: readonly SeminarCommanderResult[];
   readonly weeks: readonly SeminarWeekResult[];
+  readonly envyCycles: readonly {
+    readonly cycle: number;
+    readonly settlements: readonly DraftSettlement[];
+  }[];
+  readonly prideEvents: readonly PricingEvent[];
   readonly standings: readonly SeminarStanding[];
   readonly finalPools: Readonly<Record<string, CommanderPool>>;
   readonly terminalAwards: Readonly<
@@ -1126,6 +1131,8 @@ export async function runSeminar(options: {
     config,
     commanders: terminal,
     weeks,
+    envyCycles,
+    prideEvents,
     standings,
     finalPools: Object.fromEntries(currentPools.entries()),
     terminalAwards: Object.fromEntries(
