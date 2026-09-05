@@ -114,6 +114,7 @@ export interface CascadeResult {
   readonly events: MatchEvent[];
   readonly rout: boolean;
   readonly cascadeLength: number;
+  readonly lonelyStayDecisions: number;
 }
 
 /**
@@ -129,6 +130,7 @@ export function applyDesertionWithCascade(
   const events: MatchEvent[] = [];
   const departed: PieceState[] = [];
   let cascadeLength = 0;
+  let lonelyStayDecisions = 0;
   const queue: DesertionDeparture[] = [departure];
 
   while (queue.length > 0) {
@@ -175,11 +177,20 @@ export function applyDesertionWithCascade(
     cascadeLength += 1;
 
     if (roster.length <= 1) {
-      return { roster, departed, events, rout: true, cascadeLength };
+      return {
+        roster,
+        departed,
+        events,
+        rout: true,
+        cascadeLength,
+        lonelyStayDecisions,
+      };
     }
 
     const refreshed = buildDesertionContexts(roster, next.moveEvalByPiece);
-    const further = evaluateDesertionCascade(roster, refreshed);
+    const further = evaluateDesertionCascade(roster, refreshed, (decision) => {
+      if (decision.terms.lonely === true) lonelyStayDecisions += 1;
+    });
     for (const candidate of further) {
       const piece = roster.find((entry) => entry.id === candidate.pieceId);
       if (piece === undefined) continue;
@@ -204,5 +215,6 @@ export function applyDesertionWithCascade(
     events,
     rout: roster.length <= 1,
     cascadeLength,
+    lonelyStayDecisions,
   };
 }

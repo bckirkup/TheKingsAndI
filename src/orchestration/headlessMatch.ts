@@ -198,6 +198,8 @@ export interface HeadlessMatchResult {
   readonly refusedGoodMoves: number;
   /** Initial desertions whose true post-move audit score was materially winning. */
   readonly winningPositionDesertions: number;
+  /** Own-side desertion evaluations whose loneliness predicate held. */
+  readonly lonelyStayDecisions?: number;
   /** Private-view obviousness values for accepted justified refusals. */
   readonly justifiedRefusalObviousness: readonly number[];
   /** Raw absolute private-view losses for accepted justified refusals. */
@@ -326,6 +328,9 @@ function applyPlayerMoveConsequences(input: {
     san: choice.san,
     pieceId: actor.id,
     verdict: outcome.verdict,
+    ...(actor.panicPermille === undefined || actor.panicPermille <= 0
+      ? {}
+      : { panicPermille: actor.panicPermille }),
     ...(actor.role === 'King'
       ? {}
       : (() => {
@@ -526,6 +531,7 @@ export async function runHeadlessMatch(
   let dismissalPly: number | null = null;
   let refusedGoodMoves = 0;
   let winningPositionDesertions = 0;
+  let lonelyStayDecisions = 0;
   const justifiedRefusalObviousnessValues: number[] = [];
   const justifiedRefusalPrivateViewLosses: number[] = [];
   const enemyObservableBehaviours: string[] = [];
@@ -559,6 +565,9 @@ export async function runHeadlessMatch(
     const san = chooseKingCommandMove(board, config.random);
     if (san === undefined) return false;
     const applied = board.applySan(san);
+    const moverPanic = roster.find(
+      (piece) => piece.id === applied.moverId,
+    )?.panicPermille;
     events.push({
       t: 'MOVE',
       ply,
@@ -566,6 +575,9 @@ export async function runHeadlessMatch(
       pieceId: applied.moverId,
       verdict: 'COMPLIANT_EXECUTION',
       orderQualityCp: 40,
+      ...(moverPanic === undefined || moverPanic <= 0
+        ? {}
+        : { panicPermille: moverPanic }),
     });
     if (applied.capture !== undefined) {
       events.push({
@@ -816,6 +828,9 @@ export async function runHeadlessMatch(
         departedRoster.map((piece) => piece.id),
       );
       const desertionDecision = shouldDesert(actor, desertionContext, roster);
+      if (desertionDecision.terms.lonely === true) {
+        lonelyStayDecisions += 1;
+      }
       let outcome = evaluateMoveResponse(
         actor,
         moveEval,
@@ -974,6 +989,7 @@ export async function runHeadlessMatch(
           board.cedeTurn();
         }
         roster = cascade.roster;
+        lonelyStayDecisions += cascade.lonelyStayDecisions;
         departedRoster = appendDeparted(departedRoster, cascade.departed);
         if (cascade.rout) {
           rout = true;
@@ -1205,6 +1221,7 @@ export async function runHeadlessMatch(
     dismissalPly,
     refusedGoodMoves,
     winningPositionDesertions,
+    ...(lonelyStayDecisions === 0 ? {} : { lonelyStayDecisions }),
     justifiedRefusalObviousness: Object.freeze(
       justifiedRefusalObviousnessValues,
     ),

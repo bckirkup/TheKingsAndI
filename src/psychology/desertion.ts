@@ -375,6 +375,7 @@ export function shouldDesert(
       shadowFactor: calculateShadowFactor(context.P_lossIfStay),
       attachment,
       stayAttachmentWeightPermille,
+      ...(lonely ? { lonely: true } : {}),
       lambda,
       lambdaTrust: lambdaComponents.trust,
       lambdaMorale: lambdaComponents.morale,

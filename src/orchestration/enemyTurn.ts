@@ -120,6 +120,9 @@ export function finishUntrackedMove(
 ): EnemyTurnResult {
   const applied = board.applySan(san);
   const events: MatchEvent[] = [];
+  const moverPanic = enemyRoster.find(
+    (piece) => piece.id === applied.moverId,
+  )?.panicPermille;
   events.push({
     t: 'MOVE',
     ply,
@@ -127,6 +130,9 @@ export function finishUntrackedMove(
     pieceId: applied.moverId,
     verdict: 'COMPLIANT_EXECUTION',
     orderQualityCp: 0,
+    ...(moverPanic === undefined || moverPanic <= 0
+      ? {}
+      : { panicPermille: moverPanic }),
   });
   if (applied.capture !== undefined) {
     events.push({
@@ -304,6 +310,9 @@ function enemyCompliantTurn(input: {
     pieceId: actor.id,
     verdict: outcome.verdict,
     orderQualityCp,
+    ...(actor.panicPermille === undefined || actor.panicPermille <= 0
+      ? {}
+      : { panicPermille: actor.panicPermille }),
     ...(actor.role === 'King'
       ? {}
       : (() => {

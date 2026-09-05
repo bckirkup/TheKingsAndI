@@ -125,6 +125,8 @@ export interface DesertionDecisionTerms {
   readonly shadowFactor?: number;
   readonly attachment?: number;
   readonly stayAttachmentWeightPermille?: number;
+  /** Present only when no active above-threshold peer remains. */
+  readonly lonely?: true;
   readonly lambda: number;
   readonly lambdaTrust: number;
   readonly lambdaMorale: number;
@@ -171,6 +173,8 @@ export type MatchEvent =
       readonly san: string;
       readonly pieceId: PieceId;
       readonly verdict: MoveResponseVerdict;
+      /** Present only when the mover acted under acute panic. */
+      readonly panicPermille?: number;
       /** Centipawn-quality proxy for the order issued (ADR 0022 §5). */
       readonly orderQualityCp?: number;
       /** Overcome margin and trait-free ask (ADR 0073 addendum, D199) — debrief-only. */

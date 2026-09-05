@@ -247,6 +247,23 @@ describe('ADR 0078 Phase C live carriers', () => {
     const supportedHero = piece({
       dyadicAffinity: { [departed.id]: 80, [surviving.id]: 80 },
     });
+    const lonelyTerms = withConfig(
+      { LONELINESS_STAY_PENALTY_PERMILLE: 500 },
+      () =>
+        shouldDesert(lonelyHero, context({ departedPeerIds: [departed.id] }), [
+          lonelyHero,
+          surviving,
+        ]).terms,
+    );
+    const supportedTerms = withConfig(
+      { LONELINESS_STAY_PENALTY_PERMILLE: 500 },
+      () =>
+        shouldDesert(
+          supportedHero,
+          context({ departedPeerIds: [departed.id] }),
+          [supportedHero, surviving],
+        ).terms,
+    );
     const lonely = withConfig(
       { LONELINESS_STAY_PENALTY_PERMILLE: 500 },
       () =>
@@ -274,6 +291,8 @@ describe('ADR 0078 Phase C live carriers', () => {
     );
     expect(lonely).toBeLessThan(baseline);
     expect(supported).toBe(baseline);
+    expect(lonelyTerms.lonely).toBe(true);
+    expect(supportedTerms.lonely).toBeUndefined();
   });
 
   it('shifts same-side awe witnesses, preserves the hero and clamps affinity', () => {

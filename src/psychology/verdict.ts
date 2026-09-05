@@ -211,6 +211,12 @@ export function applyFatalisticComplianceCosts(
 export function evaluateDesertionCascade(
   roster: readonly PieceState[],
   desertionContexts: Readonly<Record<string, DesertionContext>>,
+  onEvaluation?: (decision: {
+    readonly pieceId: string;
+    readonly uStay: number;
+    readonly uDesert: number;
+    readonly terms: DesertionDecisionTerms;
+  }) => void,
 ): readonly {
   readonly pieceId: string;
   readonly uStay: number;
@@ -228,6 +234,12 @@ export function evaluateDesertionCascade(
     const context = desertionContexts[piece.id];
     if (context === undefined) continue;
     const decision = shouldDesert(piece, context, roster);
+    onEvaluation?.({
+      pieceId: piece.id,
+      uStay: decision.uStay,
+      uDesert: decision.uDesert,
+      terms: decision.terms,
+    });
     if (decision.desert) {
       results.push({
         pieceId: piece.id,

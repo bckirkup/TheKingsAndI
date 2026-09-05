@@ -215,6 +215,15 @@ describe('coefficient sweep', () => {
     expect(point.meanAbility).toBe(campaignSummary.meanAbility);
     expect(point.abilityMovedCount).toBe(campaignSummary.abilityMovedCount);
     expect(point.meanTauBenev).toBe(campaignSummary.meanTauBenev);
+    expect(point.meanPanicOnsets).toBe(campaignSummary.meanPanicOnsets);
+    expect(point.meanPanicPlies).toBe(campaignSummary.meanPanicPlies);
+    expect(point.meanReliefEvents).toBe(campaignSummary.meanReliefEvents);
+    expect(point.meanHeroismNominations).toBe(
+      campaignSummary.meanHeroismNominations,
+    );
+    expect(point.meanLonelyStayDecisions).toBe(
+      campaignSummary.meanLonelyStayDecisions,
+    );
     expect(point.meanQuietQuitRate).toBe(campaignSummary.meanQuietQuitRate);
     expect(point.meanOverrideCount).toBe(campaignSummary.meanOverrideCount);
     expect(point.meanFreeOverrideCount).toBe(

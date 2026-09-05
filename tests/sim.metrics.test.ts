@@ -131,9 +131,11 @@ describe('promotion harness metrics', () => {
     expect(metric.dismissalCause).toBeNull();
     expect(metric.dismissalPly).toBeNull();
     expect(header).toMatch(
-      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply,shame_exposures,grief_mournings,bitterness_formations,mean_grief_load_end,mean_bitterness_end$/,
+      /,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply,shame_exposures,grief_mournings,bitterness_formations,mean_grief_load_end,mean_bitterness_end,panic_onsets,panic_plies,relief_events,heroism_nominations,lonely_stay_decisions$/,
     );
-    expect(row).toMatch(/,0\.25,34\.95,50\.00,0,0\.00,0,,,0,0,0,0\.00,0\.00$/);
+    expect(row).toMatch(
+      /,0\.25,34\.95,50\.00,0,0\.00,0,,,0,0,0,0\.00,0\.00,0,0,0,0,0$/,
+    );
   });
 
   it('uses departed exit trust in mean_trust_final but preserves survivor mean_trust_end', () => {
@@ -168,6 +170,114 @@ describe('promotion harness metrics', () => {
     expect(metric.meanTrustEnd).toBe(50);
     expect(metric.meanTrustFinal).toBeLessThan(metric.meanTrustEnd);
     expect(metric.leadershipIndex).toBeCloseTo(34, 8);
+  });
+
+  it('folds Phase C trigger events and optional terms by own-side identity', () => {
+    const board = LivingBoard.standard();
+    const roster = createStartingRoster(board, 'w', 50, 0.5);
+    const enemyRoster = createStartingRoster(board, 'b', 50, 0.5);
+    const actor = roster[0];
+    const witness = roster[1];
+    if (actor === undefined || witness === undefined) {
+      throw new Error('Expected starting witnesses.');
+    }
+    const metric = metricsFromMatch(
+      1,
+      1,
+      'supportive',
+      roster,
+      {
+        events: [
+          {
+            t: 'PANIC_ONSET',
+            ply: 1,
+            side: 'w',
+            trigger: 'dread',
+            dreading: [actor.id],
+            fielded: roster.length,
+          },
+          {
+            t: 'PANIC_ONSET',
+            ply: 2,
+            side: 'b',
+            trigger: 'dread',
+            dreading: [enemyRoster[0]?.id ?? 'b:P:a7'],
+            fielded: enemyRoster.length,
+          },
+          {
+            t: 'MOVE',
+            ply: 3,
+            san: 'a3',
+            pieceId: actor.id,
+            verdict: 'COMPLIANT_EXECUTION',
+            panicPermille: 500,
+          },
+          {
+            t: 'RELIEF',
+            ply: 4,
+            pieceId: actor.id,
+            priorRiskPermille: 700,
+            riskPermille: 100,
+          },
+          {
+            t: 'HEROISM_NOMINATION',
+            ply: 5,
+            pieceId: witness.id,
+            san: 'Nb1',
+          },
+          {
+            t: 'DESERTION',
+            ply: 6,
+            pieceId: actor.id,
+            refusedMove: 'a3',
+            uStay: -1,
+            uDesert: 1,
+            departureKind: 'first',
+            terms: {
+              P_captured: 0.5,
+              pain: 0.2,
+              P_lossIfStay: 0.4,
+              P_lossIfLeave: 0.2,
+              lambda: 1,
+              lambdaTrust: 1,
+              lambdaMorale: 0,
+              lambdaLoyalty: 0,
+              lambdaAffinity: 0,
+              standingCost: 0,
+              gloryWeight: 0,
+              tauBenev: 0,
+              tauAbil: 0,
+              lonely: true,
+            },
+          },
+        ],
+        roster,
+        departedRoster: [],
+        enemyRoster,
+        departedEnemyRoster: [],
+        enemyFieldedPieceIds: enemyRoster.map((piece) => piece.id),
+        plies: 6,
+        winScore: 50,
+        rout: false,
+        enemyRout: false,
+        dismissed: false,
+        dismissalCause: null,
+        dismissalPly: null,
+        refusedGoodMoves: 0,
+        winningPositionDesertions: 0,
+        lonelyStayDecisions: 1,
+        justifiedRefusalObviousness: [],
+        justifiedRefusalPrivateViewLosses: [],
+        determinismId: 'phase-c-metrics-test',
+        enemyObservableBehaviours: [],
+      },
+      0,
+    );
+    expect(metric.panicOnsets).toBe(1);
+    expect(metric.panicPlies).toBe(1);
+    expect(metric.reliefEvents).toBe(1);
+    expect(metric.heroismNominations).toBe(1);
+    expect(metric.lonelyStayDecisions).toBe(1);
   });
 
   it('folds commander promotions from events and excludes enemy promotions', () => {
