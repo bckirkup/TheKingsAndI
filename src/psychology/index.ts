@@ -115,7 +115,11 @@ export {
   type DreadExposure,
 } from './trauma';
 export { applyMorningLift } from './morningLift';
-export { prideAppraisalDelta, prideExpectationAfter } from './pride';
+export {
+  prideAppraisalDelta,
+  prideAppraisalSum,
+  prideExpectationAfter,
+} from './pride';
 export {
   bitternessPermille,
   decayBitterness,

@@ -1,6 +1,7 @@
 import {
   ENGINE_CONFIG,
   prideAppraisalDelta,
+  prideAppraisalSum,
   prideExpectationAfter,
   type PieceRole,
 } from '../src/psychology';
@@ -130,7 +131,7 @@ export function foldPride(
       expectation,
       movement,
     );
-    career.appraisal += delta;
+    career.appraisal = prideAppraisalSum(career.appraisal, delta);
     career.role = event.role;
     career.ownerId = event.ownerId;
   }
@@ -141,7 +142,7 @@ export function foldPride(
       pieceId,
       role: career.role,
       ownerId: career.ownerId,
-      appraisal: Math.max(-1_000, Math.min(1_000, career.appraisal)),
+      appraisal: prideAppraisalSum(0, career.appraisal),
       steps: career.steps,
     };
     const appraisal = result.appraisal;

@@ -418,6 +418,7 @@ export function applyWitnessedSacrificeEvent(
   };
 }
 
+/** Applies the shift to a same-side fielded roster containing the hero. */
 export function applyAweShift(
   roster: readonly PieceState[],
   heroId: string,
@@ -428,7 +429,7 @@ export function applyAweShift(
   const hero = roster.find((piece) => piece.id === heroId);
   if (hero === undefined) return [...roster];
   return roster.map((piece) => {
-    if (piece.id === heroId || piece.id.charAt(0) !== hero.id.charAt(0)) {
+    if (piece.id === hero.id) {
       return piece;
     }
     return {

@@ -32,6 +32,7 @@ import {
 import {
   ENGINE_CONFIG,
   prideAppraisalDelta,
+  prideAppraisalSum,
   prideExpectationAfter,
   type PieceState,
 } from '../src/psychology';
@@ -235,7 +236,7 @@ function commanderId(side: CommanderSide, index: number): string {
   return `${side}:commander:${String(index).padStart(2, '0')}`;
 }
 
-function applyLivePride(
+export function applyLivePride(
   pools: ReadonlyMap<string, CommanderPool>,
   events: readonly PricingEvent[],
   config: SeminarConfig,
@@ -252,10 +253,11 @@ function applyLivePride(
     const expectation =
       expectations.get(event.pieceId) ??
       roleExpectationPrice(event.role, config);
-    const appraisal =
-      (appraisals.get(event.pieceId) ?? 0) +
-      prideAppraisalDelta(event.price, expectation);
-    appraisals.set(event.pieceId, Math.max(-1_000, Math.min(1_000, appraisal)));
+    const appraisal = prideAppraisalDelta(event.price, expectation);
+    appraisals.set(
+      event.pieceId,
+      prideAppraisalSum(appraisals.get(event.pieceId) ?? 0, appraisal),
+    );
     expectations.set(
       event.pieceId,
       prideExpectationAfter(

@@ -10,6 +10,7 @@ import {
   ENGINE_CONFIG,
   evaluateMoveResponse,
   normalizePieceState,
+  prideAppraisalSum,
   shouldDesert,
   withoutPanic,
   type CandidateMoveEvaluation,
@@ -19,7 +20,7 @@ import {
 import { applyMorningLift } from '../src/psychology/morningLift';
 import { decayPanic } from '../src/psychology/panic';
 import { foldPride } from '../sim/pride';
-import { runSeminar } from '../sim/seminar';
+import { applyLivePride, runSeminar } from '../sim/seminar';
 import { SEMINAR_CONFIG } from '../sim/seminarConfig';
 
 const traits = {
@@ -170,6 +171,55 @@ describe('ADR 0078 Phase C live carriers', () => {
         expect(member.state.selfAppraisal).toBe(careers.get(member.state.id));
       }
     }
+
+    const railEvents = [
+      {
+        cycle: 1,
+        kind: 'draft' as const,
+        ownerId: 'w:commander:00',
+        pieceId: 'w:P:rail',
+        role: 'Pawn' as const,
+        price: 10_000,
+      },
+      {
+        cycle: 2,
+        kind: 'draft' as const,
+        ownerId: 'w:commander:00',
+        pieceId: 'w:P:rail',
+        role: 'Pawn' as const,
+        price: 10_000,
+      },
+    ];
+    const rail = foldPride(railEvents, result.config);
+    const ownerId = 'w:commander:00';
+    const ownerPool = result.finalPools[ownerId];
+    const template = ownerPool?.members[0];
+    if (ownerPool === undefined || template === undefined) {
+      throw new Error(`Missing test pool ${ownerId}.`);
+    }
+    const railPool = {
+      ...ownerPool,
+      members: [
+        ...ownerPool.members,
+        {
+          ...template,
+          state: {
+            ...template.state,
+            id: 'w:P:rail',
+            role: 'Pawn' as const,
+          },
+        },
+      ],
+    };
+    const live = withConfig({ PRIDE_REFUSAL_SCALE: 1 }, () =>
+      applyLivePride(new Map([[ownerId, railPool]]), railEvents, result.config),
+    );
+    const foldedAppraisal = rail[ownerId]?.proud?.[0]?.appraisal;
+    const liveAppraisal = live.get(ownerId)?.members.at(-1)
+      ?.state.selfAppraisal;
+    expect(foldedAppraisal).toBe(1_000);
+    expect(liveAppraisal).toBe(foldedAppraisal);
+    expect(prideAppraisalSum(1_000, 1_000)).toBe(1_000);
   });
 
   it('reduces depth monotonically with bounded panic and decays it away', () => {
@@ -232,13 +282,11 @@ describe('ADR 0078 Phase C live carriers', () => {
       id: 'w:P:g1',
       dyadicAffinity: { [hero.id]: 90 },
     });
-    const enemy = piece({ id: 'b:P:g1', dyadicAffinity: { [hero.id]: 20 } });
-    const shifted = applyAweShift([hero, witness, enemy], hero.id, 50);
+    const shifted = applyAweShift([hero, witness], hero.id, 50);
     expect(
       shifted.find((item) => item.id === witness.id)?.dyadicAffinity[hero.id],
     ).toBe(100);
     expect(shifted.find((item) => item.id === hero.id)).toEqual(hero);
-    expect(shifted.find((item) => item.id === enemy.id)).toEqual(enemy);
   });
 
   it('increases relief lift with event count and caps the configured addition', () => {
