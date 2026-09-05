@@ -54,7 +54,7 @@ describe('headless player refusal replanning', () => {
 
     const runWithShameOff = async () => {
       const config = ENGINE_CONFIG as unknown as Record<string, number>;
-      const originalShame = config.SHAME_PER_WITNESS_PERMILLE;
+      const originalShame = config.SHAME_PER_WITNESS_PERMILLE ?? 0;
       config.SHAME_PER_WITNESS_PERMILLE = 0;
       try {
         return await runHeadlessMatch({
