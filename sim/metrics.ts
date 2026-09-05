@@ -53,6 +53,11 @@ export interface MatchMetrics {
   readonly vindicationRate?: number;
   readonly dripEvents?: number;
   readonly regardEvents?: number;
+  readonly shameExposures?: number;
+  readonly griefMournings?: number;
+  readonly bitternessFormations?: number;
+  readonly meanGriefLoadEnd?: number;
+  readonly meanBitternessEnd?: number;
   readonly adjudicationObservations?: number;
   readonly adjudicationVindicationRate?: number;
   readonly dripGainTotal?: number;
@@ -324,6 +329,11 @@ export interface CampaignMetrics {
   readonly meanDripGainTotal: number;
   readonly meanRegardEvents: number;
   readonly meanRegardGainTotal: number;
+  readonly meanShameExposures: number;
+  readonly meanGriefMournings: number;
+  readonly meanBitternessFormations: number;
+  readonly meanGriefLoadEnd: number;
+  readonly meanBitternessEnd: number;
   readonly meanAdjudicationLoss: number;
   readonly meanTauBenev: number;
   readonly abilityMin: number;
@@ -342,7 +352,7 @@ export interface CampaignMetrics {
 }
 
 const CSV_HEADER =
-  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply';
+  'match,seed,leader,plies,refusals,overrides,implicit_overrides,quiet_quit_moves,desertions,promotions,promotion_to_role_counts,first_desertions,first_unknown_cause,cascade_desertions,cascade_unknown_cause,cascade_length,first_u_stay,first_u_desert,first_p_captured,first_pain,first_p_loss_if_stay,first_p_loss_if_leave,first_lambda,first_lambda_trust,first_lambda_morale,first_lambda_loyalty,first_lambda_affinity,first_standing_cost,first_glory_weight,first_tau_benev,first_tau_abil,refused_good_moves,refusal_rate,refusals_per_ply,quiet_quit_rate,refused_good_move_rate,override_rate,mean_trust_start,mean_trust_end,class_contempt_start,class_contempt_end,win_score,rout,archetype,mean_tau_abil_start,mean_tau_abil_end,mean_tau_benev_start,mean_tau_benev_end,surviving_roster_size,enemy_attrition,enemy_surviving_roster_size,enemy_desertions,enemy_refusal_rate,retirements,grace_events,enemy_retirements,enemy_grace_events,drip_events,drip_gain_total,regard_events,regard_gain_total,free_override_count,benev_loss_target,benev_loss_witness,free_insistence_ply_fraction,unjustified_trauma,leadership_index,mean_trust_final,emptied_chairs,emptied_chairs_score,dismissed,dismissal_cause,dismissal_ply,shame_exposures,grief_mournings,bitterness_formations,mean_grief_load_end,mean_bitterness_end';
 
 export function calculateEmptiedChairsScore(
   emptiedChairs: number,
@@ -380,6 +390,9 @@ function countEvents(
   dripGainTotal: number;
   regardEvents: number;
   regardGainTotal: number;
+  shameExposures: number;
+  griefMournings: number;
+  bitternessFormations: number;
   freeOverrideCount: number;
   benevLossTarget: number;
   benevLossWitness: number;
@@ -401,6 +414,9 @@ function countEvents(
   let dripGainTotal = 0;
   let regardEvents = 0;
   let regardGainTotal = 0;
+  let shameExposures = 0;
+  let griefMournings = 0;
+  let bitternessFormations = 0;
   let benevLossTarget = 0;
   let benevLossWitness = 0;
   const overrideEvents = events.filter(
@@ -481,6 +497,15 @@ function countEvents(
           regardGainTotal += event.gained;
         }
         break;
+      case 'SHAME_EXPOSURE':
+        if (isCommandedPiece) shameExposures += 1;
+        break;
+      case 'GRIEF_MOURNING':
+        if (isCommandedPiece) griefMournings += 1;
+        break;
+      case 'BITTERNESS_FORMED':
+        if (isCommandedPiece) bitternessFormations += 1;
+        break;
       default:
         break;
     }
@@ -508,6 +533,9 @@ function countEvents(
     dripGainTotal,
     regardEvents,
     regardGainTotal,
+    shameExposures,
+    griefMournings,
+    bitternessFormations,
     freeOverrideCount,
     benevLossTarget,
     benevLossWitness,
@@ -758,6 +786,14 @@ export function metricsFromMatch(
   const meanTauAbilEnd = meanTauAbil(result.roster);
   const meanTauBenevStart = meanTauBenev(rosterStart);
   const meanTauBenevEnd = meanTauBenev(result.roster);
+  const meanGriefLoadEnd =
+    result.roster.reduce((sum, piece) => sum + (piece.griefLoad ?? 0), 0) /
+    Math.max(1, result.roster.length);
+  const meanBitternessEnd =
+    result.roster.reduce(
+      (sum, piece) => sum + (piece.bitternessPermille ?? 0),
+      0,
+    ) / Math.max(1, result.roster.length);
   const classContemptStart = meanClassContempt(rosterStart);
   const classContemptEnd = meanClassContempt(result.roster);
   const unjustifiedTrauma = foldUnjustifiedTrauma(
@@ -813,6 +849,11 @@ export function metricsFromMatch(
     dripGainTotal: counts.dripGainTotal,
     regardEvents: counts.regardEvents,
     regardGainTotal: counts.regardGainTotal,
+    shameExposures: counts.shameExposures,
+    griefMournings: counts.griefMournings,
+    bitternessFormations: counts.bitternessFormations,
+    meanGriefLoadEnd,
+    meanBitternessEnd,
     adjudicationObservations: counts.abilityObservations,
     adjudicationVindicationRate,
     adjudicationLossTotal: counts.adjudicationLossTotal,
@@ -1088,6 +1129,13 @@ function aggregateCampaignCore(
     meanDripGainTotal: mean((metric) => metric.dripGainTotal ?? 0),
     meanRegardEvents: mean((metric) => metric.regardEvents ?? 0),
     meanRegardGainTotal: mean((metric) => metric.regardGainTotal ?? 0),
+    meanShameExposures: mean((metric) => metric.shameExposures ?? 0),
+    meanGriefMournings: mean((metric) => metric.griefMournings ?? 0),
+    meanBitternessFormations: mean(
+      (metric) => metric.bitternessFormations ?? 0,
+    ),
+    meanGriefLoadEnd: mean((metric) => metric.meanGriefLoadEnd ?? 0),
+    meanBitternessEnd: mean((metric) => metric.meanBitternessEnd ?? 0),
     meanAdjudicationLoss: mean((metric) => metric.meanAdjudicationLoss ?? 0),
     meanTauBenev: mean((metric) => metric.meanTauBenevEnd),
     abilityMin: mean((metric) => metric.abilityMin ?? 0),
@@ -1259,6 +1307,11 @@ export function renderCsv(
       metric.dismissed ? 1 : 0,
       metric.dismissalCause ?? '',
       metric.dismissalPly ?? '',
+      metric.shameExposures ?? 0,
+      metric.griefMournings ?? 0,
+      metric.bitternessFormations ?? 0,
+      (metric.meanGriefLoadEnd ?? 0).toFixed(2),
+      (metric.meanBitternessEnd ?? 0).toFixed(2),
     ]
       .map(csvField)
       .join(','),
