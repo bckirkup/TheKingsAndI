@@ -32,6 +32,7 @@ export interface EmotionCensusArgs {
   readonly panicFloor: number;
   readonly relief: number;
   readonly guiltSafetyFloor: number;
+  readonly prideRefusalScale: number;
 }
 
 export interface CensusCommander {
@@ -72,6 +73,7 @@ export interface CensusDiagnosticRecord {
   readonly ownerId: string;
   readonly rosterSize: number;
   readonly events: readonly MatchEvent[];
+  readonly fieldedPieceIds?: readonly string[];
 }
 
 export interface CensusSettlement extends DraftSettlement {
@@ -97,6 +99,21 @@ export interface CensusStyleDiagnostics {
   readonly panicOnset: number;
   readonly relief: number;
   readonly meanFieldedRoster: number;
+  readonly outcome: CensusStyleOutcomeSummary;
+}
+
+export interface CensusStyleOutcomeSummary {
+  readonly commanderMatches: number;
+  readonly meanWinScore: number;
+  readonly meanLeadershipIndex: number;
+  readonly meanRefusalRate: number;
+  readonly meanOverrideRate: number;
+  readonly meanDesertions: number;
+  readonly meanQuietQuitRate: number;
+  readonly meanTrustFinal: number;
+  readonly meanSelfAppraisalPricedPieces: number;
+  readonly pricedPieces: number;
+  readonly positiveSelfAppraisalPieces: number;
 }
 
 export interface CensusSettlementGroup {
@@ -201,6 +218,7 @@ export function parseEmotionCensusArgs(
     'panic-floor',
     'relief',
     'guilt-safety-floor',
+    'pride-refusal-scale',
   ]);
   const values = new Map<string, string>();
   for (const argument of argumentsList) {
@@ -259,6 +277,11 @@ export function parseEmotionCensusArgs(
       values.get('guilt-safety-floor'),
       'guilt-safety-floor',
       ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR,
+    ),
+    prideRefusalScale: nonNegativeInteger(
+      values.get('pride-refusal-scale'),
+      'pride-refusal-scale',
+      ENGINE_CONFIG.PRIDE_REFUSAL_SCALE,
     ),
   };
 }
@@ -385,6 +408,105 @@ function emptyStyleDiagnostics(): CensusStyleDiagnostics {
     panicOnset: 0,
     relief: 0,
     meanFieldedRoster: 0,
+    outcome: {
+      commanderMatches: 0,
+      meanWinScore: 0,
+      meanLeadershipIndex: 0,
+      meanRefusalRate: 0,
+      meanOverrideRate: 0,
+      meanDesertions: 0,
+      meanQuietQuitRate: 0,
+      meanTrustFinal: 0,
+      meanSelfAppraisalPricedPieces: 0,
+      pricedPieces: 0,
+      positiveSelfAppraisalPieces: 0,
+    },
+  };
+}
+
+function mean(values: readonly number[]): number {
+  return values.length === 0
+    ? 0
+    : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function outcomeForStyle(
+  style: string,
+  records: readonly CensusDiagnosticRecord[],
+  commanders: readonly CensusCommander[],
+  result: SeminarResult | undefined,
+): CensusStyleOutcomeSummary {
+  const commanderIds = new Set(
+    commanders
+      .filter((commander) => commander.style === style)
+      .map((commander) => commander.id),
+  );
+  const styleRecords = records.filter((record) =>
+    commanderIds.has(record.ownerId),
+  );
+  const commanderMatches = styleRecords.length;
+  const resultByOwner = new Map(
+    (result?.commanders ?? [])
+      .filter((entry) => commanderIds.has(entry.commander.id))
+      .map((entry) => [entry.commander.id, entry]),
+  );
+  const values = styleRecords.map((record) => {
+    const entry = resultByOwner.get(record.ownerId);
+    const ownerRecords = records.filter(
+      (candidate) => candidate.ownerId === record.ownerId,
+    );
+    const judgement =
+      entry?.judgementSeat.matches[ownerRecords.indexOf(record)];
+    const fieldedPieceIds = new Set(record.fieldedPieceIds);
+    const events =
+      record.fieldedPieceIds === undefined
+        ? record.events
+        : record.events.filter(
+            (event) =>
+              !('pieceId' in event) || fieldedPieceIds.has(event.pieceId),
+          );
+    const moves = events.filter((event) => event.t === 'MOVE').length;
+    const refusals = events.filter((event) => event.t === 'REFUSAL').length;
+    const overrides = events.filter((event) => event.t === 'OVERRIDE').length;
+    const desertions = events.filter((event) => event.t === 'DESERTION').length;
+    const quietQuit = events.filter(
+      (event) => event.t === 'MOVE' && event.verdict === 'QUIET_QUITTING',
+    ).length;
+    const plies =
+      Math.max(
+        -1,
+        ...events.flatMap((event) =>
+          'ply' in event && typeof event.ply === 'number' ? [event.ply] : [],
+        ),
+      ) + 1;
+    return {
+      winScore: judgement?.winScore ?? 0,
+      leadershipIndex: judgement?.leadershipIndex ?? 0,
+      refusalRate: refusals / Math.max(1, moves + refusals + desertions),
+      overrideRate: overrides / Math.max(1, plies),
+      desertions,
+      quietQuitRate: quietQuit / Math.max(1, plies),
+      trustFinal: judgement?.finalTrust ?? 0,
+    };
+  });
+  const pricedPieces = Object.values(result?.finalPools ?? {})
+    .filter((pool) => commanderIds.has(pool.id))
+    .flatMap((pool) => pool.members)
+    .map((member) => member.state.selfAppraisal)
+    .filter((appraisal): appraisal is number => appraisal !== undefined);
+  return {
+    commanderMatches,
+    meanWinScore: mean(values.map((value) => value.winScore)),
+    meanLeadershipIndex: mean(values.map((value) => value.leadershipIndex)),
+    meanRefusalRate: mean(values.map((value) => value.refusalRate)),
+    meanOverrideRate: mean(values.map((value) => value.overrideRate)),
+    meanDesertions: mean(values.map((value) => value.desertions)),
+    meanQuietQuitRate: mean(values.map((value) => value.quietQuitRate)),
+    meanTrustFinal: mean(values.map((value) => value.trustFinal)),
+    meanSelfAppraisalPricedPieces: mean(pricedPieces),
+    pricedPieces: pricedPieces.length,
+    positiveSelfAppraisalPieces: pricedPieces.filter((value) => value > 0)
+      .length,
   };
 }
 
@@ -393,6 +515,7 @@ export function buildDiagnostics(input: {
   readonly commanders: readonly CensusCommander[];
   readonly settlements: readonly CensusSettlement[];
   readonly prideEvents: readonly PricingEvent[];
+  readonly result?: SeminarResult;
 }): EmotionCensusDiagnostics {
   const styles = new Set(input.commanders.map((commander) => commander.style));
 
@@ -472,6 +595,12 @@ export function buildDiagnostics(input: {
         style,
         {
           ...current,
+          outcome: outcomeForStyle(
+            style,
+            input.records,
+            input.commanders,
+            input.result,
+          ),
           meanFieldedRoster:
             current.records === 0
               ? 0
@@ -740,6 +869,7 @@ export async function runEmotionCensus(
       PANIC_ROSTER_FLOOR: args.panicFloor,
       RELIEF_CAPTURE_RISK_PERMILLE: args.relief,
       GUILT_PEER_SAFETY_FLOOR: args.guiltSafetyFloor,
+      PRIDE_REFUSAL_SCALE: args.prideRefusalScale,
     },
     () =>
       runSeminar({
@@ -763,10 +893,12 @@ export async function runEmotionCensus(
           ownerId,
           rosterSize: record.rosterSnapshot.length,
           events: record.events,
+          fieldedPieceIds: record.rosterSnapshot.map((piece) => piece.id),
         })),
       ),
     ),
     commanders,
+    result,
     settlements: result.envyCycles.flatMap((cycle) =>
       cycle.settlements.map((settlement) => ({
         ...settlement,
@@ -906,6 +1038,7 @@ export async function runEmotionCensus(
 }
 
 function printCensus(output: EmotionCensusOutput): void {
+  console.log(`config\tpride_refusal_scale=${output.args.prideRefusalScale}`);
   console.log(`playDigest=${output.playDigest}`);
   console.log(`recordDigest=${output.recordDigest}`);
   for (const [style, diagnostics] of Object.entries(
@@ -934,6 +1067,25 @@ function printCensus(output: EmotionCensusOutput): void {
         `panicOnset=${diagnostics.panicOnset}`,
         `relief=${diagnostics.relief}`,
         `meanFieldedRoster=${diagnostics.meanFieldedRoster}`,
+      ].join('\t'),
+    );
+    const outcome = diagnostics.outcome;
+    console.log(
+      [
+        'outcome',
+        'style',
+        style,
+        `commanderMatches=${outcome.commanderMatches}`,
+        `meanWinScore=${outcome.meanWinScore}`,
+        `meanLeadershipIndex=${outcome.meanLeadershipIndex}`,
+        `meanRefusalRate=${outcome.meanRefusalRate}`,
+        `meanOverrideRate=${outcome.meanOverrideRate}`,
+        `meanDesertions=${outcome.meanDesertions}`,
+        `meanQuietQuitRate=${outcome.meanQuietQuitRate}`,
+        `meanTrustFinal=${outcome.meanTrustFinal}`,
+        `meanSelfAppraisalPricedPieces=${outcome.meanSelfAppraisalPricedPieces}`,
+        `pricedPieces=${outcome.pricedPieces}`,
+        `positiveSelfAppraisalPieces=${outcome.positiveSelfAppraisalPieces}`,
       ].join('\t'),
     );
   }

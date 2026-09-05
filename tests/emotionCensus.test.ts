@@ -5,6 +5,7 @@ import {
   buildIncidenceTable,
   buildDiagnostics,
   parseEmotionCensusArgs,
+  runEmotionCensus,
   withPatchedEngineConfig,
 } from '../sim/emotionCensus';
 import type { MatchEvent } from '../src/psychology';
@@ -232,6 +233,7 @@ describe('emotion census helpers', () => {
       panicFloor: ENGINE_CONFIG.PANIC_ROSTER_FLOOR,
       relief: ENGINE_CONFIG.RELIEF_CAPTURE_RISK_PERMILLE,
       guiltSafetyFloor: ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR,
+      prideRefusalScale: ENGINE_CONFIG.PRIDE_REFUSAL_SCALE,
     });
     expect(defaults.catalogue).toEqual([
       'servant',
@@ -244,11 +246,54 @@ describe('emotion census helpers', () => {
     expect(
       parseEmotionCensusArgs(['--guilt-safety-floor=0.05']).guiltSafetyFloor,
     ).toBe(0.05);
+    expect(
+      parseEmotionCensusArgs(['--pride-refusal-scale=250']).prideRefusalScale,
+    ).toBe(250);
     expect(() => parseEmotionCensusArgs(['--unknown=1'])).toThrow(
       'Unrecognised flag',
     );
     expect(() => parseEmotionCensusArgs(['--weeks=bad'])).toThrow(
       'positive integer',
+    );
+  });
+
+  it('reports seminar outcomes and preserves them without pricing events', async () => {
+    const base = {
+      seed: 3,
+      weeks: 1,
+      matches: 1,
+      commanders: 1,
+      catalogue: ['supportive'] as const,
+      engine: 'fake' as const,
+      out: undefined,
+      panicFloor: ENGINE_CONFIG.PANIC_ROSTER_FLOOR,
+      relief: ENGINE_CONFIG.RELIEF_CAPTURE_RISK_PERMILLE,
+      guiltSafetyFloor: ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR,
+    };
+    const control = await runEmotionCensus({
+      ...base,
+      prideRefusalScale: 0,
+    });
+    const priced = await runEmotionCensus({
+      ...base,
+      prideRefusalScale: 250,
+    });
+    expect(control.diagnostics.byStyle.supportive?.outcome).toMatchObject({
+      commanderMatches: 2,
+      meanWinScore: expect.any(Number),
+      meanLeadershipIndex: expect.any(Number),
+      meanRefusalRate: expect.any(Number),
+      meanOverrideRate: expect.any(Number),
+      meanDesertions: expect.any(Number),
+      meanQuietQuitRate: expect.any(Number),
+      meanTrustFinal: expect.any(Number),
+      meanSelfAppraisalPricedPieces: 0,
+      pricedPieces: 0,
+      positiveSelfAppraisalPieces: 0,
+    });
+    expect(control.diagnostics.prideEvents.total).toBe(0);
+    expect(priced.diagnostics.byStyle.supportive?.outcome).toEqual(
+      control.diagnostics.byStyle.supportive?.outcome,
     );
   });
 
