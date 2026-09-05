@@ -301,6 +301,7 @@ describe('seminar spine', () => {
       ),
       prideConfig,
       500,
+      1,
     );
     const prideCareers = Object.values(pride).flatMap((reading) => [
       ...reading.proud,

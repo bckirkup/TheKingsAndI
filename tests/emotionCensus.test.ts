@@ -229,9 +229,9 @@ describe('emotion census helpers', () => {
       matches: 2,
       commanders: 2,
       engine: 'fake',
-      panicFloor: 0,
-      relief: 0,
-      guiltSafetyFloor: 0,
+      panicFloor: ENGINE_CONFIG.PANIC_ROSTER_FLOOR,
+      relief: ENGINE_CONFIG.RELIEF_CAPTURE_RISK_PERMILLE,
+      guiltSafetyFloor: ENGINE_CONFIG.GUILT_PEER_SAFETY_FLOOR,
     });
     expect(defaults.catalogue).toEqual([
       'servant',

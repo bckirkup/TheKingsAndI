@@ -19,14 +19,14 @@ function record(
 }
 
 describe('D217 loneliness recognition', () => {
-  it('is inert at the default threshold', () => {
+  it('is inert at a zero threshold', () => {
     const match = record(
       [piece('survivor', { lost: 70 })],
       [piece('survivor', { lost: 70 })],
       [],
     );
     expect(
-      foldSeminarLoneliness([{ week: 1, records: { owner: [match] } }]),
+      foldSeminarLoneliness([{ week: 1, records: { owner: [match] } }], 0),
     ).toEqual({});
   });
 

@@ -2464,11 +2464,12 @@ The scale knobs default to zero; magnitudes await a measurement sweep.
 `leaderAppraisal` and bitterness interactions remain open.
 
 ### D213 ✅ Guilt: does the survivor carry what its escape cost? (ADR 0078)
-**Wired inert.** Terminal-only `foldGuilt` recognizes direct deserter cascade
+**Recognition default ruled at `GUILT_PEER_SAFETY_FLOOR = 0.05`; cascade
+window remains 0.** Terminal-only `foldGuilt` recognizes direct deserter cascade
 followers and floor-gated survivor safety spending followed by a peer capture.
-The optional MOVE annotation is absent at the zero default floor; no live
-surface or Leadership Index term reads it. Attribution windows, magnitudes,
-whether guilt becomes a carrier, and pricing remain open.
+The optional MOVE annotation is enabled at the ruled floor; no live surface or
+Leadership Index term reads it. Attribution windows, whether guilt becomes a
+carrier, and pricing remain open.
 
 ### D214 ✅ Envy: what does a piece feel about another's price? (ADR 0078)
 **Wired inert.** `foldEnvy` is a deterministic, terminal-only recognition fold
@@ -2482,32 +2483,36 @@ The affinity-discount magnitude, whether envy of the ransomed joins the
 reading, and pricing remain open.
 
 ### D215 ✅ Pride: where does D182's self-appraisal land, and what wounds it? (ADR 0078)
-**Partly wired (price appraisal), inert.** `foldPride` reconstructs a
+**Partly wired (price appraisal), terminal-only at ruled defaults.**
+`foldPride` reconstructs a
 role-seeded, moving expectation from seminar draft and ransom price events,
 using `PRIDE_EXPECTATION_EMA_PERMILLE` and naming nonzero appraisals at
-`PRIDE_NAMING_FLOOR_PERMILLE`; both default to zero, and an empty pride reading is
-omitted from the terminal payload. The carrier is not yet a `PieceState` field:
+`PRIDE_NAMING_FLOOR_PERMILLE`; defaults are 250 and 100 respectively, and an
+empty pride reading is omitted from the terminal payload. The carrier is not
+yet a `PieceState` field:
 live registration remains open, as do vindication, promotion, commendation
 conduct, sustained overrides, passed-over obsolescence, refusal-threshold
 interaction, and the hinge into bitterness and spite.
 
 ### D216 ✅ Panic: can a room break by freezing instead of leaving? (ADR 0078)
-**Partly wired (recognition), inert.** A terminal-only `PANIC_ONSET` names a
+**Partly wired (recognition), terminal-only at `PANIC_ROSTER_FLOOR = 4`.**
+A terminal-only `PANIC_ONSET` names a
 ply when `PANIC_ROSTER_FLOOR` fielded pieces read capture risk at or above
 `PANIC_CAPTURE_RISK_PERMILLE`, or a King-danger costly signal fires while the
-zero-default fold is enabled; the seminar fold is recognition-only. The
+fold is enabled; the seminar fold is recognition-only. The
 synchronized `engagementFactor` carrier, contagion topology, quiet-quit
 double-charge guard, and UI dramatization remain open, with the carrier owed
 the exploit-tier re-run.
 
 ### D217 ✅ Relief, awe, loneliness: located together, deferred together (ADR 0078)
-**Partly wired (recognition), inert.** Terminal seminar folds name relief from
+**Partly wired (recognition), terminal-only at ruled defaults.** Terminal
+seminar folds name relief from
 down-crossing prior-ply capture risk, awe from per-match
 `HEROISM_NOMINATION` counts, and loneliness from departed-peer affinity with no
-surviving peer at the threshold. `RELIEF_CAPTURE_RISK_PERMILLE`,
-`AWE_NOMINATION_FLOOR`, and `LONELINESS_AFFINITY_THRESHOLD` are zero sentinels.
-The live relief lift, awe affinity rise, and loneliness stay-side desertion
-term remain open.
+surviving peer at the threshold. `RELIEF_CAPTURE_RISK_PERMILLE = 500` and
+`LONELINESS_AFFINITY_THRESHOLD = 50`; `AWE_NOMINATION_FLOOR` remains zero as a
+structural sentinel. The live relief lift, awe affinity rise, and loneliness
+stay-side desertion term remain open.
 
 ### D218 ✅ Is the ADR 0061 step-7 gate passed, and for which surfaces? (ADR 0079)
 **Answered 2026-09-04 (owner): the ADR 0079 proposal is accepted.** The gate

@@ -5,7 +5,8 @@
   D209, D211, D212, D213, and D214 are wired inert, D210 is partly wired for
   recognition, D215 is partly wired for price appraisal, D216 is partly wired
   for recognition, and D217 is partly wired for recognition** — no opened
-  emotion is priced or enabled by default
+  carrier is priced or play-enabled by default; recognition defaults are ruled
+  below
 - **Opens:** **D210** (gratitude)
 - **Refines:** ADR 0073 (hope and courage set the house pattern: computed
   always, exposed nowhere in play, named once at the closing debrief), ADR
@@ -15,6 +16,29 @@
   unpurchasable — the constraint any relief-like lift inherits)
 - **Adjacent:** D198 (destroying a hope object), D182 (self-appraisal against
   role expectation), D190 (the boundary has no event stream)
+
+## Rulings 2026-09-05
+
+The recognition census now in main at
+`docs/calibration/2026-09-05-the-recognition-census.md` (PR #207) sets the
+following terminal/debrief defaults without enabling any live carrier:
+
+- `PRIDE_NAMING_FLOOR_PERMILLE = 100`: the naming knee is between 100 and
+  250‰.
+- `PRIDE_EXPECTATION_EMA_PERMILLE = 250`: the EMA is nominal because it was
+  unobservable at one pricing event per piece.
+- `LONELINESS_AFFINITY_THRESHOLD = 50`: 25 and 50 are equivalent, 75
+  collapses the reading, and 50 matches the grief bond threshold.
+- `PANIC_ROSTER_FLOOR = 4`: floor 2 saturates while floor 6 is nearly silent.
+- `RELIEF_CAPTURE_RISK_PERMILLE = 500`: 500 and 750 produce identical
+  readings, while 250 admits low-risk relief.
+- `GUILT_PEER_SAFETY_FLOOR = 0.05`: 0.05 and 0.1 are quantised alike and
+  retain the supportive-only reading.
+
+The structural zeros remain zero: `GUILT_CASCADE_WINDOW_PLIES`, both spite
+floors, `ENVY_PRICE_GAP_FLOOR`, `AWE_NOMINATION_FLOOR`, and gratitude remain
+unpriced until their required market, audit, ransom, or cascade evidence
+exists.
 
 ## Context
 
@@ -212,20 +236,20 @@ campaign/seminar debriefs and remain unpriced.
 
 #### D213 addendum (2026-09-05)
 
-D213 is wired inert and recognition-only. `GUILT_CASCADE_WINDOW_PLIES` and
-`GUILT_PEER_SAFETY_FLOOR` are zero sentinels; the capture window defaults to
+D213 is recognition-only. `GUILT_CASCADE_WINDOW_PLIES` remains zero while
+`GUILT_PEER_SAFETY_FLOOR` defaults to `0.05`; the capture window defaults to
 two plies and is consulted only when its floor is enabled. The deserter
 incident names the first departure and its cascade follower count. The
 survivor incident names the mover, peer, positive safety spent, and capture
-ply. Fielding filters actors as in the other terminal folds. The optional
-MOVE annotation is absent at the default floor, preserving seeded payload
-identity; no live state, observation, policy, standing, register,
-commendation, Leadership Index, or PRNG draw is involved. A deserter still
-receives a terminal name, following the exit precedent in ADR 0071.
+ply. Fielding filters actors as in the other terminal folds. The MOVE
+annotation is enabled at the ruled floor; recognition changes the terminal
+record/debrief only, with no live state, observation, policy, standing,
+register, commendation, Leadership Index, or PRNG draw involved. A deserter
+still receives a terminal name when the cascade window is later enabled,
+following the exit precedent in ADR 0071.
 
 The direct-link ruling intentionally does not attribute guilt through longer
-cascades. Window and floor magnitudes, whether guilt ever becomes a live
-carrier, and pricing remain open.
+cascades. Whether guilt ever becomes a live carrier and pricing remain open.
 
 ### D214 — Envy (wired inert, 2026-09-05 addendum)
 
@@ -309,8 +333,10 @@ trajectory is identical to what a carried field would hold, and it lifts into
 `PieceState` only when a live registration — the refusal threshold, trauma,
 or bitterness — is ruled. A career whose summed appraisal reaches
 `PRIDE_NAMING_FLOOR_PERMILLE` is named **proud** or **wounded** at the
-seminar debrief only. The EMA knob is a zero sentinel, so the fold is inert
-by default and the terminal `pride` block is omitted.
+seminar debrief only. The ruled defaults are
+`PRIDE_EXPECTATION_EMA_PERMILLE = 250` and
+`PRIDE_NAMING_FLOOR_PERMILLE = 100`; the fold remains terminal-only and does
+not alter play.
 
 Still open in D215: the non-price triggers (vindication, promotion,
 commendation conduct; overrides sustained, the obsolescence streak), whether
@@ -336,7 +362,7 @@ lost peer) and despair (chronic): panic is acute and shared.
 Recognition only: a `PANIC_ONSET` event names the ply at which
 `PANIC_ROSTER_FLOOR` fielded pieces read capture risk ≥
 `PANIC_CAPTURE_RISK_PERMILLE` at once, or a King-danger costly signal fires
-while the fold is enabled. The zero floor is the sentinel; the event is folded
+while the fold is enabled. The ruled roster floor is 4; the event is folded
 only into the seminar terminal reading. The carrier — synchronized
 `engagementFactor` collapse through the witness broadcast — remains open, as
 do contagion topology, the quiet-quit double-charge guard, and whether a UI
@@ -357,12 +383,14 @@ seeded-payload change at defaults.
 
 #### D217 addendum (2026-09-05)
 
-The three recognitions are wired inert and debrief-only. Relief is emitted per
+The three recognitions are debrief-only. Relief is emitted per
 ply when the prior own-ply capture-risk reading crosses down through
 `RELIEF_CAPTURE_RISK_PERMILLE`; awe folds existing heroism nominations at
 `AWE_NOMINATION_FLOOR`; loneliness folds departed peers and survivor affinity
-at `LONELINESS_AFFINITY_THRESHOLD`. Each knob is a zero sentinel, and each
-reading is exposed only in the seminar terminal debrief. Relief as a lift
+at `LONELINESS_AFFINITY_THRESHOLD`. The ruled defaults are
+`RELIEF_CAPTURE_RISK_PERMILLE = 500` and
+`LONELINESS_AFFINITY_THRESHOLD = 50`; awe remains at its structural zero.
+Each reading is exposed only in the seminar terminal debrief. Relief as a lift
 inherits grace's constraints — the morning lift may be its carrier. Awe's
 open carrier is a dyadic-affinity rise toward the hero. Loneliness' open
 carrier is a stay-side desertion term. None is live state.
