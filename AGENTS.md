@@ -27,6 +27,7 @@ implementation status from an ADR or the decision register alone.
 | `docs/engine_licensing.md` | `EnginePort`, engine swap strategy, verified permissive candidates |
 | `docs/data_model.md` | Entities, Dexie schema, identity rules |
 | `docs/development_plan.md` | Milestones 0–8 and their exit criteria (incl. **Milestone 5b**) |
+| `docs/seminar_delivery_roadmap.md` | **Seminar/UI plan:** text, graphics, facilitator kit, LLM gates — expands ADR 0079 for leadership delivery |
 | `docs/calibration/2026-08-13-blocked-on-measurement.md` | **Current state: the model is degenerate for cold styles and the measurement pipelines are broken.** Read before planning calibration or new mechanics |
 | `docs/calibration/2026-08-13-cross-style-table.md` | All nine leader styles measured on 248cd08 — collapse is style-invariant and attrition is saturated; compute footprint is bounded. **Superseded by the 08-26 coverage pass:** outcome is no longer style-invariant |
 | `docs/calibration/2026-08-26-npc-coverage-and-the-envelope.md` | The nine-style span at the `random` opponent; its outcome-ceiling reading is superseded by the 08-27 pass. Still current for the per-style compute spread (10 s–348 s per match, fake engine) and the promotion-column CSV corruption |
