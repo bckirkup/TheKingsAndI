@@ -22,6 +22,8 @@ import { decayPanic } from '../src/psychology/panic';
 import { foldPride } from '../sim/pride';
 import { applyLivePride, runSeminar } from '../sim/seminar';
 import { SEMINAR_CONFIG } from '../sim/seminarConfig';
+import { createCommanderPool } from '../sim/pool';
+import { itHeavy } from './tier';
 
 const traits = {
   w_honor: 0.5,
@@ -145,33 +147,38 @@ describe('ADR 0078 Phase C live carriers', () => {
     expect(negative).toBe(baseline);
   });
 
-  it('reconstructs live pride appraisal with foldPride over a two-week seminar', async () => {
-    const result = await withConfigAsync({ PRIDE_REFUSAL_SCALE: 1 }, () =>
-      runSeminar({
-        seed: 7,
-        engineKind: 'fake',
-        config: {
-          ...SEMINAR_CONFIG,
-          WEEKS_PER_SEMESTER: 2,
-          MATCHES_PER_WEEK: 1,
-          COMMANDERS_PER_COHORT: 2,
-        },
-      }),
-    );
-    const folded = foldPride(result.prideEvents, result.config);
-    for (const [ownerId, pool] of Object.entries(result.finalPools)) {
-      const careers = new Map(
-        [
-          ...(folded[ownerId]?.proud ?? []),
-          ...(folded[ownerId]?.wounded ?? []),
-        ].map((career) => [career.pieceId, career.appraisal]),
+  itHeavy(
+    'reconstructs live pride appraisal with foldPride over a two-week seminar',
+    async () => {
+      const result = await withConfigAsync({ PRIDE_REFUSAL_SCALE: 1 }, () =>
+        runSeminar({
+          seed: 7,
+          engineKind: 'fake',
+          config: {
+            ...SEMINAR_CONFIG,
+            WEEKS_PER_SEMESTER: 2,
+            MATCHES_PER_WEEK: 1,
+            COMMANDERS_PER_COHORT: 2,
+          },
+        }),
       );
-      for (const member of pool.members) {
-        if (!careers.has(member.state.id)) continue;
-        expect(member.state.selfAppraisal).toBe(careers.get(member.state.id));
+      const folded = foldPride(result.prideEvents, result.config);
+      for (const [ownerId, pool] of Object.entries(result.finalPools)) {
+        const careers = new Map(
+          [
+            ...(folded[ownerId]?.proud ?? []),
+            ...(folded[ownerId]?.wounded ?? []),
+          ].map((career) => [career.pieceId, career.appraisal]),
+        );
+        for (const member of pool.members) {
+          if (!careers.has(member.state.id)) continue;
+          expect(member.state.selfAppraisal).toBe(careers.get(member.state.id));
+        }
       }
-    }
+    },
+  );
 
+  it('applies live pride to a drafted piece exactly as foldPride does', () => {
     const railEvents = [
       {
         cycle: 1,
@@ -190,12 +197,16 @@ describe('ADR 0078 Phase C live carriers', () => {
         price: 10_000,
       },
     ];
-    const rail = foldPride(railEvents, result.config);
     const ownerId = 'w:commander:00';
-    const ownerPool = result.finalPools[ownerId];
-    const template = ownerPool?.members[0];
-    if (ownerPool === undefined || template === undefined) {
-      throw new Error(`Missing test pool ${ownerId}.`);
+    const ownerPool = createCommanderPool({
+      id: ownerId,
+      side: 'w',
+      style: 'supportive',
+      careerSeed: 7,
+    });
+    const template = ownerPool.members[0];
+    if (template === undefined) {
+      throw new Error(`Missing test pool member ${ownerId}.`);
     }
     const railPool = {
       ...ownerPool,
@@ -211,8 +222,13 @@ describe('ADR 0078 Phase C live carriers', () => {
         },
       ],
     };
+    const rail = foldPride(railEvents, SEMINAR_CONFIG);
     const live = withConfig({ PRIDE_REFUSAL_SCALE: 1 }, () =>
-      applyLivePride(new Map([[ownerId, railPool]]), railEvents, result.config),
+      applyLivePride(
+        new Map([[ownerId, railPool]]),
+        railEvents,
+        SEMINAR_CONFIG,
+      ),
     );
     const foldedAppraisal = rail[ownerId]?.proud?.[0]?.appraisal;
     const liveAppraisal = live.get(ownerId)?.members.at(-1)
