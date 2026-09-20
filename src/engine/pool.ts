@@ -25,6 +25,7 @@ export interface EnginePoolOptions {
   readonly hashMb?: number;
   readonly threads?: number;
   readonly multiPv?: number;
+  readonly maxInfoLinesPerSearch?: number;
   readonly size?: number;
 }
 
@@ -57,6 +58,9 @@ export class EnginePool {
         threads: 1,
         ...(options.hashMb !== undefined ? { hashMb: options.hashMb } : {}),
         ...(options.multiPv !== undefined ? { multiPv: options.multiPv } : {}),
+        ...(options.maxInfoLinesPerSearch !== undefined
+          ? { maxInfoLinesPerSearch: options.maxInfoLinesPerSearch }
+          : {}),
       });
       pool.workers.push(worker);
       pool.idle.push(worker);

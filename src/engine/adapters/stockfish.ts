@@ -16,6 +16,8 @@ export const STOCKFISH_NPM_VERSION = '18.0.8';
 export const STOCKFISH_BUILD = '18';
 export const STOCKFISH_FLAVOR = 'lite-single';
 export const STOCKFISH_HASH_MB = 16;
+// Depth 16 × MultiPV 8 emits ≥128 depth/multipv lines plus currmove lines before bestmove; 512 was measured at depth 4, so 4096 preserves ADR 0068's fail-never-truncate guard with comparable headroom.
+export const STOCKFISH_MAX_INFO_LINES_PER_SEARCH = 4096;
 
 export function stockfishDeterminismId(
   dMax: number = SHARED_SEARCH_D_MAX,
@@ -93,6 +95,7 @@ export async function createStockfishPort(
     preferredMultiPv,
     preferredPoolSize,
     dMax,
+    maxInfoLinesPerSearch: STOCKFISH_MAX_INFO_LINES_PER_SEARCH,
     ...(options.ladderCacheCapacity !== undefined
       ? { ladderCacheCapacity: options.ladderCacheCapacity }
       : {}),
