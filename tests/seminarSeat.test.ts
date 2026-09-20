@@ -14,48 +14,53 @@ import {
   seminarSummary,
 } from '../sim/seminar';
 import { SEMINAR_CONFIG } from '../sim/seminarConfig';
+import { itHeavy } from './tier';
 
 describe('seminar Judgement Seat', () => {
-  it('folds a terminal seat per commander and preserves side scores', async () => {
-    const result = await runSeminar({
-      seed: 71,
-      config: {
-        ...SEMINAR_CONFIG,
-        WEEKS_PER_SEMESTER: 1,
-        MATCHES_PER_WEEK: 1,
-        COMMANDERS_PER_COHORT: 2,
-        COMMANDER_STYLE_CATALOGUE: ['supportive', 'tyrannical'],
-      },
-      engineKind: 'fake',
-    });
-    for (const commander of result.commanders) {
-      expect(commander.judgementSeat).toBeDefined();
-      expect(commander.judgementSeat.meanLeadershipIndex).toEqual(
-        expect.any(Number),
+  itHeavy(
+    'folds a terminal seat per commander and preserves side scores',
+    async () => {
+      const result = await runSeminar({
+        seed: 71,
+        config: {
+          ...SEMINAR_CONFIG,
+          WEEKS_PER_SEMESTER: 1,
+          MATCHES_PER_WEEK: 1,
+          COMMANDERS_PER_COHORT: 2,
+          COMMANDER_STYLE_CATALOGUE: ['supportive', 'tyrannical'],
+        },
+        engineKind: 'fake',
+      });
+      for (const commander of result.commanders) {
+        expect(commander.judgementSeat).toBeDefined();
+        expect(commander.judgementSeat.meanLeadershipIndex).toEqual(
+          expect.any(Number),
+        );
+      }
+      const whiteRecord = result.weeks[0]?.records['w:commander:00']?.[1];
+      const blackRecord = result.weeks[0]?.records['b:commander:01']?.[0];
+      expect(whiteRecord?.winScore).toBeDefined();
+      expect(blackRecord?.winScore).toBeDefined();
+      expect((whiteRecord?.winScore ?? 0) + (blackRecord?.winScore ?? 0)).toBe(
+        100,
       );
-    }
-    const whiteRecord = result.weeks[0]?.records['w:commander:00']?.[1];
-    const blackRecord = result.weeks[0]?.records['b:commander:01']?.[0];
-    expect(whiteRecord?.winScore).toBeDefined();
-    expect(blackRecord?.winScore).toBeDefined();
-    expect((whiteRecord?.winScore ?? 0) + (blackRecord?.winScore ?? 0)).toBe(
-      100,
-    );
-    const supportive = result.commanders.find(
-      (entry) => entry.commander.style === 'supportive',
-    );
-    const tyrannical = result.commanders.find(
-      (entry) => entry.commander.style === 'tyrannical',
-    );
-    expect(supportive?.judgementSeat.meanFinalTrust).toBeGreaterThan(
-      tyrannical?.judgementSeat.meanFinalTrust ?? Number.POSITIVE_INFINITY,
-    );
-    expect(supportive?.judgementSeat.meanLeadershipIndex).toBeGreaterThan(
-      tyrannical?.judgementSeat.meanLeadershipIndex ?? Number.POSITIVE_INFINITY,
-    );
-    expect(seminarPayload(result)).toContain('"judgementSeat"');
-    expect(seminarSummary(result)).toContain('LI=');
-  });
+      const supportive = result.commanders.find(
+        (entry) => entry.commander.style === 'supportive',
+      );
+      const tyrannical = result.commanders.find(
+        (entry) => entry.commander.style === 'tyrannical',
+      );
+      expect(supportive?.judgementSeat.meanFinalTrust).toBeGreaterThan(
+        tyrannical?.judgementSeat.meanFinalTrust ?? Number.POSITIVE_INFINITY,
+      );
+      expect(supportive?.judgementSeat.meanLeadershipIndex).toBeGreaterThan(
+        tyrannical?.judgementSeat.meanLeadershipIndex ??
+          Number.POSITIVE_INFINITY,
+      );
+      expect(seminarPayload(result)).toContain('"judgementSeat"');
+      expect(seminarSummary(result)).toContain('LI=');
+    },
+  );
 
   it('matches campaign observable semantics for a white result', async () => {
     const engine = await createSimEngine('fake');
