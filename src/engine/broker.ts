@@ -118,6 +118,9 @@ export async function createSharedSearchBroker(
     hashMb: options.hashMb ?? 16,
     threads: 1,
     multiPv: options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH,
+    ...(options.maxInfoLinesPerSearch !== undefined
+      ? { maxInfoLinesPerSearch: options.maxInfoLinesPerSearch }
+      : {}),
     ...(options.size !== undefined ? { size: options.size } : {}),
   });
   let bestPoolPromise: Promise<EnginePool> | undefined;
@@ -141,6 +144,9 @@ export async function createSharedSearchBroker(
       hashMb: options.hashMb ?? 16,
       threads: 1,
       multiPv: preferredMultiPv,
+      ...(options.maxInfoLinesPerSearch !== undefined
+        ? { maxInfoLinesPerSearch: options.maxInfoLinesPerSearch }
+        : {}),
       size: preferredPoolSize,
     });
     return bestPoolPromise;
