@@ -1,4 +1,3 @@
-import type { PieceRole } from '../psychology';
 export {
   heatBandWord,
   judgementGapWord,
@@ -10,8 +9,6 @@ export {
   trustChangeWord,
 } from '../core/qualitativeBands';
 import {
-  moraleBandWord,
-  traumaBandWord,
   trustBandWord,
   trustChangeWord,
 } from '../core/qualitativeBands';
@@ -25,6 +22,11 @@ export type {
   TrustBandWord,
   TrustChangeWord,
 } from '../core/qualitativeBands';
+import type {
+  MoraleBandWord,
+  TraumaBandWord,
+  TrustBandWord,
+} from '../core/qualitativeBands';
 
 export function pieceSubject(name: string | undefined, role: string): string {
   return name ?? role;
@@ -36,20 +38,20 @@ export function witnessCostWord(delta: number): string {
 
 export function pieceAccessibleLabel(
   name: string | undefined,
-  role: PieceRole,
-  trust: number,
-  morale: number,
+  role: string,
+  trust: TrustBandWord,
+  morale: MoraleBandWord,
 ): string {
   const subject = name === undefined ? role : `${name}, ${role}`;
-  return `${subject}, ${trustBandWord(trust)} trust, ${moraleBandWord(morale)} morale`;
+  return `${subject}, ${trust} trust, ${morale} morale`;
 }
 
-export function moraleTooltip(morale: number): string {
-  return `Morale is ${moraleBandWord(morale)}`;
+export function moraleTooltip(morale: MoraleBandWord): string {
+  return `Morale is ${morale}`;
 }
 
-export function traumaTooltip(trauma: number): string {
-  return `Trauma is ${traumaBandWord(trauma)}`;
+export function traumaTooltip(trauma: TraumaBandWord): string {
+  return `Trauma is ${trauma}`;
 }
 
 export function rosterPieceLabel(

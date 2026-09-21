@@ -70,6 +70,16 @@ describe('decision journal observations', () => {
     expect(
       observation.roster.every((piece) => typeof piece.trauma === 'string'),
     ).toBe(true);
+    expect(
+      observation.roster.every((piece) =>
+        piece.affinities.every((edge) => typeof edge.heat === 'string'),
+      ),
+    ).toBe(true);
+    expect(
+      observation.roster.every((piece) =>
+        piece.classHeat.every((cell) => typeof cell.heat === 'string'),
+      ),
+    ).toBe(true);
   });
 
   it('projects override context without private refusal values', () => {

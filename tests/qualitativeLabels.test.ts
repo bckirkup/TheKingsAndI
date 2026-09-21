@@ -23,19 +23,20 @@ import {
 describe('qualitative UI labels', () => {
   it('never renders arithmetic for any trust, morale, or trauma value', () => {
     const labels = [
-      ...Array.from({ length: 201 }, (_, index) =>
-        pieceAccessibleLabel(
-          'Aethelgard',
-          'Pawn',
-          index - 100,
-          Math.min(index, 100),
-        ),
-      ),
+      ...Array.from({ length: 201 }, (_, index) => {
+        const trust = trustBandWord(index - 100);
+        const morale = moraleBandWord(Math.min(index, 100));
+        return pieceAccessibleLabel('Aethelgard', 'Pawn', trust, morale);
+      }),
       ...Array.from({ length: 201 }, (_, index) => trustBandWord(index - 100)),
       ...Array.from({ length: 101 }, (_, value) => moraleBandWord(value)),
       ...Array.from({ length: 101 }, (_, value) => traumaBandWord(value)),
-      ...Array.from({ length: 101 }, (_, value) => moraleTooltip(value)),
-      ...Array.from({ length: 101 }, (_, value) => traumaTooltip(value)),
+      ...Array.from({ length: 101 }, (_, value) =>
+        moraleTooltip(moraleBandWord(value)),
+      ),
+      ...Array.from({ length: 101 }, (_, value) =>
+        traumaTooltip(traumaBandWord(value)),
+      ),
       ...Array.from({ length: 401 }, (_, index) =>
         trustChangeWord(index - 200),
       ),
@@ -65,7 +66,7 @@ describe('qualitative UI labels', () => {
     ];
 
     expect(labels.every((label) => !/\d/.test(label))).toBe(true);
-    expect(pieceAccessibleLabel(undefined, 'Pawn', 0, 50)).toBe(
+    expect(pieceAccessibleLabel(undefined, 'Pawn', 'wary', 'steady')).toBe(
       'Pawn, wary trust, steady morale',
     );
     expect(pieceSubject(undefined, 'Pawn')).toBe('Pawn');

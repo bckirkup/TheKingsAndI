@@ -1,12 +1,12 @@
 import { calculateEngineSearchDepth } from '../../psychology/depth';
 import { ENGINE_CONFIG } from '../../psychology/config';
 import type { PendingVerdict } from '../../orchestration/matchSession';
+import type { TrustBandWord } from '../qualitativeLabels';
 import {
   judgementGapWord,
   objectionStrengthWord,
   pieceSubject,
   sightBandWord,
-  trustBandWord,
   trustChangeWord,
   witnessCostWord,
 } from '../qualitativeLabels';
@@ -165,7 +165,7 @@ export interface QuietQuitPanelProps {
   readonly role: string;
   readonly name?: string;
   readonly san: string;
-  readonly trust: number;
+  readonly trust: TrustBandWord;
 }
 
 export function QuietQuitPanel({
@@ -179,8 +179,8 @@ export function QuietQuitPanel({
       <h2>Quiet compliance</h2>
       <p>
         <strong>{pieceSubject(name, role)}</strong> played <code>{san}</code>{' '}
-        without enthusiasm. Trust is {trustBandWord(trust)}; engagement is low.
-        The order went through — the army did not.
+        without enthusiasm. Trust is {trust}; engagement is low. The order went
+        through — the army did not.
       </p>
       <p className="divergence__note">
         This is not a bug. The piece complied while withholding effort.
