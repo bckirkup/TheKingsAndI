@@ -1,4 +1,8 @@
 import {
+  createCaissaPort,
+  disposeCaissaPort,
+} from '../src/engine/adapters/caissa';
+import {
   createLozzaPort,
   disposeLozzaPort,
 } from '../src/engine/adapters/lozza';
@@ -9,7 +13,7 @@ import {
 import { createFakeEnginePort } from '../src/engine/fake';
 import type { EnginePort } from '../src/engine/types';
 
-export type SimEngineKind = 'fake' | 'lozza' | 'stockfish';
+export type SimEngineKind = 'caissa' | 'fake' | 'lozza' | 'stockfish';
 
 export function capEngineDepth(
   engine: EnginePort,
@@ -38,6 +42,9 @@ export function capEngineDepth(
 
 export async function disposeSimEngine(kind: SimEngineKind): Promise<void> {
   switch (kind) {
+    case 'caissa':
+      await disposeCaissaPort();
+      return;
     case 'fake':
       return;
     case 'lozza':
@@ -62,6 +69,8 @@ export async function createSimEngine(
   options: { readonly coldSearch?: boolean | undefined } = {},
 ): Promise<EnginePort> {
   switch (kind) {
+    case 'caissa':
+      return createCaissaPort({ poolSize: 2 });
     case 'fake':
       return createFakeEnginePort('sim-fake/depth-fixed');
     case 'lozza':

@@ -1,3 +1,4 @@
+import { platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -60,6 +61,36 @@ describe('UCI score failures', () => {
     );
     await engine.dispose();
   });
+
+  it.skipIf(platform() === 'win32')(
+    'spawns a native executable under spawnMode native',
+    async () => {
+      const fixture = fileURLToPath(
+        new URL('./fixtures/uci-fake-native.sh', import.meta.url),
+      );
+      const engine = new UciEngine({
+        enginePath: fixture,
+        spawnMode: 'native',
+      });
+      const result = await engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 1);
+      expect(result.scoreCp).toBe(12);
+      await engine.dispose();
+    },
+  );
+
+  it.skipIf(platform() === 'win32')(
+    'rejects a shell script under the default node spawn mode',
+    async () => {
+      const fixture = fileURLToPath(
+        new URL('./fixtures/uci-fake-native.sh', import.meta.url),
+      );
+      const engine = new UciEngine({ enginePath: fixture });
+      await expect(
+        engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 1),
+      ).rejects.toThrow();
+      await engine.dispose();
+    },
+  );
 
   it("treats Lozza's mate-zero sentinel as unsound", () => {
     // ADR 0068 withdraws mate 0 as an immediate-mate evaluation.

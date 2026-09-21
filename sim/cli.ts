@@ -106,7 +106,7 @@ export function opponentArchetypeForLeader(leader: Leader): OpponentArchetype {
   }
 }
 
-export const ENGINES = ['fake', 'lozza', 'stockfish'] as const;
+export const ENGINES = ['caissa', 'fake', 'lozza', 'stockfish'] as const;
 
 export interface SimulationOptions {
   readonly matches: number;

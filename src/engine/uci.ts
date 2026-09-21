@@ -28,9 +28,21 @@ export const DEFAULT_MAX_SCORE_ESCALATIONS = 4;
 // across the measured mid-game positions; 512 leaves over 20x headroom.
 export const DEFAULT_MAX_INFO_LINES_PER_SEARCH = 512;
 
+/**
+ * How the engine child is spawned: `'node'` runs `enginePath` as a script
+ * under `process.execPath`; `'native'` executes `enginePath` directly.
+ */
+export type UciSpawnMode = 'node' | 'native';
+
 export interface UciEngineOptions {
-  /** Absolute path to the engine script (e.g. lozza.cjs or stockfish-*.js). */
+  /**
+   * Absolute path to the engine artifact: a JS script (e.g. lozza.cjs or
+   * stockfish-*.js) under `'node'` spawn mode, or a native executable under
+   * `'native'` spawn mode.
+   */
   readonly enginePath: string;
+  /** Spawn mode; defaults to `'node'` (script run under the Node runtime). */
+  readonly spawnMode?: UciSpawnMode;
   /** Clear carried engine state before every search; defaults to cold. */
   readonly coldSearch?: boolean;
   /** Fixed hash size in MiB (deterministic mode). */
@@ -226,9 +238,15 @@ export class UciEngine {
     ) {
       throw new RangeError('maxInfoLinesPerSearch must be a positive integer.');
     }
-    this.process = spawn(process.execPath, [options.enginePath], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const spawnMode = options.spawnMode ?? 'node';
+    this.process =
+      spawnMode === 'native'
+        ? spawn(options.enginePath, [], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
+        : spawn(process.execPath, [options.enginePath], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
     this.processExit = new Promise((resolve) => {
       this.process.once('exit', () => resolve());
     });

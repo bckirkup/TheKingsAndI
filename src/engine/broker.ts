@@ -115,6 +115,9 @@ export async function createSharedSearchBroker(
   }
   const pool = await EnginePool.create({
     enginePath: options.enginePath,
+    ...(options.spawnMode !== undefined
+      ? { spawnMode: options.spawnMode }
+      : {}),
     hashMb: options.hashMb ?? 16,
     threads: 1,
     multiPv: options.multiPv ?? DEFAULT_PRIVATE_MULTIPV_WIDTH,
@@ -141,6 +144,9 @@ export async function createSharedSearchBroker(
   function ensureBestPool(): Promise<EnginePool> {
     bestPoolPromise ??= EnginePool.create({
       enginePath: options.enginePath,
+      ...(options.spawnMode !== undefined
+        ? { spawnMode: options.spawnMode }
+        : {}),
       hashMb: options.hashMb ?? 16,
       threads: 1,
       multiPv: preferredMultiPv,
