@@ -8,10 +8,7 @@ export {
   trustBandWord,
   trustChangeWord,
 } from '../core/qualitativeBands';
-import {
-  trustBandWord,
-  trustChangeWord,
-} from '../core/qualitativeBands';
+import { trustBandWord, trustChangeWord } from '../core/qualitativeBands';
 export type {
   HeatBandWord,
   JudgementGapWord,
