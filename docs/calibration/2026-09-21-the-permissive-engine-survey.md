@@ -203,8 +203,8 @@ Stockfish broker test.
 
 ### Report immediately if
 
-- Caissa collapses, or does not collapse, on seeds 29/41 in a way that differs
-  from Stockfish;
+- seeds 29/41 collapse (or fail to collapse) under Caissa — either way it is
+  scope-changing, since it decides whether the collapse is Stockfish-specific;
 - the info-line ceiling is hit;
 - unsound-score escalation is triggered.
 
