@@ -104,6 +104,21 @@ which is the *last* audience (D1), not for Steam, which is the first.
 - Trademark clearance on *The Kings and I: Sacrifice and Command* remains a
   separate pre-store-page item (ADR 0010).
 
+### Caissa native adapter
+
+A third engine surface ships as a native-binary adapter
+(`src/engine/adapters/caissa.ts`): **Caissa** (C++, **MIT**,
+https://github.com/Witek902/Caissa), spawned directly rather than under the
+Node runtime. It is opt-in — the harness takes `--engine=caissa` and resolves
+the binary through the `CAISSA_ENGINE_PATH` environment variable; no machine
+path is hard-coded, the binary is not vendored, and it is not in the AWS
+image. The adapter pins Caissa 2.0.1 and folds a sha256 of the binary into
+`determinismId` (the binary embeds its `.pnn` network, so the hash covers
+version, build target, and net in one token); the `.pnn` evaluation nets are
+distributed through the Caissa-Nets releases and their licensing is an open
+item to re-verify before shipping them anywhere. Cold-search, MultiPV-8
+shared search, and the ADR 0068 unsound-score/runaway guards apply unchanged.
+
 ### Lozza terminal-score observation
 
 During adapter diagnostics, the vendored Lozza artifact returned `score cp 0`

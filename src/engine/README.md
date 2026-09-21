@@ -9,6 +9,8 @@ Landed (Milestone 1.3 / 1.3b / 1.3c):
 - `EnginePort`, the barrier, the evaluation cache, and the round digest
 - Lozza MIT adapter (`adapters/lozza.ts`) + conformance corpus
 - Stockfish.js 18 lite-single WASM pool (`adapters/stockfish.ts`)
+- Caissa 2.0.1 MIT native-binary adapter (`adapters/caissa.ts`, opt-in via
+  `CAISSA_ENGINE_PATH`)
 - Shared-search / private-scoring broker (`broker.ts`, ADR 0017)
 
 ```ts
@@ -24,7 +26,7 @@ The layer has two entry points, because half of it cannot run in a browser:
 | Entry | Contains | Imported by |
 |---|---|---|
 | `index.ts` | port types, barrier, cache, round, search constants, fake port | anything, including `src/app` |
-| `node.ts` | `EnginePool`, `UciEngine`, the shared-search broker, Lozza and Stockfish adapters | `sim/`, tests, server entries |
+| `node.ts` | `EnginePool`, `UciEngine`, the shared-search broker, Lozza, Stockfish, and Caissa adapters | `sim/`, tests, server entries |
 
 `node.ts` reaches `node:child_process` and `node:os`, so importing it from the
 bundle fails `pnpm build` with `"spawn" is not exported by

@@ -102,8 +102,8 @@ function parseEngineKindValue(
   values: ReadonlyMap<string, string>,
 ): SimEngineKind {
   const engineKind = valueFor(values, 'engine', 'fake');
-  if (!['fake', 'lozza', 'stockfish'].includes(engineKind)) {
-    throw new Error('--engine must be fake, lozza, or stockfish.');
+  if (!['caissa', 'fake', 'lozza', 'stockfish'].includes(engineKind)) {
+    throw new Error('--engine must be caissa, fake, lozza, or stockfish.');
   }
   return engineKind as SimEngineKind;
 }

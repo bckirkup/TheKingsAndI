@@ -7,6 +7,17 @@
 export { createLozzaPort, disposeLozzaPort } from './adapters/lozza';
 export type { LozzaPortOptions } from './adapters/lozza';
 export {
+  CAISSA_ENGINE_PATH_ENV,
+  CAISSA_HASH_MB,
+  CAISSA_MAX_INFO_LINES_PER_SEARCH,
+  CAISSA_VERSION,
+  caissaDeterminismId,
+  createCaissaPort,
+  defaultCaissaPath,
+  disposeCaissaPort,
+} from './adapters/caissa';
+export type { CaissaPortOptions } from './adapters/caissa';
+export {
   STOCKFISH_BUILD,
   STOCKFISH_DETERMINISM_ID,
   STOCKFISH_FLAVOR,

@@ -78,8 +78,8 @@ export function parseArguments(argumentsList: readonly string[]): {
   if (!Number.isSafeInteger(seed))
     throw new Error('--seed must be an integer.');
   const engine = values.get('engine') ?? 'fake';
-  if (!['fake', 'lozza', 'stockfish'].includes(engine)) {
-    throw new Error('--engine must be fake, lozza, or stockfish.');
+  if (!['caissa', 'fake', 'lozza', 'stockfish'].includes(engine)) {
+    throw new Error('--engine must be caissa, fake, lozza, or stockfish.');
   }
   if (values.has('out') && values.get('out') === '') {
     throw new Error('--out must not be empty.');

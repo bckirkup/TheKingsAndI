@@ -1,6 +1,6 @@
 import { cpus } from 'node:os';
 
-import { UciEngine, type DepthLadder } from './uci';
+import { UciEngine, type DepthLadder, type UciSpawnMode } from './uci';
 
 /**
  * Worker pool for UCI engines (ADR 0005 / architecture §5).
@@ -22,6 +22,8 @@ export function defaultPoolSize(): number {
 
 export interface EnginePoolOptions {
   readonly enginePath: string;
+  /** Spawn mode; defaults to `'node'` (script run under the Node runtime). */
+  readonly spawnMode?: UciSpawnMode;
   readonly hashMb?: number;
   readonly threads?: number;
   readonly multiPv?: number;
@@ -55,6 +57,9 @@ export class EnginePool {
     for (let index = 0; index < size; index += 1) {
       const worker = new UciEngine({
         enginePath: options.enginePath,
+        ...(options.spawnMode !== undefined
+          ? { spawnMode: options.spawnMode }
+          : {}),
         threads: 1,
         ...(options.hashMb !== undefined ? { hashMb: options.hashMb } : {}),
         ...(options.multiPv !== undefined ? { multiPv: options.multiPv } : {}),
