@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { tacticalBlueprintTokens } from '../ui/theme/tacticalBlueprint';
+import {
+  TACTICAL_BLUEPRINT_PACK_ID,
+  tacticalBlueprintTokens,
+} from '../ui/theme/tacticalBlueprint';
 
 import './tacticalBlueprint.css';
 
@@ -14,7 +17,11 @@ export function ThemeProvider({
   ) as React.CSSProperties;
 
   return (
-    <div className="theme-tactical-blueprint" style={style}>
+    <div
+      className="theme-tactical-blueprint"
+      data-pack={TACTICAL_BLUEPRINT_PACK_ID}
+      style={style}
+    >
       {children}
     </div>
   );

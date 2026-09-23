@@ -61,6 +61,14 @@ Full analysis and open items D46/D47 in
 shared search `D_max=16`. Determinism id recorded on every match:
 `stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`.
 
+## Shipped UI fonts (OFL)
+
+Self-hosted under `public/assets/fonts/` (offline; no font CDN at runtime).
+**Barlow**, **Barlow Condensed**, and **IBM Plex Mono** are licensed under the
+SIL Open Font License 1.1 — see `public/assets/fonts/NOTICE.md` and
+`public/assets/fonts/OFL.txt`. OFL fonts are compatible with both AGPL and
+commercial packaging tracks.
+
 ## Trademark
 
 *The King and I* is a well-known musical title. The software name pluralizes it

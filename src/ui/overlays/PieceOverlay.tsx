@@ -26,6 +26,13 @@ const TRUST_HUE: Record<TrustBandWord, string> = {
   loyal: 'var(--trust-loyal)',
 };
 
+/** Shape classes for colour-safe aura encoding (S1 / S2a prep for M7.3). */
+export const TRUST_AURA_SHAPE: Record<TrustBandWord, string> = {
+  hostile: 'piece-overlay__aura--hostile',
+  wary: 'piece-overlay__aura--wary',
+  loyal: 'piece-overlay__aura--loyal',
+};
+
 const MORALE_HEIGHT_PX: Record<MoraleBandWord, number> = {
   low: 8,
   steady: 16,
@@ -49,29 +56,30 @@ export function PieceOverlay({
   const moraleHeight = MORALE_HEIGHT_PX[piece.morale];
   const betrayal = piece.trauma !== 'clear';
   const { column, row } = squareGridPosition(square);
+  const accessible = pieceAccessibleLabel(
+    name,
+    piece.role,
+    piece.trust,
+    piece.morale,
+  );
 
   return (
-    <button
-      type="button"
+    <div
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
-      aria-label={pieceAccessibleLabel(
-        name,
-        piece.role,
-        piece.trust,
-        piece.morale,
-      )}
-      onClick={onSelect}
+      data-square={square}
     >
       <span
-        className="piece-overlay__aura"
+        className={`piece-overlay__aura ${TRUST_AURA_SHAPE[piece.trust]}`}
         style={{
           boxShadow: `0 0 0 ${trustRing}px ${TRUST_HUE[piece.trust]}`,
         }}
+        aria-hidden="true"
       />
       <span
         className="piece-overlay__morale"
         title={moraleTooltip(piece.morale)}
+        aria-hidden="true"
       >
         <span
           className="piece-overlay__morale-fill"
@@ -82,10 +90,20 @@ export function PieceOverlay({
         <span
           className="piece-overlay__betrayal"
           title={traumaTooltip(piece.trauma)}
+          aria-hidden="true"
         >
           !
         </span>
       ) : null}
-    </button>
+      <button
+        type="button"
+        className="piece-overlay__inspect"
+        aria-label={`Inspect ${accessible}`}
+        aria-pressed={selected}
+        onClick={onSelect}
+      >
+        i
+      </button>
+    </div>
   );
 }
