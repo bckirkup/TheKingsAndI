@@ -1,9 +1,63 @@
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/barlow-condensed-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/assets/fonts/barlow-condensed-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/barlow-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/barlow-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-mono-500.woff2') format('woff2');
+}
+
 .theme-tactical-blueprint {
   min-height: 100vh;
-  background: var(--bg);
+  background: radial-gradient(
+      ellipse 90% 55% at 50% -10%,
+      var(--bg-glow) 0%,
+      transparent 55%
+    ),
+    linear-gradient(165deg, var(--bg) 0%, var(--bg-mid) 48%, var(--bg) 100%);
   color: var(--text);
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, Menlo, Consolas,
-    monospace;
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: 1.45;
 }
 
 .theme-tactical-blueprint * {
@@ -18,14 +72,18 @@
 
 .match-screen__header h1 {
   margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-headline);
+  letter-spacing: var(--letter-brand);
   text-transform: uppercase;
 }
 
 .match-screen__status {
   color: var(--text-muted);
   margin: 0.25rem 0 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
 }
 
 .match-screen__layout {
@@ -39,6 +97,17 @@
   position: relative;
   width: var(--board-size);
   max-width: 100%;
+  padding: 0.65rem;
+  border: 1px solid var(--board-frame);
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.85) inset,
+    0 0 28px var(--board-frame-glow);
+  background: linear-gradient(
+      135deg,
+      rgba(77, 163, 255, 0.06),
+      transparent 42%
+    ),
+    var(--surface);
 }
 
 .theme-tactical-blueprint .cg-wrap cg-board {
@@ -48,51 +117,103 @@
 /* Chessground paints board cells as custom <square> elements; select by
    class under cg-board so CSS analyzers do not require that tag name. */
 .theme-tactical-blueprint .cg-wrap cg-board > .light {
-  background-color: #1a2740;
+  background-color: var(--board-light);
 }
 
 .theme-tactical-blueprint .cg-wrap cg-board > .dark {
-  background-color: #111a2e;
+  background-color: var(--board-dark);
+}
+
+.theme-tactical-blueprint .cg-wrap coords {
+  color: var(--board-coord);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
 }
 
 .cg-wrap {
-  width: var(--board-size);
+  width: 100%;
   max-width: 100%;
   aspect-ratio: 1;
 }
 
+/*
+ * S2a / S1 board hit-testing: overlays must not steal pointer events from
+ * chessground (drag-to-move). The overlay layer stays none; only a small
+ * inspect hit target is interactive for relationship selection.
+ */
 .board-stack__overlays {
   pointer-events: none;
   position: absolute;
-  inset: 0;
+  inset: 0.65rem;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
 }
 
-.board-stack__overlays .piece-overlay {
-  pointer-events: auto;
-}
-
 .piece-overlay {
   position: relative;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
   border: 0;
   padding: 0;
   background: transparent;
   font: inherit;
+  width: 100%;
+  height: 100%;
+}
+
+.piece-overlay__inspect {
+  pointer-events: auto;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--grid-line);
+  border-radius: 2px;
+  padding: 0;
+  background: var(--surface-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.piece-overlay__inspect:hover,
+.piece-overlay__inspect:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
 }
 
 .piece-overlay--selected {
   outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .piece-overlay__aura {
   display: block;
   position: absolute;
   inset: 12%;
+  pointer-events: none;
+}
+
+/* Aura encoding prototype (prep M7.3): shape + ring, not hue alone. */
+.piece-overlay__aura--loyal {
   border-radius: 50%;
+}
+
+.piece-overlay__aura--wary {
+  border-radius: 50%;
+  border-style: dashed;
+}
+
+.piece-overlay__aura--hostile {
+  border-radius: 12%;
+  transform: rotate(45deg);
+  inset: 18%;
 }
 
 .piece-overlay__morale {
@@ -104,6 +225,7 @@
   height: 24px;
   background: var(--surface-elevated);
   border: 1px solid var(--grid-line);
+  pointer-events: none;
 }
 
 .piece-overlay__morale-fill {
@@ -128,6 +250,7 @@
   font-size: 10px;
   place-items: center;
   font-weight: 700;
+  pointer-events: none;
 }
 
 .match-screen__sidebar {
@@ -163,9 +286,11 @@
 .override-panel h2,
 .divergence h3 {
   margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .relationship-inspector__affinity {
@@ -185,6 +310,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.75rem;
+  font-family: var(--font-mono);
 }
 
 .relationship-inspector__matrix th,
@@ -235,9 +361,42 @@
   background: var(--surface-elevated);
   color: var(--text);
   border: 1px solid var(--grid-line);
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 1.1rem;
   cursor: pointer;
-  font: inherit;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.btn:hover:not(:disabled),
+.btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #061018;
+}
+
+.btn--primary:hover:not(:disabled),
+.btn--primary:focus-visible {
+  background: #6bb4ff;
+  border-color: #6bb4ff;
+  color: #061018;
 }
 
 .btn--danger {
@@ -247,12 +406,143 @@
 
 .dialogue-bubble__speaker {
   color: var(--accent);
-  font-size: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
-.campaign-hub,
+/* —— Campaign hub: one composition, brand-first (S1a) —— */
+.campaign-hub {
+  min-height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-hub__hero {
+  flex: 1 0 auto;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.campaign-hub__hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.14;
+  mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 40%,
+    #000 20%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+.campaign-hub__hero-copy {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  max-width: 36rem;
+  animation: hub-rise 700ms ease-out both;
+}
+
+.campaign-hub__brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-brand);
+  letter-spacing: var(--letter-brand);
+  text-transform: uppercase;
+  line-height: 0.95;
+  color: var(--text);
+}
+
+.campaign-hub__tagline {
+  margin: 0.85rem 0 0;
+  font-size: var(--font-size-headline);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  max-width: 28ch;
+}
+
+.campaign-hub__lede {
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+  max-width: 42ch;
+  font-size: 1.05rem;
+}
+
+.campaign-hub__cta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+  animation: hub-rise 700ms ease-out 120ms both;
+}
+
+.campaign-hub__meta {
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem clamp(1.5rem, 5vw, 3.5rem) 2rem;
+  border-top: 1px solid var(--grid-line);
+  background: rgba(11, 18, 32, 0.72);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.campaign-hub__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.campaign-hub__meta-row p {
+  margin: 0;
+}
+
+.campaign-hub__length {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  max-width: 16rem;
+}
+
+.campaign-hub__length select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  padding: 0.4rem 0.5rem;
+}
+
+.campaign-hub__reinstatement,
+.campaign-hub__suspended {
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0 0;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
 .roster-screen,
 .debrief-screen {
   max-width: 900px;
@@ -260,33 +550,14 @@
   padding: 1.5rem;
 }
 
-.campaign-hub h1,
 .roster-screen h1,
 .debrief-screen h1 {
   margin: 0 0 0.5rem;
-  font-size: 1.25rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-headline);
+  letter-spacing: var(--letter-brand);
   text-transform: uppercase;
-}
-
-.campaign-hub__note {
-  color: var(--text-muted);
-}
-
-.campaign-hub__length {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin: 1rem 0;
-  font-size: 0.9rem;
-}
-
-.campaign-hub__reinstatement,
-.campaign-hub__suspended {
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
 }
 
 .roster-screen__warning {
@@ -298,7 +569,6 @@
   border-color: var(--accent-muted, #6b7c93);
 }
 
-.campaign-hub__actions,
 .roster-screen__actions {
   display: flex;
   gap: 0.75rem;
@@ -364,6 +634,7 @@
 
 .debrief-screen__folds dt {
   color: var(--text-muted);
+  font-family: var(--font-display);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -463,6 +734,24 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .campaign-hub__hero-copy,
+  .campaign-hub__cta {
+    animation: none;
+  }
+}
+
+@keyframes hub-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .narration-audit {
   margin: 1rem 0;
   padding: 1rem 1.25rem;
@@ -474,8 +763,9 @@
 
 .narration-audit__headline {
   margin: 0 0 0.6rem;
-  font-size: 1.05rem;
-  letter-spacing: 0.03em;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
 }
 
 .narration-audit__paragraph {

@@ -47,15 +47,12 @@ legal destinations, which is the reliable way to calibrate square centres
 1024/1600 to convert board geometry into computer-tool coordinates rather than
 eyeballing the squares.
 
-Known blocker (present at least through the promotion-truth slice): the piece
-overlays in `src/app/tacticalBlueprint.css`
-(`.board-stack__overlays .piece-overlay { pointer-events: auto }`) cover the
-full square, so `document.elementFromPoint` returns `.piece-overlay` and
-chessground never sees the pointerdown — the drag silently does nothing and the
-ply counter does not advance. If this reproduces, confirm it first (it is a real
-user-facing bug worth reporting), then edit that rule to `pointer-events: none`
-for the duration of the test (Vite HMR applies it instantly), label all later
-evidence as taken with the workaround, and revert the file before finishing.
+Board hit-testing (S1 / S2a): `.board-stack__overlays` and `.piece-overlay` use
+`pointer-events: none` so chessground receives drag-to-move. Relationship
+inspect uses the small `.piece-overlay__inspect` control (`pointer-events: auto`)
+in the square corner — do not click the centre of the square when selecting a
+piece for the inspector. If drag still fails, check that no other layer covers
+`cg-board` before applying a temporary CSS workaround.
 
 ## Reaching a terminal state quickly
 
