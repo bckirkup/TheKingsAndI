@@ -61,6 +61,18 @@ Full analysis and open items D46/D47 in
 shared search `D_max=16`. Determinism id recorded on every match:
 `stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`.
 
+## UI fonts (OFL)
+
+Self-hosted via `@fontsource/*` (MIT packaging; fonts under SIL OFL 1.1):
+
+- **Barlow Condensed** — display / brand (`--font-display`)
+- **IBM Plex Sans** — UI body (`--font-ui`)
+- **IBM Plex Mono** — instrument captions (`--font-mono`)
+
+No CDN font requests at runtime. Pack theme swaps replace the token strings and
+matching `@fontsource` imports; do not add GPL-only type tooling as a shipped
+dependency.
+
 ## Trademark
 
 *The King and I* is a well-known musical title. The software name pluralizes it
