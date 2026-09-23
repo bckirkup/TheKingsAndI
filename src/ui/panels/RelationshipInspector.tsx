@@ -1,21 +1,22 @@
-import type { PieceState } from '../../psychology';
-import {
-  heatBandWord,
-  moraleBandWord,
-  trustBandWord,
-} from '../qualitativeLabels';
-
-const ROLES = ['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King'] as const;
+import type { ObservationPiece } from '../../orchestration/observation';
+import type { HeatBandWord } from '../qualitativeLabels';
 
 export interface RelationshipInspectorProps {
-  readonly roster: readonly PieceState[];
+  readonly roster: readonly ObservationPiece[];
   readonly selectedPieceId: string | null;
 }
 
-function heatClass(value: number): string {
-  if (value <= -20) return 'heat--cold';
-  if (value >= 20) return 'heat--hot';
+function heatClass(heat: HeatBandWord): string {
+  if (heat === 'cold') return 'heat--cold';
+  if (heat === 'warm') return 'heat--hot';
   return 'heat--neutral';
+}
+
+function peerLabel(
+  roster: readonly ObservationPiece[],
+  peerId: string,
+): string {
+  return roster.find((piece) => piece.id === peerId)?.role ?? peerId;
 }
 
 export function RelationshipInspector({
@@ -38,25 +39,18 @@ export function RelationshipInspector({
     <section className="relationship-inspector">
       <h2>Relationships</h2>
       <p className="relationship-inspector__focus">
-        Focus: <strong>{selected.role}</strong> ({trustBandWord(selected.T_i)}{' '}
-        trust, {moraleBandWord(selected.M_i)} morale)
+        Focus: <strong>{selected.role}</strong> ({selected.trust} trust,{' '}
+        {selected.morale} morale)
       </p>
 
       <h3>Who protects whom</h3>
       <ul className="relationship-inspector__affinity">
-        {roster
-          .filter((peer) => peer.id !== selected.id)
-          .map((peer) => {
-            const affinity = selected.dyadicAffinity[peer.id] ?? 0;
-            return (
-              <li key={peer.id}>
-                <span>{peer.role}</span>
-                <span className={heatClass(affinity)}>
-                  {heatBandWord(affinity)}
-                </span>
-              </li>
-            );
-          })}
+        {selected.affinities.map((edge) => (
+          <li key={edge.peerId}>
+            <span>{peerLabel(roster, edge.peerId)}</span>
+            <span className={heatClass(edge.heat)}>{edge.heat}</span>
+          </li>
+        ))}
       </ul>
 
       <h3>Class prejudice heatmap</h3>
@@ -64,22 +58,19 @@ export function RelationshipInspector({
         <thead>
           <tr>
             <th />
-            {ROLES.map((role) => (
-              <th key={role}>{role.slice(0, 1)}</th>
+            {selected.classHeat.map((cell) => (
+              <th key={cell.role}>{cell.role.slice(0, 1)}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
             <th>{selected.role}</th>
-            {ROLES.map((role) => {
-              const value = selected.classPrestige[role];
-              return (
-                <td key={role} className={heatClass(value)}>
-                  {heatBandWord(value)}
-                </td>
-              );
-            })}
+            {selected.classHeat.map((cell) => (
+              <td key={cell.role} className={heatClass(cell.heat)}>
+                {cell.heat}
+              </td>
+            ))}
           </tr>
         </tbody>
       </table>

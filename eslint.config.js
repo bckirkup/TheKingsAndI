@@ -101,7 +101,26 @@ export default tseslint.config(
   {
     name: 'ui-layer-boundary',
     files: ['src/ui/**'],
-    rules: boundaryRule([...higherLayers.ui, '**/engine/**']),
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...[...higherLayers.ui, '**/engine/**'].map((group) => ({
+              group: [group],
+              message: 'Layer imports must flow downward only.',
+            })),
+            nodeOnlyEngineGroup,
+            {
+              group: ['**/psychology', '**/psychology/**'],
+              importNames: ['PieceState'],
+              message:
+                'D219 glass screen: ui/ may not import PieceState; consume ObservationPiece.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     // Orchestration owns the barrier call site (ADR 0034) and may import

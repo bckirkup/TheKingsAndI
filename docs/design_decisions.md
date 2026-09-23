@@ -2581,9 +2581,13 @@ on what already exists." The interactive match path writes ADR 0062
 `Observation`, enumerate the options, a click is `chosen = i` — and `ui/`
 reads only the observation projection, so human and model journals are
 comparable under ADR 0063 §3. The screen may show nothing not derivable from
-the `Observation`. The relationship inspector reads `PieceState` directly
-today and must be moved onto the projection. Detector: **the glass screen**.
-**Not wired.**
+the `Observation`. The relationship inspector and piece overlay consume
+`ObservationPiece` via `projectOwnRosterObservation`
+(`src/orchestration/observation.ts`, `src/ui/panels/RelationshipInspector.tsx`,
+`src/ui/overlays/PieceOverlay.tsx`); detector **the glass screen** is enforced
+by `tests/glassScreen.leak.test.ts` and the `src/ui/**` eslint import ban on
+`PieceState`. **Wired** for the observation projection into those panels;
+journal-in-app writer remains unwired (ADR 0079 step 1 remainder).
 
 ### D220 ⬜ May a consented playtest upload a journal? (ADR 0079)
 **Closed as moot 2026-09-04 (owner).** The paid ninety-minute stranger

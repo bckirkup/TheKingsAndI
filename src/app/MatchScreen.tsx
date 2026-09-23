@@ -14,6 +14,7 @@ import {
   MatchSession,
   type MatchSessionSnapshot,
 } from '../orchestration/matchSession';
+import { projectOwnRosterObservation } from '../orchestration/observation';
 import { classifyMatchResult } from '../orchestration/terminalState';
 import type { MatchEvent } from '../psychology';
 import { activeLineup } from '../orchestration/rosterActions';
@@ -149,6 +150,19 @@ export function MatchScreen({
     phase === 'playing' && board.turn() === playerSide && !board.isGameOver();
 
   const playerPieces = board.piecesOf(playerSide);
+  const observedRoster = useMemo(
+    () =>
+      projectOwnRosterObservation({
+        board,
+        side: playerSide,
+        roster,
+      }),
+    [board, playerSide, roster],
+  );
+  const observedById = useMemo(() => {
+    const map = new Map(observedRoster.map((piece) => [piece.id, piece]));
+    return map;
+  }, [observedRoster]);
 
   useEffect(() => {
     if (
@@ -226,12 +240,12 @@ export function MatchScreen({
             />
             <div className="board-stack__overlays">
               {playerPieces.map((piece) => {
-                const state = roster.find((p) => p.id === piece.id);
-                if (state === undefined) return null;
+                const observed = observedById.get(piece.id);
+                if (observed === undefined) return null;
                 return (
                   <PieceOverlay
                     key={piece.id}
-                    piece={state}
+                    piece={observed}
                     {...namePropsFor(piece.id)}
                     square={piece.square}
                     selected={snapshot.selectedPieceId === piece.id}
@@ -260,19 +274,16 @@ export function MatchScreen({
 
         <aside className="match-screen__sidebar">
           <RelationshipInspector
-            roster={roster}
+            roster={observedRoster}
             selectedPieceId={snapshot.selectedPieceId}
           />
 
           {dialogueCue?.eventKind === 'quiet_quit' && pending === null ? (
             <QuietQuitPanel
               {...namePropsFor(dialogueCue.pieceId)}
-              role={
-                roster.find((p) => p.id === dialogueCue.pieceId)?.role ??
-                'Piece'
-              }
+              role={observedById.get(dialogueCue.pieceId)?.role ?? 'Piece'}
               san={dialogueCue.san}
-              trust={roster.find((p) => p.id === dialogueCue.pieceId)?.T_i ?? 0}
+              trust={observedById.get(dialogueCue.pieceId)?.trust ?? 'wary'}
             />
           ) : null}
 

@@ -2,10 +2,13 @@ export { runHeadlessMatch } from './headlessMatch';
 export {
   projectMoveObservation,
   projectOverrideObservation,
+  projectOwnRosterObservation,
 } from './observation';
 export type {
   MoveObservation,
   Observation,
+  ObservationAffinity,
+  ObservationClassHeat,
   ObservationPiece,
   OverrideObservation,
 } from './observation';
