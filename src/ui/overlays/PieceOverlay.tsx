@@ -32,12 +32,20 @@ const MORALE_HEIGHT_PX: Record<MoraleBandWord, number> = {
   strong: 24,
 };
 
-function squareGridPosition(square: string): { column: number; row: number } {
+export function squareGridPosition(square: string): {
+  column: number;
+  row: number;
+} {
   const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
   const rank = Number.parseInt(square.charAt(1), 10);
   return { column: file + 1, row: 9 - rank };
 }
 
+/**
+ * Aura / morale chrome over a square. The overlay shell is pointer-events
+ * none so chessground receives drag-to-move; only the corner select chip
+ * captures clicks for the relationship inspector (UI plan S1 / S2a).
+ */
 export function PieceOverlay({
   piece,
   name,
@@ -49,29 +57,30 @@ export function PieceOverlay({
   const moraleHeight = MORALE_HEIGHT_PX[piece.morale];
   const betrayal = piece.trauma !== 'clear';
   const { column, row } = squareGridPosition(square);
+  const label = pieceAccessibleLabel(
+    name,
+    piece.role,
+    piece.trust,
+    piece.morale,
+  );
 
   return (
-    <button
-      type="button"
+    <div
       className={`piece-overlay${selected ? ' piece-overlay--selected' : ''}`}
       style={{ gridColumn: column, gridRow: row }}
-      aria-label={pieceAccessibleLabel(
-        name,
-        piece.role,
-        piece.trust,
-        piece.morale,
-      )}
-      onClick={onSelect}
+      data-square={square}
     >
       <span
         className="piece-overlay__aura"
         style={{
           boxShadow: `0 0 0 ${trustRing}px ${TRUST_HUE[piece.trust]}`,
         }}
+        aria-hidden="true"
       />
       <span
         className="piece-overlay__morale"
         title={moraleTooltip(piece.morale)}
+        aria-hidden="true"
       >
         <span
           className="piece-overlay__morale-fill"
@@ -82,10 +91,18 @@ export function PieceOverlay({
         <span
           className="piece-overlay__betrayal"
           title={traumaTooltip(piece.trauma)}
+          aria-hidden="true"
         >
           !
         </span>
       ) : null}
-    </button>
+      <button
+        type="button"
+        className="piece-overlay__select"
+        aria-label={label}
+        aria-pressed={selected}
+        onClick={onSelect}
+      />
+    </div>
   );
 }
