@@ -39,12 +39,20 @@ const MORALE_HEIGHT_PX: Record<MoraleBandWord, number> = {
   strong: 24,
 };
 
-function squareGridPosition(square: string): { column: number; row: number } {
+export function squareGridPosition(square: string): {
+  column: number;
+  row: number;
+} {
   const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
   const rank = Number.parseInt(square.charAt(1), 10);
   return { column: file + 1, row: 9 - rank };
 }
 
+/**
+ * Aura / morale chrome over a square. The overlay shell is pointer-events
+ * none so chessground receives drag-to-move; only the corner select chip
+ * captures clicks for the relationship inspector (UI plan S1 / S2a).
+ */
 export function PieceOverlay({
   piece,
   name,
@@ -56,12 +64,15 @@ export function PieceOverlay({
   const moraleHeight = MORALE_HEIGHT_PX[piece.morale];
   const betrayal = piece.trauma !== 'clear';
   const { column, row } = squareGridPosition(square);
-  const accessible = pieceAccessibleLabel(
+  const label = pieceAccessibleLabel(
     name,
     piece.role,
     piece.trust,
     piece.morale,
   );
+  const inspectLabel = betrayal
+    ? `Inspect ${label}. ${traumaTooltip(piece.trauma)}`
+    : `Inspect ${label}`;
 
   return (
     <div
@@ -97,8 +108,8 @@ export function PieceOverlay({
       ) : null}
       <button
         type="button"
-        className="piece-overlay__inspect"
-        aria-label={`Inspect ${accessible}`}
+        className="piece-overlay__select"
+        aria-label={inspectLabel}
         aria-pressed={selected}
         onClick={onSelect}
       >

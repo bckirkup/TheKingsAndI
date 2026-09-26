@@ -61,13 +61,17 @@ Full analysis and open items D46/D47 in
 shared search `D_max=16`. Determinism id recorded on every match:
 `stockfish-js-18-lite-single/hash-16/threads-1/dmax-16`.
 
-## Shipped UI fonts (OFL)
+## UI fonts (OFL)
 
-Self-hosted under `public/assets/fonts/` (offline; no font CDN at runtime).
-**Barlow**, **Barlow Condensed**, and **IBM Plex Mono** are licensed under the
-SIL Open Font License 1.1 — see `public/assets/fonts/NOTICE.md` and
-`public/assets/fonts/OFL.txt`. OFL fonts are compatible with both AGPL and
-commercial packaging tracks.
+Self-hosted via `@fontsource/*` (MIT packaging; fonts under SIL OFL 1.1):
+
+- **Barlow Condensed** — display / brand (`--font-display`)
+- **IBM Plex Sans** — UI body (`--font-ui`)
+- **IBM Plex Mono** — instrument captions (`--font-mono`)
+
+No CDN font requests at runtime. Pack theme swaps replace the token strings and
+matching `@fontsource` imports; do not add GPL-only type tooling as a shipped
+dependency.
 
 ## Trademark
 

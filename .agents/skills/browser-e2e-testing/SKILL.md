@@ -47,12 +47,10 @@ legal destinations, which is the reliable way to calibrate square centres
 1024/1600 to convert board geometry into computer-tool coordinates rather than
 eyeballing the squares.
 
-Board hit-testing (S1 / S2a): `.board-stack__overlays` and `.piece-overlay` use
-`pointer-events: none` so chessground receives drag-to-move. Relationship
-inspect uses the small `.piece-overlay__inspect` control (`pointer-events: auto`)
-in the square corner — do not click the centre of the square when selecting a
-piece for the inspector. If drag still fails, check that no other layer covers
-`cg-board` before applying a temporary CSS workaround.
+Board hit-testing (S1 / S2a): overlay shells use `pointer-events: none`; only
+`.piece-overlay__select` (corner chip) is `pointer-events: auto`, so chessground
+receives drag-to-move on the square centre. If a drag still fails, confirm
+`elementFromPoint` is not a full-square overlay before blaming the board.
 
 ## Reaching a terminal state quickly
 

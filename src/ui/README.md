@@ -10,5 +10,5 @@ Presentation components for the playable vertical slice (Milestone 4).
 | `theme/` | Pack `themeTokens` (`tactical-blueprint`; military JSON under `public/assets/packs/`) |
 
 No game logic — state mutations live in `src/orchestration/`.
-Overlays stay `pointer-events: none` except `.piece-overlay__inspect` so chessground
-drag-to-move is not blocked (S1 board hit-testing).
+Overlays stay `pointer-events: none` except the `.piece-overlay__select` corner
+chip so chessground drag-to-move is not blocked (S1 board hit-testing).

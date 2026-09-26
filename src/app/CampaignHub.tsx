@@ -84,7 +84,16 @@ export function CampaignHub({
   }, []);
 
   if (loading || career === null || campaign === null || act === null) {
-    return <p>Loading campaign…</p>;
+    return (
+      <section className="campaign-hub" aria-busy="true">
+        <div className="campaign-hub__hero">
+          <div className="campaign-hub__hero-inner">
+            <p className="campaign-hub__brand">The Kings and I</p>
+            <p className="campaign-hub__tagline">Loading campaign…</p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   const campaignComplete = matchCount >= campaign.targetMatches;
@@ -93,14 +102,85 @@ export function CampaignHub({
   return (
     <section className="campaign-hub">
       <div className="campaign-hub__hero">
-        <div className="campaign-hub__hero-copy">
+        <div className="campaign-hub__hero-inner">
           <h1 className="campaign-hub__brand">The Kings and I</h1>
-          <p className="campaign-hub__tagline">Sacrifice and command</p>
-          <p className="campaign-hub__lede">
-            Lead pieces that remember. Trust frays, orders are refused, and a
-            career is judged by more than the score.
+          <p className="campaign-hub__tagline">
+            Sacrifice and command — pieces that remember, refuse, and walk away.
           </p>
-          <div className="campaign-hub__cta">
+          <p className="campaign-hub__meta">
+            Act 1 · Kings remaining {act.kingsRemaining} · Match {matchCount}/
+            {campaign.targetMatches}
+          </p>
+          <p className="campaign-hub__note">
+            Opponent: {act.opponentArchetype} commander. Career seed{' '}
+            {career.seed}.
+          </p>
+
+          {matchCount === 0 ? (
+            <label className="campaign-hub__length">
+              Campaign length{' '}
+              <select
+                value={targetMatches}
+                onChange={(event) => {
+                  const next = Number.parseInt(event.target.value, 10);
+                  setTargetMatches(next);
+                  void (async () => {
+                    const repo = new CareerRepository();
+                    await repo.init();
+                    await repo.updateCampaignTarget(campaign.id, next);
+                    setCampaign({ ...campaign, targetMatches: next });
+                  })();
+                }}
+              >
+                {Array.from(
+                  {
+                    length:
+                      CAMPAIGN_CONFIG.MAX_CAMPAIGN_MATCHES -
+                      CAMPAIGN_CONFIG.MIN_CAMPAIGN_MATCHES +
+                      1,
+                  },
+                  (_, index) => CAMPAIGN_CONFIG.MIN_CAMPAIGN_MATCHES + index,
+                ).map((count) => (
+                  <option key={count} value={count}>
+                    {count} matches
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {reinstatementOffered ? (
+            <div className="campaign-hub__reinstatement">
+              <p>
+                The King offers reinstatement. Trust has recovered enough to
+                compare your command against his.
+              </p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  void (async () => {
+                    const repo = new CareerRepository();
+                    await repo.init();
+                    await repo.reinstatePlayer(act.id);
+                    setReinstatementOffered(false);
+                    setAct({ ...act, playerSuspended: false });
+                  })();
+                }}
+              >
+                Accept reinstatement
+              </button>
+            </div>
+          ) : null}
+
+          {act.playerSuspended && !reinstatementOffered ? (
+            <p className="campaign-hub__suspended">
+              You remain suspended after dismissal. The King commands until
+              reinstatement is earned.
+            </p>
+          ) : null}
+
+          <div className="campaign-hub__actions">
             {!campaignComplete ? (
               <button
                 type="button"
@@ -138,82 +218,6 @@ export function CampaignHub({
             )}
           </div>
         </div>
-      </div>
-
-      <div className="campaign-hub__meta">
-        <div className="campaign-hub__meta-row">
-          <p>
-            Act 1 · Kings remaining {act.kingsRemaining} · Match {matchCount}/
-            {campaign.targetMatches}
-          </p>
-          <p>
-            Opponent: {act.opponentArchetype} · Seed {career.seed}
-          </p>
-        </div>
-
-        {matchCount === 0 ? (
-          <label className="campaign-hub__length">
-            Campaign length
-            <select
-              value={targetMatches}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                setTargetMatches(next);
-                void (async () => {
-                  const repo = new CareerRepository();
-                  await repo.init();
-                  await repo.updateCampaignTarget(campaign.id, next);
-                  setCampaign({ ...campaign, targetMatches: next });
-                })();
-              }}
-            >
-              {Array.from(
-                {
-                  length:
-                    CAMPAIGN_CONFIG.MAX_CAMPAIGN_MATCHES -
-                    CAMPAIGN_CONFIG.MIN_CAMPAIGN_MATCHES +
-                    1,
-                },
-                (_, index) => CAMPAIGN_CONFIG.MIN_CAMPAIGN_MATCHES + index,
-              ).map((count) => (
-                <option key={count} value={count}>
-                  {count} matches
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-
-        {reinstatementOffered ? (
-          <div className="campaign-hub__reinstatement">
-            <p>
-              The King offers reinstatement. Trust has recovered enough to
-              compare your command against his.
-            </p>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                void (async () => {
-                  const repo = new CareerRepository();
-                  await repo.init();
-                  await repo.reinstatePlayer(act.id);
-                  setReinstatementOffered(false);
-                  setAct({ ...act, playerSuspended: false });
-                })();
-              }}
-            >
-              Accept reinstatement
-            </button>
-          </div>
-        ) : null}
-
-        {act.playerSuspended && !reinstatementOffered ? (
-          <p className="campaign-hub__suspended">
-            You remain suspended after dismissal. The King commands until
-            reinstatement is earned.
-          </p>
-        ) : null}
       </div>
     </section>
   );

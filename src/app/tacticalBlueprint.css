@@ -1,113 +1,76 @@
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/assets/fonts/barlow-condensed-600.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/assets/fonts/barlow-condensed-700.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/assets/fonts/barlow-400.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/assets/fonts/barlow-500.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/assets/fonts/ibm-plex-mono-400.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/assets/fonts/ibm-plex-mono-500.woff2') format('woff2');
-}
-
 .theme-tactical-blueprint {
   min-height: 100vh;
   background: radial-gradient(
-      ellipse 90% 55% at 50% -10%,
-      var(--bg-glow) 0%,
+      ellipse 120% 80% at 50% -10%,
+      var(--bg-mid) 0%,
       transparent 55%
     ),
-    linear-gradient(165deg, var(--bg) 0%, var(--bg-mid) 48%, var(--bg) 100%);
+    linear-gradient(165deg, var(--bg) 0%, #070d18 48%, var(--bg-mid) 100%);
   color: var(--text);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: var(--font-size-body);
-  line-height: 1.45;
+  line-height: var(--line-height-body);
 }
 
 .theme-tactical-blueprint * {
   box-sizing: border-box;
 }
 
+/* ——— Match chrome ——— */
+
 .match-screen {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.match-screen__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--grid-line);
 }
 
 .match-screen__header h1 {
   margin: 0;
   font-family: var(--font-display);
+  font-size: var(--font-size-title);
   font-weight: 700;
-  font-size: var(--font-size-headline);
-  letter-spacing: var(--letter-brand);
+  letter-spacing: var(--letter-spacing-brand);
   text-transform: uppercase;
 }
 
 .match-screen__status {
   color: var(--text-muted);
-  margin: 0.25rem 0 1rem;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--font-size-caption);
+  letter-spacing: 0.04em;
 }
 
 .match-screen__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 1rem;
+  gap: 1.25rem;
   align-items: start;
+  margin-top: 1rem;
 }
+
+/* ——— Board chrome ——— */
 
 .board-stack {
   position: relative;
   width: var(--board-size);
   max-width: 100%;
-  padding: 0.65rem;
-  border: 1px solid var(--board-frame);
+  padding: 0.35rem;
+  background: var(--board-frame);
   box-shadow:
-    0 0 0 1px rgba(11, 18, 32, 0.85) inset,
-    0 0 28px var(--board-frame-glow);
-  background: linear-gradient(
-      135deg,
-      rgba(77, 163, 255, 0.06),
-      transparent 42%
-    ),
-    var(--surface);
+    0 0 0 1px var(--grid-line),
+    0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
 .theme-tactical-blueprint .cg-wrap cg-board {
@@ -127,8 +90,11 @@
 .theme-tactical-blueprint .cg-wrap coords {
   color: var(--board-coord);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+}
+
+.theme-tactical-blueprint .cg-wrap square.last-move {
+  background-color: var(--board-lastmove) !important;
 }
 
 .cg-wrap {
@@ -137,20 +103,16 @@
   aspect-ratio: 1;
 }
 
-/*
- * S2a / S1 board hit-testing: overlays must not steal pointer events from
- * chessground (drag-to-move). The overlay layer stays none; only a small
- * inspect hit target is interactive for relationship selection.
- */
 .board-stack__overlays {
   pointer-events: none;
   position: absolute;
-  inset: 0.65rem;
+  inset: 0.35rem;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
 }
 
+/* Shell must not steal chessground pointerdown (drag-to-move). */
 .piece-overlay {
   position: relative;
   pointer-events: none;
@@ -158,34 +120,6 @@
   padding: 0;
   background: transparent;
   font: inherit;
-  width: 100%;
-  height: 100%;
-}
-
-.piece-overlay__inspect {
-  pointer-events: auto;
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  z-index: 2;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--grid-line);
-  border-radius: 2px;
-  padding: 0;
-  background: var(--surface-elevated);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.piece-overlay__inspect:hover,
-.piece-overlay__inspect:focus-visible {
-  border-color: var(--accent);
-  color: var(--accent);
-  outline: none;
 }
 
 .piece-overlay--selected {
@@ -197,23 +131,19 @@
   display: block;
   position: absolute;
   inset: 12%;
+  border-radius: 50%;
   pointer-events: none;
 }
 
 /* Aura encoding prototype (prep M7.3): shape + ring, not hue alone. */
-.piece-overlay__aura--loyal {
-  border-radius: 50%;
-}
-
 .piece-overlay__aura--wary {
-  border-radius: 50%;
-  border-style: dashed;
+  border: 2px dashed var(--trust-wary);
 }
 
 .piece-overlay__aura--hostile {
+  inset: 18%;
   border-radius: 12%;
   transform: rotate(45deg);
-  inset: 18%;
 }
 
 .piece-overlay__morale {
@@ -253,6 +183,38 @@
   pointer-events: none;
 }
 
+/* Corner chip only — keeps the square centre free for chessground. */
+.piece-overlay__select {
+  pointer-events: auto;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--grid-line);
+  border-radius: 2px;
+  background: var(--surface-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.piece-overlay__select:hover,
+.piece-overlay__select:focus-visible {
+  opacity: 1;
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+.piece-overlay--selected .piece-overlay__select {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .match-screen__sidebar {
   display: flex;
   flex-direction: column;
@@ -287,10 +249,10 @@
 .divergence h3 {
   margin: 0 0 0.5rem;
   font-family: var(--font-display);
-  font-weight: 600;
   font-size: 0.95rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .relationship-inspector__affinity {
@@ -347,7 +309,7 @@
 
 .divergence__note {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-caption);
 }
 
 .override-panel__actions {
@@ -361,24 +323,20 @@
   background: var(--surface-elevated);
   color: var(--text);
   border: 1px solid var(--grid-line);
-  padding: 0.65rem 1.1rem;
+  padding: 0.55rem 0.9rem;
   cursor: pointer;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: inherit;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.02em;
   transition:
     border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
+    background-color 160ms ease;
 }
 
 .btn:hover:not(:disabled),
 .btn:focus-visible {
   border-color: var(--accent);
-  color: var(--accent);
-  outline: none;
 }
 
 .btn:disabled {
@@ -390,13 +348,12 @@
   background: var(--accent);
   border-color: var(--accent);
   color: #061018;
+  font-weight: 600;
 }
 
 .btn--primary:hover:not(:disabled),
 .btn--primary:focus-visible {
-  background: #6bb4ff;
-  border-color: #6bb4ff;
-  color: #061018;
+  filter: brightness(1.08);
 }
 
 .btn--danger {
@@ -409,10 +366,11 @@
   font-family: var(--font-display);
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
-/* —— Campaign hub: one composition, brand-first (S1a) —— */
+/* ——— Campaign hub: one first-viewport composition (S1a) ——— */
+
 .campaign-hub {
   min-height: 100vh;
   max-width: none;
@@ -425,9 +383,10 @@
 .campaign-hub__hero {
   flex: 1 0 auto;
   min-height: 100vh;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  padding: clamp(1.5rem, 5vw, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(1.25rem, 5vw, 3.5rem);
   position: relative;
   overflow: hidden;
 }
@@ -439,108 +398,113 @@
   background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
-  opacity: 0.14;
+  opacity: 0.18;
+  pointer-events: none;
   mask-image: radial-gradient(
-    ellipse 70% 60% at 50% 40%,
+    ellipse 70% 60% at 40% 45%,
     #000 20%,
     transparent 75%
   );
-  pointer-events: none;
 }
 
-.campaign-hub__hero-copy {
+.campaign-hub__hero-inner {
   position: relative;
-  z-index: 1;
-  align-self: end;
   max-width: 36rem;
   animation: hub-rise 700ms ease-out both;
+}
+
+@keyframes hub-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .campaign-hub__brand {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
   font-size: var(--font-size-brand);
-  letter-spacing: var(--letter-brand);
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-brand);
   line-height: 0.95;
+  text-transform: uppercase;
   color: var(--text);
+  animation: hub-brand-in 900ms ease-out both;
+}
+
+@keyframes hub-brand-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.18em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: var(--letter-spacing-brand);
+  }
 }
 
 .campaign-hub__tagline {
-  margin: 0.85rem 0 0;
-  font-size: var(--font-size-headline);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--text);
-  max-width: 28ch;
-}
-
-.campaign-hub__lede {
-  margin: 0.75rem 0 0;
+  margin: 1rem 0 0;
+  max-width: 28rem;
   color: var(--text-muted);
-  max-width: 42ch;
   font-size: 1.05rem;
-}
-
-.campaign-hub__cta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.45;
   animation: hub-rise 700ms ease-out 120ms both;
 }
 
 .campaign-hub__meta {
-  position: relative;
-  z-index: 1;
-  padding: 1.25rem clamp(1.5rem, 5vw, 3.5rem) 2rem;
-  border-top: 1px solid var(--grid-line);
-  background: rgba(11, 18, 32, 0.72);
+  margin: 1.25rem 0 0;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--font-size-caption);
   color: var(--text-muted);
+  letter-spacing: 0.04em;
+  animation: hub-rise 700ms ease-out 180ms both;
 }
 
-.campaign-hub__meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.25rem;
-  margin: 0 0 0.75rem;
-}
-
-.campaign-hub__meta-row p {
-  margin: 0;
+.campaign-hub__note {
+  color: var(--text-muted);
+  margin: 0.35rem 0 0;
+  font-size: var(--font-size-caption);
 }
 
 .campaign-hub__length {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  margin: 0.75rem 0 0;
-  font-size: 0.85rem;
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
   max-width: 16rem;
+  animation: hub-rise 700ms ease-out 200ms both;
 }
 
 .campaign-hub__length select {
   font: inherit;
-  color: var(--text);
+  font-family: var(--font-mono);
   background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--grid-line);
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.6rem;
 }
 
 .campaign-hub__reinstatement,
 .campaign-hub__suspended {
   padding: 0.75rem 1rem;
-  margin: 0.75rem 0 0;
+  margin: 1.25rem 0 0;
   border: 1px solid var(--border);
   background: var(--surface-raised);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.95rem;
+  max-width: 28rem;
+}
+
+.campaign-hub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  animation: hub-rise 700ms ease-out 260ms both;
 }
 
 .roster-screen,
@@ -554,9 +518,9 @@
 .debrief-screen h1 {
   margin: 0 0 0.5rem;
   font-family: var(--font-display);
+  font-size: 1.75rem;
   font-weight: 700;
-  font-size: var(--font-size-headline);
-  letter-spacing: var(--letter-brand);
+  letter-spacing: var(--letter-spacing-brand);
   text-transform: uppercase;
 }
 
@@ -634,7 +598,6 @@
 
 .debrief-screen__folds dt {
   color: var(--text-muted);
-  font-family: var(--font-display);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -732,23 +695,20 @@
   .match-screen__layout {
     grid-template-columns: 1fr;
   }
+
+  .board-stack {
+    margin: 0 auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .campaign-hub__hero-copy,
-  .campaign-hub__cta {
+  .campaign-hub__hero-inner,
+  .campaign-hub__brand,
+  .campaign-hub__tagline,
+  .campaign-hub__meta,
+  .campaign-hub__length,
+  .campaign-hub__actions {
     animation: none;
-  }
-}
-
-@keyframes hub-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -765,7 +725,7 @@
   margin: 0 0 0.6rem;
   font-family: var(--font-display);
   font-size: 1.15rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
 .narration-audit__paragraph {
