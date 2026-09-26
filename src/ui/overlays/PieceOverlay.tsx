@@ -26,6 +26,13 @@ const TRUST_HUE: Record<TrustBandWord, string> = {
   loyal: 'var(--trust-loyal)',
 };
 
+/** Shape classes for colour-safe aura encoding (S1 / S2a prep for M7.3). */
+export const TRUST_AURA_SHAPE: Record<TrustBandWord, string> = {
+  hostile: 'piece-overlay__aura--hostile',
+  wary: 'piece-overlay__aura--wary',
+  loyal: 'piece-overlay__aura--loyal',
+};
+
 const MORALE_HEIGHT_PX: Record<MoraleBandWord, number> = {
   low: 8,
   steady: 16,
@@ -63,6 +70,9 @@ export function PieceOverlay({
     piece.trust,
     piece.morale,
   );
+  const inspectLabel = betrayal
+    ? `Inspect ${label}. ${traumaTooltip(piece.trauma)}`
+    : `Inspect ${label}`;
 
   return (
     <div
@@ -71,7 +81,7 @@ export function PieceOverlay({
       data-square={square}
     >
       <span
-        className="piece-overlay__aura"
+        className={`piece-overlay__aura ${TRUST_AURA_SHAPE[piece.trust]}`}
         style={{
           boxShadow: `0 0 0 ${trustRing}px ${TRUST_HUE[piece.trust]}`,
         }}
@@ -99,10 +109,12 @@ export function PieceOverlay({
       <button
         type="button"
         className="piece-overlay__select"
-        aria-label={label}
+        aria-label={inspectLabel}
         aria-pressed={selected}
         onClick={onSelect}
-      />
+      >
+        i
+      </button>
     </div>
   );
 }

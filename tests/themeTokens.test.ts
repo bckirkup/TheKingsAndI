@@ -6,9 +6,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   TACTICAL_BLUEPRINT_PACK_ID,
+  tacticalBlueprintTheme,
   tacticalBlueprintTokens,
   type ThemeTokens,
 } from '../src/ui/theme/tacticalBlueprint';
+import { TRUST_AURA_SHAPE } from '../src/ui/overlays/PieceOverlay';
+import type { TrustBandWord } from '../src/ui/qualitativeLabels';
 
 const TOKEN_GROUPS = {
   atmosphere: ['--bg', '--surface', '--text', '--accent', '--grid-line'],
@@ -62,6 +65,37 @@ describe('tactical-blueprint themeTokens (S1a)', () => {
       expect(display.includes(banned)).toBe(false);
     }
     expect(display).toContain('barlow condensed');
+  });
+});
+
+describe('trust aura shape encoding (S1, colour-safe prep for M7.3)', () => {
+  it('grades distinct aura shape classes per trust band', () => {
+    const bands: TrustBandWord[] = ['hostile', 'wary', 'loyal'];
+    const shapes = bands.map((band) => TRUST_AURA_SHAPE[band]);
+    expect(new Set(shapes).size).toBe(bands.length);
+    expect(TRUST_AURA_SHAPE.hostile).toContain('hostile');
+    expect(TRUST_AURA_SHAPE.wary).toContain('wary');
+    expect(TRUST_AURA_SHAPE.loyal).toContain('loyal');
+  });
+});
+
+describe('military pack themeTokens (D223, pack-as-data)', () => {
+  it('keeps the military JSON in sync with the live token object', () => {
+    const packPath = join(
+      dirname(fileURLToPath(import.meta.url)),
+      '../public/assets/packs/military/themeTokens.json',
+    );
+    const pack = JSON.parse(readFileSync(packPath, 'utf8')) as {
+      readonly packId: string;
+      readonly extends?: string;
+      readonly themeTokens: Record<string, string>;
+    };
+    expect(pack.packId).toBe('military');
+    expect(pack.extends).toBe(TACTICAL_BLUEPRINT_PACK_ID);
+    expect(tacticalBlueprintTheme.packId).toBe(TACTICAL_BLUEPRINT_PACK_ID);
+    for (const [key, value] of Object.entries(tacticalBlueprintTokens)) {
+      expect(pack.themeTokens[key], key).toBe(value);
+    }
   });
 });
 

@@ -135,6 +135,17 @@
   pointer-events: none;
 }
 
+/* Aura encoding prototype (prep M7.3): shape + ring, not hue alone. */
+.piece-overlay__aura--wary {
+  border: 2px dashed var(--trust-wary);
+}
+
+.piece-overlay__aura--hostile {
+  inset: 18%;
+  border-radius: 12%;
+  transform: rotate(45deg);
+}
+
 .piece-overlay__morale {
   display: block;
   position: absolute;
@@ -178,12 +189,16 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border: 1px solid var(--grid-line);
   border-radius: 2px;
   background: var(--surface-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
   cursor: pointer;
   opacity: 0.85;
 }

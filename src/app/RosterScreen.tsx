@@ -259,13 +259,13 @@ export function RosterScreen({
         </div>
       ) : null}
 
-      <div className="campaign-hub__actions">
+      <div className="roster-screen__actions">
         <button type="button" className="btn" onClick={onBack}>
           Back
         </button>
         <button
           type="button"
-          className="btn"
+          className="btn btn--primary"
           onClick={() => onConfirm(draft, preambleEvents)}
           disabled={activeLineup(draft).length < 2}
         >

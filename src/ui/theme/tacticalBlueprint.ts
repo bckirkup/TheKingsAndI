@@ -52,7 +52,14 @@ export const tacticalBlueprintTokens = {
   '--board-lastmove': 'rgba(61, 154, 239, 0.28)',
 } as const;
 
+export type ThemeTokenName = keyof typeof tacticalBlueprintTokens;
 export type ThemeTokens = typeof tacticalBlueprintTokens;
 
 /** Pack id this token set belongs to (ADR 0023 / D223 military-first). */
 export const TACTICAL_BLUEPRINT_PACK_ID = 'tactical-blueprint' as const;
+
+/** Pack-shaped export for ADR 0023 content-pack consumers (S1a). */
+export const tacticalBlueprintTheme = {
+  packId: TACTICAL_BLUEPRINT_PACK_ID,
+  themeTokens: tacticalBlueprintTokens,
+} as const;
