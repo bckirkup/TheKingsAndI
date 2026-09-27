@@ -1,13 +1,16 @@
 ---
 name: browser-e2e-testing
-description: Drive The Kings and I through a full match in a real browser — fresh career bootstrap, ordering moves on the chessground board, forcing refusals, reaching a terminal state, and rendering the match audit. Use when verifying any user-facing UI change end to end instead of only running vitest.
+description: Drive The Kings and I through a full match in a real browser — fresh career bootstrap, ordering moves on the chessground board, forcing refusals, reaching a terminal state, and rendering the match audit. Use ONLY when the PR's principal subject is a user-facing UI feature (screens, overlays, board interactions, rendered state); logic, orchestration, persistence, and sim changes verify at the shell level (vitest + `pnpm sim`) without a browser — see typescript-toolchain.
 ---
 
 # Browser end-to-end testing (The Kings and I)
 
 ## Bring the app up
 
+`node`/`pnpm` are not on PATH in a fresh shell — export first:
+
 ```bash
+export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"
 pnpm install
 pnpm dev            # Vite on http://localhost:5173 (localhost only —
                     # 127.0.0.1:5173 is refused unless you pass --host)
@@ -39,7 +42,13 @@ audit → "Continue" → Campaign hub.
 
 Chessground needs a real press-move-release: `mouse_move` to the origin square,
 `left_mouse_down` (no coordinate argument — it is rejected), several
-intermediate `mouse_move` steps, then `left_mouse_up` on the destination.
+intermediate `mouse_move` steps, then `left_mouse_up` on the destination —
+**also with no coordinate argument** (it is rejected and the drag stays live,
+ghost piece on the cursor, until a bare `left_mouse_up` lands it). A drop on an
+illegal square cancels silently: no order, no journal/telemetry entry — if a
+drag "does nothing", screenshot after `left_mouse_down` and check the green
+dots to confirm the destination is actually legal (e.g. a self-blocked
+diagonal).
 After `left_mouse_down`, take a screenshot: chessground draws green dots on the
 legal destinations, which is the reliable way to calibrate square centres
 (rank/file centres are easy to get off by one square). Read
