@@ -1,6 +1,7 @@
 import { cpus } from 'node:os';
 
-import { UciEngine, type DepthLadder, type UciSpawnMode } from './uci';
+import { type DepthLadder, type UciEngine } from './uci';
+import { spawnUciEngine, type UciSpawnMode } from './uciNode';
 
 /**
  * Worker pool for UCI engines (ADR 0005 / architecture §5).
@@ -55,7 +56,7 @@ export class EnginePool {
     }
     const pool = new EnginePool();
     for (let index = 0; index < size; index += 1) {
-      const worker = new UciEngine({
+      const worker = spawnUciEngine({
         enginePath: options.enginePath,
         ...(options.spawnMode !== undefined
           ? { spawnMode: options.spawnMode }

@@ -10,7 +10,8 @@ import {
   createLozzaPort,
   disposeLozzaPort,
 } from '../src/engine/adapters/lozza';
-import { UciEngine, type DepthLadder } from '../src/engine/uci';
+import { type DepthLadder, type UciEngine } from '../src/engine/uci';
+import { spawnUciEngine } from '../src/engine/uciNode';
 import { parseArguments } from '../sim/cli';
 
 const artifactPath = fileURLToPath(
@@ -53,8 +54,8 @@ describe('Lozza cold-search contract', () => {
   });
 
   it('returns the same bundle after divergent history as a fresh cold engine', async () => {
-    const afterHistory = new UciEngine({ enginePath: artifactPath });
-    const fresh = new UciEngine({ enginePath: artifactPath });
+    const afterHistory = spawnUciEngine({ enginePath: artifactPath });
+    const fresh = spawnUciEngine({ enginePath: artifactPath });
     try {
       await divergentHistory(afterHistory);
       const historical = await afterHistory.searchLadder(TARGET_FEN, 4);
@@ -66,11 +67,11 @@ describe('Lozza cold-search contract', () => {
   }, 120_000);
 
   it('keeps the warm path as a distinct, path-dependent contrast', async () => {
-    const warmAfterHistory = new UciEngine({
+    const warmAfterHistory = spawnUciEngine({
       enginePath: artifactPath,
       coldSearch: false,
     });
-    const warmFresh = new UciEngine({
+    const warmFresh = spawnUciEngine({
       enginePath: artifactPath,
       coldSearch: false,
     });

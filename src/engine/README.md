@@ -8,6 +8,8 @@ Landed (Milestone 1.3 / 1.3b / 1.3c):
 
 - `EnginePort`, the barrier, the evaluation cache, and the round digest
 - Lozza MIT adapter (`adapters/lozza.ts`) + conformance corpus
+- Lozza Web Worker port (`workerLozza.ts`) — the browser's match engine, same
+  vendored artifact behind the same `UciEngine` semantics (ADR 0079)
 - Stockfish.js 18 lite-single WASM pool (`adapters/stockfish.ts`)
 - Caissa 2.0.1 MIT native-binary adapter (`adapters/caissa.ts`, opt-in via
   `CAISSA_ENGINE_PATH`)
@@ -25,14 +27,18 @@ The layer has two entry points, because half of it cannot run in a browser:
 
 | Entry | Contains | Imported by |
 |---|---|---|
-| `index.ts` | port types, barrier, cache, round, search constants, fake port | anything, including `src/app` |
-| `node.ts` | `EnginePool`, `UciEngine`, the shared-search broker, Lozza, Stockfish, and Caissa adapters | `sim/`, tests, server entries |
+| `index.ts` | port types, barrier, cache, round, search constants, fake port, Lozza worker port | anything, including `src/app` |
+| `node.ts` | `EnginePool`, `spawnUciEngine` (child-process transport, `uciNode.ts`), the shared-search broker, Lozza, Stockfish, and Caissa adapters | `sim/`, tests, server entries |
 
-`node.ts` reaches `node:child_process` and `node:os`, so importing it from the
+`UciEngine` (`uci.ts`) is browser-safe: it takes a transport interface, which
+`workerLozza.ts` implements over a Web Worker running `vendor/lozza/lozza.cjs`
+— Lozza is already JavaScript, so the browser host needs no WASM port. The
+Node half (`node.ts`, `pool.ts`, `uciNode.ts`, `broker.ts`, `adapters/*`)
+reaches `node:child_process` and `node:os`, so importing it from the
 bundle fails `pnpm build` with `"spawn" is not exported by
 __vite-browser-external`. A lint rule enforces the split; value imports of
-`engine/node`, `broker`, `pool`, `uci`, or `adapters/*` are an error everywhere
-except inside those modules themselves.
+`engine/node`, `broker`, `pool`, `uciNode`, or `adapters/*` are an error
+everywhere except inside those modules themselves.
 
 Pinned Stockfish build: npm `stockfish@18.0.8` (GPL-3.0), flavor
 `stockfish-18-lite-single`, `Hash=16`, `Threads=1`, shared search at

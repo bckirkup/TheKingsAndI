@@ -1,6 +1,3 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createInterface, type Interface } from 'node:readline';
-
 /**
  * Minimal UCI client for depth-limited search (ADR 0005). No movetime, no
  * wall-clock cutoffs — only `go depth N`.
@@ -28,21 +25,39 @@ export const DEFAULT_MAX_SCORE_ESCALATIONS = 4;
 // across the measured mid-game positions; 512 leaves over 20x headroom.
 export const DEFAULT_MAX_INFO_LINES_PER_SEARCH = 512;
 
+/** What it means for the engine host to die underneath a search. */
+export interface UciTransportExit {
+  readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
+  readonly stderr: string;
+}
+
 /**
- * How the engine child is spawned: `'node'` runs `enginePath` as a script
- * under `process.execPath`; `'native'` executes `enginePath` directly.
+ * Line-level I/O between `UciEngine` and a UCI engine host. Node hosts spawn a
+ * child via `nodeUciTransport` in `./uciNode`; a Web Worker host supplies the
+ * same shape over `postMessage` (ADR 0079).
  */
-export type UciSpawnMode = 'node' | 'native';
+export interface UciTransport {
+  /** Enqueue one protocol line; delivery order is preserved. */
+  readonly sendLine: (line: string) => void;
+  /** Register the line consumer; called once by `UciEngine`. */
+  readonly onLine: (listener: (line: string) => void) => void;
+  /**
+   * Register the exit listener; called once. Fires on child exit, spawn
+   * failure, or worker error/termination, with the stderr tail when the host
+   * has one.
+   */
+  readonly onExit: (listener: (exit: UciTransportExit) => void) => void;
+  /** Terminate the engine host; resolves once it has stopped. */
+  readonly dispose: () => Promise<void>;
+}
 
 export interface UciEngineOptions {
   /**
-   * Absolute path to the engine artifact: a JS script (e.g. lozza.cjs or
-   * stockfish-*.js) under `'node'` spawn mode, or a native executable under
-   * `'native'` spawn mode.
+   * Identity label for the engine host (the artifact path, a worker URL, …).
+   * Diagnostic only — the transport decides what actually runs.
    */
-  readonly enginePath: string;
-  /** Spawn mode; defaults to `'node'` (script run under the Node runtime). */
-  readonly spawnMode?: UciSpawnMode;
+  readonly enginePath?: string;
   /** Clear carried engine state before every search; defaults to cold. */
   readonly coldSearch?: boolean;
   /** Fixed hash size in MiB (deterministic mode). */
@@ -55,6 +70,13 @@ export interface UciEngineOptions {
   readonly maxScoreEscalations?: number;
   /** Hard ceiling on info lines emitted by one search. */
   readonly maxInfoLinesPerSearch?: number;
+  /**
+   * Engine I/O: how protocol lines reach the host. Node callers use
+   * `spawnUciEngine`/`nodeUciTransport` from `./uciNode` (this module must
+   * stay importable from the browser bundle); a Web Worker host supplies a
+   * `postMessage` transport here.
+   */
+  readonly transport: () => UciTransport;
 }
 
 export class UciEngineExitedError extends Error {
@@ -178,9 +200,7 @@ function parseMultiPv(tokens: readonly string[]): number {
 }
 
 export class UciEngine {
-  private readonly process: ChildProcessWithoutNullStreams;
-  private readonly reader: Interface;
-  private readonly processExit: Promise<void>;
+  private readonly transport: UciTransport;
   private ready: Promise<void> | undefined;
   private readonly hashMb: number;
   private readonly threads: number;
@@ -199,7 +219,6 @@ export class UciEngine {
     readonly resolve: () => void;
     readonly reject: (cause: unknown) => void;
   }> = [];
-  private stderrTail = '';
   private processFailure: Error | undefined;
   private searchFen: string | undefined;
   private busy = false;
@@ -238,41 +257,14 @@ export class UciEngine {
     ) {
       throw new RangeError('maxInfoLinesPerSearch must be a positive integer.');
     }
-    const spawnMode = options.spawnMode ?? 'node';
-    this.process =
-      spawnMode === 'native'
-        ? spawn(options.enginePath, [], {
-            stdio: ['pipe', 'pipe', 'pipe'],
-          })
-        : spawn(process.execPath, [options.enginePath], {
-            stdio: ['pipe', 'pipe', 'pipe'],
-          });
-    this.processExit = new Promise((resolve) => {
-      this.process.once('exit', () => resolve());
-    });
-    this.reader = createInterface({ input: this.process.stdout });
-    this.reader.on('line', (line) => this.dispatch(line.trim()));
-    this.process.stderr.on('data', (chunk: Buffer | string) => {
-      const text = chunk.toString();
-      this.stderrTail = (this.stderrTail + text).slice(-2_000);
-    });
-    this.process.on('error', (cause) => {
-      this.failProcess(
-        new UciEngineExitedError(
-          null,
-          null,
-          `${String(cause)}${this.stderrTail}`,
-          this.searchFen,
-          this.targetDepth,
-        ),
-      );
-    });
-    this.process.on('exit', (code, signal) => {
+    this.transport = options.transport();
+    this.transport.onLine((line) => this.dispatch(line.trim()));
+    this.transport.onExit(({ code, signal, stderr }) => {
       this.failProcess(
         new UciEngineExitedError(
           code,
           signal,
-          this.stderrTail,
+          stderr,
           this.searchFen,
           this.targetDepth,
         ),
@@ -430,8 +422,7 @@ export class UciEngine {
     this.searchActive = false;
     for (const waiter of this.lineWaiters) waiter.reject(cause);
     this.lineWaiters = [];
-    this.reader.close();
-    this.process.kill();
+    void this.transport.dispose();
   }
 
   private async handshake(): Promise<void> {
@@ -453,10 +444,12 @@ export class UciEngine {
         reject(this.processFailure);
         return;
       }
-      this.process.stdin.write(`${command}\n`, (error) => {
-        if (error === null || error === undefined) resolve();
-        else reject(error);
-      });
+      try {
+        this.transport.sendLine(command);
+        resolve();
+      } catch (cause: unknown) {
+        reject(cause);
+      }
     });
   }
 
@@ -547,8 +540,6 @@ export class UciEngine {
 
   async dispose(): Promise<void> {
     await this.send('quit').catch(() => undefined);
-    this.reader.close();
-    this.process.kill();
-    await this.processExit;
+    await this.transport.dispose();
   }
 }

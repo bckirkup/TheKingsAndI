@@ -21,13 +21,15 @@ const higherLayers = {
  * Modules that reach `node:child_process` / `node:os` and therefore cannot
  * appear anywhere in the browser bundle's import graph (`pnpm build` fails
  * with "spawn is not exported by __vite-browser-external"). Type-only imports
- * are erased and stay allowed.
+ * are erased and stay allowed. `engine/uci` itself is browser-safe — it is
+ * the transport interface the Web Worker host implements (ADR 0079); the
+ * Node child-process transport is `engine/uciNode`.
  */
 const nodeOnlyEngineModules = [
   '**/engine/node',
   '**/engine/broker',
   '**/engine/pool',
-  '**/engine/uci',
+  '**/engine/uciNode',
   '**/engine/adapters/**',
 ];
 
@@ -169,7 +171,8 @@ export default tseslint.config(
   },
   {
     // The browser-safe half of the engine layer: `src/app` imports it, so it
-    // must stay clear of the Node-only half.
+    // must stay clear of the Node-only half. Includes the Lozza Web Worker
+    // host and the host-neutral pieces it shares with the Node adapter.
     name: 'engine-browser-surface',
     files: [
       'src/engine/index.ts',
@@ -177,9 +180,13 @@ export default tseslint.config(
       'src/engine/cache.ts',
       'src/engine/conformanceCorpus.ts',
       'src/engine/fake.ts',
+      'src/engine/lozzaArtifact.ts',
+      'src/engine/lozzaCore.ts',
       'src/engine/round.ts',
       'src/engine/search.ts',
       'src/engine/types.ts',
+      'src/engine/uci.ts',
+      'src/engine/workerLozza.ts',
     ],
     rules: boundaryRule(higherLayers.engine),
   },

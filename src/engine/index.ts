@@ -23,6 +23,12 @@ export type { ConformanceCase } from './conformanceCorpus';
 export { createFakeEnginePort } from './fake';
 export { DuplicateSeatError, buildInsightRound, roundKey } from './round';
 export {
+  createLozzaWorkerPort,
+  disposeLozzaWorkerPort,
+  lozzaWorkerDeterminismId,
+} from './workerLozza';
+export type { LozzaWorkerPortOptions } from './workerLozza';
+export {
   DEFAULT_PREFERRED_MULTIPV_WIDTH,
   DEFAULT_PREFERRED_POOL_SIZE,
   DEFAULT_PRIVATE_MULTIPV_WIDTH,

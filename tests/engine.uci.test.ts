@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { LivingBoard } from '../src/chess';
 import { terminalMoveScore } from '../src/orchestration/insight';
-import { UciEngine, parseUciScore } from '../src/engine/uci';
+import { parseUciScore } from '../src/engine/uci';
+import { spawnUciEngine } from '../src/engine/uciNode';
 
 describe('terminal post-move evaluation', () => {
   it('scores checkmate as a decisive mover win', () => {
@@ -21,7 +22,7 @@ describe('terminal post-move evaluation', () => {
 
 describe('UCI score failures', () => {
   it('retains MultiPV lines at each iterative-deepening rung', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: fileURLToPath(
         new URL('./fixtures/uci-multipv-ladder.mjs', import.meta.url),
       ),
@@ -34,7 +35,7 @@ describe('UCI score failures', () => {
   });
 
   it('rejects a bestmove with no score', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: fileURLToPath(
         new URL('./fixtures/uci-no-score.mjs', import.meta.url),
       ),
@@ -48,7 +49,7 @@ describe('UCI score failures', () => {
   });
 
   it('distinguishes a child exit during search from a missing score', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: fileURLToPath(
         new URL('./fixtures/uci-exit-during-search.mjs', import.meta.url),
       ),
@@ -68,7 +69,7 @@ describe('UCI score failures', () => {
       const fixture = fileURLToPath(
         new URL('./fixtures/uci-fake-native.sh', import.meta.url),
       );
-      const engine = new UciEngine({
+      const engine = spawnUciEngine({
         enginePath: fixture,
         spawnMode: 'native',
       });
@@ -84,7 +85,7 @@ describe('UCI score failures', () => {
       const fixture = fileURLToPath(
         new URL('./fixtures/uci-fake-native.sh', import.meta.url),
       );
-      const engine = new UciEngine({ enginePath: fixture });
+      const engine = spawnUciEngine({ enginePath: fixture });
       await expect(
         engine.evaluate('8/8/8/8/8/8/8/7K w - - 0 1', 1),
       ).rejects.toThrow();
