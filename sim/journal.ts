@@ -174,7 +174,7 @@ async function moveEnvelope(
       context,
     );
     const index = selectedIndex(optionSet, choice);
-    if (index >= 0) indices.add(index);
+    if (index !== undefined && index >= 0) indices.add(index);
   }
   return [...indices].sort((left, right) => left - right);
 }
