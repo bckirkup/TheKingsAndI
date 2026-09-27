@@ -1,7 +1,4 @@
-import {
-  LOZZA_ARTIFACT_BUILD,
-  LOZZA_ARTIFACT_SHA256,
-} from './lozzaArtifact';
+import { LOZZA_ARTIFACT_BUILD, LOZZA_ARTIFACT_SHA256 } from './lozzaArtifact';
 import {
   createLozzaPortCore,
   disposeLozzaPorts,

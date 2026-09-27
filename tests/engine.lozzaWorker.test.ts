@@ -83,21 +83,17 @@ describe('Lozza Web Worker port', () => {
     expect(worker.determinismId).toBe(node.determinismId);
   });
 
-  it(
-    'returns identical evaluations to the node adapter',
-    async () => {
-      const worker = createLozzaWorkerPort({
-        workerUrl: shimPath,
-        createWorker: threadsWorkerFactory,
-      });
-      const node = createLozzaPort();
-      for (const fen of FENS) {
-        const fromWorker = await worker.evaluate(fen, 3);
-        const fromNode = await node.evaluate(fen, 3);
-        expect(fromWorker.scoreCp).toBe(fromNode.scoreCp);
-        expect(fromWorker.pv).toEqual(fromNode.pv);
-      }
-    },
-    60_000,
-  );
+  it('returns identical evaluations to the node adapter', async () => {
+    const worker = createLozzaWorkerPort({
+      workerUrl: shimPath,
+      createWorker: threadsWorkerFactory,
+    });
+    const node = createLozzaPort();
+    for (const fen of FENS) {
+      const fromWorker = await worker.evaluate(fen, 3);
+      const fromNode = await node.evaluate(fen, 3);
+      expect(fromWorker.scoreCp).toBe(fromNode.scoreCp);
+      expect(fromWorker.pv).toEqual(fromNode.pv);
+    }
+  }, 60_000);
 });

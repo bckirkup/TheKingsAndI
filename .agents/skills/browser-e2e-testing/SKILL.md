@@ -16,6 +16,25 @@ pnpm dev            # Vite on http://localhost:5173 (localhost only —
                     # 127.0.0.1:5173 is refused unless you pass --host)
 ```
 
+If `pnpm dev` silently exits (code 0) in a one-shot exec shell, the shell's
+stdin EOF is killing the process — start Vite directly in a **persistent**
+shell (`shell_id`) instead: `node node_modules/vite/bin/vite.js`. It stays
+alive in the background.
+
+## Real-engine pacing (Lozza worker)
+
+Since the match UI runs vendored Lozza in a Web Worker
+(`createLozzaWorkerPort`), expect real search latency: ~8–15 s per player ply
+(mover-insight + audit searches), and "Fast-forward to end" takes ~1 min for
+~75 succession plies — the screen does not repaint mid-loop, so do not mistake
+the frozen board for a hang. DevTools → Sources shows **two** named
+`lozza-engine` workers (the port's shared + best engines); the worker script
+fetch (`/vendor/lozza/lozza.cjs`, ~653 KB) appears in
+`performance.getEntriesByType('resource')` with `initiatorType: 'other'`.
+Verify the swap via the downloaded journal's `determinismId`
+(`lozza-11/artifact-...`, not `ui-fake/...`) or the audit's board-quality line —
+real evals are negative on deliberately bad king walks.
+
 ## Reset to a fresh career
 
 Career state lives in an IndexedDB database named `living-chess`. To force a

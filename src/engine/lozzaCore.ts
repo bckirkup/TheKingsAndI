@@ -177,7 +177,10 @@ function getState(
   return state;
 }
 
-function getBestEngine(state: LozzaEngineState, host: LozzaEngineHost): UciEngine {
+function getBestEngine(
+  state: LozzaEngineState,
+  host: LozzaEngineHost,
+): UciEngine {
   state.bestEngine ??= createEngine(
     host,
     1,
