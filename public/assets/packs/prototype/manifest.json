@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "set": "prototype",
+  "tile": {
+    "width": 128,
+    "height": 160
+  },
+  "sprites": [
+    {
+      "file": "black-knight.png",
+      "source": "black-knight.png",
+      "width": 128,
+      "height": 160,
+      "sha256": "e770f328aef664f2dc26d7ac219926b27c82a8ba395f1a559d753e790d2fee80",
+      "alphaMean": 0.320895
+    },
+    {
+      "file": "white-king.png",
+      "source": "white-king.png",
+      "width": 128,
+      "height": 160,
+      "sha256": "97d862ca83d61bb3e0b5995f749f8bd7ae8d8b6afd7dc05dcba58cbad84cb69f",
+      "alphaMean": 0.208604
+    }
+  ]
+}

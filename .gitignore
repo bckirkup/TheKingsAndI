@@ -18,6 +18,9 @@ coverage/
 sim/out/
 *.metrics.csv
 
+# raw AI-generated images staged for scripts/sprite-pipeline.ts
+assets-src/
+
 # env & secrets
 .env
 .env.*
