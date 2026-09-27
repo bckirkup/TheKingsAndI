@@ -1,5 +1,8 @@
 'use strict';
 
+/* eslint-disable @typescript-eslint/no-require-imports, no-undef --
+   deliberate CJS test fixture loaded by `node:worker_threads` */
+
 /*
  * Test shim: run the vendored `vendor/lozza/lozza.cjs` under
  * `node:worker_threads` by presenting it as a Web Worker. The script takes
