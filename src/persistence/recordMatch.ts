@@ -32,6 +32,8 @@ export interface MatchRecordAssemblyInput {
   readonly rosterEnd: readonly StoredPieceState[];
   readonly events: MatchRecord['events'];
   readonly engineAudit?: MatchRecord['engineAudit'];
+  readonly engineDeterminismId?: MatchRecord['engineDeterminismId'];
+  readonly journal?: MatchRecord['journal'];
   readonly winScore?: MatchRecord['winScore'];
   readonly result: MatchRecord['result'];
 }
@@ -61,6 +63,12 @@ export function assembleMatchRecord(
     rosterEnd: input.rosterEnd,
     events: input.events,
     engineAudit: input.engineAudit ?? [],
+    ...(input.engineDeterminismId === undefined
+      ? {}
+      : { engineDeterminismId: input.engineDeterminismId }),
+    ...(input.journal === undefined || input.journal.length === 0
+      ? {}
+      : { journal: input.journal }),
     ...(input.winScore === undefined ? {} : { winScore: input.winScore }),
     result: input.result,
     audit,

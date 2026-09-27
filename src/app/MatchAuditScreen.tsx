@@ -1,3 +1,4 @@
+import { canonicalJson } from '../core/canonicalJson';
 import { matchAuditProse, type NarratedOutcome } from '../narrative';
 import type { MatchRecord, MatchResult } from '../persistence';
 import type { PieceRole } from '../psychology';
@@ -96,9 +97,35 @@ export function MatchAuditScreen({
         </tbody>
       </table>
 
-      <button type="button" className="btn" onClick={onContinue}>
-        Continue
-      </button>
+      <div className="campaign-hub__actions">
+        {match.journal !== undefined && match.journal.length > 0 ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const payload = canonicalJson({
+                journal: match.journal,
+                seed: match.seed,
+                determinismId: match.engineDeterminismId ?? match.determinismId,
+              });
+              const blob = new Blob([`${payload}\n`], {
+                type: 'application/json',
+              });
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement('a');
+              anchor.href = url;
+              anchor.download = `journal-match-${match.matchIndex}.json`;
+              anchor.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download decision journal
+          </button>
+        ) : null}
+        <button type="button" className="btn" onClick={onContinue}>
+          Continue
+        </button>
+      </div>
     </section>
   );
 }

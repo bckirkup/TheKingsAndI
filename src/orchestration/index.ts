@@ -12,6 +12,19 @@ export type {
   ObservationPiece,
   OverrideObservation,
 } from './observation';
+export {
+  appendJournalEntry,
+  DISENGAGE,
+  humanAgent,
+  optionsForMove,
+  OVERRIDE_OPTIONS,
+} from './journal';
+export type {
+  AgentIdentity,
+  DecisionKind,
+  JournalEntry,
+  Option,
+} from './journal';
 export { classifyMatchResult } from './terminalState';
 export { kingExposureAfterWithdrawals } from './kingExposure';
 export { endpointFor } from './privateEvaluation';

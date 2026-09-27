@@ -6,9 +6,22 @@ import {
   type Side,
   type Square,
 } from '../chess';
+import { objectionStrengthWord } from '../core/qualitativeBands';
 import { createSeededRandom, type SeededRandom } from '../core/random';
 import { SHARED_SEARCH_D_MAX } from '../engine';
 import type { EngineAuditEntry, EnginePort } from '../engine/types';
+import {
+  appendJournalEntry,
+  humanAgent,
+  optionsForMove,
+  OVERRIDE_OPTIONS,
+  type AgentIdentity,
+  type JournalEntry,
+} from './journal';
+import {
+  projectMoveObservation,
+  projectOverrideObservation,
+} from './observation';
 import {
   applyRepairSignal,
   courageForMove,
@@ -150,6 +163,7 @@ export interface MatchSessionSnapshot {
   readonly kingTauAbil: number;
   readonly determinismId: string;
   readonly engineAudit: readonly EngineAuditEntry[];
+  readonly journal: readonly JournalEntry[];
 }
 
 export interface MatchSessionConfig {
@@ -165,6 +179,14 @@ export interface MatchSessionConfig {
   readonly rosterPreamble?: readonly MatchEvent[];
   readonly kingTauAbil?: number;
   readonly rivalLeaderId?: string;
+  /**
+   * Present makes the session a journal writer (ADR 0079 D219): every move
+   * ask and override ask is appended as a JournalEntry under this identity.
+   */
+  readonly journal?: {
+    readonly match: number;
+    readonly agent?: AgentIdentity;
+  };
 }
 
 function updatePiece(
@@ -218,6 +240,9 @@ export class MatchSession {
   private enemyRegardStreakByPiece: Readonly<Record<string, number>> = {};
   private readonly engineAudit: EngineAuditEntry[] = [];
   private promotionHope: PromotionHopeState;
+  private readonly journalEntries: JournalEntry[] = [];
+  private readonly journalAgent: AgentIdentity;
+  private readonly journalMatch: number | undefined;
 
   constructor(config: MatchSessionConfig) {
     const seed = config.seed ?? 1;
@@ -225,6 +250,8 @@ export class MatchSession {
     this.random = createSeededRandom(seed);
     this.playerSide = config.playerSide ?? 'w';
     this.opponentArchetype = config.opponentArchetype ?? 'random';
+    this.journalMatch = config.journal?.match;
+    this.journalAgent = config.journal?.agent ?? humanAgent();
     this.engine = config.engine;
     this.insight = createInsightRoundHandle();
     this.kingTauAbil = config.kingTauAbil ?? 50;
@@ -285,6 +312,7 @@ export class MatchSession {
       kingTauAbil: this.kingTauAbil,
       determinismId: this.engine.determinismId,
       engineAudit: [...this.engineAudit],
+      journal: [...this.journalEntries],
     };
   }
 
@@ -320,6 +348,7 @@ export class MatchSession {
 
     this.phase = 'thinking';
     const features = extractMoveFeatures(this.board, intent);
+    this.recordMoveDecision(features.san);
     const insights = await resolveMoverInsights(
       this.engine,
       this.board,
@@ -474,6 +503,7 @@ export class MatchSession {
   replanAfterRefusal(): void {
     const pending = this.pending;
     if (pending?.verdict !== 'MORAL_REFUSAL') return;
+    this.recordOverrideDecision(pending, 1);
     const justified = pending.justified;
 
     const refusalEvent: Extract<MatchEvent, { t: 'REFUSAL' }> = {
@@ -541,6 +571,7 @@ export class MatchSession {
   async confirmOverride(): Promise<void> {
     const pending = this.pending;
     if (pending?.verdict !== 'MORAL_REFUSAL') return;
+    this.recordOverrideDecision(pending, 0);
 
     const witnesses = this.roster.filter(
       (piece) => piece.id !== pending.actor.id,
@@ -686,6 +717,64 @@ export class MatchSession {
       return;
     }
     await this.playUnderKingCommand();
+  }
+
+  private recordMoveDecision(san: string): void {
+    if (this.journalMatch === undefined) return;
+    const observation = projectMoveObservation({
+      board: this.board,
+      side: this.playerSide,
+      ply: this.ply,
+      roster: this.roster,
+    });
+    const optionSet = optionsForMove(this.board, this.playerSide);
+    const chosen = optionSet.findIndex(
+      (option) => option.kind === 'move' && option.san === san,
+    );
+    appendJournalEntry({
+      entries: this.journalEntries,
+      at: {
+        match: this.journalMatch,
+        ply: this.ply,
+        kind: 'move',
+        side: this.playerSide,
+      },
+      observation,
+      options: optionSet,
+      chosen,
+      agent: this.journalAgent,
+    });
+  }
+
+  private recordOverrideDecision(
+    pending: PendingVerdict,
+    chosen: number,
+  ): void {
+    if (this.journalMatch === undefined) return;
+    const observation = projectOverrideObservation({
+      board: this.board,
+      side: this.playerSide,
+      ply: this.ply,
+      roster: this.roster,
+      refusingPieceId: pending.actor.id,
+      candidateSan: pending.san,
+      objectionStrength: objectionStrengthWord(
+        pending.outcome.refusalThreshold - pending.outcome.utilityScore,
+      ),
+    });
+    appendJournalEntry({
+      entries: this.journalEntries,
+      at: {
+        match: this.journalMatch,
+        ply: this.ply,
+        kind: 'override',
+        side: this.playerSide,
+      },
+      observation,
+      options: OVERRIDE_OPTIONS,
+      chosen,
+      agent: this.journalAgent,
+    });
   }
 
   private maybeTriggerDismissal(): void {
