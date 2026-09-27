@@ -83,6 +83,8 @@ export interface RunMatchOptions {
   readonly opponentJournalAgent?: JournalAgent;
   /** Styles sampled for each leader-seat entry's containment envelope (ADR 0063 §3). */
   readonly envelopeStyles?: readonly Leader[];
+  /** Ply cap for the underlying match; defaults to the full match length. */
+  readonly maxPlies?: number;
   readonly griefEnabled?: boolean;
 }
 
@@ -118,7 +120,8 @@ export async function runMatch(
       : { entries: options.journalEntries };
   const envelopeSamplers = options.envelopeStyles?.map((style) => ({
     style,
-    port: leaderPort(style, playerContextBase),
+    policy: leaderPolicy(style),
+    context: playerContextBase,
   }));
   const opponentPort =
     journalConfig === undefined
@@ -165,7 +168,7 @@ export async function runMatch(
     : undefined;
   return runHeadlessMatch({
     random,
-    maxPlies: MAX_PLIES,
+    maxPlies: options.maxPlies ?? MAX_PLIES,
     playerSide: 'w',
     leader: playerPort,
     opponent: opponentPort,

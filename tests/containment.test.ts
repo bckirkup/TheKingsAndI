@@ -5,7 +5,7 @@ import { digest } from '../src/core/digest';
 import { createFakeEnginePort } from '../src/engine/fake';
 import { createStartingRoster } from '../sim/roster';
 import { runMatch } from '../sim/match';
-import { LEADERS } from '../sim/cli';
+import type { Leader } from '../sim/cli';
 import { personaAgent, PERSONAS } from '../sim/personas';
 import { containmentReport } from '../sim/containment';
 import {
@@ -132,10 +132,20 @@ describe('containment report', () => {
   });
 });
 
+/** A representative subset keeps each test match cheap; full sweeps use all. */
+const TEST_ENVELOPE: readonly Leader[] = [
+  'tyrannical',
+  'volatile',
+  'servant',
+  'random',
+];
+
 async function personaMatch(
   persona: PersonaName,
   seed: number,
+  options: { maxPlies?: number; withEnvelope?: boolean } = {},
 ): Promise<JournalEntry[]> {
+  const { maxPlies = 40, withEnvelope = true } = options;
   const board = LivingBoard.standard();
   const entries: JournalEntry[] = [];
   await runMatch({
@@ -149,13 +159,14 @@ async function personaMatch(
     engine: createFakeEnginePort(),
     journalEntries: entries,
     leaderJournalAgent: personaAgent(persona),
-    envelopeStyles: LEADERS,
+    ...(withEnvelope ? { envelopeStyles: TEST_ENVELOPE } : {}),
+    maxPlies,
   });
   return entries;
 }
 
 describe('persona containment sweep', () => {
-  it('records an envelope on every leader-seat entry', async () => {
+  it('envelopes every leader entry and contains the honest persona', async () => {
     const entries = await personaMatch('honest', 7);
     expect(entries.length).toBeGreaterThan(0);
     const leaderEntries = entries.filter((entry) => entry.at.side === 'w');
@@ -163,16 +174,12 @@ describe('persona containment sweep', () => {
     expect(leaderEntries.length).toBeGreaterThan(0);
     for (const item of leaderEntries) {
       expect(item.envelope).toBeDefined();
-      expect(item.envelopeStyles).toHaveLength(LEADERS.length);
+      expect(item.envelopeStyles).toHaveLength(TEST_ENVELOPE.length);
       expect(item.agent.id).toBe('persona:honest');
     }
     for (const item of opponentEntries) {
       expect(item.envelope).toBeUndefined();
     }
-  });
-
-  it('contains the honest persona entirely (sanity bound)', async () => {
-    const entries = await personaMatch('honest', 7);
     const report = containmentReport(entries);
     expect(report.perKind.move.outOfEnvelope).toBe(0);
     expect(report.perKind.override.outOfEnvelope).toBe(0);
@@ -189,9 +196,10 @@ describe('persona containment sweep', () => {
   });
 
   it('replays a persona journal deterministically', async () => {
-    const first = await personaMatch('bored', 11);
-    const second = await personaMatch('bored', 11);
+    const first = await personaMatch('bored', 11, { withEnvelope: false });
+    const second = await personaMatch('bored', 11, { withEnvelope: false });
     expect(digest(second)).toBe(digest(first));
+    expect(first.length).toBeGreaterThan(0);
   });
 
   it('exposes every persona behind AgentIdentity', () => {

@@ -21,6 +21,11 @@ import {
   type Observation,
 } from '../src/orchestration';
 import type { HeadlessMoveChoice } from '../src/orchestration/headlessMatch';
+import {
+  legalScoredMoves,
+  type LeaderContext,
+  type LeaderPolicy,
+} from './leaders';
 
 export type {
   AgentIdentity,
@@ -59,12 +64,15 @@ export interface JournalOptions {
   /**
    * ADR 0063 §3 — scripted NPC policies to score each ask against, recorded on
    * the entry so containment is computed from the journal alone. Each sampler
-   * is asked with a derived PRNG (seeded by style + decisionIndex), so the
-   * match stream is untouched.
+   * is asked ENVELOPE_DRAWS times with derived PRNGs (seeded by style +
+   * decisionIndex + draw), so the match stream is untouched and the envelope
+   * approximates a stochastic style's choice support, not one lucky draw.
    */
   readonly envelopeSamplers?: readonly {
     readonly style: string;
-    readonly port: HeadlessLeaderPort;
+    readonly policy: LeaderPolicy;
+    /** The seat's leader context minus `ply` (filled per ask). */
+    readonly context: Omit<LeaderContext, 'ply'>;
   }[];
 }
 
@@ -141,60 +149,92 @@ function validChoice(
   return choice !== undefined && choice >= 0 && choice < options.length;
 }
 
-/** Envelope sampling runs on a per-style derived stream (ADR 0062 §4). */
-function envelopeRandom(style: string, decisionIndex: number) {
+/**
+ * Envelope sampling runs on a per-style derived stream (ADR 0062 §4).
+ * Stochastic policies are sampled `ENVELOPE_DRAWS` times per ask so the
+ * envelope approximates a style's choice *support*, not one lucky draw.
+ */
+const ENVELOPE_DRAWS = 3;
+
+function envelopeRandom(style: string, decisionIndex: number, draw: number) {
   return createSeededRandom(
     Number.parseInt(
-      digest(`envelope:${style}:${decisionIndex}`).slice(0, 8),
+      digest(`envelope:${style}:${decisionIndex}:${draw}`).slice(0, 8),
       16,
     ),
   );
 }
 
-async function moveEnvelope(
+function moveEnvelope(
   options: JournalOptions,
   board: LivingBoard,
   side: Side,
   ply: number,
   refusedSans: ReadonlySet<string> | undefined,
-  context: Parameters<NonNullable<HeadlessLeaderPort['chooseMove']>>[5],
   optionSet: readonly Option[],
-): Promise<number[] | undefined> {
+  innerChoice: HeadlessMoveChoice | undefined,
+): number[] | undefined {
   const samplers = options.envelopeSamplers;
-  if (samplers === undefined || samplers.length === 0) return undefined;
   const decisionIndex = options.entries.length;
   const indices = new Set<number>();
-  for (const sampler of samplers) {
-    const choice = await sampler.port.chooseMove(
-      board,
-      side,
-      envelopeRandom(sampler.style, decisionIndex),
-      ply,
-      refusedSans,
-      context,
+  // The resident policy's own live pick is enveloped by observation: an NPC
+  // style actually chose it under the real stream (ADR 0063 §3).
+  const innerIndex = selectedIndex(optionSet, innerChoice);
+  if (innerIndex !== undefined && innerIndex >= 0) indices.add(innerIndex);
+  if (samplers !== undefined && samplers.length > 0) {
+    // One legal-scored-move computation shared by every style's draws — the
+    // feature extraction is the expensive part, and policies are pure over it.
+    const moves = legalScoredMoves(board).filter(
+      (move) => refusedSans?.has(move.features.san) !== true,
     );
-    const index = selectedIndex(optionSet, choice);
-    if (index !== undefined && index >= 0) indices.add(index);
+    for (const sampler of samplers) {
+      for (let draw = 0; draw < ENVELOPE_DRAWS; draw += 1) {
+        const choice = sampler.policy.chooseMove(
+          board,
+          moves,
+          envelopeRandom(sampler.style, decisionIndex, draw),
+          { ...sampler.context, ply },
+        );
+        if (choice === undefined) continue;
+        const mover = board.pieceAt(choice.intent.from);
+        if (mover === undefined || mover.side !== side) continue;
+        const index = selectedIndex(optionSet, {
+          moverId: mover.id,
+          intent: choice.intent,
+          san: choice.features.san,
+          ...(choice.leaderImpliedBias === undefined
+            ? {}
+            : { leaderImpliedBias: choice.leaderImpliedBias }),
+        });
+        if (index !== undefined && index >= 0) indices.add(index);
+      }
+    }
   }
-  return [...indices].sort((left, right) => left - right);
+  return indices.size === 0
+    ? undefined
+    : [...indices].sort((left, right) => left - right);
 }
 
 function overrideEnvelope(
   options: JournalOptions,
   ply: number,
-  context: Parameters<NonNullable<HeadlessLeaderPort['shouldOverride']>>[2],
+  innerOverride: boolean | undefined,
 ): number[] | undefined {
   const samplers = options.envelopeSamplers;
-  if (samplers === undefined || samplers.length === 0) return undefined;
   const decisionIndex = options.entries.length;
   const indices = new Set<number>();
+  if (innerOverride !== undefined) indices.add(innerOverride ? 0 : 1);
+  if (samplers === undefined || samplers.length === 0) {
+    return indices.size === 0 ? undefined : [...indices].sort((a, b) => a - b);
+  }
   for (const sampler of samplers) {
-    const override = sampler.port.shouldOverride(
-      envelopeRandom(sampler.style, decisionIndex),
-      ply,
-      context,
-    );
-    indices.add(override === true ? 0 : 1);
+    for (let draw = 0; draw < ENVELOPE_DRAWS; draw += 1) {
+      const override = sampler.policy.shouldOverride(
+        envelopeRandom(sampler.style, decisionIndex, draw),
+        { ...sampler.context, ply },
+      );
+      indices.add(override === true ? 0 : 1);
+    }
   }
   return [...indices].sort((left, right) => left - right);
 }
@@ -277,14 +317,14 @@ export function createJournallingLeader(
           context,
         );
       }
-      const envelope = await moveEnvelope(
+      const envelope = moveEnvelope(
         options,
         board,
         side,
         ply,
         refusedSans,
-        context,
         optionSet,
+        fallback,
       );
       const chosen = record(
         observation,
@@ -332,7 +372,7 @@ export function createJournallingLeader(
         scriptedOverride === undefined
           ? inner.shouldOverride(random, ply, context)
           : scriptedOverride;
-      const envelope = overrideEnvelope(options, ply, context);
+      const envelope = overrideEnvelope(options, ply, fallback);
       const chosen = record(
         observation,
         OVERRIDE_OPTIONS,
