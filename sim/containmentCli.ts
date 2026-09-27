@@ -54,7 +54,9 @@ function parseArguments(argv: readonly string[]): ContainmentOptions {
   const leader = (values.get('leader') ?? 'tyrannical') as Leader;
   const opponent = (values.get('opponent') ?? 'tyrannical') as Leader;
   if (!LEADERS.includes(leader) || !LEADERS.includes(opponent)) {
-    throw new Error(`--leader/--opponent must be one of ${LEADERS.join(', ')}.`);
+    throw new Error(
+      `--leader/--opponent must be one of ${LEADERS.join(', ')}.`,
+    );
   }
   return {
     persona: persona as PersonaName,

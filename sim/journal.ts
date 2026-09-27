@@ -157,9 +157,7 @@ async function moveEnvelope(
   side: Side,
   ply: number,
   refusedSans: ReadonlySet<string> | undefined,
-  context: Parameters<
-    NonNullable<HeadlessLeaderPort['chooseMove']>
-  >[5],
+  context: Parameters<NonNullable<HeadlessLeaderPort['chooseMove']>>[5],
   optionSet: readonly Option[],
 ): Promise<number[] | undefined> {
   const samplers = options.envelopeSamplers;
@@ -184,9 +182,7 @@ async function moveEnvelope(
 function overrideEnvelope(
   options: JournalOptions,
   ply: number,
-  context: Parameters<
-    NonNullable<HeadlessLeaderPort['shouldOverride']>
-  >[2],
+  context: Parameters<NonNullable<HeadlessLeaderPort['shouldOverride']>>[2],
 ): number[] | undefined {
   const samplers = options.envelopeSamplers;
   if (samplers === undefined || samplers.length === 0) return undefined;

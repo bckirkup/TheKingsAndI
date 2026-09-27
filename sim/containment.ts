@@ -44,9 +44,7 @@ function optionDistance(
   const enveloped = envelope
     .map((index) => options[index])
     .filter((option): option is Option => option !== undefined);
-  const envelopedMoves = enveloped.filter(
-    (option) => option.kind === 'move',
-  );
+  const envelopedMoves = enveloped.filter((option) => option.kind === 'move');
   if (
     picked?.kind === 'move' &&
     picked.from !== undefined &&
@@ -103,7 +101,10 @@ export function containmentReport(
     bucket.distanceCounts[distance] += 1;
     if (distance > 0) bucket.outOfEnvelope += 1;
     const picked = entry.options[entry.chosen];
-    if (picked?.kind === 'disengage' && !entry.envelope.includes(entry.chosen)) {
+    if (
+      picked?.kind === 'disengage' &&
+      !entry.envelope.includes(entry.chosen)
+    ) {
       bucket.uncoveredDisengage += 1;
       uncoveredDisengageCount += 1;
       firstUncoveredDisengageIndex ??= entry.decisionIndex;

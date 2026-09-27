@@ -23,7 +23,10 @@ const MOVE_OPTIONS: readonly Option[] = [
 ];
 
 function entry(
-  overrides: Partial<JournalEntry> & { chosen: number; options: readonly Option[] },
+  overrides: Partial<JournalEntry> & {
+    chosen: number;
+    options: readonly Option[];
+  },
 ): JournalEntry {
   return {
     decisionIndex: 0,
@@ -38,7 +41,12 @@ function entry(
 describe('containment report', () => {
   it('scores an in-envelope choice as distance 0', () => {
     const report = containmentReport([
-      entry({ chosen: 1, options: MOVE_OPTIONS, envelope: [0, 1], envelopeStyles: ['x'] }),
+      entry({
+        chosen: 1,
+        options: MOVE_OPTIONS,
+        envelope: [0, 1],
+        envelopeStyles: ['x'],
+      }),
     ]);
     expect(report.perKind.move.outOfEnvelope).toBe(0);
     expect(report.perKind.move.distanceCounts).toEqual([1, 0, 0]);
@@ -46,11 +54,21 @@ describe('containment report', () => {
 
   it('scores a same-piece move as distance 1, a different piece as 2', () => {
     const samePiece = containmentReport([
-      entry({ chosen: 1, options: MOVE_OPTIONS, envelope: [0], envelopeStyles: ['x'] }),
+      entry({
+        chosen: 1,
+        options: MOVE_OPTIONS,
+        envelope: [0],
+        envelopeStyles: ['x'],
+      }),
     ]);
     expect(samePiece.perKind.move.distanceCounts).toEqual([0, 1, 0]);
     const otherPiece = containmentReport([
-      entry({ chosen: 2, options: MOVE_OPTIONS, envelope: [0], envelopeStyles: ['x'] }),
+      entry({
+        chosen: 2,
+        options: MOVE_OPTIONS,
+        envelope: [0],
+        envelopeStyles: ['x'],
+      }),
     ]);
     expect(otherPiece.perKind.move.distanceCounts).toEqual([0, 0, 1]);
   });
@@ -81,7 +99,12 @@ describe('containment report', () => {
 
   it('flags a disengage no style would pick', () => {
     const report = containmentReport([
-      entry({ chosen: 3, options: MOVE_OPTIONS, envelope: [0], envelopeStyles: ['x'] }),
+      entry({
+        chosen: 3,
+        options: MOVE_OPTIONS,
+        envelope: [0],
+        envelopeStyles: ['x'],
+      }),
     ]);
     expect(report.perKind.move.distanceCounts).toEqual([0, 0, 1]);
     expect(report.uncoveredDisengageCount).toBe(1);
@@ -90,9 +113,19 @@ describe('containment report', () => {
 
   it('leaves unscored entries out of the rates', () => {
     const report = containmentReport([
-      entry({ chosen: 1, options: MOVE_OPTIONS, envelope: [0], envelopeStyles: ['x'] }),
+      entry({
+        chosen: 1,
+        options: MOVE_OPTIONS,
+        envelope: [0],
+        envelopeStyles: ['x'],
+      }),
       entry({ chosen: 2, options: MOVE_OPTIONS }),
-      entry({ chosen: -1, options: MOVE_OPTIONS, envelope: [0], envelopeStyles: ['x'] }),
+      entry({
+        chosen: -1,
+        options: MOVE_OPTIONS,
+        envelope: [0],
+        envelopeStyles: ['x'],
+      }),
     ]);
     expect(report.scoredDecisions).toBe(1);
     expect(report.perKind.move.decisions).toBe(3);

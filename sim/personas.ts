@@ -81,9 +81,7 @@ function greedyMoveIndex(options: readonly Option[]): number | undefined {
 
 /** Prefer a check ('+'), then a capture ('x') — aggression over greed. */
 function viciousMoveIndex(options: readonly Option[]): number | undefined {
-  return (
-    indexOfSanMatching(options, '+') ?? indexOfSanMatching(options, 'x')
-  );
+  return indexOfSanMatching(options, '+') ?? indexOfSanMatching(options, 'x');
 }
 
 function isOverrideAsk(request: JournalAgentRequest): boolean {
