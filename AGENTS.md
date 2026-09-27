@@ -180,7 +180,7 @@ pnpm lint # eslint + prettier check
 pnpm typecheck # tsc --noEmit, strict
 pnpm test # vitest run
 pnpm test:coverage # lcov for the SonarQube gate (ADR 0033)
-pnpm sim --matches=20 --leader=tyrannical # Lozza default; use --engine=fake in CI
+pnpm sim --matches=20 --leader=tyrannical # --engine=lozza|stockfish|caissa|fake; Lozza default, fake in CI
 pnpm sim:sweep --knob=OUTCOME_TRUST_LOSS_SCALE --values=6,12,18 --matches=4
 ```
 See the `typescript-toolchain` and `sonarqube-quality-gate` skills.
@@ -193,7 +193,7 @@ src/ui/ board, overlays, gauges, dashboards (no game logic)
 src/orchestration/ match loop; only place allowed to mutate match state
 src/psychology/ pure reducers: utility, verdicts, trust/affinity/class bias
 src/chess/ chess.js wrapper, piece-identity map, threat features
-src/engine/ stockfish.wasm pool + insight broker
+src/engine/ EnginePort adapters (Lozza, Stockfish WASM, Caissa native, fake) + insight broker
 src/narrative/ template dialogue + optional LLM adapter
 src/persistence/ Dexie schema, migrations, roster export/import
 sim/ headless CLI harness, scripted AI leaders, metrics

@@ -18,7 +18,7 @@ evidence plumbing, and room-scale product** — the gap ADR 0079 names explicitl
 
 | Gap | Authoritative status |
 |-----|----------------------|
-| Browser match ≠ harness chess | Interactive match uses a **fake** engine (`src/app/README.md`) |
+| Browser match ≠ harness chess | Interactive match uses a **fake** engine (`src/app/README.md`); the harness selects among `lozza` (default), `stockfish`, `caissa`, `fake` |
 | GUI not yet a journal writer | D219 ruled; relationship inspector still leaks past `Observation` |
 | Model players / containment | Journal decorator exists; model agents and computed envelope do not |
 | Facilitator dashboard & audit UI | Types and folds exist; M5b host/dashboard deferred |

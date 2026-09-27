@@ -30,6 +30,10 @@ All of the above must be green before a PR. Node 20 LTS.
 
 ## Engine cost and verification scope
 
+The harness engine menu is `--engine=lozza` (default), `stockfish`, `caissa`
+(opt-in — resolves the native binary via `CAISSA_ENGINE_PATH`), and `fake`
+(CI/test). The browser app constructs the fake port only.
+
 The default simulation uses real Lozza with a harness-only `--depth-cap=4`
 wrapper. The documented 20-match smoke takes approximately 5 seconds on the
 reference box. The cap is recorded in the engine determinism ID and does not
