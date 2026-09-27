@@ -92,7 +92,12 @@ describe('interactive match journal (ADR 0062 / D219)', () => {
     expect(entry?.resolvedBy).toBe('agent');
     expect(entry?.chosen).toBe(e4Index);
     expect(entry?.options).toEqual(expectedOptions);
-    expect(entry?.options[entry.chosen]).toEqual({ kind: 'move', san: 'e4' });
+    expect(entry?.options[entry.chosen]).toEqual({
+      kind: 'move',
+      san: 'e4',
+      from: 'e2',
+      to: 'e4',
+    });
     expect(entry?.options[entry.options.length - 1]).toEqual(DISENGAGE);
     expect(entry?.observationDigest).toBe(
       digest(projectMoveObservation({ board, side: 'w', ply: 1, roster })),

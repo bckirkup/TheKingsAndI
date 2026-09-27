@@ -77,6 +77,12 @@ export interface RunMatchOptions {
   readonly engine: EnginePort;
   readonly journalEntries?: JournalEntry[];
   readonly journalAgent?: JournalAgent;
+  /** Persona/agent for the player seat; defaults to `journalAgent`, then scripted. */
+  readonly leaderJournalAgent?: JournalAgent;
+  /** Persona/agent for the opponent seat; defaults to `journalAgent`, then scripted. */
+  readonly opponentJournalAgent?: JournalAgent;
+  /** Styles sampled for each leader-seat entry's containment envelope (ADR 0063 §3). */
+  readonly envelopeStyles?: readonly Leader[];
   readonly griefEnabled?: boolean;
 }
 
@@ -110,12 +116,19 @@ export async function runMatch(
     options.journalEntries === undefined
       ? undefined
       : { entries: options.journalEntries };
+  const envelopeSamplers = options.envelopeStyles?.map((style) => ({
+    style,
+    port: leaderPort(style, playerContextBase),
+  }));
   const opponentPort =
     journalConfig === undefined
       ? rawOpponentPort
       : createJournallingLeader(rawOpponentPort, {
           ...journalConfig,
-          agent: options.journalAgent ?? scriptedAgent('scripted:opponent'),
+          agent:
+            options.opponentJournalAgent ??
+            options.journalAgent ??
+            scriptedAgent('scripted:opponent'),
           match: options.matchIndex,
         });
   const playerPort =
@@ -123,8 +136,12 @@ export async function runMatch(
       ? rawLeaderPort
       : createJournallingLeader(rawLeaderPort, {
           ...journalConfig,
-          agent: options.journalAgent ?? scriptedAgent('scripted:leader'),
+          agent:
+            options.leaderJournalAgent ??
+            options.journalAgent ??
+            scriptedAgent('scripted:leader'),
           match: options.matchIndex,
+          ...(envelopeSamplers === undefined ? {} : { envelopeSamplers }),
         });
   const adaptiveOpponent =
     opponent === 'chastened' ||
