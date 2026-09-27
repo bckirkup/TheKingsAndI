@@ -129,4 +129,15 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+const isMain =
+  process.argv[1] !== undefined &&
+  import.meta.url.endsWith(process.argv[1].replaceAll('\\', '/'));
+
+if (isMain) {
+  try {
+    await main();
+  } catch (error: unknown) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
+}
