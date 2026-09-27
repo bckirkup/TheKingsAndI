@@ -107,8 +107,11 @@ shell command.
 Leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`,
 `pure_tactician`, `redeemer`.
 
-Engines: `lozza` (default runtime), `fake` (explicit CI/test mode), `stockfish`
-(explicit high-fidelity calibration mode).
+Engines: `lozza` (default runtime), `stockfish` (explicit high-fidelity
+calibration mode; GPL-3.0 — excluded from the permissive build), `caissa`
+(opt-in; resolves the native binary via `CAISSA_ENGINE_PATH`, MIT code but its
+`.pnn` net's redistribution terms are open — see `docs/engine_licensing.md`),
+`fake` (explicit CI/test mode; position-coherent, never calibration evidence).
 
 Lozza uses a harness-only default depth cap of 4 so the documented 20-match
 smoke remains tractable. `--depth-cap=N` clamps only the depth sent to the

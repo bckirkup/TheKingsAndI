@@ -32,7 +32,7 @@ credence state or the engine audit stream — see
 ```bash
 pnpm install
 pnpm lint && pnpm typecheck && pnpm test
-pnpm sim --matches=20 --leader=tyrannical # Lozza default; --engine=fake for CI
+pnpm sim --matches=20 --leader=tyrannical # --engine=lozza|stockfish|caissa|fake; Lozza default, fake in CI
 ```
 
 | Document | What it answers |

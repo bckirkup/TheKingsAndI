@@ -37,6 +37,10 @@ or the model is not responding to leadership behavior at all.
   cost is more than 251 seconds **per match** for one production-depth
   tyrannical match, so a Stockfish sweep requires an explicit runtime budget.
   Never launch one as casual verification.
+- `--engine=caissa` is a fourth option — MIT-licensed native binary, opt-in via
+  `CAISSA_ENGINE_PATH` (no machine gets it by default; see
+  `docs/engine_licensing.md` for the open `.pnn` net-license question). It is
+  the Stockfish-class permissive candidate for engine comparisons.
 - One seed per match, derived from a campaign seed; record both in the output so
   any interesting match can be replayed exactly.
 - Sweep one parameter at a time. A sweep that moves three weights at once tells
