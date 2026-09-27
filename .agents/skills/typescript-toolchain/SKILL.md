@@ -62,6 +62,11 @@ Run `pnpm test:coverage` only when the SonarQube quality gate requests it.
 For status questions, read committed calibration results in
 `docs/calibration/` instead of re-running the harness.
 
+Verification for a non-UI change ends here: vitest, the sim smoke, lint,
+typecheck, and build are the whole gate. Browser/GUI-driven testing belongs to
+the `browser-e2e-testing` skill and is only warranted when the PR's principal
+subject is a user-facing UI feature (AGENTS.md, PR Requirements).
+
 ## Agent-free verification (do not burn agent time on the gate)
 
 GitHub Actions owns routine verification — see `docs/testing_strategy.md` §7.

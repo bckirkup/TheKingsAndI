@@ -218,6 +218,12 @@ constraint — see `LICENSING.md`. Contributions require the grant in
 
 ## PR Requirements
 - Lint, typecheck, tests, and headless sim smoke all pass.
+- Verification is shell-level by default — vitest, the headless sim smoke,
+  lint, typecheck, and build (`typescript-toolchain` skill). Browser/GUI-driven
+  testing (`browser-e2e-testing` skill) is reserved for PRs whose **principal
+  subject is a user-facing UI feature** — a screen, overlay, board interaction,
+  or rendered state. A logic seam that happens to add a small control does not
+  qualify on its own.
 - New config keys ship with a wiring (sensitivity) probe; add a golden only
   when the surface is intentionally frozen.
 - Decisions that are expensive to reverse ship with an ADR.
