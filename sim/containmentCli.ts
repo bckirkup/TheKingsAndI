@@ -11,6 +11,12 @@ import type { JournalEntry } from './journal';
 import { scriptedAgent } from './journal';
 import type { Leader } from './cli';
 import { LEADERS } from './cli';
+import {
+  authoredPersonaAgent,
+  readAuthoredResponses,
+  recordingAgent,
+  type AuthoredAsk,
+} from './authoredPersona';
 import { personaAgent, PERSONAS, type PersonaName } from './personas';
 import { createStartingRoster } from './roster';
 import { runMatch } from './match';
@@ -23,6 +29,14 @@ import { runMatch } from './match';
  *
  * Usage: node --import tsx sim/containmentCli.ts --persona=disengaged \
  *   --matches=2 --seed=7 --engine=fake [--journal=out.json]
+ *
+ * Authored personas (ADR 0062 path B): `--dump-asks=<file>` writes every ask
+ * the persona was shown; a Devin session authors `responses.json`
+ * (`decisionIndex → {chosen, rationale, at?}`); `--responses=<file>` replays
+ * with the authored agent so the journal carries a real model's decisions and
+ * rationale. Passing both dumps the asks along the deviated trajectory — the
+ * iteration loop when a deviation reshapes later asks. Both are sim-only
+ * machinery — no runtime LLM.
  */
 
 interface ContainmentOptions {
@@ -33,6 +47,8 @@ interface ContainmentOptions {
   readonly opponent: Leader;
   readonly engine: SimEngineKind;
   readonly journal: string | undefined;
+  readonly dumpAsks: string | undefined;
+  readonly responses: string | undefined;
 }
 
 function parseArguments(argv: readonly string[]): ContainmentOptions {
@@ -66,13 +82,25 @@ function parseArguments(argv: readonly string[]): ContainmentOptions {
     opponent,
     engine: (values.get('engine') ?? 'fake') as SimEngineKind,
     journal: values.get('journal'),
+    dumpAsks: values.get('dump-asks'),
+    responses: values.get('responses'),
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
   const engine = await createSimEngine(options.engine);
-  const agent = personaAgent(options.persona);
+  const asks: AuthoredAsk[] = [];
+  let agent =
+    options.responses !== undefined
+      ? authoredPersonaAgent(
+          options.persona,
+          await readAuthoredResponses(options.responses),
+        )
+      : personaAgent(options.persona);
+  if (options.dumpAsks !== undefined) {
+    agent = recordingAgent(agent, asks);
+  }
   const journal: JournalEntry[] = [];
   const board = LivingBoard.standard();
   for (let matchIndex = 1; matchIndex <= options.matches; matchIndex += 1) {
@@ -132,6 +160,15 @@ async function main(): Promise<void> {
       `${canonicalJson({ persona: agent.identity, entries: journal, report: serializableReport })}\n`,
       'utf8',
     );
+  }
+  if (options.dumpAsks !== undefined) {
+    await mkdir(dirname(options.dumpAsks), { recursive: true });
+    await writeFile(
+      options.dumpAsks,
+      `${canonicalJson({ persona: agent.identity, asks })}\n`,
+      'utf8',
+    );
+    console.log(`asks dumped=${asks.length} -> ${options.dumpAsks}`);
   }
 }
 

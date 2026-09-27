@@ -222,6 +222,42 @@ export default tseslint.config(
     },
   },
   {
+    // ADR 0004 + ADR 0062: no runtime LLM in the shipped package. Model calls
+    // exist only under sim/ as instruments producing decision journals; a
+    // journal — never a client — is what may ship. Content authoring
+    // (dialogue, pack text) is offline generation committed as assets, not an
+    // import.
+    name: 'no-runtime-llm',
+    files: ['src/**', 'tests/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'openai',
+                '@anthropic-ai/*',
+                '@google/genai',
+                '@google/generative-ai',
+                '@langchain/*',
+                'langchain',
+                'cohere-ai',
+                '@mistralai/*',
+                'ollama',
+                '@azure/openai',
+                '@aws-sdk/client-bedrock*',
+                'replicate',
+              ],
+              message:
+                'ADR 0004/0062: no runtime LLM. Model calls live under sim/ only, producing replayable decision journals.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: 'deterministic-math',
     files: ['src/psychology/**', 'src/chess/**'],
     rules: {

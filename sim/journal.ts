@@ -50,10 +50,31 @@ export interface JournalAgentRequest {
   readonly decisionIndex?: number;
 }
 
+/**
+ * A decision may carry a per-entry `rationale` (journal-only; no reducer may
+ * read it — ADR 0062 §2). A bare number is shorthand for `{chosen: number}`.
+ */
+export interface JournalDecision {
+  readonly chosen?: number;
+  readonly rationale?: string;
+}
+
+export type JournalDecisionResult = number | JournalDecision | undefined;
+
+export function decisionChoice(result: JournalDecisionResult): {
+  chosen: number | undefined;
+  rationale: string | undefined;
+} {
+  if (typeof result === 'number' || result === undefined) {
+    return { chosen: result, rationale: undefined };
+  }
+  return { chosen: result.chosen, rationale: result.rationale };
+}
+
 export interface JournalAgent {
   readonly identity: AgentIdentity;
   readonly scripted?: boolean;
-  decide(request: JournalAgentRequest): number | undefined;
+  decide(request: JournalAgentRequest): JournalDecisionResult;
 }
 
 export interface JournalOptions {
@@ -251,9 +272,11 @@ export function createJournallingLeader(
     fallbackChoice: number | undefined,
     at: JournalEntry['at'],
     envelope?: readonly number[],
+    decisionRationale?: string,
   ): number => {
     const resolved = validChoice(choice, optionSet) ? choice : fallbackChoice;
     const chosen = validChoice(choice, optionSet) ? choice : -1;
+    const rationale = decisionRationale ?? options.rationale;
     appendJournalEntry({
       entries: options.entries,
       at,
@@ -261,9 +284,7 @@ export function createJournallingLeader(
       options: optionSet,
       chosen,
       agent: options.agent.identity,
-      ...(options.rationale === undefined
-        ? {}
-        : { rationale: options.rationale }),
+      ...(rationale === undefined ? {} : { rationale }),
       resolvedBy: validChoice(choice, optionSet) ? 'agent' : 'fallback',
       ...(envelope === undefined
         ? {}
@@ -298,14 +319,17 @@ export function createJournallingLeader(
         : undefined;
       const scriptedChoice = selectedIndex(optionSet, scriptedMove);
       const observationDigest = digest(observation);
-      const agentChoice = options.agent.decide({
-        observation,
-        observationDigest,
-        options: optionSet,
-        agent: options.agent.identity,
-        decisionIndex: options.entries.length,
-        ...(scriptedChoice === undefined ? {} : { scriptedChoice }),
-      });
+      const decision = decisionChoice(
+        options.agent.decide({
+          observation,
+          observationDigest,
+          options: optionSet,
+          agent: options.agent.identity,
+          decisionIndex: options.entries.length,
+          ...(scriptedChoice === undefined ? {} : { scriptedChoice }),
+        }),
+      );
+      const agentChoice = decision.chosen;
       let fallback: HeadlessMoveChoice | undefined = scriptedMove;
       if (!validChoice(agentChoice, optionSet)) {
         fallback ??= await inner.chooseMove(
@@ -333,6 +357,7 @@ export function createJournallingLeader(
         selectedIndex(optionSet, fallback),
         { match: options.match, ply, kind: 'move', side },
         envelope,
+        decision.rationale,
       );
       if (chosen < 0) return fallback;
       const selected = optionSet[chosen];
@@ -360,14 +385,17 @@ export function createJournallingLeader(
       const scriptedChoice =
         scriptedOverride === undefined ? undefined : scriptedOverride ? 0 : 1;
       const observationDigest = digest(observation);
-      const agentChoice = options.agent.decide({
-        observation,
-        observationDigest,
-        options: OVERRIDE_OPTIONS,
-        agent: options.agent.identity,
-        decisionIndex: options.entries.length,
-        ...(scriptedChoice === undefined ? {} : { scriptedChoice }),
-      });
+      const decision = decisionChoice(
+        options.agent.decide({
+          observation,
+          observationDigest,
+          options: OVERRIDE_OPTIONS,
+          agent: options.agent.identity,
+          decisionIndex: options.entries.length,
+          ...(scriptedChoice === undefined ? {} : { scriptedChoice }),
+        }),
+      );
+      const agentChoice = decision.chosen;
       const fallback =
         scriptedOverride === undefined
           ? inner.shouldOverride(random, ply, context)
@@ -380,6 +408,7 @@ export function createJournallingLeader(
         fallback ? 0 : 1,
         { match: options.match, ply, kind: 'override', side: context.side },
         envelope,
+        decision.rationale,
       );
       // Walk-away consequences are not modelled at the override ask yet.
       return chosen === 0;
