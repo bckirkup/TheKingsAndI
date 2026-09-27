@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Side } from '../chess';
-import { createFakeEnginePort } from '../engine/fake';
+import { createLozzaWorkerPort } from '../engine/workerLozza';
 import { lineFor } from '../narrative';
 import type {
   MatchResult,
@@ -67,7 +67,7 @@ function useMatchSession(
   const sessionRef = useRef<MatchSession | null>(null);
   sessionRef.current ??= new MatchSession({
     seed,
-    engine: createFakeEnginePort('ui-fake/depth-fixed'),
+    engine: createLozzaWorkerPort(),
     journal: { match: matchIndex },
     initialRoster:
       initialLineup === undefined

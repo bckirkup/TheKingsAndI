@@ -6,12 +6,12 @@ import {
   DEFAULT_MAX_INFO_LINES_PER_SEARCH,
   MAX_PLAUSIBLE_CENTIPAWNS,
   MAX_PLAUSIBLE_MATE_DISTANCE,
-  UciEngine,
   UciInfoLineLimitError,
   UciUnsoundScoreError,
   isUnsoundUciScore,
   parseUciScore,
 } from '../src/engine/uci';
+import { spawnUciEngine } from '../src/engine/uciNode';
 import {
   createLozzaPort,
   disposeLozzaPort,
@@ -85,7 +85,7 @@ describe('D172 score soundness', () => {
     const fixture = fileURLToPath(
       new URL('./fixtures/uci-unsound-then-sound.mjs', import.meta.url),
     );
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: fixture,
       maxScoreEscalations: 1,
     });
@@ -94,7 +94,7 @@ describe('D172 score soundness', () => {
     ).resolves.toMatchObject({ scoreCp: 42, sound: true });
     await engine.dispose();
 
-    const exhausted = new UciEngine({
+    const exhausted = spawnUciEngine({
       enginePath: fileURLToPath(
         new URL('./fixtures/uci-mate-zero.mjs', import.meta.url),
       ),
@@ -107,7 +107,7 @@ describe('D172 score soundness', () => {
   });
 
   it('fails loudly and disposes when the info-line ceiling is exceeded', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: fileURLToPath(
         new URL('./fixtures/uci-info-runaway.mjs', import.meta.url),
       ),
@@ -125,7 +125,7 @@ describe('D172 real Lozza regression', () => {
   it.each(poisonFens)(
     'returns promptly for the poison position at all requested depths (%s)',
     async (fen) => {
-      const engine = new UciEngine({
+      const engine = spawnUciEngine({
         enginePath: artifactPath,
         multiPv: 8,
       });
@@ -145,7 +145,7 @@ describe('D172 real Lozza regression', () => {
   it.each(mateInOneFens)(
     'reports a sound mate-in-one and its mating move (%s)',
     async ({ fen, move }) => {
-      const engine = new UciEngine({
+      const engine = spawnUciEngine({
         enginePath: artifactPath,
         multiPv: 8,
       });
@@ -166,7 +166,7 @@ describe('D172 real Lozza regression', () => {
   it.each(highScoreFens)(
     'accepts a measured overwhelming-position score without escalation at depth 4 (%s)',
     async ({ fen, move }) => {
-      const engine = new UciEngine({
+      const engine = spawnUciEngine({
         enginePath: artifactPath,
         multiPv: 8,
       });
@@ -185,7 +185,7 @@ describe('D172 real Lozza regression', () => {
   );
 
   it('keeps the earlier killer sound at depth 4 without escalation', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: artifactPath,
       multiPv: 8,
     });
@@ -203,7 +203,7 @@ describe('D172 real Lozza regression', () => {
   }, 120_000);
 
   it('keeps the default runaway ceiling well above a real depth-8 MultiPV-8 search', async () => {
-    const engine = new UciEngine({
+    const engine = spawnUciEngine({
       enginePath: artifactPath,
       multiPv: 8,
     });

@@ -79,8 +79,8 @@ facilitator **document** templates that do not touch balance knobs.
 ## Block A — One honest browser match (ADR 0079 step 1)
 
 **Goal:** Interactive path writes `JournalEntry`s; export `{ journal, seed, determinismId }`;
-Lozza or Stockfish WASM behind the same barrier as harness; `ui/` reads only
-observation-shaped inputs; leak test in CI.
+Lozza in a Web Worker behind the same barrier as harness (`workerLozza.ts`);
+`ui/` reads only observation-shaped inputs; leak test in CI.
 
 | Session focus | Deliverable |
 |---------------|-------------|
