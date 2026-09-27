@@ -58,6 +58,7 @@ function useMatchSession(
   initialLineup: readonly StoredPieceState[] | undefined,
   opponentArchetype: OpponentArchetype,
   rosterPreamble: readonly MatchEvent[],
+  matchIndex: number,
 ): {
   readonly snapshot: MatchSessionSnapshot;
   readonly session: MatchSession;
@@ -67,6 +68,7 @@ function useMatchSession(
   sessionRef.current ??= new MatchSession({
     seed,
     engine: createFakeEnginePort('ui-fake/depth-fixed'),
+    journal: { match: matchIndex },
     initialRoster:
       initialLineup === undefined
         ? activeLineup(initialRoster)
@@ -101,6 +103,8 @@ export interface MatchScreenProps {
     readonly result: MatchResult;
     readonly winScore: number;
     readonly engineAudit: MatchSessionSnapshot['engineAudit'];
+    readonly engineDeterminismId: string;
+    readonly journal: MatchSessionSnapshot['journal'];
   }) => void;
 }
 
@@ -122,6 +126,7 @@ export function MatchScreen({
     initialLineup,
     opponentArchetype,
     rosterPreamble,
+    matchIndex,
   );
   const { board, roster, phase, pending, dialogueCue, playerSide } = snapshot;
   const [reported, setReported] = useState(false);
@@ -195,6 +200,8 @@ export function MatchScreen({
       result,
       winScore: snapshot.winScore,
       engineAudit: snapshot.engineAudit,
+      engineDeterminismId: snapshot.determinismId,
+      journal: snapshot.journal,
     });
   }, [
     onMatchFinished,

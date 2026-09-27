@@ -1,11 +1,18 @@
 import { digest } from '../src/core/digest';
-import { compareCodeUnits } from '../src/core/canonicalJson';
 import {
   extractMoveFeatures,
   type LivingBoard,
   type MoveIntent,
   type Side,
 } from '../src/chess';
+import {
+  appendJournalEntry,
+  optionsForMove,
+  OVERRIDE_OPTIONS,
+  type AgentIdentity,
+  type JournalEntry,
+  type Option,
+} from '../src/orchestration/journal';
 import {
   projectMoveObservation,
   projectOverrideObservation,
@@ -14,36 +21,19 @@ import {
 } from '../src/orchestration';
 import type { HeadlessMoveChoice } from '../src/orchestration/headlessMatch';
 
-export type DecisionKind = 'move' | 'override';
-
-export interface Option {
-  readonly kind: 'move' | 'override' | 'stand' | 'disengage';
-  readonly san?: string;
-}
-
-export interface AgentIdentity {
-  readonly id: string;
-  readonly promptVersion: string;
-  readonly optionSetVersion: string;
-}
-
-export interface JournalEntry {
-  readonly decisionIndex: number;
-  readonly at: {
-    readonly match: number;
-    readonly ply?: number;
-    readonly kind: DecisionKind;
-    readonly side: Side;
-  };
-  readonly observation: Observation;
-  readonly observationDigest: string;
-  readonly options: readonly Option[];
-  readonly chosen: number;
-  readonly rationale?: string;
-  readonly agent: AgentIdentity;
-  readonly resolvedBy?: 'agent' | 'fallback';
-  readonly fallbackPolicy?: 'inner';
-}
+export type {
+  AgentIdentity,
+  DecisionKind,
+  JournalEntry,
+  Option,
+} from '../src/orchestration/journal';
+export {
+  appendJournalEntry,
+  DISENGAGE,
+  humanAgent,
+  optionsForMove,
+  OVERRIDE_OPTIONS,
+} from '../src/orchestration/journal';
 
 export interface JournalAgentRequest {
   readonly observation: Observation;
@@ -65,22 +55,6 @@ export interface JournalOptions {
   readonly match: number;
   readonly entries: JournalEntry[];
   readonly rationale?: string;
-}
-
-const DISENGAGE: Option = { kind: 'disengage' };
-
-function optionsForMove(board: LivingBoard, side: Side): Option[] {
-  return [
-    ...board
-      .legalMoves()
-      .filter((intent) => board.pieceAt(intent.from)?.side === side)
-      .map((intent) => {
-        const features = extractMoveFeatures(board, intent);
-        return { kind: 'move' as const, san: features.san };
-      })
-      .sort((left, right) => compareCodeUnits(left.san ?? '', right.san ?? '')),
-    DISENGAGE,
-  ];
 }
 
 function selectedIndex(
@@ -163,7 +137,6 @@ export function createJournallingLeader(
   const scripted = options.agent.scripted === true;
   const record = (
     observation: Observation,
-    observationDigest: string,
     optionSet: readonly Option[],
     choice: number | undefined,
     fallbackChoice: number | undefined,
@@ -171,24 +144,17 @@ export function createJournallingLeader(
   ): number => {
     const resolved = validChoice(choice, optionSet) ? choice : fallbackChoice;
     const chosen = validChoice(choice, optionSet) ? choice : -1;
-    const nextDecisionIndex = options.entries.length;
-    options.entries.push({
-      decisionIndex: nextDecisionIndex,
+    appendJournalEntry({
+      entries: options.entries,
       at,
       observation,
-      observationDigest,
       options: optionSet,
       chosen,
+      agent: options.agent.identity,
       ...(options.rationale === undefined
         ? {}
         : { rationale: options.rationale }),
-      agent: options.agent.identity,
-      ...(validChoice(choice, optionSet)
-        ? { resolvedBy: 'agent' as const }
-        : {
-            resolvedBy: 'fallback' as const,
-            fallbackPolicy: 'inner' as const,
-          }),
+      resolvedBy: validChoice(choice, optionSet) ? 'agent' : 'fallback',
     });
     return resolved ?? -1;
   };
@@ -235,7 +201,6 @@ export function createJournallingLeader(
       }
       const chosen = record(
         observation,
-        observationDigest,
         optionSet,
         agentChoice,
         selectedIndex(optionSet, fallback),
@@ -261,11 +226,6 @@ export function createJournallingLeader(
         candidateSan: context.san,
         objectionStrength: context.objectionStrength,
       });
-      const optionSet: Option[] = [
-        { kind: 'override' },
-        { kind: 'stand' },
-        DISENGAGE,
-      ];
       const scriptedOverride = scripted
         ? inner.shouldOverride(random, ply, context)
         : undefined;
@@ -275,7 +235,7 @@ export function createJournallingLeader(
       const agentChoice = options.agent.decide({
         observation,
         observationDigest,
-        options: optionSet,
+        options: OVERRIDE_OPTIONS,
         agent: options.agent.identity,
         decisionIndex: options.entries.length,
         ...(scriptedChoice === undefined ? {} : { scriptedChoice }),
@@ -286,8 +246,7 @@ export function createJournallingLeader(
           : scriptedOverride;
       const chosen = record(
         observation,
-        observationDigest,
-        optionSet,
+        OVERRIDE_OPTIONS,
         agentChoice,
         fallback ? 0 : 1,
         { match: options.match, ply, kind: 'override', side: context.side },

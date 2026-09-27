@@ -8,6 +8,7 @@ import type {
   PieceState,
 } from '../psychology';
 import type { EngineAuditEntry } from '../engine';
+import type { JournalEntry } from '../orchestration/journal';
 import type { LeaderId } from '../core/ids';
 
 export const SCHEMA_VERSION = 4;
@@ -148,6 +149,10 @@ export interface MatchRecord {
   readonly winScore?: number;
   readonly result: MatchResult;
   readonly audit: MatchAudit;
+  /** Engine determinism identity for the played match (ADR 0067/0069). */
+  readonly engineDeterminismId?: string;
+  /** Decision journal written by the interactive match (ADR 0062, D219). */
+  readonly journal?: readonly JournalEntry[];
   readonly determinismId: string;
   readonly psychConfigVersion: string;
   readonly schemaVersion: number;

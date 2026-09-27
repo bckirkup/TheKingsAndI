@@ -164,6 +164,8 @@ export function App(): JSX.Element {
                 identities: result.identities,
                 events,
                 engineAudit: result.engineAudit,
+                engineDeterminismId: result.engineDeterminismId,
+                journal: result.journal,
                 winScore: result.winScore,
                 result: result.result,
               });
