@@ -240,13 +240,6 @@ export function createJournallingLeader(
     });
     return resolved ?? -1;
   };
-  const envelopeRandom = (style: string) =>
-    createSeededRandom(
-      Number.parseInt(
-        digest(`envelope:${style}:${options.entries.length}`).slice(0, 8),
-        16,
-      ),
-    );
   return {
     async chooseMove(board, side, random, ply, refusedSans, context) {
       if (context === undefined) {

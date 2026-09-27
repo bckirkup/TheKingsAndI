@@ -35,17 +35,6 @@ interface ContainmentOptions {
   readonly journal: string | undefined;
 }
 
-function requireValue(
-  values: Map<string, string>,
-  key: string,
-): string {
-  const value = values.get(key);
-  if (value === undefined || value === '') {
-    throw new Error(`--${key} requires a value.`);
-  }
-  return value;
-}
-
 function parseArguments(argv: readonly string[]): ContainmentOptions {
   const values = new Map<string, string>();
   for (const arg of argv) {
