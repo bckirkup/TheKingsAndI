@@ -22,6 +22,21 @@ then re-folds its recorded weeks across fixed recognition-threshold grids.
 It prints per-style incidence tables and writes the same tables, plus play and
 record digests, to the requested JSON output.
 
+`sim:containment` runs the ADR 0079 step-2 persona sweep: one scripted persona
+(`--persona=honest|merchant|vicious|bored|disengaged`) sits in the leader seat
+behind `AgentIdentity`, every leader-seat ask is scored against the full NPC
+style envelope (all `LEADERS`), and each journal entry carries the computed
+`envelope` so `sim/containment.ts` reports `outOfEnvelopeRate`, distance-2
+clusters, and uncovered `disengage` from the journal alone:
+
+```bash
+pnpm sim:containment --persona=disengaged --matches=2 --seed=7 --engine=fake
+```
+
+The personas are deterministic stand-ins for the authored prompts — they give
+the containment machinery a behavior surface before any model checkpoint is
+involved; a real model agent swaps onto the same `JournalAgent` seam.
+
 `--campaign-length=N` is the number of sequential matches in one campaign;
 `--campaign=N` remains an alias. `--matches=T` is the total number of matches
 across the run, and `--campaigns=M` is the number of independent campaigns.
@@ -105,7 +120,11 @@ optional commit field is left unavailable rather than discovered by a fragile
 shell command.
 
 Leaders: `tyrannical`, `supportive`, `volatile`, `servant`, `random`,
-`pure_tactician`, `redeemer`.
+`pure_tactician`, `redeemer`, `cold_winner`, `rebuilder`, `exacting`,
+`absentee`, `steady`, `chastened`, `escalator`, `roster_first`, plus the
+exploit tier `win_maxer`, `generation_cycler`, `cascade_dodger`,
+`dismissal_fisher`, `tanker`, `commendation_farmer` (the full list is the
+containment envelope).
 
 Engines: `lozza` (default runtime), `stockfish` (explicit high-fidelity
 calibration mode; GPL-3.0 — excluded from the permissive build), `caissa`
@@ -176,6 +195,10 @@ workflow, with an explicit match budget. See `docs/testing_strategy.md` §7.
 | `degeneracy.ts` | Non-degeneracy smoke detectors |
 | `parallel.ts` | Campaign planning, sharding, manifests, and run aggregation |
 | `aggregate.ts` | Shard-artifact aggregation CLI |
+| `journal.ts` | Journalling leader wrapper — agent seam, envelope sampling, replay |
+| `personas.ts` | ADR 0079 step-2 scripted persona policies behind `AgentIdentity` |
+| `containment.ts` | Containment report: `outOfEnvelopeRate`, distance, uncovered disengage |
+| `containmentCli.ts` | Persona × envelope sweep CLI (`pnpm sim:containment`) |
 | `world.ts` | World-persistent commanders (ADR 0047) — pairing, enemy rosters, checkpoints |
 
 Depth-`D_i` insights feed psychology through the ADR 0034 barrier. Both

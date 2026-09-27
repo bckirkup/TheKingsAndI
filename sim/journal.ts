@@ -1,4 +1,5 @@
 import { digest } from '../src/core/digest';
+import { createSeededRandom } from '../src/core/random';
 import {
   extractMoveFeatures,
   type LivingBoard,
@@ -55,6 +56,16 @@ export interface JournalOptions {
   readonly match: number;
   readonly entries: JournalEntry[];
   readonly rationale?: string;
+  /**
+   * ADR 0063 §3 — scripted NPC policies to score each ask against, recorded on
+   * the entry so containment is computed from the journal alone. Each sampler
+   * is asked with a derived PRNG (seeded by style + decisionIndex), so the
+   * match stream is untouched.
+   */
+  readonly envelopeSamplers?: readonly {
+    readonly style: string;
+    readonly port: HeadlessLeaderPort;
+  }[];
 }
 
 function selectedIndex(
@@ -130,6 +141,64 @@ function validChoice(
   return choice !== undefined && choice >= 0 && choice < options.length;
 }
 
+/** Envelope sampling runs on a per-style derived stream (ADR 0062 §4). */
+function envelopeRandom(style: string, decisionIndex: number) {
+  return createSeededRandom(
+    Number.parseInt(
+      digest(`envelope:${style}:${decisionIndex}`).slice(0, 8),
+      16,
+    ),
+  );
+}
+
+async function moveEnvelope(
+  options: JournalOptions,
+  board: LivingBoard,
+  side: Side,
+  ply: number,
+  refusedSans: ReadonlySet<string> | undefined,
+  context: Parameters<NonNullable<HeadlessLeaderPort['chooseMove']>>[5],
+  optionSet: readonly Option[],
+): Promise<number[] | undefined> {
+  const samplers = options.envelopeSamplers;
+  if (samplers === undefined || samplers.length === 0) return undefined;
+  const decisionIndex = options.entries.length;
+  const indices = new Set<number>();
+  for (const sampler of samplers) {
+    const choice = await sampler.port.chooseMove(
+      board,
+      side,
+      envelopeRandom(sampler.style, decisionIndex),
+      ply,
+      refusedSans,
+      context,
+    );
+    const index = selectedIndex(optionSet, choice);
+    if (index !== undefined && index >= 0) indices.add(index);
+  }
+  return [...indices].sort((left, right) => left - right);
+}
+
+function overrideEnvelope(
+  options: JournalOptions,
+  ply: number,
+  context: Parameters<NonNullable<HeadlessLeaderPort['shouldOverride']>>[2],
+): number[] | undefined {
+  const samplers = options.envelopeSamplers;
+  if (samplers === undefined || samplers.length === 0) return undefined;
+  const decisionIndex = options.entries.length;
+  const indices = new Set<number>();
+  for (const sampler of samplers) {
+    const override = sampler.port.shouldOverride(
+      envelopeRandom(sampler.style, decisionIndex),
+      ply,
+      context,
+    );
+    indices.add(override === true ? 0 : 1);
+  }
+  return [...indices].sort((left, right) => left - right);
+}
+
 export function createJournallingLeader(
   inner: HeadlessLeaderPort,
   options: JournalOptions,
@@ -141,6 +210,7 @@ export function createJournallingLeader(
     choice: number | undefined,
     fallbackChoice: number | undefined,
     at: JournalEntry['at'],
+    envelope?: readonly number[],
   ): number => {
     const resolved = validChoice(choice, optionSet) ? choice : fallbackChoice;
     const chosen = validChoice(choice, optionSet) ? choice : -1;
@@ -155,6 +225,14 @@ export function createJournallingLeader(
         ? {}
         : { rationale: options.rationale }),
       resolvedBy: validChoice(choice, optionSet) ? 'agent' : 'fallback',
+      ...(envelope === undefined
+        ? {}
+        : {
+            envelope,
+            envelopeStyles: (options.envelopeSamplers ?? []).map(
+              (sampler) => sampler.style,
+            ),
+          }),
     });
     return resolved ?? -1;
   };
@@ -199,12 +277,22 @@ export function createJournallingLeader(
           context,
         );
       }
+      const envelope = await moveEnvelope(
+        options,
+        board,
+        side,
+        ply,
+        refusedSans,
+        context,
+        optionSet,
+      );
       const chosen = record(
         observation,
         optionSet,
         agentChoice,
         selectedIndex(optionSet, fallback),
         { match: options.match, ply, kind: 'move', side },
+        envelope,
       );
       if (chosen < 0) return fallback;
       const selected = optionSet[chosen];
@@ -244,12 +332,14 @@ export function createJournallingLeader(
         scriptedOverride === undefined
           ? inner.shouldOverride(random, ply, context)
           : scriptedOverride;
+      const envelope = overrideEnvelope(options, ply, context);
       const chosen = record(
         observation,
         OVERRIDE_OPTIONS,
         agentChoice,
         fallback ? 0 : 1,
         { match: options.match, ply, kind: 'override', side: context.side },
+        envelope,
       );
       // Walk-away consequences are not modelled at the override ask yet.
       return chosen === 0;

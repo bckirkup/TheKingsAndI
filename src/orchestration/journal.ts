@@ -1,6 +1,11 @@
 import { digest } from '../core/digest';
 import { compareCodeUnits } from '../core/canonicalJson';
-import { extractMoveFeatures, type LivingBoard, type Side } from '../chess';
+import {
+  extractMoveFeatures,
+  type LivingBoard,
+  type Side,
+  type Square,
+} from '../chess';
 import type { Observation } from './observation';
 
 export type DecisionKind = 'move' | 'override';
@@ -8,6 +13,10 @@ export type DecisionKind = 'move' | 'override';
 export interface Option {
   readonly kind: 'move' | 'override' | 'stand' | 'disengage';
   readonly san?: string;
+  /** Move options only: the moving piece's square, for envelope distance. */
+  readonly from?: Square;
+  /** Move options only: the destination square. */
+  readonly to?: Square;
 }
 
 export interface AgentIdentity {
@@ -32,6 +41,14 @@ export interface JournalEntry {
   readonly agent: AgentIdentity;
   readonly resolvedBy?: 'agent' | 'fallback';
   readonly fallbackPolicy?: 'inner';
+  /**
+   * ADR 0063 §3 — the option indices some scripted NPC style would have chosen
+   * on this ask, computed at decision time so containment reads the journal
+   * alone. Present only when the run records an envelope.
+   */
+  readonly envelope?: readonly number[];
+  /** Names of the scripted styles sampled to build `envelope`. */
+  readonly envelopeStyles?: readonly string[];
 }
 
 export const DISENGAGE: Option = { kind: 'disengage' };
@@ -50,7 +67,12 @@ export function optionsForMove(board: LivingBoard, side: Side): Option[] {
       .filter((intent) => board.pieceAt(intent.from)?.side === side)
       .map((intent) => {
         const features = extractMoveFeatures(board, intent);
-        return { kind: 'move' as const, san: features.san };
+        return {
+          kind: 'move' as const,
+          san: features.san,
+          from: intent.from,
+          to: intent.to,
+        };
       })
       .sort((left, right) => compareCodeUnits(left.san ?? '', right.san ?? '')),
     DISENGAGE,
@@ -71,6 +93,8 @@ export function appendJournalEntry(input: {
   readonly agent: AgentIdentity;
   readonly rationale?: string;
   readonly resolvedBy?: 'agent' | 'fallback';
+  readonly envelope?: readonly number[];
+  readonly envelopeStyles?: readonly string[];
 }): JournalEntry {
   const entry: JournalEntry = {
     decisionIndex: input.entries.length,
@@ -84,6 +108,9 @@ export function appendJournalEntry(input: {
     ...(input.resolvedBy === 'fallback'
       ? { resolvedBy: 'fallback' as const, fallbackPolicy: 'inner' as const }
       : { resolvedBy: 'agent' as const }),
+    ...(input.envelope === undefined || input.envelopeStyles === undefined
+      ? {}
+      : { envelope: input.envelope, envelopeStyles: input.envelopeStyles }),
   };
   input.entries.push(entry);
   return entry;
