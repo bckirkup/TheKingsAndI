@@ -22,7 +22,8 @@
     "sim:census": "tsx sim/emotionCensus.ts",
     "dialogue:distill": "tsx scripts/distill-dialogue.ts",
     "dialogue:check": "tsx scripts/distill-dialogue.ts --check",
-    "trait-leakage:check": "tsx scripts/check-trait-leakage.ts"
+    "trait-leakage:check": "tsx scripts/check-trait-leakage.ts",
+    "assets": "tsx scripts/sprite-pipeline.ts"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.3.0",
