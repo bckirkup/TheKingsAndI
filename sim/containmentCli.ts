@@ -121,9 +121,15 @@ async function main(): Promise<void> {
   );
   if (options.journal !== undefined) {
     await mkdir(dirname(options.journal), { recursive: true });
+    // canonicalJson rejects undefined values; the field is absent, not null.
+    const { firstUncoveredDisengageIndex, ...reportRest } = report;
+    const serializableReport =
+      firstUncoveredDisengageIndex === undefined
+        ? reportRest
+        : { ...reportRest, firstUncoveredDisengageIndex };
     await writeFile(
       options.journal,
-      `${canonicalJson({ persona: agent.identity, entries: journal, report })}\n`,
+      `${canonicalJson({ persona: agent.identity, entries: journal, report: serializableReport })}\n`,
       'utf8',
     );
   }
