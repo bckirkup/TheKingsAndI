@@ -1,0 +1,32 @@
+{
+  "2": {
+    "chosen": 1,
+    "at": "override",
+    "rationale": "The knight has seen enough bodies for one opening. Let it stand down."
+  },
+  "7": {
+    "chosen": 1,
+    "at": "override",
+    "rationale": "Second refusal in seven plies — forcing it now buys a corpse, not a move."
+  },
+  "9": {
+    "chosen": 1,
+    "at": "override",
+    "rationale": "Still not forcing it. Clemency is cheaper than loyalty."
+  },
+  "11": {
+    "chosen": 1,
+    "at": "override",
+    "rationale": "Four refusals. The pieces trust each other more than they trust me."
+  },
+  "13": {
+    "chosen": 1,
+    "at": "override",
+    "rationale": "I will not spend the room to hold a diagonal."
+  },
+  "15": {
+    "chosen": 2,
+    "at": "override",
+    "rationale": "Six mutinies and every order is a negotiation now. I am done commanding this room."
+  }
+}
