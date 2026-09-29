@@ -9,7 +9,7 @@ import { DIALOGUE_LINES, totalDialogueLineCount } from '../src/narrative';
 describe('dialogue distillation (6.2)', () => {
   const pack = JSON.parse(
     readFileSync(
-      join(process.cwd(), 'src/narrative/dialoguePack.json'),
+      join(process.cwd(), 'src/narrative/packs/military/dialogue.json'),
       'utf8',
     ),
   ) as {

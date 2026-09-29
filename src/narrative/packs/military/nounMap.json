@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "packId": "military",
+  "leader": {
+    "title": "Commander",
+    "titleShort": "CDR",
+    "superior": "the King",
+    "institution": "the court",
+    "appointments": 3
+  },
+  "roster": {
+    "name": "roster",
+    "member": "piece",
+    "memberPlural": "pieces",
+    "subordinateNouns": ["soldier", "rank", "rank-and-file"],
+    "departure": "desertion",
+    "collective": "the army"
+  },
+  "roles": {
+    "Pawn": {
+      "noun": "pawn",
+      "epithets": ["rank-and-file", "the line", "the front"]
+    },
+    "Knight": {
+      "noun": "knight",
+      "epithets": ["the riders", "the flanks"]
+    },
+    "Bishop": {
+      "noun": "bishop",
+      "epithets": ["the diagonals", "the clergy"]
+    },
+    "Rook": {
+      "noun": "rook",
+      "epithets": ["the files", "the towers"]
+    },
+    "Queen": {
+      "noun": "queen",
+      "epithets": ["the strongest arm", "the marshal"]
+    },
+    "King": {
+      "noun": "king",
+      "epithets": ["the crown", "the seat"]
+    }
+  },
+  "domain": {
+    "board": "the board",
+    "match": "the match",
+    "campaign": "the campaign",
+    "career": "the career",
+    "order": "order",
+    "ordersGiven": "orders given",
+    "field": "the field",
+    "enemy": "the enemy",
+    "square": "square",
+    "file": "file",
+    "rank": "rank"
+  },
+  "events": {
+    "refusal": "refusal",
+    "override": "override",
+    "desertion": "desertion",
+    "quietQuit": "quiet quitting",
+    "sacrifice": "sacrifice",
+    "capture": "capture",
+    "rout": "rout",
+    "dismissal": "dismissal",
+    "reinstatement": "reinstatement",
+    "suspension": "suspension",
+    "retirement": "retirement",
+    "grace": "grace",
+    "promotion": "promotion",
+    "resignation": "resignation"
+  },
+  "verdicts": {
+    "win": "victory",
+    "loss": "defeat",
+    "draw": "stalemate",
+    "rout": "rout",
+    "dismissed": "dismissal",
+    "abandoned": "abandoned"
+  },
+  "stages": {
+    "judgementSeat": "the Judgement Seat",
+    "debrief": "the debrief",
+    "audit": "the audit",
+    "certificate": "the certificate",
+    "commendation": "commendation"
+  }
+}

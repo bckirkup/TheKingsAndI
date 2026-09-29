@@ -1,0 +1,15 @@
+{
+  "packId": "military",
+  "version": 1,
+  "extends": "tactical-blueprint",
+  "description": "Default military voice pack. Situation keys are role-abstract (they name relationships and events, never board objects); themes re-skin the nounMap, never the keys.",
+  "files": {
+    "nouns": "nounMap.json",
+    "names": "names.json",
+    "dialogue": "dialogue.json",
+    "intros": "intros.json",
+    "epilogues": "epilogues.json",
+    "notices": "notices.json",
+    "commendations": "commendations.json"
+  }
+}

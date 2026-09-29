@@ -1,4 +1,5 @@
 import { credenceBand } from './authoredProvider';
+import introsPack from './packs/military/intros.json';
 import type { MatchEvent, PieceRole } from '../psychology';
 
 /**
@@ -330,16 +331,30 @@ export interface IntroProseInput {
   readonly act: number;
 }
 
-const INTRO_BY_MANDATE: Readonly<Record<'low' | 'mid' | 'high', string>> = {
-  low: 'The room has already made up its mind about you. Prove it wrong, or do not.',
-  mid: 'They will follow. For now. The board is set.',
-  high: 'They would walk into fire for you. Do not waste it.',
-};
+type IntroAct = keyof typeof introsPack.byAct;
 
-export function narratorIntro(input: IntroProseInput): string {
+function introAct(act: number): IntroAct {
+  if (act <= 1) return '1';
+  if (act >= 3) return '3';
+  return '2';
+}
+
+/** Alternate opening lines for a (act, mandate) cell — variant 0 is canonical. */
+export function narratorIntroVariants(
+  act: number,
+  mandate: number,
+): readonly string[] {
+  return introsPack.byAct[introAct(act)][credenceBand(mandate)];
+}
+
+export function narratorIntro(
+  input: IntroProseInput & { readonly variant?: number },
+): string {
   const actNote =
     input.act <= 1
-      ? 'This is your first command.'
-      : `This is command number ${input.act}.`;
-  return `${actNote} ${INTRO_BY_MANDATE[credenceBand(input.mandate)]}`;
+      ? introsPack.actLabel.first
+      : introsPack.actLabel.numbered.replaceAll('{act}', String(input.act));
+  const variants = narratorIntroVariants(input.act, input.mandate);
+  const index = Math.abs(input.variant ?? 0) % variants.length;
+  return `${actNote} ${variants[index] ?? variants[0] ?? ''}`;
 }
