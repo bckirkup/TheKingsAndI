@@ -1,3 +1,4 @@
+import commendationsPack from '../narrative/packs/military/commendations.json';
 import { COMMENDATION_CONFIG } from './commendationConfig';
 import { foldLearningDelta, type LearningDelta } from './learningDelta';
 import { giniCoefficient } from './transcript';
@@ -45,15 +46,20 @@ export interface PlayerCommendationSet {
 }
 
 const PLAYER_LABELS: Record<PlayerCommendationId, string> = {
-  evenness_of_attention: 'Evenness of attention',
-  best_of_the_best: 'The best of the best',
-  nobody_drowned: 'Nobody drowned',
-  overcoming_a_weakness: 'Overcoming a weakness',
-  grit_and_endurance: 'Grit and endurance',
-  overall_improvement: 'Overall improvement',
-  honest_sacrifice: 'The honest sacrifice',
-  repaired_breach: 'The repaired breach',
+  evenness_of_attention: commendationsPack.player.evenness_of_attention.label,
+  best_of_the_best: commendationsPack.player.best_of_the_best.label,
+  nobody_drowned: commendationsPack.player.nobody_drowned.label,
+  overcoming_a_weakness: commendationsPack.player.overcoming_a_weakness.label,
+  grit_and_endurance: commendationsPack.player.grit_and_endurance.label,
+  overall_improvement: commendationsPack.player.overall_improvement.label,
+  honest_sacrifice: commendationsPack.player.honest_sacrifice.label,
+  repaired_breach: commendationsPack.player.repaired_breach.label,
 };
+
+/** Behavioural citation for an award id (debrief/certificate copy). */
+export function commendationCitation(id: PlayerCommendationId): string {
+  return commendationsPack.player[id].citation;
+}
 
 function mean(values: readonly number[]): number {
   if (values.length === 0) return 0;

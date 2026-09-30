@@ -9,7 +9,13 @@ import {
 
 const root = join(fileURLToPath(new URL('..', import.meta.url)));
 const SOURCES = [
-  'src/narrative/dialoguePack.json',
+  'src/narrative/packs/military/dialogue.json',
+  'src/narrative/packs/military/intros.json',
+  'src/narrative/packs/military/epilogues.json',
+  'src/narrative/packs/military/notices.json',
+  'src/narrative/packs/military/commendations.json',
+  'src/narrative/packs/military/names.json',
+  'src/narrative/packs/military/nounMap.json',
   'src/narrative/audit.ts',
   'src/persistence/certificate.ts',
 ] as const;

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "packId": "military",
+  "actLabel": {
+    "first": "This is your first command.",
+    "numbered": "This is command number {act}."
+  },
+  "byAct": {
+    "1": {
+      "low": [
+        "The room has already made up its mind about you. Prove it wrong, or do not.",
+        "They reviewed your file and were not impressed. The board will decide what they could not.",
+        "No one here asked for you, Commander. Every square you take will have to argue otherwise."
+      ],
+      "mid": [
+        "They will follow. For now. The board is set.",
+        "Your appointment surprised no one and convinced no one. Command anyway.",
+        "The roster is watching, undecided. First orders weigh more than first impressions."
+      ],
+      "high": [
+        "They would walk into fire for you. Do not waste it.",
+        "Your reputation arrived before you did — all of it good, all of it fragile.",
+        "They already believe, Commander. Belief like that is a debt; spend it well."
+      ]
+    },
+    "2": {
+      "low": [
+        "They have heard how the last command went. The second King asks harder questions.",
+        "Word travels faster than orders. This room knows exactly what you cost.",
+        "A new King, an old reputation. They will not be fooled twice."
+      ],
+      "mid": [
+        "The second appointment begins. They have heard stories; they are waiting to see which are true.",
+        "Another King, another roster's worth of doubt. The record walks in ahead of you.",
+        "They know your name here. Whether that helps is up to the next match."
+      ],
+      "high": [
+        "The last command's survivors speak well of you. This room expects the same.",
+        "They asked for you by name — the second King honors what you built.",
+        "Your reputation carried across courts. Do not let it carry you past the work."
+      ]
+    },
+    "3": {
+      "low": [
+        "The last King will sit for you — once. This room has read everything.",
+        "Third appointment, final patience. They agreed to see whether the stories were unfair.",
+        "No more Kings after this one, Commander. The room knows that as well as you do."
+      ],
+      "mid": [
+        "The final appointment. They will follow a while longer — the alternative is worse.",
+        "One King left willing to start a match with you. Everything now is evidence.",
+        "The third and last room. They are tired of commanders; be something else."
+      ],
+      "high": [
+        "Even the last King has heard you are worth the risk. Do not make a liar of the record.",
+        "The final command, and still they hope. That hope is the rarest thing you own.",
+        "They saved the most patient King for last, because they wanted to believe in you."
+      ]
+    }
+  }
+}

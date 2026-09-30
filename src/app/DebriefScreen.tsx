@@ -4,7 +4,10 @@ import { campaignDebriefProse, type NarratedOutcome } from '../narrative';
 import { CareerRepository } from '../persistence';
 import type { CampaignDebrief, MatchResult } from '../persistence';
 import { certificateToJson } from '../persistence/certificate';
-import { EPILOGUE_BY_TERMINAL } from '../orchestration/terminalState';
+import {
+  dismissalReadingFor,
+  epilogueFor,
+} from '../orchestration/terminalState';
 import { ENGINE_CONFIG } from '../psychology';
 import { DebriefBarChart } from '../ui/panels/DebriefChart';
 
@@ -77,11 +80,19 @@ export function DebriefScreen({
     debrief.judgementSeat.meanEmptiedChairsScore === null
       ? null
       : -weights.epsilon * debrief.judgementSeat.meanEmptiedChairsScore;
+  const dismissalReading = dismissalReadingFor(debrief.matches);
+  const epilogue = epilogueFor({
+    terminal: debrief.actTerminalState,
+    ...(dismissalReading === undefined ? {} : { dismissalReading }),
+  });
 
   return (
     <section className="debrief-screen">
       <h1>Campaign debrief</h1>
-      <p>{EPILOGUE_BY_TERMINAL[debrief.actTerminalState]}</p>
+      <h2>{epilogue.headline}</h2>
+      {epilogue.paragraphs.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
 
       <section className="debrief-screen__judgement-seat">
         <h2>The Judgement Seat</h2>

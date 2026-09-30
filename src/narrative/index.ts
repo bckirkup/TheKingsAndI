@@ -6,6 +6,7 @@ export {
   situationFor,
   situationKeyFor,
   type CredenceReading,
+  type DesertionGrievance,
   type DialogueCue,
   type NarrationRequest,
   type SituationKey,
@@ -28,10 +29,18 @@ export {
   type TraitLeakageFinding,
 } from './traitLeakage';
 export {
+  NOUN_MAP,
+  noticeFor,
+  renderNotice,
+  type FixedNotice,
+  type NoticeId,
+} from './notices';
+export {
   AUDIT_PROSE_CONFIG,
   campaignDebriefProse,
   matchAuditProse,
   narratorIntro,
+  narratorIntroVariants,
   type AuditProse,
   type AuditProseConfig,
   type CampaignMatchProse,

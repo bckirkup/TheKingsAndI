@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "packId": "military",
+  "player": {
+    "evenness_of_attention": {
+      "label": "Evenness of attention",
+      "citation": "No piece carried the campaign alone and none was left to rust. The orders were spread evenly enough that every career on the roster touched the war."
+    },
+    "best_of_the_best": {
+      "label": "The best of the best",
+      "citation": "The most trusted pieces were asked for the most, and answered with the best orders played on the board. Confidence placed where it was earned, and repaid."
+    },
+    "nobody_drowned": {
+      "label": "Nobody drowned",
+      "citation": "Not one career ended in burnout, and the least-believing piece still retained reason to follow. The roster came home whole in the ways that cannot be patched."
+    },
+    "overcoming_a_weakness": {
+      "label": "Overcoming a weakness",
+      "citation": "A piece arrived carrying a wound and left measurably lighter. Someone on this roster healed under your command."
+    },
+    "grit_and_endurance": {
+      "label": "Grit and endurance",
+      "citation": "Through consecutive defeats the army never stopped executing orders at full fidelity. The losing was yours; the refusing to quit was theirs — and you kept them able to do it."
+    },
+    "overall_improvement": {
+      "label": "Overall improvement",
+      "citation": "The second army you led played better than the first, measured on the same scales. The record shows a commander who learned."
+    },
+    "honest_sacrifice": {
+      "label": "The honest sacrifice",
+      "citation": "A piece spent itself knowingly for the win, trusted anyway, and the army witnessed it land. Expensive orders, honestly bought."
+    },
+    "repaired_breach": {
+      "label": "The repaired breach",
+      "citation": "A piece that had stopped believing came back. Rupture is cheap to cause and costly to mend; this roster shows a mend."
+    }
+  },
+  "facilitator": {
+    "hard_seed_distribution": {
+      "label": "Hard seeds, fairly dealt",
+      "citation": "The difficult seeds reached the players who could carry them, and no one grew beneath a board they could not survive."
+    },
+    "weakest_student_growth": {
+      "label": "The weakest student's growth",
+      "citation": "The player who started furthest behind ended furthest ahead of their own baseline. The cohort's floor rose."
+    },
+    "pairing_quality": {
+      "label": "Pairing quality",
+      "citation": "Opponents met at the right difficulty: close enough to teach, far enough to matter."
+    },
+    "cohort_expenditure_evenness": {
+      "label": "Even expenditure across the cohort",
+      "citation": "The seminar's cost did not land on a few shoulders. Every player's roster was spent at a survivable rate."
+    }
+  }
+}

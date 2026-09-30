@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "packId": "military",
+  "notices": {
+    "dismissal": {
+      "title": "Dismissed",
+      "body": "The King relieves you of command. The roster takes the field under his orders; you remain to watch."
+    },
+    "suspension": {
+      "title": "Suspended",
+      "body": "You remain suspended after dismissal. The King commands until reinstatement is earned."
+    },
+    "reinstatement.offer": {
+      "title": "Reinstatement offered",
+      "body": "The King offers reinstatement. Trust has recovered enough to compare your command against his."
+    },
+    "reinstatement.accepted": {
+      "title": "Reinstated",
+      "body": "You return to command under a King who has seen the alternative. The roster holds a comparison now — use it."
+    },
+    "careerEnd": {
+      "title": "Career over",
+      "body": "No King will start a match with you. The record stands: three courts heard you, and none will seat you again."
+    },
+    "retirement": {
+      "title": "Retirement",
+      "body": "{name} has carried enough. The {role} leaves service for good — a career ended by what the campaign asked of it."
+    },
+    "grace": {
+      "title": "Grace",
+      "body": "Relief finds {name} unearned. Some of the {role}'s burden lifts — not because you gave it, and not to your credit."
+    },
+    "freeAgentDecline": {
+      "title": "Declined",
+      "body": "{name} will not sign with you. Free agents read the same record the roster does."
+    },
+    "successionCoda": {
+      "title": "Succession coda",
+      "body": "Dismissed. The King commands the remainder — you spectate with no authority."
+    },
+    "rout": {
+      "title": "Rout",
+      "body": "Your army has collapsed. Only the King remains — the match cannot continue as fought."
+    },
+    "quietQuit": {
+      "title": "Quiet compliance",
+      "body": "The order went through — the army did not. The piece complied while withholding effort."
+    },
+    "promotionAttained": {
+      "title": "Promotion",
+      "body": "{name} attained {role} through promotion."
+    },
+    "firstRefusal.explainer": {
+      "title": "Why orders are refused",
+      "body": "Pieces reason from a limited view rather than the true score. The shortfall is sight, not disloyalty."
+    },
+    "certificate.citation": {
+      "title": "Certificate of completion",
+      "body": "This certifies that career {careerId} concluded under seed {seed} with a replay-verifiable record. The board remembers everything."
+    },
+    "audit.empty": {
+      "title": "Quiet ledger",
+      "body": "Nothing worth testifying happened this match — which is itself a finding."
+    }
+  }
+}

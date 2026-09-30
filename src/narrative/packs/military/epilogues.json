@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "packId": "military",
+  "terminals": {
+    "ongoing": {
+      "default": {
+        "headline": "The campaign continues.",
+        "paragraphs": ["Your orders still carry weight — for now."]
+      },
+      "acts": {
+        "1": {
+          "headline": "The first command continues.",
+          "paragraphs": [
+            "The record is still being written. Every match is evidence the next King will read."
+          ]
+        },
+        "2": {
+          "headline": "The second command continues.",
+          "paragraphs": [
+            "They have heard about you; the rest of the campaign decides what they conclude."
+          ]
+        },
+        "3": {
+          "headline": "The final command continues.",
+          "paragraphs": [
+            "There is no fourth King. Whatever this campaign becomes is the ending."
+          ]
+        }
+      }
+    },
+    "checkmate": {
+      "default": {
+        "headline": "Outplayed.",
+        "paragraphs": [
+          "The roster marched where you pointed, but the positions you chose were losing. The pieces are spent, not shattered: they followed you into defeat."
+        ]
+      },
+      "acts": {
+        "1": {
+          "headline": "Outplayed in the first command.",
+          "paragraphs": [
+            "They followed you into a losing position and held formation to the end. The failure was on the board, not in the room — which makes it the kind that can be learned from."
+          ]
+        },
+        "2": {
+          "headline": "Outplayed in the second command.",
+          "paragraphs": [
+            "A roster that heard stories about you followed anyway, and lost. Loyalty carried them into your bad positions. That is a debt, not a compliment."
+          ]
+        },
+        "3": {
+          "headline": "Outplayed at the last command.",
+          "paragraphs": [
+            "The final King watched his army follow you into checkmate. The career closes in defeat, but in an ordered one — they never stopped executing your orders."
+          ]
+        }
+      }
+    },
+    "dismissal": {
+      "default": {
+        "headline": "Dismissed.",
+        "paragraphs": [
+          "The roster survives intact and still wants the win — they lost faith in your judgment, not in the mission. The King took the field; the debrief will show whether the army played better under a worse tactician who was obeyed."
+        ]
+      },
+      "readings": {
+        "lost_room": {
+          "headline": "You lost the room.",
+          "paragraphs": [
+            "Under the King — a shallower tactician with an unspent mandate — the army played better than it did under you. The orders were worse and the results were better. That inversion is the whole lesson: your judgment was never the bottleneck. Your standing was."
+          ]
+        },
+        "broke_roster": {
+          "headline": "You broke the roster.",
+          "paragraphs": [
+            "The King took the field and failed too. This is the worse ending: you did not merely lose command, you left a room no one could command. The ruins are the report."
+          ]
+        }
+      },
+      "acts": {
+        "1": {
+          "headline": "Dismissed from the first command.",
+          "paragraphs": [
+            "Two Kings remain who have not yet refused you. What this roster reports about you will be waiting at the next court."
+          ]
+        },
+        "2": {
+          "headline": "Dismissed from the second command.",
+          "paragraphs": [
+            "One King left. The next room will arrive knowing exactly how this one ended."
+          ]
+        },
+        "3": {
+          "headline": "Dismissed at the last command.",
+          "paragraphs": [
+            "No King will start a match with you again. The career ends here — not with checkmate, but with a room that chose its King over you."
+          ]
+        }
+      }
+    },
+    "rout": {
+      "default": {
+        "headline": "Rout.",
+        "paragraphs": [
+          "The army shattered. Desertion cascaded until only the King remained. This is the worst ending: not merely outplayed, but abandoned."
+        ]
+      },
+      "acts": {
+        "1": {
+          "headline": "Rout in the first command.",
+          "paragraphs": [
+            "They did not wait to learn what kind of commander you would become. The desertion was the review — early, unanimous, and irreversible."
+          ]
+        },
+        "2": {
+          "headline": "Rout in the second command.",
+          "paragraphs": [
+            "The room that had heard everything about you decided the rumors were true. A cascade this fast is never about one order; it is the accumulated record, priced."
+          ]
+        },
+        "3": {
+          "headline": "Rout at the last command.",
+          "paragraphs": [
+            "The final army walked. There is no King left to appoint you, and no roster left to follow anyone. The career ends the way routs always end — alone, on a full board."
+          ]
+        }
+      }
+    },
+    "victory": {
+      "default": {
+        "headline": "Victory.",
+        "paragraphs": [
+          "The army's realized play sustained above your personal ceiling — the roster executed well enough that the positions themselves carried the campaign. You led beyond your own tactical limit."
+        ]
+      },
+      "acts": {
+        "1": {
+          "headline": "Victory in the first command.",
+          "paragraphs": [
+            "A new roster outplayed its own commander. The next King will hear of this — and will hold you to it."
+          ]
+        },
+        "2": {
+          "headline": "Victory in the second command.",
+          "paragraphs": [
+            "Twice now the army has outrun its orders. The pattern stops being luck and starts being a reputation — the kind that precedes you into the last appointment."
+          ]
+        },
+        "3": {
+          "headline": "Victory at the last command.",
+          "paragraphs": [
+            "The career closes with a roster that became more than the hand that led it. That is the only completion certificate this game issues."
+          ]
+        }
+      }
+    }
+  }
+}

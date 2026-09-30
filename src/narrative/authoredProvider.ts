@@ -4,6 +4,11 @@ import { DIALOGUE_LINES, type SituationKey } from './dialogueTree';
 
 export type { SituationKey } from './dialogueTree';
 
+export type DesertionGrievance =
+  | 'after_override'
+  | 'after_casualty'
+  | 'despair';
+
 export interface DialogueCue {
   readonly eventKind:
     | 'refusal'
@@ -12,10 +17,16 @@ export interface DialogueCue {
     | 'quiet_quit'
     | 'compliant'
     | 'heroic'
-    | 'rout';
+    | 'rout'
+    | 'dismissal';
   readonly pieceId: string;
   readonly san: string;
   readonly verdict?: MoveResponseVerdict;
+  /**
+   * Why this desertion happened, when the orchestrator can tell (ADR 0018:
+   * every departure names a cause the player can act on). Absent → mutiny.
+   */
+  readonly grievance?: DesertionGrievance;
 }
 
 /** The two credence channels at the cue site (ADR 0019), integer 0..100. */
@@ -78,6 +89,16 @@ export function situationFor(
       if (abil === 'high' && benev === 'low') return 'override.able_uncared';
       return 'override.forced';
     case 'desertion':
+      switch (cue.grievance) {
+        case 'after_override':
+          return 'desertion.after_override';
+        case 'after_casualty':
+          return 'desertion.after_casualty';
+        case 'despair':
+          return 'desertion.despair';
+        case undefined:
+          return 'desertion.mutiny';
+      }
       return 'desertion.mutiny';
     case 'quiet_quit':
       return 'quiet_quit.compliance';
@@ -85,11 +106,16 @@ export function situationFor(
       return 'heroic.sacrifice';
     case 'rout':
       return 'rout.cascade';
+    case 'dismissal':
+      return 'dismissal.censure';
     case 'compliant':
-    default:
       return verdict === 'HEROIC_EXECUTION'
         ? 'heroic.sacrifice'
-        : 'compliant.order';
+        : verdict === 'FATALISTIC_COMPLIANCE'
+          ? 'compliant.fatalistic'
+          : 'compliant.order';
+    default:
+      return 'compliant.order';
   }
 }
 

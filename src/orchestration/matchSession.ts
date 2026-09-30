@@ -134,10 +134,12 @@ export interface DialogueCue {
     | 'quiet_quit'
     | 'compliant'
     | 'heroic'
-    | 'rout';
+    | 'rout'
+    | 'dismissal';
   readonly pieceId: string;
   readonly san: string;
   readonly verdict?: MoveResponseVerdict;
+  readonly grievance?: 'after_override' | 'after_casualty' | 'despair';
 }
 
 export interface MatchSessionSnapshot {
@@ -474,6 +476,7 @@ export class MatchSession {
         pieceId: actor.id,
         san: features.san,
         verdict: outcome.verdict,
+        grievance: this.desertionGrievance(actor.id),
       };
       return true;
     }
@@ -684,6 +687,7 @@ export class MatchSession {
       pieceId: pending.actor.id,
       san: pending.san,
       verdict: 'DESERTION_MUTINY',
+      grievance: this.desertionGrievance(pending.actor.id),
     };
     await this.runOpponentTurn();
     this.maybeTriggerDismissal();
@@ -790,10 +794,36 @@ export class MatchSession {
     });
     this.phase = 'succession_spectate';
     this.dialogueCue = {
-      eventKind: 'rout',
+      eventKind: 'dismissal',
       pieceId: this.roster[0]?.id ?? 'w:K:e1',
       san: '—',
     };
+  }
+
+  /**
+   * Why this desertion happened, mirroring the audit's trigger clause (ADR
+   * 0018 — the cause must be actable): a recent forced override of this piece,
+   * else a recent capture it witnessed, else ambient despair.
+   */
+  private desertionGrievance(
+    actorId: string,
+  ): 'after_override' | 'after_casualty' | 'despair' {
+    const window = 4;
+    const forced = this.events.some(
+      (event) =>
+        event.t === 'OVERRIDE' &&
+        event.pieceId === actorId &&
+        event.ply <= this.ply &&
+        this.ply - event.ply <= window,
+    );
+    if (forced) return 'after_override';
+    const witnessed = this.events.some(
+      (event) =>
+        event.t === 'CAPTURE' &&
+        event.ply <= this.ply &&
+        this.ply - event.ply <= window,
+    );
+    return witnessed ? 'after_casualty' : 'despair';
   }
 
   private async playUnderKingCommand(): Promise<void> {

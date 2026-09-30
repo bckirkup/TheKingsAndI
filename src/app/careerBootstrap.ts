@@ -1,4 +1,5 @@
 import { createSeededRandom } from '../core/random';
+import namesPack from '../narrative/packs/military/names.json';
 import { createFreshPieceState, unitForIndex } from '../orchestration/roster';
 import {
   DISPOSITION_SPREAD,
@@ -14,39 +15,7 @@ import type {
   StoredPieceState,
 } from '../persistence/types';
 
-export const SQUAD_NAMES = [
-  'Aethelgard',
-  'Baldric',
-  'Caelum',
-  'Drystan',
-  'Elowen',
-  'Fenric',
-  'Gareth',
-  'Helena',
-  'Isolde',
-  'Jorah',
-  'Kestrel',
-  'Leofric',
-  'Mira',
-  'Niall',
-  'Orin',
-  'Petra',
-  'Quillon',
-  'Rosalind',
-  'Stefan',
-  'Theodora',
-  'Ulric',
-  'Valeria',
-  'Wulfric',
-  'Xanthe',
-  'Ysabel',
-  'Zephyr',
-  'Amaranth',
-  'Branwen',
-  'Cedric',
-  'Damaris',
-  'Eadric',
-];
+export const SQUAD_NAMES: readonly string[] = namesPack.squadNames;
 
 function roleOrder(): readonly PieceRole[] {
   return ['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King'];
